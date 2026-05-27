@@ -18,6 +18,33 @@ export default function TeacherDashboard() {
   const [newClassName, setNewClassName] = useState("");
   const [searchStudentQuery, setSearchStudentQuery] = useState("");
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 2 * 1024 * 1024) return alert('Ảnh quá lớn. Vui lòng chọn ảnh dưới 2MB');
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = e.target?.result as string;
+      try {
+        const res = await fetch(`http://localhost:5000/api/auth/avatar/${user.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatar: base64 })
+        });
+        if (res.ok) {
+          const updatedUser = await res.json();
+          setUser(updatedUser);
+        } else {
+          alert('Lỗi tải ảnh');
+        }
+      } catch (err) {
+        console.error('Lỗi tải ảnh:', err);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   useEffect(() => {
     const userId = localStorage.getItem('userId');
     const url = userId ? `http://localhost:5000/api/auth/me?userId=${userId}` : "http://localhost:5000/api/auth/me";
@@ -236,9 +263,22 @@ export default function TeacherDashboard() {
           </button>
         ))}
         <div className="mt-auto pt-6 border-t border-foreground/10 px-2 flex flex-col gap-4">
-          <div>
-            <p className="text-sm font-bold truncate">{user?.name || '...'}</p>
-            <p className="text-xs text-foreground/50 truncate">{user?.email}</p>
+          <div className="flex items-center gap-3">
+            <label className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer relative overflow-hidden group">
+              <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+              {user?.avatar ? (
+                <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                user?.name?.charAt(0)
+              )}
+              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-[10px] font-medium text-white">Đổi</span>
+              </div>
+            </label>
+            <div className="overflow-hidden">
+              <p className="text-sm font-bold truncate">{user?.name || '...'}</p>
+              <p className="text-xs text-foreground/50 truncate">{user?.email}</p>
+            </div>
           </div>
           <button 
             onClick={() => { localStorage.removeItem('userId'); window.location.href = '/'; }}
@@ -340,7 +380,9 @@ export default function TeacherDashboard() {
                         return (
                           <tr key={s.id} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5 transition-colors">
                             <td className="p-4 font-medium flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs shrink-0">{s.name.charAt(0)}</div>
+                              <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+                                {s.avatar ? <img src={s.avatar} alt="Avatar" className="w-full h-full object-cover" /> : s.name.charAt(0)}
+                              </div>
                               <div>
                                 <div>{s.name}</div>
                                 <div className="text-xs text-foreground/50 font-normal">{s.email}</div>
@@ -775,9 +817,13 @@ export default function TeacherDashboard() {
                                 
                                 return (
                                   <tr key={s.id} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5">
-                                    <td className="p-3 flex items-center gap-2 font-medium">
-                                      <div className="w-6 h-6 rounded-full bg-foreground/10 flex items-center justify-center text-xs font-bold">{s.name.charAt(0)}</div>
-                                      {s.name}
+                                    <td className="p-3">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-foreground/10 flex items-center justify-center text-xs font-bold overflow-hidden">
+                                          {s.avatar ? <img src={s.avatar} alt="Avatar" className="w-full h-full object-cover" /> : s.name.charAt(0)}
+                                        </div>
+                                        {s.name}
+                                      </div>
                                     </td>
                                     {hasSubmitted ? (
                                       <>

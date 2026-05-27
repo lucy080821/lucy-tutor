@@ -32,6 +32,21 @@ router.post('/signin', async (req, res) => {
   }
 });
 
+// Update Avatar
+router.put('/avatar/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { avatar } = req.body; // Base64 string
+    const user = await prisma.user.update({
+      where: { id },
+      data: { avatar }
+    });
+    res.json(user);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Submit placement test score
 router.post('/placement', async (req, res) => {
   try {

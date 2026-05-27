@@ -9,6 +9,34 @@ export default function StudentDashboard() {
   const [user, setUser] = useState<any>(null);
   const [joinCode, setJoinCode] = useState("");
   const [history, setHistory] = useState<any[]>([]);
+  const [examResults, setExamResults] = useState<any[]>([]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (file.size > 2 * 1024 * 1024) return alert('Ảnh quá lớn. Vui lòng chọn ảnh dưới 2MB');
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = e.target?.result as string;
+      try {
+        const res = await fetch(`http://localhost:5000/api/auth/avatar/${user.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatar: base64 })
+        });
+        if (res.ok) {
+          const updatedUser = await res.json();
+          setUser(updatedUser);
+        } else {
+          alert('Lỗi tải ảnh');
+        }
+      } catch (err) {
+        console.error('Lỗi tải ảnh:', err);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleJoinClass = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,9 +171,17 @@ export default function StudentDashboard() {
         {user && (
           <div className="mb-8 flex justify-between items-center bg-primary/5 p-6 rounded-2xl border border-primary/10">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-gradient-to-tr from-primary to-secondary text-white rounded-full flex items-center justify-center text-2xl font-bold shadow-md">
-                {user.name.charAt(0)}
-              </div>
+              <label className="w-14 h-14 bg-gradient-to-tr from-primary to-secondary text-white rounded-full flex items-center justify-center text-2xl font-bold shadow-md cursor-pointer relative overflow-hidden group">
+                <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+                {user.avatar ? (
+                  <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  user.name.charAt(0)
+                )}
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-xs font-medium">Đổi</span>
+                </div>
+              </label>
               <div>
                 <h2 className="text-2xl font-bold text-foreground">{user.name}</h2>
                 <div className="flex items-center gap-3 mt-1">
