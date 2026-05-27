@@ -343,7 +343,7 @@ export default function TeacherDashboard() {
                           <ExamCard key={exam.id} exam={exam} title={exam.title} type="Bài tập"
                             detail={classrooms.find((c: any) => c.id === exam.classroomId)?.name || 'N/A'}
                             questions={exam.totalQuestions}
-                            onClick={() => setSelectedExamForView(exam)}
+                            onClick={() => { setSelectedExamForView(exam); setExamViewTab('QUESTIONS'); }}
                             onEdit={() => setEditExam({ ...exam, publishTime: exam.publishTime ? new Date(exam.publishTime).toISOString().slice(0, 16) : '', deadline: exam.deadline ? new Date(exam.deadline).toISOString().slice(0, 16) : '' })}
                             onDelete={() => handleDeleteExam(exam.id)} />
                         ))}
@@ -358,7 +358,7 @@ export default function TeacherDashboard() {
                           <ExamCard key={exam.id} exam={exam} title={exam.title} type="Đề thi"
                             detail={classrooms.find((c: any) => c.id === exam.classroomId)?.name || 'N/A'}
                             questions={exam.totalQuestions}
-                            onClick={() => setSelectedExamForView(exam)}
+                            onClick={() => { setSelectedExamForView(exam); setExamViewTab('QUESTIONS'); }}
                             onEdit={() => setEditExam({ ...exam, publishTime: exam.publishTime ? new Date(exam.publishTime).toISOString().slice(0, 16) : '', deadline: exam.deadline ? new Date(exam.deadline).toISOString().slice(0, 16) : '' })}
                             onDelete={() => handleDeleteExam(exam.id)} />
                         ))}
@@ -831,7 +831,7 @@ function ExamCard({ title, type, detail, questions, onClick, onEdit, onDelete, e
         <p className="text-sm text-foreground/60 mt-1">Giao cho: <span className="font-medium text-foreground">{detail}</span> • {questions} câu • {exam?.duration || 45} phút</p>
       </div>
       <div className="flex items-center gap-2 ml-4 shrink-0">
-        <button onClick={() => { setExamViewTab('QUESTIONS'); onClick?.(); }} className="px-3 py-2 text-sm font-bold bg-foreground/10 rounded-lg hover:bg-foreground/20 cursor-pointer">👁 Xem</button>
+        <button onClick={onClick} className="px-3 py-2 text-sm font-bold bg-foreground/10 rounded-lg hover:bg-foreground/20 cursor-pointer">👁 Xem</button>
         <button onClick={e => { e.stopPropagation(); onEdit?.(); }} className="px-3 py-2 text-sm font-bold bg-primary/10 text-primary rounded-lg hover:bg-primary/20 cursor-pointer">✏️ Sửa</button>
         <button onClick={e => { e.stopPropagation(); onDelete?.(); }} className="px-3 py-2 text-sm font-bold bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500/20 cursor-pointer">🗑 Xóa</button>
       </div>
