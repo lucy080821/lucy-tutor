@@ -29,29 +29,48 @@ export default function Home() {
         </div>
       </div>
       
-      <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-5xl z-10">
+      <div className="mt-24 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 w-full max-w-5xl z-10 text-left">
         <FeatureCard 
-          title="Phân Tích Điểm Yếu" 
-          desc="Tự động phát hiện các phần ngữ pháp bạn hay sai và đề xuất bài ôn tập." 
+          icon="🎯"
+          title="Mục Tiêu & Lộ Trình" 
+          desc="Thiết lập điểm số mục tiêu và theo dõi phần trăm hoàn thành chặng đường." 
         />
         <FeatureCard 
-          title="Tự Động Quét Đề Thi" 
-          desc="Giáo viên chỉ cần upload file Word/PDF, hệ thống tự trích xuất câu hỏi và đáp án." 
+          icon="📚"
+          title="Sổ Tay Lỗi Sai" 
+          desc="Tự động lưu lại các câu làm sai theo từng chuyên đề và xuất ra PDF ôn tập." 
         />
         <FeatureCard 
+          icon="💎"
+          title="Cấp Bậc & EXP" 
+          desc="Tích lũy kinh nghiệm, thăng hạng và giữ chuỗi học tập mỗi ngày như chơi game." 
+        />
+        <FeatureCard 
+          icon="🤖"
+          title="AI Phân Tích Điểm Yếu" 
+          desc="Tự động phát hiện các phần ngữ pháp bạn hay sai và gợi ý bài luyện tập." 
+        />
+        <FeatureCard 
+          icon="👨‍🏫"
           title="Quản Lý Lớp Học" 
-          desc="Tạo lớp, cấp mã mời và theo dõi toàn bộ tiến độ của từng học sinh." 
+          desc="Giáo viên dễ dàng tạo lớp, giao đề thi và theo dõi tiến độ chi tiết của học sinh." 
+        />
+        <FeatureCard 
+          icon="✨"
+          title="Giao Diện Cá Nhân" 
+          desc="Thể hiện phong cách với ảnh đại diện Avatar sắc nét dung lượng lên đến 100MB." 
         />
       </div>
     </div>
   );
 }
 
-function FeatureCard({ title, desc }: { title: string, desc: string }) {
+function FeatureCard({ icon, title, desc }: { icon: string, title: string, desc: string }) {
   return (
-    <div className="glass p-6 rounded-3xl text-left hover:-translate-y-2 transition-transform duration-300">
+    <div className="glass p-6 rounded-3xl text-left hover:-translate-y-2 hover:shadow-xl hover:border-primary/30 transition-all duration-300 group bg-surface/50 backdrop-blur-md">
+      <div className="text-4xl mb-4 group-hover:scale-110 transition-transform origin-left">{icon}</div>
       <h3 className="text-xl font-bold mb-2">{title}</h3>
-      <p className="text-foreground/70">{desc}</p>
+      <p className="text-foreground/70 text-sm leading-relaxed">{desc}</p>
     </div>
   );
 }
