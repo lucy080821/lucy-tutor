@@ -61,6 +61,17 @@ export default function Home() {
           desc="Thể hiện phong cách với ảnh đại diện Avatar sắc nét dung lượng lên đến 100MB." 
         />
       </div>
+      {/* Footer */}
+      <footer className="mt-32 w-full max-w-5xl border-t border-foreground/10 pt-8 pb-4 text-center z-10 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="Lucy Tutor Logo" className="w-8 h-8 object-contain" />
+          <span className="font-bold text-foreground/80">Lucy Tutor</span>
+        </div>
+        <p className="text-sm text-foreground/50 text-left md:text-right">
+          © 2026 Lucy Tutor. Đã đăng ký bản quyền.<br/>
+          Hệ thống luyện thi Tiếng Anh thông minh.
+        </p>
+      </footer>
     </div>
   );
 }
