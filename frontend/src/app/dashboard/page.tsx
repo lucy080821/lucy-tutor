@@ -201,8 +201,8 @@ export default function StudentDashboard() {
         {/* Dashboard Header - User Info Sync */}
         {user && (
           <div className="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-primary/5 p-4 sm:p-6 rounded-2xl border border-primary/10">
-            <div className="flex items-center gap-4">
-              <label className="w-14 h-14 bg-gradient-to-tr from-primary to-secondary text-white rounded-full flex items-center justify-center text-2xl font-bold shadow-md cursor-pointer relative overflow-hidden group">
+            <div className="flex items-center gap-4 w-full sm:w-auto">
+              <label className="w-14 h-14 shrink-0 bg-gradient-to-tr from-primary to-secondary text-white rounded-full flex items-center justify-center text-2xl font-bold shadow-md cursor-pointer relative overflow-hidden group">
                 <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
                 {user.avatar ? (
                   <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
@@ -256,9 +256,9 @@ export default function StudentDashboard() {
             <h1 className="text-3xl font-bold">Tổng Quan Học Tập</h1>
             
             {needsActionExams.length > 0 && (
-              <div className="bg-rose-500/10 border border-rose-500/20 p-6 rounded-3xl flex justify-between items-center shadow-sm">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-rose-500 text-white rounded-full flex items-center justify-center text-2xl font-black shadow-md animate-pulse">
+              <div className="bg-rose-500/10 border border-rose-500/20 p-5 sm:p-6 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
+                <div className="flex items-center gap-4 w-full">
+                  <div className="w-12 h-12 shrink-0 bg-rose-500 text-white rounded-full flex items-center justify-center text-2xl font-black shadow-md animate-pulse">
                     !
                   </div>
                   <div>
@@ -268,7 +268,7 @@ export default function StudentDashboard() {
                 </div>
                 <button 
                   onClick={() => setActiveTab('EXAMS')}
-                  className="px-6 py-3 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 transition-colors shadow-md cursor-pointer whitespace-nowrap ml-4"
+                  className="px-6 py-3 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 transition-colors shadow-md cursor-pointer whitespace-nowrap w-full sm:w-auto"
                 >
                   Xử lý ngay →
                 </button>
@@ -300,7 +300,7 @@ export default function StudentDashboard() {
 
             {/* Chart Section */}
             {history.length > 0 && (
-              <div className="bg-surface border border-foreground/10 rounded-3xl shadow-sm p-8">
+              <div className="bg-surface border border-foreground/10 rounded-3xl shadow-sm p-4 sm:p-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                   <h4 className="text-xl font-bold flex items-center gap-3">
                     <span className="p-2 bg-primary/10 text-primary rounded-xl">📈</span> Biểu Đồ Tiến Bộ
@@ -311,7 +311,7 @@ export default function StudentDashboard() {
                     <button onClick={() => setChartViewMode('month')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${chartViewMode === 'month' ? 'bg-surface shadow-sm text-foreground' : 'text-foreground/50 hover:text-foreground'}`}>Tháng</button>
                   </div>
                 </div>
-                <div className="h-[300px] w-full">
+                <div className="h-[250px] sm:h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData} margin={{ top: 20, right: 20, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="opacity-[0.05]" />
@@ -407,9 +407,9 @@ export default function StudentDashboard() {
               return (
                 <div className="space-y-4">
                   {assignments.map((e: any) => (
-                    <div key={e.id} className="bg-surface border border-foreground/10 p-6 rounded-2xl flex justify-between items-center hover:border-primary/30 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-2xl">
+                    <div key={e.id} className="bg-surface border border-foreground/10 p-5 sm:p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-primary/30 transition-colors">
+                      <div className="flex items-center gap-4 w-full">
+                        <div className="w-12 h-12 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-2xl">
                           📝
                         </div>
                         <div>
@@ -425,10 +425,10 @@ export default function StudentDashboard() {
                         const attempts = history.filter(h => h.examId === e.id).length;
                         const maxAttempts = e.maxAttempts || 1;
                         if (attempts >= maxAttempts) {
-                          return <span className="px-6 py-2 bg-foreground/10 text-foreground/50 font-bold rounded-xl cursor-not-allowed">Hết Lượt ({attempts}/{maxAttempts})</span>;
+                          return <span className="px-6 py-2 bg-foreground/10 text-foreground/50 font-bold rounded-xl cursor-not-allowed w-full sm:w-auto text-center">Hết Lượt ({attempts}/{maxAttempts})</span>;
                         }
                         return (
-                          <Link href={`/exam/${e.id}`} className="px-6 py-2 bg-foreground text-background font-bold rounded-xl hover:bg-foreground/80 transition-colors">
+                          <Link href={`/exam/${e.id}`} className="px-6 py-2 bg-foreground text-background font-bold rounded-xl hover:bg-foreground/80 transition-colors w-full sm:w-auto text-center mt-2 sm:mt-0">
                             Làm Bài ({attempts}/{maxAttempts}) →
                           </Link>
                         );
@@ -461,9 +461,9 @@ export default function StudentDashboard() {
               return (
                 <div className="space-y-4">
                   {tests.map((e: any) => (
-                    <div key={e.id} className="bg-surface border border-foreground/10 p-6 rounded-2xl flex justify-between items-center hover:border-rose-500/30 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center text-2xl">
+                    <div key={e.id} className="bg-surface border border-foreground/10 p-5 sm:p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-rose-500/30 transition-colors">
+                      <div className="flex items-center gap-4 w-full">
+                        <div className="w-12 h-12 shrink-0 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center text-2xl">
                           ⏰
                         </div>
                         <div>
@@ -483,12 +483,12 @@ export default function StudentDashboard() {
                         
                         if (attempts >= maxAttempts) {
                           if (maxScore < 5) {
-                            return <span className="px-6 py-2 bg-rose-500/10 text-rose-700 font-bold rounded-xl cursor-not-allowed">Khóa (Thi Trượt)</span>;
+                            return <span className="px-6 py-2 bg-rose-500/10 text-rose-700 font-bold rounded-xl cursor-not-allowed w-full sm:w-auto text-center mt-2 sm:mt-0">Khóa (Thi Trượt)</span>;
                           }
-                          return <span className="px-6 py-2 bg-foreground/10 text-foreground/50 font-bold rounded-xl cursor-not-allowed">Hết Lượt ({attempts}/{maxAttempts})</span>;
+                          return <span className="px-6 py-2 bg-foreground/10 text-foreground/50 font-bold rounded-xl cursor-not-allowed w-full sm:w-auto text-center mt-2 sm:mt-0">Hết Lượt ({attempts}/{maxAttempts})</span>;
                         }
                         return (
-                          <Link href={`/exam/${e.id}`} className="px-6 py-2 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 transition-colors">
+                          <Link href={`/exam/${e.id}`} className="px-6 py-2 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 transition-colors w-full sm:w-auto text-center mt-2 sm:mt-0">
                             Thi Ngay ({attempts}/{maxAttempts}) →
                           </Link>
                         );
