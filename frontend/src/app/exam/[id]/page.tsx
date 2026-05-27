@@ -177,8 +177,8 @@ export default function ExamPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-foreground/10 px-4 md:px-8 py-3 md:py-4 flex flex-col sm:flex-row items-center justify-between shadow-sm gap-4">
-        <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-foreground/10 px-4 md:px-8 py-3 md:py-4 flex flex-wrap items-center justify-between shadow-sm gap-3 md:gap-4">
+        <div className="flex items-center gap-2 md:gap-3">
           <Link href="/dashboard" className="w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center hover:bg-foreground/10 transition-colors">
             ←
           </Link>
@@ -187,14 +187,14 @@ export default function ExamPage() {
             <p className="text-xs md:text-sm text-foreground/50">{isReviewMode ? 'Chế độ xem lại' : 'Đang làm bài'}</p>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 md:gap-4 w-full sm:w-auto justify-between sm:justify-end">
           {isReviewMode ? (
-            <button onClick={() => setIsReviewMode(false)} className="px-5 py-2 bg-amber-500/10 text-amber-600 font-bold rounded-xl hover:bg-amber-500/20 transition-colors cursor-pointer">
+            <button onClick={() => setIsReviewMode(false)} className="w-full sm:w-auto px-5 py-2 bg-amber-500/10 text-amber-600 font-bold rounded-xl hover:bg-amber-500/20 transition-colors cursor-pointer text-sm md:text-base">
               ← Thoát Xem Lại
             </button>
           ) : (
             <>
-              <div className={`font-mono text-xl font-black px-4 py-2 rounded-xl ${isTimeWarning ? 'bg-rose-500/20 text-rose-500 animate-pulse' : 'bg-foreground/10 text-foreground'}`}>
+              <div className={`font-mono text-lg md:text-xl font-black px-3 py-1.5 md:px-4 md:py-2 rounded-xl ${isTimeWarning ? 'bg-rose-500/20 text-rose-500 animate-pulse' : 'bg-foreground/10 text-foreground'}`}>
                 ⏱ {formatTime(timeLeft)}
               </div>
               <button
@@ -329,7 +329,7 @@ export default function ExamPage() {
         <aside className="w-full lg:w-64 shrink-0">
           <div className="bg-surface border border-foreground/10 rounded-3xl p-6 sticky top-24">
             <h3 className="font-bold mb-4 text-sm text-foreground/60 uppercase tracking-wide">Bảng câu hỏi</h3>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="flex flex-wrap gap-2">
               {questions.map((_: any, i: number) => {
                 const qObj = questions[i]?.question;
                 const qId = qObj?.id;

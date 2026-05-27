@@ -215,7 +215,7 @@ export default function StudentDashboard() {
               </label>
               <div>
                 <h2 className="text-2xl font-bold text-foreground">{user.name}</h2>
-                <div className="flex items-center gap-3 mt-1">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
                   <p className="text-sm text-foreground/60 font-medium">
                     {user.classroomJoined ? `Lớp: ${user.classroomJoined.name}` : 'Chưa tham gia lớp học'}
                   </p>
@@ -229,8 +229,8 @@ export default function StudentDashboard() {
                     else if (xp >= 1000) rank = { label: '📖 Học Giả', color: 'text-amber-700 bg-amber-500/10 border-amber-500/20', next: 4000 };
                     
                     return (
-                      <div className="flex items-center gap-3">
-                        <span className={`px-2.5 py-0.5 rounded-md border text-xs font-bold ${rank.color} shadow-sm`}>
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                        <span className={`px-2.5 py-0.5 rounded-md border text-xs font-bold ${rank.color} shadow-sm whitespace-nowrap`}>
                           {rank.label}
                         </span>
                         {rank.next > xp && (

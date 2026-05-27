@@ -386,10 +386,11 @@ export default function TeacherDashboard() {
               };
 
               return (
-                <div className="bg-surface border border-foreground/10 rounded-2xl overflow-hidden">
-                  <table className="w-full text-left">
-                    <thead>
-                      <tr className="bg-foreground/5 text-foreground/70 text-sm">
+                <div className="bg-surface border border-foreground/10 rounded-2xl overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto w-full">
+                    <table className="w-full text-left min-w-[800px]">
+                      <thead>
+                        <tr className="bg-foreground/5 text-foreground/70 text-sm">
                         <th className="p-4 font-bold border-b border-foreground/10">Học Sinh</th>
                         <th className="p-4 font-bold border-b border-foreground/10">Cấp Bậc</th>
                         <th className="p-4 font-bold border-b border-foreground/10 text-center">Điểm XP</th>
@@ -440,6 +441,7 @@ export default function TeacherDashboard() {
                     </tbody>
                   </table>
                 </div>
+              </div>
               );
             })()}
           </div>
