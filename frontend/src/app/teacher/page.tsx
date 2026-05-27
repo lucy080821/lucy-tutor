@@ -13,6 +13,7 @@ const BLANK_QUESTION = () => ({
 
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState("OVERVIEW");
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
@@ -250,9 +251,18 @@ export default function TeacherDashboard() {
   const allStudents = classrooms.flatMap(c => c.students || []).filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
 
   return (
-    <div className="flex h-screen bg-background text-foreground p-6 gap-6">
+    <div className="flex h-[calc(100vh-80px)] overflow-hidden w-full p-2 md:p-6 gap-0 md:gap-6 relative">
+      
+      {/* Mobile Sidebar Backdrop */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-72 bg-surface/80 backdrop-blur-2xl rounded-3xl p-6 flex flex-col gap-2 shrink-0 h-full overflow-y-auto border border-foreground/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-10">
+      <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-72 bg-surface/95 md:bg-surface/80 backdrop-blur-2xl rounded-r-3xl md:rounded-3xl p-6 flex flex-col gap-2 shrink-0 h-full overflow-y-auto border-r md:border border-foreground/5 shadow-2xl md:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="mb-10 px-2 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/30">
             L
@@ -265,7 +275,7 @@ export default function TeacherDashboard() {
         
         <div className="flex flex-col gap-2">
           {navItems.map(item => (
-            <button key={item.id} onClick={() => setActiveTab(item.id)}
+            <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
               className={`flex items-center px-5 py-3.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left group ${activeTab === item.id ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-xl shadow-primary/25 scale-[1.02]' : 'hover:bg-foreground/5 text-foreground/60 hover:text-foreground hover:translate-x-1'}`}>
               <span className="tracking-wide">{item.label}</span>
             </button>
@@ -299,7 +309,17 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 rounded-3xl p-8 h-full overflow-y-auto relative bg-surface border border-foreground/10 shadow-sm flex flex-col">
+      <div className="flex-1 rounded-3xl p-4 md:p-8 h-full overflow-y-auto relative bg-surface border border-foreground/10 shadow-sm flex flex-col w-full">
+        
+        {/* Mobile Header with Hamburger */}
+        <div className="md:hidden flex items-center justify-between mb-6 pb-4 border-b border-foreground/5">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-foreground/5 rounded-xl hover:bg-foreground/10 transition-colors">
+              <span className="text-xl">☰</span>
+            </button>
+            <h2 className="font-bold text-primary tracking-tight">LUCY TUTOR</h2>
+          </div>
+        </div>
 
         {/* ── OVERVIEW ── */}
         {activeTab === "OVERVIEW" && (
@@ -518,7 +538,7 @@ export default function TeacherDashboard() {
                     <input type="number" min="1" className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent" value={createMaxAttempts} onChange={e => setCreateMaxAttempts(e.target.value)} />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-1">Hình thức giao</label>
                     <select className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent" value={createAssignMode} onChange={e => setCreateAssignMode(e.target.value)}>
@@ -555,7 +575,7 @@ export default function TeacherDashboard() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-1">Ghi chú</label>
                     <input type="text" className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent" placeholder="VD: Không dùng tài liệu" value={createNotes} onChange={e => setCreateNotes(e.target.value)} />
@@ -780,7 +800,7 @@ export default function TeacherDashboard() {
                           )}
                           <p className="font-semibold mb-3" dangerouslySetInnerHTML={{ __html: q.question.content }}></p>
                           {!isEssay && opts.length > 0 && (
-                            <div className="grid grid-cols-2 gap-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {opts.map((opt: string, idx: number) => (
                                 <p key={idx} className={`text-sm p-2 rounded-lg ${String.fromCharCode(65 + idx) === q.question.correctOption ? 'bg-primary/10 text-primary font-bold' : 'text-foreground/70'}`}>
                                   {String.fromCharCode(65 + idx)}. {opt}
@@ -894,7 +914,7 @@ export default function TeacherDashboard() {
                 <label className="block text-sm font-bold mb-1">Tiêu đề</label>
                 <input className="w-full p-3 rounded-lg border border-foreground/20 bg-transparent" value={editExam.title} onChange={e => setEditExam({ ...editExam, title: e.target.value })} />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold mb-1">Loại</label>
                   <select className="w-full p-3 rounded-lg border border-foreground/20 bg-transparent" value={editExam.examType} onChange={e => setEditExam({ ...editExam, examType: e.target.value })}>
@@ -907,7 +927,7 @@ export default function TeacherDashboard() {
                   <input type="number" className="w-full p-3 rounded-lg border border-foreground/20 bg-transparent" value={editExam.duration} onChange={e => setEditExam({ ...editExam, duration: e.target.value })} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold mb-1">Public lúc</label>
                   <input type="datetime-local" className="w-full p-3 rounded-lg border border-foreground/20 bg-transparent" value={editExam.publishTime || ''} onChange={e => setEditExam({ ...editExam, publishTime: e.target.value })} />

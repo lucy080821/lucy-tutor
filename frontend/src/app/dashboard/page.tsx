@@ -90,6 +90,7 @@ export default function StudentDashboard() {
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
   const [chartViewMode, setChartViewMode] = useState<'day' | 'week' | 'month'>('day');
   const [selectedNotebookForView, setSelectedNotebookForView] = useState<any>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const totalExams = history.length;
   const avgScore = totalExams > 0 ? (history.reduce((acc, curr) => acc + curr.score, 0) / totalExams).toFixed(1) : "0.0";
@@ -135,10 +136,18 @@ export default function StudentDashboard() {
   }));
 
   return (
-    <div className="flex h-[calc(100vh-80px)] overflow-hidden w-full p-4 md:p-6 gap-6">
+    <div className="flex h-[calc(100vh-80px)] overflow-hidden w-full p-2 md:p-6 gap-0 md:gap-6 relative">
       
+      {/* Mobile Sidebar Backdrop */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden backdrop-blur-sm"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className="w-72 bg-surface/80 backdrop-blur-2xl rounded-3xl p-6 flex flex-col gap-2 shrink-0 h-full overflow-y-auto border border-foreground/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-10">
+      <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-72 bg-surface/95 md:bg-surface/80 backdrop-blur-2xl rounded-r-3xl md:rounded-3xl p-6 flex flex-col gap-2 shrink-0 h-full overflow-y-auto border-r md:border border-foreground/5 shadow-2xl md:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         
         <div className="mb-10 px-2 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/30">
@@ -154,7 +163,7 @@ export default function StudentDashboard() {
           {navItems.map(item => (
             <button
               key={item.id}
-              onClick={() => setActiveTab(item.id)}
+              onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
               className={`flex items-center px-5 py-3.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer group ${
                 activeTab === item.id 
                   ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-xl shadow-primary/25 scale-[1.02]' 
@@ -177,11 +186,21 @@ export default function StudentDashboard() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 rounded-3xl p-8 h-full overflow-y-auto relative bg-surface border border-foreground/10 shadow-sm flex flex-col">
+      <div className="flex-1 rounded-3xl p-4 md:p-8 h-full overflow-y-auto relative bg-surface border border-foreground/10 shadow-sm flex flex-col w-full">
         
+        {/* Mobile Header with Hamburger */}
+        <div className="md:hidden flex items-center justify-between mb-6 pb-4 border-b border-foreground/5">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-foreground/5 rounded-xl hover:bg-foreground/10 transition-colors">
+              <span className="text-xl">☰</span>
+            </button>
+            <h2 className="font-bold text-primary tracking-tight">LUCY TUTOR</h2>
+          </div>
+        </div>
+
         {/* Dashboard Header - User Info Sync */}
         {user && (
-          <div className="mb-8 flex justify-between items-center bg-primary/5 p-6 rounded-2xl border border-primary/10">
+          <div className="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-primary/5 p-4 sm:p-6 rounded-2xl border border-primary/10">
             <div className="flex items-center gap-4">
               <label className="w-14 h-14 bg-gradient-to-tr from-primary to-secondary text-white rounded-full flex items-center justify-center text-2xl font-bold shadow-md cursor-pointer relative overflow-hidden group">
                 <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
@@ -256,7 +275,7 @@ export default function StudentDashboard() {
               </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               <div className="bg-surface border border-foreground/10 p-8 rounded-3xl relative overflow-hidden flex flex-col justify-center hover:border-primary/30 transition-colors shadow-sm">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[50px] rounded-full" />
                 <p className="text-sm font-bold text-foreground/50 mb-2 uppercase tracking-wide">Điểm Trung Bình</p>
@@ -321,8 +340,8 @@ export default function StudentDashboard() {
                     <span className="p-2 bg-secondary/10 text-secondary rounded-xl">📜</span> Lịch Sử Bài Làm Gần Đây
                   </h4>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-left border-collapse min-w-[500px]">
                     <thead>
                       <tr className="bg-foreground/5">
                         <th className="p-4 font-bold text-foreground/50 text-sm uppercase tracking-wide">Tên Bài Thi</th>
@@ -614,11 +633,11 @@ export default function StudentDashboard() {
               </button>
             </form>
 
-            <div className="bg-surface border border-foreground/10 p-8 rounded-3xl space-y-4 shadow-sm mt-8">
+            <div className="bg-surface border border-foreground/10 p-4 md:p-8 rounded-3xl space-y-4 shadow-sm mt-8">
               <h2 className="text-xl font-bold">Tham Gia Lớp Học</h2>
               <p className="text-sm text-foreground/60 mb-4">Nhập mã lớp do Giáo viên cung cấp để tham gia làm bài tập và đề thi được giao.</p>
-              <form onSubmit={handleJoinClass} className="flex gap-4 items-end">
-                <div className="flex-1">
+              <form onSubmit={handleJoinClass} className="flex flex-col sm:flex-row gap-4 items-end">
+                <div className="flex-1 w-full">
                   <label className="block text-sm font-bold mb-2">Mã Lớp Học (Join Code)</label>
                   <input 
                     type="text" 
@@ -629,7 +648,7 @@ export default function StudentDashboard() {
                     required
                   />
                 </div>
-                <button type="submit" className="px-6 py-3 rounded-xl bg-green-500 text-white font-bold hover:bg-green-600 transition-colors shadow-lg cursor-pointer h-[50px] whitespace-nowrap">
+                <button type="submit" className="w-full sm:w-auto px-6 py-3 rounded-xl bg-green-500 text-white font-bold hover:bg-green-600 transition-colors shadow-lg cursor-pointer h-[50px] whitespace-nowrap">
                   Tham Gia
                 </button>
               </form>

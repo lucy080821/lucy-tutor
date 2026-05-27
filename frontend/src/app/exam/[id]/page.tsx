@@ -177,10 +177,15 @@ export default function ExamPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-surface shadow-sm border-b border-foreground/10 px-6 py-3 flex justify-between items-center">
-        <div>
-          <h1 className="font-bold text-lg truncate max-w-xs">{exam.title}</h1>
-          <p className="text-xs text-foreground/50">{answered}/{totalQ} câu đã trả lời</p>
+      <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-foreground/10 px-4 md:px-8 py-3 md:py-4 flex flex-col sm:flex-row items-center justify-between shadow-sm gap-4">
+        <div className="flex items-center gap-3">
+          <Link href="/dashboard" className="w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center hover:bg-foreground/10 transition-colors">
+            ←
+          </Link>
+          <div>
+            <h1 className="font-bold text-lg md:text-xl">{exam?.title}</h1>
+            <p className="text-xs md:text-sm text-foreground/50">{isReviewMode ? 'Chế độ xem lại' : 'Đang làm bài'}</p>
+          </div>
         </div>
         <div className="flex items-center gap-4">
           {isReviewMode ? (
@@ -204,10 +209,10 @@ export default function ExamPage() {
         </div>
       </header>
 
-      <div className="flex flex-1 max-w-6xl mx-auto w-full p-6 gap-6">
+      <div className="flex flex-col lg:flex-row flex-1 max-w-6xl mx-auto w-full p-4 md:p-6 gap-6">
         {/* Question Panel */}
-        <main className="flex-1">
-          <div className="bg-surface border border-foreground/10 rounded-3xl p-8 h-full">
+        <main className="flex-1 w-full">
+          <div className="bg-surface border border-foreground/10 rounded-3xl p-6 md:p-8 h-full">
             <p className="text-sm text-foreground/50 font-bold mb-3">Câu {currentQ + 1}/{totalQ}</p>
             {/* Progress bar */}
             <div className="w-full bg-foreground/10 h-1.5 rounded-full mb-8">
@@ -301,27 +306,27 @@ export default function ExamPage() {
             )}
 
             {/* Navigation */}
-            <div className="flex justify-between mt-8">
+            <div className="mt-8 flex flex-col sm:flex-row justify-between gap-4">
               <button
-                onClick={() => setCurrentQ(q => Math.max(0, q - 1))}
+                onClick={() => setCurrentQ(Math.max(0, currentQ - 1))}
                 disabled={currentQ === 0}
-                className="px-6 py-3 rounded-xl bg-foreground/10 font-bold hover:bg-foreground/20 transition-colors cursor-pointer disabled:opacity-30"
+                className="w-full sm:w-auto px-6 py-3 rounded-2xl font-bold bg-foreground/5 hover:bg-foreground/10 disabled:opacity-30 transition-colors"
               >
-                ← Trước
+                ← Câu trước
               </button>
               <button
-                onClick={() => setCurrentQ(q => Math.min(totalQ - 1, q + 1))}
+                onClick={() => setCurrentQ(Math.min(totalQ - 1, currentQ + 1))}
                 disabled={currentQ === totalQ - 1}
-                className="px-6 py-3 rounded-xl bg-foreground text-background font-bold hover:bg-foreground/80 transition-colors cursor-pointer disabled:opacity-30"
+                className="w-full sm:w-auto px-6 py-3 rounded-2xl font-bold bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-30 transition-colors"
               >
-                Tiếp →
+                Câu tiếp →
               </button>
             </div>
           </div>
         </main>
 
-        {/* Question Navigator sidebar */}
-        <aside className="w-64 shrink-0">
+        {/* Navigator Panel */}
+        <aside className="w-full lg:w-64 shrink-0">
           <div className="bg-surface border border-foreground/10 rounded-3xl p-6 sticky top-24">
             <h3 className="font-bold mb-4 text-sm text-foreground/60 uppercase tracking-wide">Bảng câu hỏi</h3>
             <div className="grid grid-cols-5 gap-2">

@@ -8,22 +8,22 @@ export default function Home() {
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-secondary/20 blur-[120px] pointer-events-none" />
 
       <div className="max-w-3xl z-10 space-y-8 mt-12">
-        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight">
+        <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold tracking-tight">
           Nền tảng Tiếng Anh <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">
             Thông Minh Cho Mọi Nhà
           </span>
         </h1>
         
-        <p className="text-lg md:text-xl text-foreground/70 max-w-2xl mx-auto">
+        <p className="text-base sm:text-lg md:text-xl text-foreground/70 max-w-2xl mx-auto px-4">
           Học sinh tự tin bứt phá điểm số với AI phân tích điểm yếu. Giáo viên dễ dàng quản lý lớp học và số hóa đề thi chỉ bằng 1 cú click.
         </p>
 
-        <div className="pt-8 flex flex-col sm:flex-row gap-6 justify-center">
-          <Link href="/auth?role=STUDENT" className="px-8 py-4 rounded-2xl bg-primary text-white font-bold text-lg shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] hover:scale-105 transition-transform flex items-center justify-center gap-2">
+        <div className="pt-8 flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center w-full px-6">
+          <Link href="/auth?role=STUDENT" className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-primary text-white font-bold text-lg shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] hover:scale-105 transition-transform flex items-center justify-center gap-2">
             Dành cho Học Sinh
           </Link>
-          <Link href="/auth?role=TEACHER" className="px-8 py-4 rounded-2xl glass font-bold text-lg hover:-translate-y-1 transition-transform flex items-center justify-center gap-2 border-2 border-primary/20">
+          <Link href="/auth?role=TEACHER" className="w-full sm:w-auto px-8 py-4 rounded-2xl glass font-bold text-lg hover:-translate-y-1 transition-transform flex items-center justify-center gap-2 border-2 border-primary/20">
             Dành cho Giáo Viên
           </Link>
         </div>
