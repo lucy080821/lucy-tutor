@@ -72,6 +72,8 @@ router.get('/:id', async (req, res) => {
     const exam = await prisma.exam.findUnique({
       where: { id: req.params.id },
       include: {
+        assignedStudents: true,
+        results: true,
         questions: {
           include: { question: true },
           orderBy: { order: 'asc' }
