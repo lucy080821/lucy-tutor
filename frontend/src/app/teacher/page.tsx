@@ -16,6 +16,7 @@ export default function TeacherDashboard() {
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [newClassName, setNewClassName] = useState("");
+  const [searchStudentQuery, setSearchStudentQuery] = useState("");
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
@@ -278,32 +279,84 @@ export default function TeacherDashboard() {
         {/* ── STUDENTS ── */}
         {activeTab === "STUDENTS" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h1 className="text-3xl font-bold">Danh Sách Học Sinh</h1>
+            <div className="flex justify-between items-center flex-wrap gap-4">
+              <h1 className="text-3xl font-bold">Danh Sách Học Sinh</h1>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/40">🔍</span>
+                <input 
+                  type="text" 
+                  placeholder="Tìm theo tên hoặc email..." 
+                  value={searchStudentQuery}
+                  onChange={(e) => setSearchStudentQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 rounded-xl border border-foreground/15 bg-surface focus:border-primary focus:outline-none min-w-[250px]"
+                />
+              </div>
+            </div>
             {(() => {
+              const filteredStudents = allStudents.filter((s: any) => 
+                s.name.toLowerCase().includes(searchStudentQuery.toLowerCase()) || 
+                s.email.toLowerCase().includes(searchStudentQuery.toLowerCase())
+              );
               if (allStudents.length === 0) return <p className="text-foreground/50">Chưa có học sinh nào tham gia lớp.</p>;
+              if (filteredStudents.length === 0) return <p className="text-foreground/50">Không tìm thấy học sinh phù hợp.</p>;
+              
+              const getTier = (xp: number) => {
+                if (xp >= 10000) return { name: 'Thách Đấu', color: 'text-purple-500 bg-purple-500/10' };
+                if (xp >= 5000) return { name: 'Cao Thủ', color: 'text-red-500 bg-red-500/10' };
+                if (xp >= 2000) return { name: 'Kim Cương', color: 'text-blue-500 bg-blue-500/10' };
+                if (xp >= 500) return { name: 'Vàng', color: 'text-yellow-500 bg-yellow-500/10' };
+                return { name: 'Đồng', color: 'text-amber-700 bg-amber-500/10' };
+              };
+
               return (
                 <div className="bg-surface border border-foreground/10 rounded-2xl overflow-hidden">
                   <table className="w-full text-left">
                     <thead>
                       <tr className="bg-foreground/5 text-foreground/70 text-sm">
                         <th className="p-4 font-bold border-b border-foreground/10">Học Sinh</th>
-                        <th className="p-4 font-bold border-b border-foreground/10">Email</th>
+                        <th className="p-4 font-bold border-b border-foreground/10">Cấp Bậc (XP)</th>
                         <th className="p-4 font-bold border-b border-foreground/10">Lớp</th>
-                        <th className="p-4 font-bold border-b border-foreground/10">Mục tiêu</th>
+                        <th className="p-4 font-bold border-b border-foreground/10 text-center">Điểm TB</th>
+                        <th className="p-4 font-bold border-b border-foreground/10 text-center">Mục tiêu</th>
+                        <th className="p-4 font-bold border-b border-foreground/10 w-32">Tiến độ</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {allStudents.map((s: any) => (
-                        <tr key={s.id} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5 transition-colors">
-                          <td className="p-4 font-medium flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs">{s.name.charAt(0)}</div>
-                            {s.name}
-                          </td>
-                          <td className="p-4 text-sm text-foreground/70">{s.email}</td>
-                          <td className="p-4 text-sm">{classrooms.find(c => c.students?.some((st: any) => st.id === s.id))?.name || '—'}</td>
-                          <td className="p-4 font-bold text-primary">{s.targetScore}+</td>
-                        </tr>
-                      ))}
+                      {filteredStudents.map((s: any) => {
+                        const studentResults = classrooms.flatMap(c => c.exams || []).flatMap(e => e.results || []).filter(r => r.userId === s.id);
+                        const avgScore = studentResults.length > 0 ? (studentResults.reduce((acc, r) => acc + r.score, 0) / studentResults.length) : 0;
+                        const percentToTarget = s.targetScore > 0 ? Math.min(100, Math.round((avgScore / s.targetScore) * 100)) : 0;
+                        const tier = getTier(s.totalXP || 0);
+
+                        return (
+                          <tr key={s.id} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5 transition-colors">
+                            <td className="p-4 font-medium flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs shrink-0">{s.name.charAt(0)}</div>
+                              <div>
+                                <div>{s.name}</div>
+                                <div className="text-xs text-foreground/50 font-normal">{s.email}</div>
+                              </div>
+                            </td>
+                            <td className="p-4">
+                              <span className={`px-2 py-1 rounded-lg text-xs font-bold ${tier.color}`}>
+                                {tier.name}
+                              </span>
+                              <div className="text-xs text-foreground/50 mt-1 font-medium">{s.totalXP || 0} XP</div>
+                            </td>
+                            <td className="p-4 text-sm">{classrooms.find(c => c.students?.some((st: any) => st.id === s.id))?.name || '—'}</td>
+                            <td className="p-4 text-center font-bold text-lg">{avgScore.toFixed(1)}</td>
+                            <td className="p-4 font-bold text-primary text-center">{s.targetScore}+</td>
+                            <td className="p-4">
+                              <div className="flex items-center justify-between text-xs mb-1 font-bold text-foreground/60">
+                                <span>{percentToTarget}%</span>
+                              </div>
+                              <div className="w-full bg-foreground/10 rounded-full h-2">
+                                <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${percentToTarget}%` }}></div>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

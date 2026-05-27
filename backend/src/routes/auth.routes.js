@@ -6,6 +6,10 @@ const router = express.Router();
 router.post('/signup', async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return res.status(400).json({ error: 'Email đã được sử dụng. Vui lòng chọn email khác.' });
+    }
     const user = await prisma.user.create({
       data: { name, email, password, role: role || 'STUDENT' },
     });
