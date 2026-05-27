@@ -128,10 +128,10 @@ export default function StudentDashboard() {
 
         <div className="mt-auto pt-6 border-t border-foreground/10">
           <button 
-            onClick={() => window.location.href = '/'}
-            className="flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-bold text-red-500 hover:bg-red-500/10 transition-colors w-full cursor-pointer"
+            onClick={() => { localStorage.removeItem('userId'); window.location.href = '/'; }}
+            className="flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-bold text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 transition-colors w-full cursor-pointer text-sm"
           >
-            Đăng xuất
+            🚪 Đăng xuất
           </button>
         </div>
       </div>

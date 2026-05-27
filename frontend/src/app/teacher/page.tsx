@@ -235,9 +235,17 @@ export default function TeacherDashboard() {
             {item.label}
           </button>
         ))}
-        <div className="mt-auto pt-6 border-t border-foreground/10 px-2">
-          <p className="text-sm font-bold truncate">{user?.name || '...'}</p>
-          <p className="text-xs text-foreground/50 truncate">{user?.email}</p>
+        <div className="mt-auto pt-6 border-t border-foreground/10 px-2 flex flex-col gap-4">
+          <div>
+            <p className="text-sm font-bold truncate">{user?.name || '...'}</p>
+            <p className="text-xs text-foreground/50 truncate">{user?.email}</p>
+          </div>
+          <button 
+            onClick={() => { localStorage.removeItem('userId'); window.location.href = '/'; }}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 transition-colors w-full cursor-pointer text-sm"
+          >
+            🚪 Đăng xuất
+          </button>
         </div>
       </div>
 
