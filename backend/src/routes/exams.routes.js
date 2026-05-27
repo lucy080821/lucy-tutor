@@ -51,6 +51,7 @@ router.post('/create', async (req, res) => {
           options: q.options || '[]',
           correctOption: q.correctOption || '',
           explanation: q.explanation || '',
+          imageUrl: q.imageUrl || null,
         }
       });
       await prisma.examQuestion.create({

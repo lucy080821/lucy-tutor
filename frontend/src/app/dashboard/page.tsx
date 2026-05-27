@@ -80,11 +80,11 @@ export default function StudentDashboard() {
   }, []);
 
   const navItems = [
-    { id: "OVERVIEW", label: "Tổng Quan", icon: "" },
-    { id: "PRACTICE", label: "Bài Tập", icon: "" },
-    { id: "EXAMS", label: "Bài Kiểm Tra", icon: "" },
-    { id: "NOTEBOOK", label: "Sổ Tay Lỗi Sai", icon: "" },
-    { id: "SETTINGS", label: "Cài đặt", icon: "" },
+    { id: "OVERVIEW", label: "Tổng Quan" },
+    { id: "PRACTICE", label: "Bài Tập" },
+    { id: "EXAMS", label: "Bài Kiểm Tra" },
+    { id: "NOTEBOOK", label: "Sổ Tay Lỗi Sai" },
+    { id: "SETTINGS", label: "Cài Đặt" },
   ];
 
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
@@ -138,28 +138,40 @@ export default function StudentDashboard() {
     <div className="flex h-[calc(100vh-80px)] overflow-hidden w-full p-4 md:p-6 gap-6">
       
       {/* Sidebar */}
-      <div className="w-64 bg-surface rounded-3xl p-6 flex flex-col gap-2 shrink-0 h-full overflow-y-auto border border-foreground/10 shadow-sm">
+      <div className="w-72 bg-surface/80 backdrop-blur-2xl rounded-3xl p-6 flex flex-col gap-2 shrink-0 h-full overflow-y-auto border border-foreground/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-10">
         
-        {navItems.map(item => (
-          <button
-            key={item.id}
-            onClick={() => setActiveTab(item.id)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all cursor-pointer ${
-              activeTab === item.id 
-                ? 'bg-primary text-white shadow-lg shadow-primary/25' 
-                : 'text-foreground/70 hover:bg-foreground/5 hover:text-foreground'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
+        <div className="mb-10 px-2 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/30">
+            L
+          </div>
+          <div>
+            <h2 className="text-xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">Lucy Tutor</h2>
+            <p className="text-[10px] text-foreground/50 font-bold uppercase tracking-widest mt-0.5">Học sinh</p>
+          </div>
+        </div>
 
-        <div className="mt-auto pt-6 border-t border-foreground/10">
+        <div className="flex flex-col gap-2">
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`flex items-center px-5 py-3.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer group ${
+                activeTab === item.id 
+                  ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-xl shadow-primary/25 scale-[1.02]' 
+                  : 'text-foreground/60 hover:bg-foreground/5 hover:text-foreground hover:translate-x-1'
+              }`}
+            >
+              <span className="tracking-wide">{item.label}</span>
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-auto pt-6 border-t border-foreground/5">
           <button 
             onClick={() => { localStorage.removeItem('userId'); window.location.href = '/'; }}
-            className="flex items-center justify-center gap-3 px-4 py-3 rounded-xl font-bold text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 transition-colors w-full cursor-pointer text-sm"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-rose-500/80 bg-rose-500/5 hover:bg-rose-500 hover:text-white transition-all w-full cursor-pointer text-sm shadow-sm hover:shadow-rose-500/25"
           >
-            🚪 Đăng xuất
+            Đăng xuất
           </button>
         </div>
       </div>

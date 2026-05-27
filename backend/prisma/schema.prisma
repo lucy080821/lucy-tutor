@@ -44,6 +44,7 @@ model Question {
   options       String   // stored as JSON string
   correctOption String
   explanation   String?
+  imageUrl      String?
   
   mistakeBank   MistakeBank[]
   exams         ExamQuestion[]

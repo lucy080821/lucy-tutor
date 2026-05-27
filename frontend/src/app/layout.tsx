@@ -17,20 +17,18 @@ export default function RootLayout({
       <body suppressHydrationWarning className={`antialiased min-h-screen flex flex-col`}>
         
         {/* Global Header */}
-        <header className="sticky top-0 z-50 bg-surface/90 backdrop-blur-sm border-b border-foreground/10 px-6 py-4 flex justify-between items-center relative">
-          <div className="w-10 h-10"></div> {/* Placeholder to balance flex layout */}
-          
-          <Link href="/" className="absolute left-1/2 -translate-x-1/2 flex items-center gap-4 group">
+        <header className="sticky top-0 z-50 bg-surface/90 backdrop-blur-sm border-b border-foreground/10 px-6 py-4 flex justify-center items-center gap-10 md:gap-32">
+          <Link href="/" className="flex items-center gap-4 group">
             <img src="/logo.png" alt="Lucy Tutor Logo" className="w-14 h-14 object-contain rounded-2xl shadow-sm group-hover:scale-105 transition-transform duration-300" />
             <span className="text-3xl font-black text-primary tracking-tight">
               LUCY<span className="text-foreground">TUTOR</span>
             </span>
           </Link>
 
-          <div className="flex items-center gap-4">
-            <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white font-bold shadow-md cursor-pointer">
-              U
-            </div>
+          <div className="hidden sm:flex items-center">
+            <p className="text-sm md:text-base italic text-foreground/70 font-medium border-l-[3px] border-primary/60 pl-4 py-1">
+              "Học tập không ngừng, vươn tới thành công"
+            </p>
           </div>
         </header>
 

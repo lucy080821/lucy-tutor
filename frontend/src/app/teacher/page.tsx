@@ -8,6 +8,7 @@ const BLANK_QUESTION = () => ({
   options: ["", "", "", ""],
   correctOption: "A",
   explanation: "",
+  imageUrl: "",
 });
 
 export default function TeacherDashboard() {
@@ -211,6 +212,7 @@ export default function TeacherDashboard() {
           options: q.type === 'MULTIPLE_CHOICE' ? JSON.stringify(q.options.filter(o => o.trim())) : '[]',
           correctOption: q.type === 'MULTIPLE_CHOICE' ? q.correctOption : null,
           explanation: q.explanation || '',
+          imageUrl: q.imageUrl || null,
         }))
       };
       const res = await fetch('http://localhost:5000/api/exams/create', {
@@ -250,41 +252,48 @@ export default function TeacherDashboard() {
   return (
     <div className="flex h-screen bg-background text-foreground p-6 gap-6">
       {/* Sidebar */}
-      <div className="w-64 bg-surface rounded-3xl p-6 flex flex-col gap-2 shrink-0 h-full overflow-y-auto border border-foreground/10 shadow-sm">
-        <div className="mb-10 px-2">
-          <h2 className="text-2xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Lucy Tutor</h2>
-          <p className="text-xs text-foreground/50 mt-1 font-bold">Giáo viên</p>
+      <div className="w-72 bg-surface/80 backdrop-blur-2xl rounded-3xl p-6 flex flex-col gap-2 shrink-0 h-full overflow-y-auto border border-foreground/5 shadow-[0_8px_30px_rgb(0,0,0,0.04)] relative z-10">
+        <div className="mb-10 px-2 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/30">
+            L
+          </div>
+          <div>
+            <h2 className="text-xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">Lucy Tutor</h2>
+            <p className="text-[10px] text-foreground/50 font-bold uppercase tracking-widest mt-0.5">Giáo viên</p>
+          </div>
         </div>
         
-        {navItems.map(item => (
-          <button key={item.id} onClick={() => setActiveTab(item.id)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all cursor-pointer text-left ${activeTab === item.id ? 'bg-primary text-white shadow-lg shadow-primary/25' : 'hover:bg-foreground/5 text-foreground/70 hover:text-foreground'}`}>
-            {item.label}
-          </button>
-        ))}
-        <div className="mt-auto pt-6 border-t border-foreground/10 px-2 flex flex-col gap-4">
-          <div className="flex items-center gap-3">
-            <label className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer relative overflow-hidden group">
+        <div className="flex flex-col gap-2">
+          {navItems.map(item => (
+            <button key={item.id} onClick={() => setActiveTab(item.id)}
+              className={`flex items-center px-5 py-3.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left group ${activeTab === item.id ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-xl shadow-primary/25 scale-[1.02]' : 'hover:bg-foreground/5 text-foreground/60 hover:text-foreground hover:translate-x-1'}`}>
+              <span className="tracking-wide">{item.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="mt-auto pt-6 border-t border-foreground/5 px-2 flex flex-col gap-4">
+          <div className="flex items-center gap-4 p-3 rounded-2xl hover:bg-foreground/5 transition-colors cursor-pointer group">
+            <label className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 text-primary flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer relative overflow-hidden ring-2 ring-transparent group-hover:ring-primary/30 transition-all">
               <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
               {user?.avatar ? (
                 <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
               ) : (
                 user?.name?.charAt(0)
               )}
-              <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-[10px] font-medium text-white">Đổi</span>
+              <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+                <span className="text-[10px] font-bold text-white tracking-wider">ĐỔI</span>
               </div>
             </label>
             <div className="overflow-hidden">
-              <p className="text-sm font-bold truncate">{user?.name || '...'}</p>
-              <p className="text-xs text-foreground/50 truncate">{user?.email}</p>
+              <p className="text-sm font-bold truncate text-foreground/90">{user?.name || '...'}</p>
+              <p className="text-xs text-foreground/40 truncate font-medium mt-0.5">{user?.email}</p>
             </div>
           </div>
           <button 
             onClick={() => { localStorage.removeItem('userId'); window.location.href = '/'; }}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 transition-colors w-full cursor-pointer text-sm"
+            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-rose-500/80 bg-rose-500/5 hover:bg-rose-500 hover:text-white transition-all w-full cursor-pointer text-sm shadow-sm hover:shadow-rose-500/25"
           >
-            🚪 Đăng xuất
+            Đăng xuất
           </button>
         </div>
       </div>
@@ -628,6 +637,27 @@ export default function TeacherDashboard() {
                         <textarea rows={2} className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent resize-none focus:border-primary outline-none transition-colors"
                           placeholder={q.type === 'ESSAY' ? 'Nhập câu hỏi tự luận...' : 'Nhập câu hỏi trắc nghiệm...'}
                           value={q.content} onChange={e => updateQuestion(qi, { content: e.target.value })} />
+                      </div>
+                      
+                      {/* Image upload for question */}
+                      <div>
+                        <label className="block text-xs font-bold text-foreground/50 mb-1 uppercase tracking-wide">Hình ảnh (không bắt buộc)</label>
+                        {q.imageUrl ? (
+                          <div className="relative inline-block mt-2">
+                            <img src={q.imageUrl} alt="Question image" className="max-h-40 rounded-xl border border-foreground/10" />
+                            <button type="button" onClick={() => updateQuestion(qi, { imageUrl: '' })} className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs cursor-pointer shadow-md">✕</button>
+                          </div>
+                        ) : (
+                          <input type="file" accept="image/*" onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              if (file.size > 5 * 1024 * 1024) return alert('Kích thước ảnh tối đa là 5MB');
+                              const reader = new FileReader();
+                              reader.onload = (ev) => updateQuestion(qi, { imageUrl: ev.target?.result as string });
+                              reader.readAsDataURL(file);
+                            }
+                          }} className="block w-full text-sm text-foreground/70 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer" />
+                        )}
                       </div>
                     </div>
 

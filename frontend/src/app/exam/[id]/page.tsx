@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import confetti from "canvas-confetti";
 
 export default function ExamPage() {
   const params = useParams();
@@ -78,6 +79,21 @@ export default function ExamPage() {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
+  // Result Screen Confetti Effect
+  useEffect(() => {
+    if (submitted && result && !isReviewMode) {
+      const score = result.result?.score ?? 0;
+      if (score >= 8) {
+        confetti({
+          particleCount: 150,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6']
+        });
+      }
+    }
+  }, [submitted, result, isReviewMode]);
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center space-y-4">
@@ -96,7 +112,6 @@ export default function ExamPage() {
     </div>
   );
 
-  // Result Screen
   if (submitted && result && !isReviewMode) {
     const score = result.result?.score ?? 0;
     const percent = Math.round((score / 10) * 100);
@@ -202,6 +217,12 @@ export default function ExamPage() {
             {question?.heading && (
               <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-700/90 font-medium whitespace-pre-wrap leading-relaxed">
                 {question.heading}
+              </div>
+            )}
+            
+            {question?.imageUrl && (
+              <div className="mb-6">
+                <img src={question.imageUrl} alt="Question" className="max-h-64 rounded-xl border border-foreground/10" />
               </div>
             )}
 
