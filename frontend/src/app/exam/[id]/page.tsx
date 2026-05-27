@@ -27,7 +27,7 @@ export default function ExamPage() {
   useEffect(() => {
     const uid = localStorage.getItem('userId');
     setUserId(uid);
-    const url = `http://localhost:5000/api/exams/${examId}${uid ? `?userId=${uid}` : ''}`;
+    const url = `${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/exams/${examId}${uid ? `?userId=${uid}` : ''}`;
     fetch(url)
       .then(res => res.json())
       .then(data => {
@@ -44,7 +44,7 @@ export default function ExamPage() {
     if (submitting || submitted) return;
     setSubmitting(true);
     try {
-      const res = await fetch('http://localhost:5000/api/exams/submit', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

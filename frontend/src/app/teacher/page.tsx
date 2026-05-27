@@ -29,7 +29,7 @@ export default function TeacherDashboard() {
     reader.onload = async (e) => {
       const base64 = e.target?.result as string;
       try {
-        const res = await fetch(`http://localhost:5000/api/auth/avatar/${user.id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/auth/avatar/${user.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ avatar: base64 })
@@ -49,13 +49,13 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
-    const url = userId ? `http://localhost:5000/api/auth/me?userId=${userId}` : "http://localhost:5000/api/auth/me";
+    const url = userId ? `${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/auth/me?userId=${userId}` : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`;
     fetch(url).then(res => res.json()).then(data => setUser(data)).catch(console.error);
   }, []);
 
   useEffect(() => {
     if (user?.id) {
-      fetch(`http://localhost:5000/api/classroom/teacher/${user.id}`)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/classroom/teacher/${user.id}`)
         .then(res => res.json()).then(setClassrooms).catch(console.error);
     }
   }, [user]);
@@ -64,7 +64,7 @@ export default function TeacherDashboard() {
     e.preventDefault();
     if (!newClassName || !user?.id) return;
     try {
-      const res = await fetch('http://localhost:5000/api/classroom/create', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/classroom/create`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newClassName, teacherId: user.id })
       });
@@ -81,7 +81,7 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     if (selectedExamForView && !selectedExamForView.questions) {
-      fetch(`http://localhost:5000/api/exams/${selectedExamForView.id}`)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/exams/${selectedExamForView.id}`)
         .then(res => res.json()).then(data => setSelectedExamForView(data)).catch(console.error);
     }
   }, [selectedExamForView]);
@@ -89,10 +89,10 @@ export default function TeacherDashboard() {
   const handleDeleteExam = async (examId: string) => {
     if (!confirm('Bạn có chắc muốn xóa đề thi này không?')) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/exams/${examId}`, { method: 'DELETE' });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/exams/${examId}`, { method: 'DELETE' });
       if (res.ok) {
         setLocalExams(localExams.filter((e: any) => e.id !== examId));
-        const refreshed = await fetch(`http://localhost:5000/api/classroom/teacher/${user.id}`).then(r => r.json());
+        const refreshed = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/classroom/teacher/${user.id}`).then(r => r.json());
         setClassrooms(refreshed);
       } else { alert('Xóa thất bại'); }
     } catch (err) { console.error(err); }
@@ -102,7 +102,7 @@ export default function TeacherDashboard() {
     e.preventDefault();
     if (!editExam) return;
     try {
-      const res = await fetch(`http://localhost:5000/api/exams/${editExam.id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/exams/${editExam.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: editExam.title, examType: editExam.examType, duration: editExam.duration,
@@ -112,7 +112,7 @@ export default function TeacherDashboard() {
       if (res.ok) {
         const updated = await res.json();
         setLocalExams(localExams.map((e: any) => e.id === updated.id ? updated : e));
-        const refreshed = await fetch(`http://localhost:5000/api/classroom/teacher/${user.id}`).then(r => r.json());
+        const refreshed = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/classroom/teacher/${user.id}`).then(r => r.json());
         setClassrooms(refreshed);
         setEditExam(null);
       } else { alert('Cập nhật thất bại'); }
@@ -160,7 +160,7 @@ export default function TeacherDashboard() {
 
     setSolvingAI(prev => ({ ...prev, [qi]: true }));
     try {
-      const res = await fetch('http://localhost:5000/api/ai/solve-question', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/ai/solve-question`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           heading: q.heading,
@@ -216,13 +216,13 @@ export default function TeacherDashboard() {
           imageUrl: q.imageUrl || null,
         }))
       };
-      const res = await fetch('http://localhost:5000/api/exams/create', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/create`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Tạo đề thất bại');
-      const refreshed = await fetch(`http://localhost:5000/api/classroom/teacher/${user.id}`).then(r => r.json());
+      const refreshed = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/classroom/teacher/${user.id}`).then(r => r.json());
       setClassrooms(refreshed);
       setLocalExams([...localExams, data]);
       // Reset form
@@ -734,9 +734,7 @@ export default function TeacherDashboard() {
               </button>
             </form>
           </div>
-        )}
-
-      </main>
+        )}      </div>
 
       {/* ── Create Class Modal ── */}
       {showModal && (

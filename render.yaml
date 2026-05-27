@@ -1,0 +1,29 @@
+services:
+  # 1. Backend Service (Node.js API)
+  - type: web
+    name: lucy-backend
+    env: node
+    rootDir: backend
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+
+  # 2. Frontend Service (Next.js Application)
+  - type: web
+    name: lucy-frontend
+    env: node
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: lucy-backend
+          envVarKey: RENDER_EXTERNAL_URL

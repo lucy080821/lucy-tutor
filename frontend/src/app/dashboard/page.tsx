@@ -20,7 +20,7 @@ export default function StudentDashboard() {
     reader.onload = async (e) => {
       const base64 = e.target?.result as string;
       try {
-        const res = await fetch(`http://localhost:5000/api/auth/avatar/${user.id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/auth/avatar/${user.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ avatar: base64 })
@@ -42,7 +42,7 @@ export default function StudentDashboard() {
     e.preventDefault();
     if (!joinCode || !user?.id) return;
     try {
-      const res = await fetch('http://localhost:5000/api/classroom/join', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/classroom/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id, joinCode })
@@ -63,14 +63,14 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
-    const url = userId ? `http://localhost:5000/api/auth/me?userId=${userId}` : "http://localhost:5000/api/auth/me";
+    const url = userId ? `${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/auth/me?userId=${userId}` : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`;
     
     fetch(url)
       .then(res => res.json())
       .then(data => {
         setUser(data);
         if (data?.id) {
-          fetch(`http://localhost:5000/api/analytics/history/${data.id}`)
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/analytics/history/${data.id}`)
             .then(res => res.json())
             .then(hist => setHistory(hist || []))
             .catch(console.error);
@@ -321,8 +321,8 @@ export default function StudentDashboard() {
                       <Tooltip 
                         contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 40px -10px rgba(0,0,0,0.2)', backgroundColor: 'var(--color-surface)', color: 'var(--color-foreground)' }}
                         itemStyle={{ fontWeight: '900', fontSize: '1.1rem' }}
-                        formatter={(value: any, name: string) => [name === 'score' ? `${value} điểm` : `${value} lượt`, name === 'score' ? 'Điểm TB' : 'Số lượt làm']}
-                        labelStyle={{ color: 'var(--color-foreground)', opacity: 0.6, marginBottom: '4px', fontWeight: 'bold' }}
+                        formatter={(value: any, name: any) => [name === 'score' ? `${value} Điểm` : `${value} Phút`, name === 'score' ? 'Điểm số' : 'Thời gian']}
+                        labelStyle={{ color: 'var(--color-foreground)', opacity: 0.6, margin: 0, paddingBottom: '12px', fontWeight: 'bold' }}
                       />
                       <Line yAxisId="left" type="monotone" dataKey="score" name="score" stroke="var(--color-primary)" strokeWidth={4} dot={{ r: 5, fill: 'var(--color-surface)', strokeWidth: 3 }} activeDot={{ r: 8, strokeWidth: 0 }} animationDuration={1500} />
                       <Line yAxisId="right" type="monotone" dataKey="attempts" name="attempts" stroke="var(--color-secondary)" strokeWidth={4} strokeDasharray="5 5" dot={{ r: 5, fill: 'var(--color-surface)', strokeWidth: 3 }} activeDot={{ r: 8, strokeWidth: 0 }} animationDuration={1500} />
@@ -581,7 +581,7 @@ export default function StudentDashboard() {
                 if (!userId) return;
                 
                 try {
-                  const res = await fetch(`http://localhost:5000/api/auth/me?userId=${userId}`, {
+                  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/auth/me?userId=${userId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({

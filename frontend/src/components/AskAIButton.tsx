@@ -26,7 +26,7 @@ export default function AskAIButton({
       setError(null);
       try {
         // In a real app, this hits the backend: 
-        // const res = await fetch('http://localhost:5000/api/ai/explain', ...)
+        // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/ai/explain`, ...)
         
         // Simulating API call for MVP since backend might not have the API KEY yet
         setTimeout(() => {
