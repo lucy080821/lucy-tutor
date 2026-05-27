@@ -550,7 +550,7 @@ export default function StudentDashboard() {
               </div>
               
               <div>
-                <label className="block text-sm font-bold mb-2">Mục tiêu điểm số (THPT Quốc Gia)</label>
+                <label className="block text-sm font-bold mb-2">Mục tiêu điểm số</label>
                 <select name="targetScore" defaultValue={user?.targetScore || 7.0} className="w-full px-4 py-3 rounded-xl border border-foreground/10 bg-transparent focus:outline-none focus:border-primary">
                   <option value="5">5.0 - Cơ bản</option>
                   <option value="6">6.0 - Trung bình khá</option>
