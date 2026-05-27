@@ -301,11 +301,11 @@ export default function TeacherDashboard() {
               if (filteredStudents.length === 0) return <p className="text-foreground/50">Không tìm thấy học sinh phù hợp.</p>;
               
               const getTier = (xp: number) => {
-                if (xp >= 10000) return { name: 'Thách Đấu', color: 'text-purple-500 bg-purple-500/10' };
-                if (xp >= 5000) return { name: 'Cao Thủ', color: 'text-red-500 bg-red-500/10' };
-                if (xp >= 2000) return { name: 'Kim Cương', color: 'text-blue-500 bg-blue-500/10' };
-                if (xp >= 500) return { name: 'Vàng', color: 'text-yellow-500 bg-yellow-500/10' };
-                return { name: 'Đồng', color: 'text-amber-700 bg-amber-500/10' };
+                if (xp >= 20000) return { name: '💎 Huyền Thoại', color: 'text-cyan-600 bg-cyan-500/10 border border-cyan-500/20' };
+                if (xp >= 10000) return { name: '🥇 Bậc Thầy', color: 'text-yellow-600 bg-yellow-500/10 border border-yellow-500/20' };
+                if (xp >= 4000) return { name: '🥈 Tinh Anh', color: 'text-slate-600 bg-slate-500/10 border border-slate-500/20' };
+                if (xp >= 1000) return { name: '📖 Học Giả', color: 'text-amber-700 bg-amber-500/10 border border-amber-500/20' };
+                return { name: '🌱 Tân Binh', color: 'text-emerald-600 bg-emerald-500/10 border border-emerald-500/20' };
               };
 
               return (
@@ -314,7 +314,8 @@ export default function TeacherDashboard() {
                     <thead>
                       <tr className="bg-foreground/5 text-foreground/70 text-sm">
                         <th className="p-4 font-bold border-b border-foreground/10">Học Sinh</th>
-                        <th className="p-4 font-bold border-b border-foreground/10">Cấp Bậc (XP)</th>
+                        <th className="p-4 font-bold border-b border-foreground/10">Cấp Bậc</th>
+                        <th className="p-4 font-bold border-b border-foreground/10 text-center">Điểm XP</th>
                         <th className="p-4 font-bold border-b border-foreground/10">Lớp</th>
                         <th className="p-4 font-bold border-b border-foreground/10 text-center">Điểm TB</th>
                         <th className="p-4 font-bold border-b border-foreground/10 text-center">Mục tiêu</th>
@@ -338,11 +339,11 @@ export default function TeacherDashboard() {
                               </div>
                             </td>
                             <td className="p-4">
-                              <span className={`px-2 py-1 rounded-lg text-xs font-bold ${tier.color}`}>
+                              <span className={`px-2 py-1 rounded-md text-xs font-bold ${tier.color} shadow-sm`}>
                                 {tier.name}
                               </span>
-                              <div className="text-xs text-foreground/50 mt-1 font-medium">{s.totalXP || 0} XP</div>
                             </td>
+                            <td className="p-4 text-center font-bold text-amber-500">{s.totalXP || 0} XP</td>
                             <td className="p-4 text-sm">{classrooms.find(c => c.students?.some((st: any) => st.id === s.id))?.name || '—'}</td>
                             <td className="p-4 text-center font-bold text-lg">{avgScore.toFixed(1)}</td>
                             <td className="p-4 font-bold text-primary text-center">{s.targetScore}+</td>
