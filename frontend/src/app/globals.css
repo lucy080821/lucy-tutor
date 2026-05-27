@@ -1,12 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f5f5f4; /* Stone 100 - Warm and soft to reduce glare */
-  --foreground: #292524; /* Stone 800 - Softer than pure black */
-  --primary: #f59e0b;    /* Golden Yellow / Amber */
-  --secondary: #eab308;  /* Yellow */
-  --accent: #f43f5e;     /* Rose Pink */
-  --surface: #fafaf9;    /* Stone 50 - Off-white, less glaring */
+  --background: #f8fafc; /* Slate 50 */
+  --foreground: #0f172a; /* Slate 900 */
+  --primary: #1e3a8a;    /* Deep Blue / Classic Navy */
+  --secondary: #3b82f6;  /* Royal Blue */
+  --accent: #f59e0b;     /* Golden Yellow / Orange */
+  --surface: #ffffff;    /* White */
 }
 
 @theme inline {
