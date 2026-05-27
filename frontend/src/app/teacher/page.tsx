@@ -21,7 +21,7 @@ export default function TeacherDashboard() {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 10 * 1024 * 1024) return alert('Ảnh quá lớn. Vui lòng chọn ảnh dưới 10MB');
+    if (file.size > 100 * 1024 * 1024) return alert('Ảnh quá lớn. Vui lòng chọn ảnh dưới 100MB');
     
     const reader = new FileReader();
     reader.onload = async (e) => {
