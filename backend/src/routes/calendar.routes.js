@@ -3,6 +3,13 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const router = express.Router();
 
+const parseVNTime = (timeStr) => {
+  if (!timeStr) return null;
+  // If it's just "YYYY-MM-DDTHH:mm", append seconds and timezone
+  if (timeStr.length === 16) return new Date(`${timeStr}:00+07:00`);
+  return new Date(timeStr);
+};
+
 // GET /api/calendar/events?userId=xyz&role=STUDENT|TEACHER
 router.get('/events', async (req, res) => {
   try {
@@ -30,8 +37,8 @@ router.get('/events', async (req, res) => {
                 id: `virtual-${c.id}`,
                 title: `${c.name}`,
                 classroomId: c.id,
-                startTime: new Date(`2024-01-01T${c.startTime}:00`),
-                endTime: new Date(`2024-01-01T${c.endTime}:00`),
+                startTime: new Date(`2024-01-01T${c.startTime}:00+07:00`),
+                endTime: new Date(`2024-01-01T${c.endTime}:00+07:00`),
                 recurrenceRule: JSON.stringify(days), // pass days array
                 isVirtual: true
               });
@@ -67,8 +74,8 @@ router.get('/events', async (req, res) => {
                   id: `virtual-${c.id}`,
                   title: `${c.name}`,
                   classroomId: c.id,
-                  startTime: new Date(`2024-01-01T${c.startTime}:00`),
-                  endTime: new Date(`2024-01-01T${c.endTime}:00`),
+                  startTime: new Date(`2024-01-01T${c.startTime}:00+07:00`),
+                  endTime: new Date(`2024-01-01T${c.endTime}:00+07:00`),
                   recurrenceRule: JSON.stringify(days),
                   isVirtual: true
                 });
@@ -95,8 +102,8 @@ router.post('/sessions', async (req, res) => {
       data: {
         classroomId,
         title,
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
+        startTime: parseVNTime(startTime),
+        endTime: parseVNTime(endTime),
         recurrenceRule,
         location
       },
@@ -114,8 +121,8 @@ router.put('/sessions/:id', async (req, res) => {
     const { id } = req.params;
     const { title, startTime, endTime, recurrenceRule, location } = req.body;
     const data = { title, recurrenceRule, location };
-    if (startTime) data.startTime = new Date(startTime);
-    if (endTime) data.endTime = new Date(endTime);
+    if (startTime) data.startTime = parseVNTime(startTime);
+    if (endTime) data.endTime = parseVNTime(endTime);
     
     const session = await prisma.classSession.update({
       where: { id },
