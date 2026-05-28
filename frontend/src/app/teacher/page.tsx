@@ -18,7 +18,11 @@ export default function TeacherDashboard() {
   const [user, setUser] = useState<any>(null);
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [editClassroom, setEditClassroom] = useState<any>(null);
   const [newClassName, setNewClassName] = useState("");
+  const [scheduleDays, setScheduleDays] = useState<number[]>([]);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [searchStudentQuery, setSearchStudentQuery] = useState("");
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -54,24 +58,71 @@ export default function TeacherDashboard() {
     fetch(url).then(res => res.json()).then(data => setUser(data)).catch(console.error);
   }, []);
 
-  useEffect(() => {
+  const fetchTeacherData = () => {
     if (user?.id) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/classroom/teacher/${user.id}`)
         .then(res => res.json()).then(setClassrooms).catch(console.error);
     }
+  };
+
+  useEffect(() => {
+    fetchTeacherData();
   }, [user]);
 
-  const handleCreateClass = async (e: React.FormEvent) => {
+  const handleCreateOrEditClass = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newClassName || !user?.id) return;
+    if (!user?.id) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/classroom/create`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newClassName, teacherId: user.id })
+      const isEditing = !!editClassroom;
+      const url = isEditing 
+        ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/classrooms/edit/${editClassroom.id}`
+        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/classrooms/create`;
+        
+      const method = isEditing ? 'PUT' : 'POST';
+      
+      const payload: any = {
+        name: newClassName,
+        scheduleDays: JSON.stringify(scheduleDays),
+        startTime,
+        endTime
+      };
+      if (!isEditing) payload.teacherId = user.id;
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
       });
-      const data = await res.json();
-      if (res.ok) { setClassrooms([...classrooms, data]); setShowModal(false); setNewClassName(""); }
-    } catch (err) { console.error(err); }
+      if (res.ok) {
+        setNewClassName("");
+        setScheduleDays([]);
+        setStartTime("");
+        setEndTime("");
+        setShowModal(false);
+        setEditClassroom(null);
+        fetchTeacherData();
+      }
+    } catch (err) {
+      console.error('Error saving classroom', err);
+    }
+  };
+
+  const openEditModal = (c: any) => {
+    setEditClassroom(c);
+    setNewClassName(c.name);
+    try { setScheduleDays(c.scheduleDays ? JSON.parse(c.scheduleDays) : []); } catch { setScheduleDays([]); }
+    setStartTime(c.startTime || "");
+    setEndTime(c.endTime || "");
+    setShowModal(true);
+  };
+  
+  const openCreateModal = () => {
+    setEditClassroom(null);
+    setNewClassName("");
+    setScheduleDays([]);
+    setStartTime("");
+    setEndTime("");
+    setShowModal(true);
   };
 
   // ── Exam management state ──
@@ -334,8 +385,8 @@ export default function TeacherDashboard() {
               <StatCard title="Câu Hỏi" value={String(classrooms.flatMap(c => c.exams || []).reduce((s: number, e: any) => s + (e.totalQuestions || 0), 0))} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {classrooms.map(c => <ClassCard key={c.id} name={c.name} count={c.students?.length || 0} code={c.joinCode} />)}
-              <button onClick={() => setShowModal(true)} className="border-2 border-dashed border-foreground/20 rounded-2xl p-5 flex items-center justify-center gap-2 text-foreground/40 font-bold hover:border-primary/40 hover:text-primary/60 transition-colors cursor-pointer">
+              {classrooms.map(c => <ClassCard key={c.id} c={c} onEdit={() => openEditModal(c)} />)}
+              <button onClick={openCreateModal} className="border-2 border-dashed border-foreground/20 rounded-2xl p-5 flex items-center justify-center gap-2 text-foreground/40 font-bold hover:border-primary/40 hover:text-primary/60 transition-colors cursor-pointer">
                 + Tạo Lớp Mới
               </button>
             </div>
@@ -347,10 +398,10 @@ export default function TeacherDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center">
               <h1 className="text-3xl font-bold">Lớp Học</h1>
-              <button onClick={() => setShowModal(true)} className="px-4 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 cursor-pointer">+ Tạo Lớp</button>
+              <button onClick={openCreateModal} className="px-4 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 cursor-pointer">+ Tạo Lớp</button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {classrooms.map(c => <ClassCard key={c.id} name={c.name} count={c.students?.length || 0} code={c.joinCode} />)}
+              {classrooms.map(c => <ClassCard key={c.id} c={c} onEdit={() => openEditModal(c)} />)}
             </div>
           </div>
         )}
@@ -750,21 +801,50 @@ export default function TeacherDashboard() {
           </div>
         )}      </div>
 
-      {/* ── Create Class Modal ── */}
+      {/* ── Create / Edit Class Modal ── */}
       {showModal && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
           <div className="bg-surface p-8 rounded-3xl w-full max-w-md border border-foreground/10 shadow-2xl animate-in zoom-in-95 duration-200">
-            <h2 className="text-2xl font-bold mb-6">Tạo Lớp Học Mới</h2>
-            <form onSubmit={handleCreateClass}>
-              <div className="mb-6">
+            <h2 className="text-2xl font-bold mb-6">{editClassroom ? 'Chỉnh Sửa Lớp Học' : 'Tạo Lớp Học Mới'}</h2>
+            <form onSubmit={handleCreateOrEditClass}>
+              <div className="mb-4">
                 <label className="block text-sm font-bold mb-2">Tên Lớp</label>
                 <input type="text" value={newClassName} onChange={e => setNewClassName(e.target.value)}
                   className="w-full px-4 py-3 rounded-xl border border-foreground/20 bg-transparent focus:outline-none focus:border-primary"
-                  placeholder="VD: Lớp 12A1" required autoFocus />
+                  placeholder="VD: Tiếng Anh luyện thi Đại học" required autoFocus />
               </div>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-bold mb-2">Ngày học trong tuần</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[{ id: 1, label: 'T2' }, { id: 2, label: 'T3' }, { id: 3, label: 'T4' }, { id: 4, label: 'T5' }, { id: 5, label: 'T6' }, { id: 6, label: 'T7' }, { id: 0, label: 'CN' }].map(day => (
+                    <label key={day.id} className={`flex items-center justify-center px-2 py-2 rounded-lg border font-bold text-sm cursor-pointer transition-colors ${scheduleDays.includes(day.id) ? 'bg-primary text-white border-primary' : 'border-foreground/20 text-foreground/70 hover:bg-foreground/5'}`}>
+                      <input type="checkbox" className="hidden" checked={scheduleDays.includes(day.id)} onChange={(e) => {
+                        if (e.target.checked) setScheduleDays([...scheduleDays, day.id]);
+                        else setScheduleDays(scheduleDays.filter(d => d !== day.id));
+                      }} />
+                      {day.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label className="block text-sm font-bold mb-2">Giờ Bắt Đầu</label>
+                  <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-foreground/20 bg-transparent focus:outline-none focus:border-primary" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-2">Giờ Kết Thúc</label>
+                  <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
+                    className="w-full px-4 py-3 rounded-xl border border-foreground/20 bg-transparent focus:outline-none focus:border-primary" />
+                </div>
+              </div>
+
               <div className="flex gap-3 justify-end">
                 <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2.5 rounded-xl font-bold hover:bg-foreground/5 cursor-pointer text-foreground/70">Hủy</button>
-                <button type="submit" className="px-5 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 cursor-pointer">Tạo Lớp</button>
+                <button type="submit" className="px-5 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 cursor-pointer">{editClassroom ? 'Lưu Thay Đổi' : 'Tạo Lớp'}</button>
               </div>
             </form>
           </div>
@@ -974,16 +1054,39 @@ function StatCard({ title, value }: { title: string; value: string }) {
   );
 }
 
-function ClassCard({ name, count, code }: { name: string; count: number; code: string }) {
+function ClassCard({ c, onEdit }: { c: any; onEdit?: () => void }) {
+  let daysStr = '';
+  try {
+    const days = c.scheduleDays ? JSON.parse(c.scheduleDays) : [];
+    if (days.length > 0) {
+      const map: any = { 1: 'T2', 2: 'T3', 3: 'T4', 4: 'T5', 5: 'T6', 6: 'T7', 0: 'CN' };
+      daysStr = days.sort((a: number,b: number) => a-b).map((d: number) => map[d]).join(' - ');
+    }
+  } catch (e) {}
+
   return (
-    <div className="bg-surface border border-foreground/10 p-5 rounded-2xl flex justify-between items-center hover:-translate-y-1 transition-transform cursor-pointer">
+    <div className="bg-surface border border-foreground/10 p-5 rounded-2xl flex justify-between items-center hover:-translate-y-1 transition-transform group relative">
       <div>
-        <h4 className="font-bold text-lg">{name}</h4>
-        <p className="text-sm text-foreground/60">{count} Học sinh</p>
+        <h4 className="font-bold text-lg flex items-center gap-2">
+          {c.name}
+          {onEdit && (
+            <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 p-1 text-foreground/40 hover:text-primary transition-all rounded hover:bg-primary/10">
+              ✎
+            </button>
+          )}
+        </h4>
+        <p className="text-sm text-foreground/60">{c.students?.length || 0} Học sinh</p>
+        
+        {(daysStr || c.startTime || c.endTime) && (
+          <div className="mt-2 text-xs font-bold bg-foreground/5 text-foreground/70 px-3 py-1.5 rounded-lg inline-flex gap-2">
+            {daysStr && <span>📅 {daysStr}</span>}
+            {c.startTime && <span>⏰ {c.startTime} {c.endTime && `- ${c.endTime}`}</span>}
+          </div>
+        )}
       </div>
-      <div className="text-right">
+      <div className="text-right shrink-0">
         <p className="text-xs text-foreground/50 mb-1">Mã tham gia</p>
-        <div className="bg-primary/10 text-primary font-mono font-bold px-3 py-1 rounded text-lg tracking-widest">{code}</div>
+        <div className="bg-primary/10 text-primary font-mono font-bold px-3 py-1 rounded text-lg tracking-widest">{c.joinCode}</div>
       </div>
     </div>
   );

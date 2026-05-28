@@ -7,14 +7,17 @@ const crypto = require('crypto');
 // Teacher creates a classroom
 router.post('/create', async (req, res) => {
   try {
-    const { name, teacherId } = req.body;
+    const { name, teacherId, scheduleDays, startTime, endTime } = req.body;
     const joinCode = crypto.randomBytes(3).toString('hex').toUpperCase(); // e.g. "A1B2C3"
     
     const classroom = await prisma.classroom.create({
       data: {
         name,
         teacherId,
-        joinCode
+        joinCode,
+        scheduleDays: scheduleDays || null,
+        startTime: startTime || null,
+        endTime: endTime || null
       }
     });
     res.json(classroom);
@@ -59,6 +62,25 @@ router.get('/teacher/:teacherId', async (req, res) => {
       }
     });
     res.json(classrooms);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Edit a classroom
+router.put('/edit/:id', async (req, res) => {
+  try {
+    const { name, scheduleDays, startTime, endTime } = req.body;
+    const classroom = await prisma.classroom.update({
+      where: { id: req.params.id },
+      data: {
+        name,
+        scheduleDays: scheduleDays || null,
+        startTime: startTime || null,
+        endTime: endTime || null
+      }
+    });
+    res.json(classroom);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
