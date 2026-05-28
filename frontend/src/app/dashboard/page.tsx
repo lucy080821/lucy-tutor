@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import CalendarComponent from "@/components/calendar/CalendarComponent";
 import Swal from 'sweetalert2';
+import confetti from "canvas-confetti";
 
 export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState("OVERVIEW");
@@ -80,6 +81,59 @@ export default function StudentDashboard() {
       })
       .catch(err => console.error(err));
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const currentXP = user.totalXP || 0;
+    const storedXP = localStorage.getItem('lucy_previous_xp');
+    
+    if (storedXP !== null) {
+      const prevXP = parseInt(storedXP, 10);
+      if (currentXP > prevXP) {
+        const prevLevel = Math.floor((1 + Math.sqrt(1 + 4 * prevXP / 50)) / 2);
+        const currentLevel = Math.floor((1 + Math.sqrt(1 + 4 * currentXP / 50)) / 2);
+        
+        if (currentLevel > prevLevel) {
+          const getRankLabel = (lvl: number) => {
+            if (lvl >= 20) return '💎 Huyền Thoại';
+            if (lvl >= 15) return '🥇 Bậc Thầy';
+            if (lvl >= 10) return '🥈 Tinh Anh';
+            if (lvl >= 5) return '📖 Học Giả';
+            return '🌱 Tân Binh';
+          };
+          const prevRank = getRankLabel(prevLevel);
+          const currentRank = getRankLabel(currentLevel);
+          
+          if (prevRank !== currentRank) {
+            // Rank up celebration
+            confetti({ particleCount: 200, spread: 160, origin: { y: 0.6 } });
+            setTimeout(() => {
+              Swal.fire({
+                title: 'THĂNG HẠNG THÀNH CÔNG!',
+                html: `Sự kiên trì của bạn đã được đền đáp!<br/><br/>Chúc mừng bạn đã chính thức đạt danh hiệu <br/><b style="font-size:1.5em; color:#eab308;">${currentRank}</b>!`,
+                icon: 'success',
+                confirmButtonText: 'Tuyệt vời!'
+              });
+            }, 500);
+          } else {
+            // Level up celebration
+            confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+            Swal.fire({
+              title: 'Lên Cấp!',
+              text: `Tuyệt vời! Bạn vừa đạt Cấp ${currentLevel}!`,
+              icon: 'success',
+              toast: true,
+              position: 'top-end',
+              showConfirmButton: false,
+              timer: 3000,
+              timerProgressBar: true
+            });
+          }
+        }
+      }
+    }
+    localStorage.setItem('lucy_previous_xp', currentXP.toString());
+  }, [user?.totalXP]);
 
   const navItems = [
     { id: "OVERVIEW", label: "Tổng Quan" },
