@@ -445,11 +445,12 @@ export default function TeacherDashboard() {
               if (filteredStudents.length === 0) return <p className="text-foreground/50">Không tìm thấy học sinh phù hợp.</p>;
               
               const getTier = (xp: number) => {
-                if (xp >= 20000) return { name: '💎 Huyền Thoại', color: 'text-cyan-600 bg-cyan-500/10 border border-cyan-500/20' };
-                if (xp >= 10000) return { name: '🥇 Bậc Thầy', color: 'text-yellow-600 bg-yellow-500/10 border border-yellow-500/20' };
-                if (xp >= 4000) return { name: '🥈 Tinh Anh', color: 'text-slate-600 bg-slate-500/10 border border-slate-500/20' };
-                if (xp >= 1000) return { name: '📖 Học Giả', color: 'text-amber-700 bg-amber-500/10 border border-amber-500/20' };
-                return { name: '🌱 Tân Binh', color: 'text-emerald-600 bg-emerald-500/10 border border-emerald-500/20' };
+                const level = Math.floor((1 + Math.sqrt(1 + 4 * xp / 50)) / 2);
+                if (level >= 20) return { name: `Cấp ${level} - 💎 Huyền Thoại`, color: 'text-cyan-600 bg-cyan-500/10 border border-cyan-500/20' };
+                if (level >= 15) return { name: `Cấp ${level} - 🥇 Bậc Thầy`, color: 'text-yellow-600 bg-yellow-500/10 border border-yellow-500/20' };
+                if (level >= 10) return { name: `Cấp ${level} - 🥈 Tinh Anh`, color: 'text-slate-600 bg-slate-500/10 border border-slate-500/20' };
+                if (level >= 5) return { name: `Cấp ${level} - 📖 Học Giả`, color: 'text-amber-700 bg-amber-500/10 border border-amber-500/20' };
+                return { name: `Cấp ${level} - 🌱 Tân Binh`, color: 'text-emerald-600 bg-emerald-500/10 border border-emerald-500/20' };
               };
 
               return (

@@ -225,25 +225,29 @@ export default function StudentDashboard() {
                   <span className="text-foreground/30">•</span>
                   {(() => {
                     const xp = user.totalXP || 0;
-                    let rank = { label: '🌱 Tân Binh', color: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20', next: 1000 };
-                    if (xp >= 20000) rank = { label: '💎 Huyền Thoại', color: 'text-cyan-600 bg-cyan-500/10 border-cyan-500/20', next: 20000 };
-                    else if (xp >= 10000) rank = { label: '🥇 Bậc Thầy', color: 'text-yellow-600 bg-yellow-500/10 border-yellow-500/20', next: 20000 };
-                    else if (xp >= 4000) rank = { label: '🥈 Tinh Anh', color: 'text-slate-600 bg-slate-500/10 border-slate-500/20', next: 10000 };
-                    else if (xp >= 1000) rank = { label: '📖 Học Giả', color: 'text-amber-700 bg-amber-500/10 border-amber-500/20', next: 4000 };
+                    const level = Math.floor((1 + Math.sqrt(1 + 4 * xp / 50)) / 2);
+                    const currentLevelXP = 50 * level * (level - 1);
+                    const nextLevelXP = 50 * (level + 1) * level;
+                    const xpInCurrentLevel = xp - currentLevelXP;
+                    const xpNeededForNext = nextLevelXP - currentLevelXP;
+
+                    let rank = { label: '🌱 Tân Binh', color: 'text-emerald-600 bg-emerald-500/10 border-emerald-500/20' };
+                    if (level >= 20) rank = { label: '💎 Huyền Thoại', color: 'text-cyan-600 bg-cyan-500/10 border-cyan-500/20' };
+                    else if (level >= 15) rank = { label: '🥇 Bậc Thầy', color: 'text-yellow-600 bg-yellow-500/10 border-yellow-500/20' };
+                    else if (level >= 10) rank = { label: '🥈 Tinh Anh', color: 'text-slate-600 bg-slate-500/10 border-slate-500/20' };
+                    else if (level >= 5) rank = { label: '📖 Học Giả', color: 'text-amber-700 bg-amber-500/10 border-amber-500/20' };
                     
                     return (
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         <span className={`px-2.5 py-0.5 rounded-md border text-xs font-bold ${rank.color} shadow-sm whitespace-nowrap`}>
-                          {rank.label}
+                          Cấp {level} - {rank.label}
                         </span>
-                        {rank.next > xp && (
-                          <div className="flex items-center gap-2" title={`${xp} / ${rank.next} XP`}>
-                            <div className="w-24 h-1.5 bg-foreground/10 rounded-full overflow-hidden shadow-inner">
-                              <div className="h-full bg-primary/80 rounded-full" style={{ width: `${(xp / rank.next) * 100}%` }} />
-                            </div>
-                            <span className="text-xs text-foreground/40 font-bold">{xp}/{rank.next}</span>
+                        <div className="flex items-center gap-2" title={`Cấp ${level}: ${xpInCurrentLevel} / ${xpNeededForNext} XP`}>
+                          <div className="w-24 h-1.5 bg-foreground/10 rounded-full overflow-hidden shadow-inner relative group">
+                            <div className="h-full bg-primary/80 rounded-full" style={{ width: `${(xpInCurrentLevel / xpNeededForNext) * 100}%` }} />
                           </div>
-                        )}
+                          <span className="text-xs text-foreground/40 font-bold">{xpInCurrentLevel}/{xpNeededForNext}</span>
+                        </div>
                       </div>
                     );
                   })()}
