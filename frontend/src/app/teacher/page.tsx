@@ -310,7 +310,7 @@ export default function TeacherDashboard() {
     { id: "OVERVIEW", label: "Tổng Quan" },
     { id: "CLASSES", label: "Lớp Học" },
     { id: "STUDENTS", label: "Học Sinh" },
-    { id: "CALENDAR", label: "Lịch Dạy" },
+    { id: "CALENDAR", label: "Thời Khóa Biểu" },
     { id: "EXAMS", label: "Quản Lý Đề Thi" },
     { id: "CREATE", label: "Tạo Đề Mới" },
   ];

@@ -77,10 +77,13 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
       // Exams (Homework / Tests)
       for (const exam of data.exams || []) {
         if (exam.deadline) {
+          const endDate = new Date(exam.deadline);
+          endDate.setMinutes(endDate.getMinutes() + 45); // 45 min duration block
           formattedEvents.push({
             id: `exam-${exam.id}`,
             title: `[Hạn] ${exam.title}`,
             start: exam.deadline,
+            end: endDate.toISOString(),
             allDay: false,
             backgroundColor: '#ef4444', // red
             borderColor: '#dc2626',

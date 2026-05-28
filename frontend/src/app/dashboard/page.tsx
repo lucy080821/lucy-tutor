@@ -85,7 +85,7 @@ export default function StudentDashboard() {
     { id: "OVERVIEW", label: "Tổng Quan" },
     { id: "PRACTICE", label: "Bài Tập" },
     { id: "EXAMS", label: "Bài Kiểm Tra" },
-    { id: "CALENDAR", label: "Lịch Trình" },
+    { id: "CALENDAR", label: "Thời Khóa Biểu" },
     { id: "NOTEBOOK", label: "Sổ Tay Lỗi Sai" },
     { id: "SETTINGS", label: "Cài Đặt" },
   ];
