@@ -239,7 +239,35 @@ export default function StudentDashboard() {
                     
                     return (
                       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                        <span className={`px-2.5 py-0.5 rounded-md border text-xs font-bold ${rank.color} shadow-sm whitespace-nowrap`}>
+                        <span 
+                          onClick={() => {
+                            Swal.fire({
+                              title: 'Cẩm Nang Cày Cấp',
+                              html: `
+                                <div style="text-align: left; font-size: 15px; line-height: 1.6;">
+                                  <p>Bạn sẽ kiếm được điểm <b>XP</b> để thăng cấp và đạt các Danh hiệu danh giá. Cấp càng cao, lượng XP yêu cầu để thăng cấp càng lớn!</p>
+                                  <div style="background: rgba(0,0,0,0.05); padding: 15px; border-radius: 10px; margin: 15px 0;">
+                                    <b>Hệ Thống Danh Hiệu:</b><br/>
+                                    🌱 Tân Binh (Cấp 1 - 4)<br/>
+                                    📖 Học Giả (Cấp 5 - 9)<br/>
+                                    🥈 Tinh Anh (Cấp 10 - 14)<br/>
+                                    🥇 Bậc Thầy (Cấp 15 - 19)<br/>
+                                    💎 Huyền Thoại (Cấp 20+)
+                                  </div>
+                                  <p><b>Cách nhận XP:</b></p>
+                                  <ul style="padding-left: 20px;">
+                                    <li>✅ <b>Làm Bài Tập/Kiểm Tra:</b> Nhận tới 100 XP cho mỗi bài xuất sắc.</li>
+                                    <li>📅 <b>Điểm Danh:</b> Đăng nhập mỗi ngày để nhận XP khởi động.</li>
+                                  </ul>
+                                  <p style="margin-top: 15px; font-weight: bold; color: #ef4444;">🔥 Chúc bạn leo rank thần tốc!</p>
+                                </div>
+                              `,
+                              confirmButtonText: 'Đã Rõ!',
+                              confirmButtonColor: '#3b82f6',
+                            });
+                          }}
+                          className={`px-2.5 py-0.5 rounded-md border text-xs font-bold ${rank.color} shadow-sm whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity`}
+                        >
                           Cấp {level} - {rank.label}
                         </span>
                         <div className="flex items-center gap-2" title={`Cấp ${level}: ${xpInCurrentLevel} / ${xpNeededForNext} XP`}>
