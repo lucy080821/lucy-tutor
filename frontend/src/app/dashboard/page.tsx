@@ -4,6 +4,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import CalendarComponent from "@/components/calendar/CalendarComponent";
+import Swal from 'sweetalert2';
 
 export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState("OVERVIEW");
@@ -15,7 +16,7 @@ export default function StudentDashboard() {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 100 * 1024 * 1024) return alert('Ảnh quá lớn. Vui lòng chọn ảnh dưới 100MB');
+    if (file.size > 100 * 1024 * 1024) return Swal.fire('Lỗi', 'Ảnh quá lớn. Vui lòng chọn ảnh dưới 100MB', 'error');
     
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -30,7 +31,7 @@ export default function StudentDashboard() {
           const updatedUser = await res.json();
           setUser(updatedUser);
         } else {
-          alert('Lỗi tải ảnh');
+          Swal.fire('Lỗi', 'Lỗi tải ảnh', 'error');
         }
       } catch (err) {
         console.error('Lỗi tải ảnh:', err);
@@ -51,14 +52,14 @@ export default function StudentDashboard() {
       const data = await res.json();
       if (res.ok) {
         setUser({ ...user, classroomsJoined: [...(user.classroomsJoined || []), data.classroom] });
-        alert('Đã tham gia lớp học thành công!');
+        Swal.fire('Thành công', 'Đã tham gia lớp học thành công!', 'success');
         setJoinCode("");
       } else {
-        alert(data.error || 'Lỗi khi tham gia lớp');
+        Swal.fire('Lỗi', data.error || 'Lỗi khi tham gia lớp', 'error');
       }
     } catch (err) {
       console.error(err);
-      alert('Lỗi kết nối');
+      Swal.fire('Lỗi', 'Lỗi kết nối', 'error');
     }
   };
 
@@ -602,13 +603,16 @@ export default function StudentDashboard() {
                     })
                   });
                   if (res.ok) {
-                    const updatedUser = await res.json();
-                    setUser(updatedUser);
-                    alert('Cập nhật thông tin thành công!');
+                    const data = await res.json();
+                    setUser(data);
+                    setEditProfileMode(false);
+                    Swal.fire('Thành công', 'Cập nhật thông tin thành công!', 'success');
+                  } else {
+                    Swal.fire('Lỗi', 'Lỗi cập nhật thông tin', 'error');
                   }
                 } catch (error) {
                   console.error(error);
-                  alert('Lỗi cập nhật thông tin');
+                  Swal.fire('Lỗi', 'Lỗi cập nhật thông tin', 'error');
                 }
               }}
               className="bg-surface border border-foreground/10 p-8 rounded-3xl space-y-6 shadow-sm"

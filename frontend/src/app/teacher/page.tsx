@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import CalendarComponent from "@/components/calendar/CalendarComponent";
+import Swal from 'sweetalert2';
 
 const BLANK_QUESTION = () => ({
   type: "MULTIPLE_CHOICE" as "MULTIPLE_CHOICE" | "ESSAY",
@@ -28,7 +29,7 @@ export default function TeacherDashboard() {
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
-    if (file.size > 100 * 1024 * 1024) return alert('Ảnh quá lớn. Vui lòng chọn ảnh dưới 100MB');
+    if (file.size > 100 * 1024 * 1024) return Swal.fire('Lỗi', 'Ảnh quá lớn. Vui lòng chọn ảnh dưới 100MB', 'error');
     
     const reader = new FileReader();
     reader.onload = async (e) => {
@@ -43,7 +44,7 @@ export default function TeacherDashboard() {
           const updatedUser = await res.json();
           setUser(updatedUser);
         } else {
-          alert('Lỗi tải ảnh');
+          Swal.fire('Lỗi', 'Lỗi tải ảnh', 'error');
         }
       } catch (err) {
         console.error('Lỗi tải ảnh:', err);
@@ -139,15 +140,28 @@ export default function TeacherDashboard() {
   }, [selectedExamForView]);
 
   const handleDeleteExam = async (examId: string) => {
-    if (!confirm('Bạn có chắc muốn xóa đề thi này không?')) return;
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/exams/${examId}`, { method: 'DELETE' });
-      if (res.ok) {
-        setLocalExams(localExams.filter((e: any) => e.id !== examId));
-        const refreshed = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/classroom/teacher/${user.id}`).then(r => r.json());
-        setClassrooms(refreshed);
-      } else { alert('Xóa thất bại'); }
-    } catch (err) { console.error(err); }
+    Swal.fire({
+      title: 'Xác nhận xóa',
+      text: 'Bạn có chắc muốn xóa đề thi này không?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Có, xóa',
+      cancelButtonText: 'Hủy'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/exams/${examId}`, { method: 'DELETE' });
+          if (res.ok) {
+            setLocalExams(localExams.filter((e: any) => e.id !== examId));
+            const refreshed = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/classroom/teacher/${user.id}`).then(r => r.json());
+            setClassrooms(refreshed);
+            Swal.fire('Đã xóa!', 'Đề thi đã được xóa thành công.', 'success');
+          } else { 
+            Swal.fire('Lỗi', 'Xóa thất bại', 'error'); 
+          }
+        } catch (err) { console.error(err); }
+      }
+    });
   };
 
   const handleUpdateExam = async (e: React.FormEvent) => {
@@ -167,7 +181,7 @@ export default function TeacherDashboard() {
         const refreshed = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/classroom/teacher/${user.id}`).then(r => r.json());
         setClassrooms(refreshed);
         setEditExam(null);
-      } else { alert('Cập nhật thất bại'); }
+      } else { Swal.fire('Lỗi', 'Cập nhật thất bại', 'error'); }
     } catch (err) { console.error(err); }
   };
 
@@ -205,9 +219,9 @@ export default function TeacherDashboard() {
 
   const handleSolveAI = async (qi: number) => {
     const q = createQuestions[qi];
-    if (!q.content.trim()) return alert("Vui lòng nhập nội dung câu hỏi trước khi nhờ AI giải!");
+    if (!q.content.trim()) return Swal.fire('Cảnh báo', "Vui lòng nhập nội dung câu hỏi trước khi nhờ AI giải!", 'warning');
     if (q.type === 'MULTIPLE_CHOICE' && q.options.filter(o => o.trim()).length < 2) {
-      return alert("Vui lòng nhập ít nhất 2 đáp án trước khi nhờ AI giải!");
+      return Swal.fire('Cảnh báo', "Vui lòng nhập ít nhất 2 đáp án trước khi nhờ AI giải!", 'warning');
     }
 
     setSolvingAI(prev => ({ ...prev, [qi]: true }));
@@ -229,21 +243,21 @@ export default function TeacherDashboard() {
         explanation: data.explanation || ''
       });
     } catch (err: any) {
-      alert('Lỗi AI: ' + err.message);
+      Swal.fire('Lỗi AI', err.message, 'error');
     }
     setSolvingAI(prev => ({ ...prev, [qi]: false }));
   };
 
   const handleCreateExam = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!createTitle.trim()) return alert('Vui lòng nhập tiêu đề đề thi');
-    if (!createClassroomId) return alert('Vui lòng chọn lớp học');
-    if (createQuestions.length === 0) return alert('Vui lòng thêm ít nhất 1 câu hỏi');
+    if (!createTitle.trim()) return Swal.fire('Cảnh báo', 'Vui lòng nhập tiêu đề đề thi', 'warning');
+    if (!createClassroomId) return Swal.fire('Cảnh báo', 'Vui lòng chọn lớp học', 'warning');
+    if (createQuestions.length === 0) return Swal.fire('Cảnh báo', 'Vui lòng thêm ít nhất 1 câu hỏi', 'warning');
     for (let i = 0; i < createQuestions.length; i++) {
-      if (!createQuestions[i].content.trim()) return alert(`Câu ${i + 1}: Vui lòng nhập nội dung câu hỏi`);
+      if (!createQuestions[i].content.trim()) return Swal.fire('Cảnh báo', `Câu ${i + 1}: Vui lòng nhập nội dung câu hỏi`, 'warning');
       if (createQuestions[i].type === 'MULTIPLE_CHOICE') {
         const filledOpts = createQuestions[i].options.filter(o => o.trim());
-        if (filledOpts.length < 2) return alert(`Câu ${i + 1}: Trắc nghiệm cần ít nhất 2 đáp án`);
+        if (filledOpts.length < 2) return Swal.fire('Cảnh báo', `Câu ${i + 1}: Trắc nghiệm cần ít nhất 2 đáp án`, 'warning');
       }
     }
     setIsCreating(true);
@@ -283,9 +297,9 @@ export default function TeacherDashboard() {
       setCreatePublishMode("NOW"); setCreatePublishTime(""); setCreateDeadline(""); setCreateNotes("");
       setCreateQuestions([BLANK_QUESTION()]);
       setActiveTab("EXAMS");
-      alert(`✅ Tạo đề thi thành công! ${createQuestions.length} câu hỏi đã được lưu.`);
+      Swal.fire('Thành công', 'Tạo đề thi thành công!', 'success');
     } catch (err: any) {
-      alert('Lỗi: ' + err.message);
+      Swal.fire('Lỗi', err.message, 'error');
       console.error(err);
     }
     setIsCreating(false);
@@ -736,7 +750,7 @@ export default function TeacherDashboard() {
                           <input type="file" accept="image/*" onChange={(e) => {
                             const file = e.target.files?.[0];
                             if (file) {
-                              if (file.size > 5 * 1024 * 1024) return alert('Kích thước ảnh tối đa là 5MB');
+                              if (file.size > 5 * 1024 * 1024) return Swal.fire('Lỗi', 'Kích thước ảnh tối đa là 5MB', 'error');
                               const reader = new FileReader();
                               reader.onload = (ev) => updateQuestion(qi, { imageUrl: ev.target?.result as string });
                               reader.readAsDataURL(file);

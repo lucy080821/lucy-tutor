@@ -4,6 +4,7 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
+import Swal from 'sweetalert2';
 
 export default function CalendarComponent({ user, role, classrooms }: { user: any, role: 'STUDENT' | 'TEACHER', classrooms?: any[] }) {
   const [events, setEvents] = useState<any[]>([]);
@@ -120,7 +121,7 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
     const ev = clickInfo.event;
     if (ev.extendedProps.type === 'SESSION' && role === 'TEACHER') {
       if (ev.extendedProps.isVirtual) {
-        alert("Đây là lịch học cố định của lớp. Để sửa, vui lòng vào tab 'Lớp Học' và sửa thông tin lớp.");
+        Swal.fire('Thông báo', "Đây là lịch học cố định của lớp. Để sửa, vui lòng vào tab 'Lớp Học' và sửa thông tin lớp.", 'info');
         return;
       }
       setEditSession({ id: ev.id });
@@ -135,7 +136,7 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
       setShowSessionModal(true);
     } else {
       // Just show simple alert for now
-      alert(`Sự kiện: ${ev.title}\nLoại: ${ev.extendedProps.type === 'EXAM' ? 'Bài tập/Kiểm tra' : 'Buổi học'}`);
+      Swal.fire(`Sự kiện: ${ev.title}`, `Loại: ${ev.extendedProps.type === 'EXAM' ? 'Bài tập/Kiểm tra' : 'Buổi học'}`, 'info');
     }
   };
 
@@ -189,16 +190,28 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
   };
 
   const handleDeleteSession = async () => {
-    if (!editSession || !confirm('Xóa lịch học này?')) return;
-    try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/calendar/sessions/${editSession.id}`, {
-        method: 'DELETE'
-      });
-      fetchEvents();
-      setShowSessionModal(false);
-    } catch (err) {
-      console.error(err);
-    }
+    if (!editSession) return;
+    Swal.fire({
+      title: 'Xóa lịch học?',
+      text: 'Bạn có chắc muốn xóa lịch học này không?',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Có, xóa',
+      cancelButtonText: 'Hủy'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/calendar/sessions/${editSession.id}`, {
+            method: 'DELETE'
+          });
+          fetchEvents();
+          setShowSessionModal(false);
+          Swal.fire('Đã xóa', 'Xóa lịch học thành công', 'success');
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    });
   };
 
   return (

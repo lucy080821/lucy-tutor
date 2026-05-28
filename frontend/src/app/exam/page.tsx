@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import AskAIButton from "@/components/AskAIButton";
+import Swal from 'sweetalert2';
 
 const MOCK_QUESTION = {
   id: 1,
@@ -21,7 +22,7 @@ export default function ExamSimulator() {
   };
 
   const handleSubmitExam = () => {
-    if (!selectedAnswer) return alert("Vui lòng chọn đáp án trước khi nộp!");
+    if (!selectedAnswer) return Swal.fire("Vui lòng chọn đáp án trước khi nộp!");
     setIsSubmitted(true);
   };
 

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import confetti from "canvas-confetti";
+import Swal from 'sweetalert2';
 
 export default function ExamPage() {
   const params = useParams();
@@ -60,7 +61,7 @@ export default function ExamPage() {
       setSubmitted(true);
     } catch (err) {
       console.error(err);
-      alert("Lỗi khi nộp bài");
+      Swal.fire('Lỗi', 'Lỗi khi nộp bài', 'error');
     }
     setSubmitting(false);
   }, [submitting, submitted, userId, examId, answers, exam, timeLeft]);
@@ -198,7 +199,18 @@ export default function ExamPage() {
                 ⏱ {formatTime(timeLeft)}
               </div>
               <button
-                onClick={() => { if (confirm('Bạn có chắc muốn nộp bài không?')) handleSubmit(); }}
+                onClick={() => {
+                  Swal.fire({
+                    title: 'Xác nhận nộp bài',
+                    text: 'Bạn có chắc muốn nộp bài không?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Nộp bài',
+                    cancelButtonText: 'Kiểm tra lại'
+                  }).then((result) => {
+                    if (result.isConfirmed) handleSubmit();
+                  });
+                }}
                 disabled={submitting}
                 className="px-5 py-2 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50"
               >
