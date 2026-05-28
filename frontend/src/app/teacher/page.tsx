@@ -75,8 +75,8 @@ export default function TeacherDashboard() {
     try {
       const isEditing = !!editClassroom;
       const url = isEditing 
-        ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/classrooms/edit/${editClassroom.id}`
-        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/classrooms/create`;
+        ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/classroom/edit/${editClassroom.id}`
+        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/classroom/create`;
         
       const method = isEditing ? 'PUT' : 'POST';
       

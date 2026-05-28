@@ -42,7 +42,8 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
             classroomId: session.classroomId,
             recurrenceRule: session.recurrenceRule,
             originalStart: session.startTime,
-            originalEnd: session.endTime
+            originalEnd: session.endTime,
+            isVirtual: session.isVirtual
           }
         };
 
@@ -51,8 +52,19 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
           const endDate = new Date(session.endTime);
           baseEvent.startTime = startDate.toTimeString().slice(0, 5); // "HH:MM"
           baseEvent.endTime = endDate.toTimeString().slice(0, 5);
-          baseEvent.startRecur = startDate.toISOString().split('T')[0];
-          baseEvent.daysOfWeek = [startDate.getDay()]; // Recurs on that day of week
+          if (session.isVirtual) {
+            try {
+              baseEvent.daysOfWeek = JSON.parse(session.recurrenceRule);
+            } catch (e) {
+              baseEvent.daysOfWeek = [startDate.getDay()];
+            }
+            baseEvent.editable = false; // Cannot drag and drop virtual classroom schedules
+            baseEvent.backgroundColor = '#10b981'; // Green for classroom schedule
+            baseEvent.borderColor = '#059669';
+          } else {
+            baseEvent.startRecur = startDate.toISOString().split('T')[0];
+            baseEvent.daysOfWeek = [startDate.getDay()]; // Recurs on that day of week
+          }
         } else {
           baseEvent.start = session.startTime;
           baseEvent.end = session.endTime;
@@ -107,6 +119,10 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
   const handleEventClick = (clickInfo: any) => {
     const ev = clickInfo.event;
     if (ev.extendedProps.type === 'SESSION' && role === 'TEACHER') {
+      if (ev.extendedProps.isVirtual) {
+        alert("Đây là lịch học cố định của lớp. Để sửa, vui lòng vào tab 'Lớp Học' và sửa thông tin lớp.");
+        return;
+      }
       setEditSession({ id: ev.id });
       setSessionForm({
         title: ev.title,

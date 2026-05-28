@@ -20,7 +20,26 @@ router.get('/events', async (req, res) => {
         where: { teacherId: userId },
         include: { classSessions: true }
       });
-      classSessions = classrooms.flatMap(c => c.classSessions);
+      classSessions = classrooms.flatMap(c => {
+        const sessions = [...c.classSessions];
+        if (c.scheduleDays && c.startTime && c.endTime) {
+          try {
+            const days = JSON.parse(c.scheduleDays);
+            if (days.length > 0) {
+              sessions.push({
+                id: `virtual-${c.id}`,
+                title: `${c.name}`,
+                classroomId: c.id,
+                startTime: new Date(`2024-01-01T${c.startTime}:00`),
+                endTime: new Date(`2024-01-01T${c.endTime}:00`),
+                recurrenceRule: JSON.stringify(days), // pass days array
+                isVirtual: true
+              });
+            }
+          } catch (e) {}
+        }
+        return sessions;
+      });
       
       // Teacher sees exams they uploaded
       exams = await prisma.exam.findMany({
@@ -38,7 +57,26 @@ router.get('/events', async (req, res) => {
         }
       });
       if (user) {
-        classSessions = user.classroomsJoined.flatMap(c => c.classSessions);
+        classSessions = user.classroomsJoined.flatMap(c => {
+          const sessions = [...c.classSessions];
+          if (c.scheduleDays && c.startTime && c.endTime) {
+            try {
+              const days = JSON.parse(c.scheduleDays);
+              if (days.length > 0) {
+                sessions.push({
+                  id: `virtual-${c.id}`,
+                  title: `${c.name}`,
+                  classroomId: c.id,
+                  startTime: new Date(`2024-01-01T${c.startTime}:00`),
+                  endTime: new Date(`2024-01-01T${c.endTime}:00`),
+                  recurrenceRule: JSON.stringify(days),
+                  isVirtual: true
+                });
+              }
+            } catch (e) {}
+          }
+          return sessions;
+        });
         exams = user.assignedExams;
       }
     }
