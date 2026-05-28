@@ -25,6 +25,7 @@ const gamificationRoutes = require('./routes/gamification.routes');
 const uploadRoutes = require('./routes/upload.routes');
 const classroomRoutes = require('./routes/classroom.routes');
 const aiRoutes = require('./routes/ai.routes');
+const calendarRoutes = require('./routes/calendar.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
@@ -34,6 +35,7 @@ app.use('/api/gamification', gamificationRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/classroom', classroomRoutes);
 app.use('/api/ai', aiRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 const PORT = process.env.PORT || 5000;
 

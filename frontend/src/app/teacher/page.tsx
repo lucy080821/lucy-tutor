@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import CalendarComponent from "@/components/calendar/CalendarComponent";
 
 const BLANK_QUESTION = () => ({
   type: "MULTIPLE_CHOICE" as "MULTIPLE_CHOICE" | "ESSAY",
@@ -244,6 +245,7 @@ export default function TeacherDashboard() {
     { id: "OVERVIEW", label: "Tổng Quan" },
     { id: "CLASSES", label: "Lớp Học" },
     { id: "STUDENTS", label: "Học Sinh" },
+    { id: "CALENDAR", label: "Lịch Dạy" },
     { id: "EXAMS", label: "Quản Lý Đề Thi" },
     { id: "CREATE", label: "Tạo Đề Mới" },
   ];
@@ -444,6 +446,16 @@ export default function TeacherDashboard() {
               </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* ── CALENDAR ── */}
+        {activeTab === "CALENDAR" && (
+          <div className="h-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h1 className="text-3xl font-bold mb-6">Quản Lý Lịch Dạy</h1>
+            <div className="flex-1 min-h-[500px]">
+              <CalendarComponent user={user} role="TEACHER" classrooms={classrooms} />
+            </div>
           </div>
         )}
 

@@ -68,9 +68,9 @@ router.get('/me', async (req, res) => {
     const { userId } = req.query;
     let user;
     if (userId) {
-      user = await prisma.user.findUnique({ where: { id: userId }, include: { classroomJoined: true, assignedExams: true, notebooks: true } });
+      user = await prisma.user.findUnique({ where: { id: userId }, include: { classroomsJoined: true, assignedExams: true, notebooks: true } });
     } else {
-      user = await prisma.user.findFirst({ where: { role: 'STUDENT' }, include: { classroomJoined: true, assignedExams: true, notebooks: true } });
+      user = await prisma.user.findFirst({ where: { role: 'STUDENT' }, include: { classroomsJoined: true, assignedExams: true, notebooks: true } });
     }
     
     if (!user) {

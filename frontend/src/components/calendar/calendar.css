@@ -1,0 +1,28 @@
+.fc {
+  font-family: inherit;
+  --fc-button-bg-color: var(--color-primary);
+  --fc-button-border-color: var(--color-primary);
+  --fc-button-hover-bg-color: var(--color-primary);
+  --fc-button-hover-border-color: var(--color-primary);
+  --fc-button-active-bg-color: var(--color-primary);
+  --fc-button-active-border-color: var(--color-primary);
+  --fc-today-bg-color: rgba(0, 0, 0, 0.05);
+}
+.fc-theme-standard td, .fc-theme-standard th {
+  border-color: rgba(0,0,0,0.1);
+}
+.fc-theme-standard .fc-scrollgrid {
+  border-color: rgba(0,0,0,0.1);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.fc-event {
+  border-radius: 6px;
+  padding: 2px 4px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+.fc-event:hover {
+  transform: scale(1.02);
+}

@@ -33,7 +33,7 @@ router.post('/join', async (req, res) => {
     
     const user = await prisma.user.update({
       where: { id: userId },
-      data: { classroomJoinedId: classroom.id }
+      data: { classroomsJoined: { connect: { id: classroom.id } } }
     });
     
     res.json({ message: 'Joined classroom successfully', classroom });

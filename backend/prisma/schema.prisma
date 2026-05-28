@@ -27,8 +27,7 @@ model User {
   notebooks    MistakeNotebook[]
   
   classroomsOwned   Classroom[] @relation("TeacherClassrooms")
-  classroomJoinedId String?
-  classroomJoined   Classroom?  @relation("StudentClassrooms", fields: [classroomJoinedId], references: [id])
+  classroomsJoined  Classroom[] @relation("StudentClassrooms")
   uploadedExams     Exam[]      @relation("TeacherExams")
   assignedExams     Exam[]      @relation("AssignedExams")
   
@@ -145,7 +144,23 @@ model Classroom {
   teacher     User     @relation("TeacherClassrooms", fields: [teacherId], references: [id], onDelete: Cascade)
   students    User[]   @relation("StudentClassrooms")
   exams       Exam[]
+  classSessions ClassSession[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+model ClassSession {
+  id             String    @id @default(uuid())
+  classroomId    String
+  title          String?
+  startTime      DateTime
+  endTime        DateTime
+  recurrenceRule String?
+  location       String?
+
+  classroom      Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }

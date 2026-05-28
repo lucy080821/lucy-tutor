@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import CalendarComponent from "@/components/calendar/CalendarComponent";
 
 export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState("OVERVIEW");
@@ -49,7 +50,7 @@ export default function StudentDashboard() {
       });
       const data = await res.json();
       if (res.ok) {
-        setUser({ ...user, classroomJoined: data.classroom });
+        setUser({ ...user, classroomsJoined: [...(user.classroomsJoined || []), data.classroom] });
         alert('Đã tham gia lớp học thành công!');
         setJoinCode("");
       } else {
@@ -83,6 +84,7 @@ export default function StudentDashboard() {
     { id: "OVERVIEW", label: "Tổng Quan" },
     { id: "PRACTICE", label: "Bài Tập" },
     { id: "EXAMS", label: "Bài Kiểm Tra" },
+    { id: "CALENDAR", label: "Lịch Trình" },
     { id: "NOTEBOOK", label: "Sổ Tay Lỗi Sai" },
     { id: "SETTINGS", label: "Cài Đặt" },
   ];
@@ -217,7 +219,7 @@ export default function StudentDashboard() {
                 <h2 className="text-2xl font-bold text-foreground">{user.name}</h2>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
                   <p className="text-sm text-foreground/60 font-medium">
-                    {user.classroomJoined ? `Lớp: ${user.classroomJoined.name}` : 'Chưa tham gia lớp học'}
+                    {user.classroomsJoined?.length > 0 ? `Lớp: ${user.classroomsJoined.map((c: any) => c.name).join(', ')}` : 'Chưa tham gia lớp học'}
                   </p>
                   <span className="text-foreground/30">•</span>
                   {(() => {
@@ -498,6 +500,16 @@ export default function StudentDashboard() {
                 </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* VIEW: CALENDAR */}
+        {activeTab === "CALENDAR" && (
+          <div className="h-full flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h1 className="text-3xl font-bold mb-6">Lịch Học & Bài Tập</h1>
+            <div className="flex-1 min-h-[500px]">
+              <CalendarComponent user={user} role="STUDENT" />
+            </div>
           </div>
         )}
 
