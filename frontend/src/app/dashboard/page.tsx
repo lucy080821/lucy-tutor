@@ -605,7 +605,6 @@ export default function StudentDashboard() {
                   if (res.ok) {
                     const data = await res.json();
                     setUser(data);
-                    setEditProfileMode(false);
                     Swal.fire('Thành công', 'Cập nhật thông tin thành công!', 'success');
                   } else {
                     Swal.fire('Lỗi', 'Lỗi cập nhật thông tin', 'error');
