@@ -147,11 +147,24 @@ export default function StudentDashboard() {
     localStorage.setItem('lucy_previous_xp', currentXP.toString());
   }, [user?.totalXP]);
 
-  const navItems = [
+  const [expandedNav, setExpandedNav] = useState<Record<string, boolean>>({
+    'LEARNING': true,
+  });
+
+  const toggleNavGroup = (id: string) => {
+    setExpandedNav(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const navGroups = [
     { id: "OVERVIEW", label: "Tổng Quan" },
-    { id: "LESSONS", label: "Bài Học" },
-    { id: "PRACTICE", label: "Bài Tập" },
-    { id: "EXAMS", label: "Bài Kiểm Tra" },
+    { 
+      id: "LEARNING", label: "Học Tập", 
+      subItems: [
+        { id: "LESSONS", label: "Bài Học" },
+        { id: "PRACTICE", label: "Bài Tập" },
+        { id: "EXAMS", label: "Bài Kiểm Tra" },
+      ]
+    },
     { id: "CALENDAR", label: "Thời Khóa Biểu" },
     { id: "NOTEBOOK", label: "Sổ Tay Lỗi Sai" },
     { id: "SETTINGS", label: "Cài Đặt" },
@@ -230,18 +243,35 @@ export default function StudentDashboard() {
         </div>
 
         <div className="flex flex-col gap-2">
-          {navItems.map(item => (
-            <button
-              key={item.id}
-              onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-              className={`flex items-center px-5 py-3.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer group ${
-                activeTab === item.id 
-                  ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-xl shadow-primary/25 scale-[1.02]' 
-                  : 'text-foreground/60 hover:bg-foreground/5 hover:text-foreground hover:translate-x-1'
-              }`}
-            >
-              <span className="tracking-wide">{item.label}</span>
-            </button>
+          {navGroups.map(group => (
+            <div key={group.id} className="flex flex-col gap-1">
+              {group.subItems ? (
+                <>
+                  <button 
+                    onClick={() => toggleNavGroup(group.id)}
+                    className="flex items-center justify-between px-5 py-3 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left text-foreground/80 hover:bg-foreground/5"
+                  >
+                    <span className="tracking-wide">{group.label}</span>
+                    <span className={`transform transition-transform text-xs ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▼</span>
+                  </button>
+                  {expandedNav[group.id] && (
+                    <div className="flex flex-col gap-1 pl-4">
+                      {group.subItems.map(item => (
+                        <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
+                          className={`flex items-center px-5 py-2.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left text-sm group ${activeTab === item.id ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-md shadow-primary/25 scale-[1.02]' : 'hover:bg-foreground/5 text-foreground/60 hover:text-foreground hover:translate-x-1'}`}>
+                          <span className="tracking-wide">{item.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <button onClick={() => { setActiveTab(group.id); setIsMobileMenuOpen(false); }}
+                  className={`flex items-center px-5 py-3.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left group ${activeTab === group.id ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-xl shadow-primary/25 scale-[1.02]' : 'hover:bg-foreground/5 text-foreground/60 hover:text-foreground hover:translate-x-1'}`}>
+                  <span className="tracking-wide">{group.label}</span>
+                </button>
+              )}
+            </div>
           ))}
         </div>
 
