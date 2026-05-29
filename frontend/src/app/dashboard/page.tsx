@@ -227,7 +227,7 @@ export default function StudentDashboard() {
             };
           })
       )).then(reports => {
-        setAttReports(reports.filter(r => r && r.userId)); // only valid reports
+        setAttReports(reports.filter(r => r && r.user?.id)); // only valid reports
       }).catch(console.error);
     }
   }, [activeTab, attMonth, user]);
