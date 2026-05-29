@@ -23,7 +23,8 @@
     "recharts": "^3.8.1",
     "rrule": "^2.8.1",
     "sweetalert2": "^11.26.25",
-    "sweetalert2-react-content": "^5.1.2"
+    "sweetalert2-react-content": "^5.1.2",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

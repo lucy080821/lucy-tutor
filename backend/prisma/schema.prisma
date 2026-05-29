@@ -31,6 +31,9 @@ model User {
   uploadedExams     Exam[]      @relation("TeacherExams")
   assignedExams     Exam[]      @relation("AssignedExams")
   
+  uploadedLessons   Lesson[]    @relation("TeacherLessons")
+  lessonProgress    LessonProgress[]
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -149,6 +152,7 @@ model Classroom {
   students    User[]   @relation("StudentClassrooms")
   exams       Exam[]
   classSessions ClassSession[]
+  lessons     Lesson[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -167,4 +171,63 @@ model ClassSession {
 
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
+}
+
+model Lesson {
+  id            String   @id @default(uuid())
+  title         String
+  description   String?
+  
+  uploadedById  String?
+  uploadedBy    User?      @relation("TeacherLessons", fields: [uploadedById], references: [id], onDelete: SetNull)
+  
+  classroomId   String?
+  classroom     Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  
+  publishTime   DateTime?
+  deadline      DateTime?
+  
+  vocabularies  VocabItem[]
+  grammars      GrammarItem[]
+  progress      LessonProgress[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model VocabItem {
+  id            String   @id @default(uuid())
+  lessonId      String
+  word          String
+  pos           String?
+  phonetic      String?
+  meaning       String
+  example       String?
+  
+  lesson        Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+model GrammarItem {
+  id            String   @id @default(uuid())
+  lessonId      String
+  title         String
+  structure     String?
+  explanation   String
+  
+  lesson        Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+}
+
+model LessonProgress {
+  id            String   @id @default(uuid())
+  userId        String
+  lessonId      String
+  status        String   @default("UNREAD") // "UNREAD", "IN_PROGRESS", "COMPLETED"
+  
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson        Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@unique([userId, lessonId])
 }

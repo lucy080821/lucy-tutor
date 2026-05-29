@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import CalendarComponent from "@/components/calendar/CalendarComponent";
 import Swal from 'sweetalert2';
+import * as XLSX from 'xlsx';
 
 const BLANK_QUESTION = () => ({
   type: "MULTIPLE_CHOICE" as "MULTIPLE_CHOICE" | "ESSAY",
@@ -124,6 +125,80 @@ export default function TeacherDashboard() {
     setStartTime("");
     setEndTime("");
     setShowModal(true);
+  };
+
+  // ── Lesson management state ──
+  const [localLessons, setLocalLessons] = useState<any[]>([]);
+  useEffect(() => {
+    if (user?.id) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/teacher/${user.id}`)
+        .then(res => res.json()).then(setLocalLessons).catch(console.error);
+    }
+  }, [user]);
+
+  const [createLessonTitle, setCreateLessonTitle] = useState("");
+  const [createLessonDesc, setCreateLessonDesc] = useState("");
+  const [createLessonClassroomId, setCreateLessonClassroomId] = useState("");
+  const [lessonVocabs, setLessonVocabs] = useState<any[]>([]);
+  const [lessonGrammars, setLessonGrammars] = useState<any[]>([]);
+
+  const handleDownloadVocabTemplate = () => {
+    const ws = XLSX.utils.json_to_sheet([
+      { word: "apple", pos: "Noun", phonetic: "/ˈæpl/", meaning: "quả táo", example: "I eat an apple." }
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Vocabulary");
+    XLSX.writeFile(wb, "VocabTemplate.xlsx");
+  };
+
+  const handleUploadVocabExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const wsname = wb.SheetNames[0];
+      const ws = wb.Sheets[wsname];
+      const data = XLSX.utils.sheet_to_json(ws);
+      setLessonVocabs([...lessonVocabs, ...data]);
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = '';
+  };
+
+  const handleCreateLesson = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!createLessonTitle.trim()) return Swal.fire('Cảnh báo', 'Vui lòng nhập tiêu đề bài học', 'warning');
+    if (!createLessonClassroomId) return Swal.fire('Cảnh báo', 'Vui lòng chọn lớp học', 'warning');
+    if (lessonVocabs.length === 0 && lessonGrammars.length === 0) return Swal.fire('Cảnh báo', 'Bài học cần có ít nhất 1 từ vựng hoặc 1 điểm ngữ pháp', 'warning');
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: createLessonTitle,
+          description: createLessonDesc,
+          classroomId: createLessonClassroomId,
+          uploadedById: user.id,
+          vocabularies: lessonVocabs,
+          grammars: lessonGrammars
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setLocalLessons([data, ...localLessons]);
+        setCreateLessonTitle(""); setCreateLessonDesc(""); setCreateLessonClassroomId("");
+        setLessonVocabs([]); setLessonGrammars([]);
+        setActiveTab("LESSONS");
+        Swal.fire('Thành công', 'Tạo bài học thành công!', 'success');
+      } else {
+        Swal.fire('Lỗi', 'Tạo thất bại', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   // ── Exam management state ──
@@ -311,6 +386,8 @@ export default function TeacherDashboard() {
     { id: "CLASSES", label: "Lớp Học" },
     { id: "STUDENTS", label: "Học Sinh" },
     { id: "CALENDAR", label: "Thời Khóa Biểu" },
+    { id: "LESSONS", label: "Quản Lý Bài Học" },
+    { id: "CREATE_LESSON", label: "Tạo Bài Học" },
     { id: "EXAMS", label: "Quản Lý Đề Thi" },
     { id: "CREATE", label: "Tạo Đề Mới" },
   ];
@@ -522,6 +599,135 @@ export default function TeacherDashboard() {
             <div className="flex-1 min-h-[500px]">
               <CalendarComponent user={user} role="TEACHER" classrooms={classrooms} />
             </div>
+          </div>
+        )}
+
+        {/* ── LESSONS ── */}
+        {activeTab === "LESSONS" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-3xl font-bold">Ngân Hàng Bài Học</h1>
+              <button onClick={() => setActiveTab('CREATE_LESSON')} className="px-4 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Mới</button>
+            </div>
+            {localLessons.length === 0 ? (
+                <div className="bg-surface border border-foreground/10 p-12 rounded-3xl flex flex-col items-center text-center">
+                  <span className="text-5xl mb-4">📚</span>
+                  <h2 className="text-2xl font-bold mb-2">Chưa có bài học nào</h2>
+                  <p className="text-foreground/50 mb-6">Bắt đầu bằng cách tạo bài học mới</p>
+                  <button onClick={() => setActiveTab('CREATE_LESSON')} className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Ngay</button>
+                </div>
+            ) : (
+                <div className="space-y-3">
+                  {localLessons.map((lesson: any) => (
+                    <div key={lesson.id} className="bg-surface border border-foreground/10 p-5 rounded-2xl flex items-center justify-between hover:shadow-md transition-shadow">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-blue-500/10 text-blue-600 rounded-xl flex items-center justify-center text-2xl">📚</div>
+                        <div>
+                          <h3 className="font-bold text-lg">{lesson.title}</h3>
+                          <p className="text-sm text-foreground/50">{lesson.vocabularies?.length || 0} từ vựng • {lesson.grammars?.length || 0} ngữ pháp</p>
+                        </div>
+                      </div>
+                      <button onClick={async () => {
+                        if (confirm('Bạn có chắc muốn xóa bài học này?')) {
+                          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/${lesson.id}`, { method: 'DELETE' });
+                          if (res.ok) setLocalLessons(localLessons.filter(l => l.id !== lesson.id));
+                        }
+                      }} className="text-rose-500 hover:text-rose-600 font-bold text-sm px-3 py-1.5 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer">Xóa</button>
+                    </div>
+                  ))}
+                </div>
+            )}
+          </div>
+        )}
+
+        {/* ── CREATE LESSON ── */}
+        {activeTab === "CREATE_LESSON" && (
+          <div className="space-y-6 max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div>
+              <h1 className="text-3xl font-bold mb-1">Tạo Bài Học Mới</h1>
+              <p className="text-foreground/50">Thêm từ vựng qua file Excel và tạo ngữ pháp</p>
+            </div>
+            <form onSubmit={handleCreateLesson} className="space-y-6">
+              <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-4">
+                <h2 className="font-bold text-lg border-b border-foreground/10 pb-3 mb-4">📋 Thông Tin Bài Học</h2>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Tiêu đề *</label>
+                  <input type="text" className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent focus:border-primary outline-none"
+                    placeholder="VD: Unit 1 - Family" value={createLessonTitle} onChange={e => setCreateLessonTitle(e.target.value)} required />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Lớp học *</label>
+                  <select className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent" value={createLessonClassroomId}
+                    onChange={e => setCreateLessonClassroomId(e.target.value)} required>
+                    <option value="">-- Chọn lớp --</option>
+                    {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold mb-1">Mô tả (Không bắt buộc)</label>
+                  <textarea className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent focus:border-primary outline-none"
+                    placeholder="Mô tả bài học..." value={createLessonDesc} onChange={e => setCreateLessonDesc(e.target.value)} />
+                </div>
+              </div>
+
+              <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-4">
+                <div className="flex justify-between items-center border-b border-foreground/10 pb-3 mb-4">
+                  <h2 className="font-bold text-lg">📝 Từ Vựng ({lessonVocabs.length} từ)</h2>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={handleDownloadVocabTemplate} className="px-3 py-1.5 bg-green-500/10 text-green-600 font-bold rounded-lg text-sm cursor-pointer hover:bg-green-500/20">⬇️ Tải Excel Mẫu</button>
+                    <label className="px-3 py-1.5 bg-blue-500/10 text-blue-600 font-bold rounded-lg text-sm cursor-pointer hover:bg-blue-500/20">
+                      ⬆️ Upload Excel
+                      <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleUploadVocabExcel} />
+                    </label>
+                  </div>
+                </div>
+                {lessonVocabs.length > 0 && (
+                  <div className="max-h-60 overflow-y-auto border border-foreground/10 rounded-xl">
+                    <table className="w-full text-left text-sm">
+                      <thead className="bg-foreground/5 sticky top-0">
+                        <tr>
+                          <th className="p-2 font-bold">Từ</th>
+                          <th className="p-2 font-bold">Loại</th>
+                          <th className="p-2 font-bold">Phiên âm</th>
+                          <th className="p-2 font-bold">Nghĩa</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lessonVocabs.map((v, i) => (
+                          <tr key={i} className="border-b border-foreground/10 last:border-0">
+                            <td className="p-2">{v.word}</td>
+                            <td className="p-2 text-foreground/50">{v.pos}</td>
+                            <td className="p-2 text-primary">{v.phonetic}</td>
+                            <td className="p-2">{v.meaning}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-4">
+                <div className="flex justify-between items-center border-b border-foreground/10 pb-3 mb-4">
+                  <h2 className="font-bold text-lg">📖 Ngữ Pháp ({lessonGrammars.length} mục)</h2>
+                  <button type="button" onClick={() => setLessonGrammars([...lessonGrammars, { title: '', structure: '', explanation: '' }])} className="px-3 py-1.5 bg-primary/10 text-primary font-bold rounded-lg text-sm cursor-pointer hover:bg-primary/20">+ Thêm Ngữ Pháp</button>
+                </div>
+                {lessonGrammars.map((g, i) => (
+                  <div key={i} className="p-4 border border-foreground/10 rounded-xl space-y-3 relative">
+                    <button type="button" onClick={() => setLessonGrammars(lessonGrammars.filter((_, idx) => idx !== i))} className="absolute top-2 right-2 text-rose-500 font-bold cursor-pointer hover:underline text-xs">Xóa</button>
+                    <input type="text" placeholder="Tên điểm ngữ pháp (VD: Thì hiện tại đơn)" className="w-full p-2 border-b border-foreground/15 bg-transparent font-bold outline-none" value={g.title} onChange={e => { const n = [...lessonGrammars]; n[i].title = e.target.value; setLessonGrammars(n); }} />
+                    <input type="text" placeholder="Công thức (S + V + O)" className="w-full p-2 border-b border-foreground/15 bg-transparent outline-none text-primary font-mono text-sm" value={g.structure} onChange={e => { const n = [...lessonGrammars]; n[i].structure = e.target.value; setLessonGrammars(n); }} />
+                    <textarea placeholder="Giải thích chi tiết..." className="w-full p-2 border border-foreground/15 rounded bg-transparent outline-none text-sm" rows={3} value={g.explanation} onChange={e => { const n = [...lessonGrammars]; n[i].explanation = e.target.value; setLessonGrammars(n); }} />
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex justify-end">
+                <button type="submit" className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 cursor-pointer shadow-lg shadow-primary/30">
+                  Lưu Bài Học
+                </button>
+              </div>
+            </form>
           </div>
         )}
 
