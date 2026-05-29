@@ -78,16 +78,48 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const userId = localStorage.getItem('userId');
-    const url = userId ? `${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/auth/me?userId=${userId}` : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`;
+    const url = userId ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me?userId=${userId}` : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`;
     
     fetch(url)
       .then(res => res.json())
       .then(data => {
         setUser(data);
         if (data?.id) {
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/analytics/history/${data.id}`)
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/analytics/history/${data.id}`)
             .then(res => res.json())
             .then(hist => setHistory(hist || []))
+            .catch(console.error);
+            
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/gamification/checkin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: data.id })
+          })
+            .then(res => res.json())
+            .then(checkinData => {
+              if (checkinData.checkedIn) {
+                setUser(checkinData.user);
+                if (checkinData.bonusXP > 0) {
+                  confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                  Swal.fire({
+                    title: 'Đỉnh quá! 🎉',
+                    html: `Bạn đã học liên tục <b>${checkinData.user.streakCount} ngày</b>!<br/>Được thưởng nóng <b>+${checkinData.xpAdded} XP</b> (gồm ${checkinData.bonusXP} XP thưởng chuỗi).`,
+                    icon: 'success',
+                    confirmButtonText: 'Tuyệt vời!'
+                  });
+                } else {
+                  Swal.fire({
+                    title: 'Điểm danh ngày mới! ☀️',
+                    html: `Bạn nhận được <b>+10 XP</b>. Đang giữ chuỗi: <b>${checkinData.user.streakCount} ngày</b>!`,
+                    icon: 'info',
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000
+                  });
+                }
+              }
+            })
             .catch(console.error);
         }
       })
