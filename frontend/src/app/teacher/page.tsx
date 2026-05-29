@@ -4,7 +4,7 @@ import CalendarComponent from "@/components/calendar/CalendarComponent";
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx-js-style';
 import { jsPDF } from 'jspdf';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { TuitionInvoice } from '@/components/tuition/TuitionInvoice';
@@ -311,8 +311,7 @@ export default function TeacherDashboard() {
       setIsExporting(true);
       // Brief timeout to let any styles settle
       await new Promise(r => setTimeout(r, 100));
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true });
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = await toPng(el, { pixelRatio: 2, cacheBust: true });
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [800, 1131] });
       pdf.addImage(imgData, 'PNG', 0, 0, 800, 1131);
       pdf.save(`${studentName.replace(/\s+/g, '_')}_${attMonth.replace('-', '_')}.pdf`);
@@ -332,8 +331,7 @@ export default function TeacherDashboard() {
       for (const sr of attReport.report) {
         const el = invoiceRefs.current[sr.user.id];
         if (el) {
-          const canvas = await html2canvas(el, { scale: 2, useCORS: true });
-          const imgData = canvas.toDataURL('image/png');
+          const imgData = await toPng(el, { pixelRatio: 2, cacheBust: true });
           const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [800, 1131] });
           pdf.addImage(imgData, 'PNG', 0, 0, 800, 1131);
           const pdfBlob = pdf.output('blob');
