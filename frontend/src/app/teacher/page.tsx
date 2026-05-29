@@ -249,7 +249,42 @@ export default function TeacherDashboard() {
     }
   };
 
-  // ── Exam management state ──
+  const handleDuplicateLesson = (oldLesson: any) => {
+    setCreateLessonTitle(`[Bản sao] ${oldLesson.title}`);
+    setCreateLessonDesc(oldLesson.description || "");
+    setCreateLessonClassroomId("");
+    setLessonVocabs(oldLesson.vocabularies?.map((v: any) => ({ word: v.word, pos: v.pos, phonetic: v.phonetic, meaning: v.meaning, example: v.example })) || []);
+    setLessonGrammars(oldLesson.grammars?.map((g: any) => ({ title: g.title, structure: g.structure, explanation: g.explanation })) || []);
+    setActiveTab("CREATE_LESSON");
+    setExpandedNav(prev => ({ ...prev, 'LESSONS_GROUP': true }));
+  };
+
+  const handleDuplicateExam = (oldExam: any) => {
+    setCreateTitle(`[Bản sao] ${oldExam.title}`);
+    setCreateType(oldExam.examType || "ASSIGNMENT");
+    setCreateClassroomId("");
+    setCreateAssignMode("CLASS");
+    setCreateStudentIds([]);
+    setCreateDuration((oldExam.duration || 45).toString());
+    setCreateMaxAttempts((oldExam.maxAttempts || 1).toString());
+    setCreatePublishMode("NOW");
+    setCreatePublishTime("");
+    setCreateDeadline("");
+    setCreateNotes(oldExam.notes || "");
+    setCreateQuestions(oldExam.questions?.map((q: any) => ({
+      heading: q.heading || "",
+      type: q.type,
+      content: q.content,
+      options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options,
+      correctOption: q.correctOption,
+      explanation: q.explanation || "",
+      imageUrl: q.imageUrl || ""
+    })) || [BLANK_QUESTION()]);
+    setActiveTab("CREATE");
+    setExpandedNav(prev => ({ ...prev, 'EXAMS_GROUP': true }));
+  };
+
+  // ── Handlers for exams ──management state ──
   const [localExams, setLocalExams] = useState<any[]>([]);
   const [selectedExamForView, setSelectedExamForView] = useState<any>(null);
   const [editExam, setEditExam] = useState<any>(null);
@@ -724,12 +759,15 @@ export default function TeacherDashboard() {
                           <p className="text-sm text-foreground/50">{lesson.vocabularies?.length || 0} từ vựng • {lesson.grammars?.length || 0} ngữ pháp</p>
                         </div>
                       </div>
-                      <button onClick={async () => {
-                        if (confirm('Bạn có chắc muốn xóa bài học này?')) {
-                          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/${lesson.id}`, { method: 'DELETE' });
-                          if (res.ok) setLocalLessons(localLessons.filter(l => l.id !== lesson.id));
-                        }
-                      }} className="text-rose-500 hover:text-rose-600 font-bold text-sm px-3 py-1.5 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer">Xóa</button>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => handleDuplicateLesson(lesson)} className="text-blue-500 hover:text-blue-600 font-bold text-sm px-3 py-1.5 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer mr-2">📋 Nhân bản</button>
+                        <button onClick={async () => {
+                          if (confirm('Bạn có chắc muốn xóa bài học này?')) {
+                            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/${lesson.id}`, { method: 'DELETE' });
+                            if (res.ok) setLocalLessons(localLessons.filter(l => l.id !== lesson.id));
+                          }
+                        }} className="text-rose-500 hover:text-rose-600 font-bold text-sm px-3 py-1.5 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer">🗑 Xóa</button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -861,7 +899,8 @@ export default function TeacherDashboard() {
                             questions={exam.totalQuestions}
                             onClick={() => { setSelectedExamForView(exam); setExamViewTab('QUESTIONS'); }}
                             onEdit={() => setEditExam({ ...exam, publishTime: exam.publishTime ? new Date(exam.publishTime).toISOString().slice(0, 16) : '', deadline: exam.deadline ? new Date(exam.deadline).toISOString().slice(0, 16) : '' })}
-                            onDelete={() => handleDeleteExam(exam.id)} />
+                            onDelete={() => handleDeleteExam(exam.id)}
+                            onDuplicate={() => handleDuplicateExam(exam)} />
                         ))}
                       </div>
                     </div>
@@ -876,7 +915,8 @@ export default function TeacherDashboard() {
                             questions={exam.totalQuestions}
                             onClick={() => { setSelectedExamForView(exam); setExamViewTab('QUESTIONS'); }}
                             onEdit={() => setEditExam({ ...exam, publishTime: exam.publishTime ? new Date(exam.publishTime).toISOString().slice(0, 16) : '', deadline: exam.deadline ? new Date(exam.deadline).toISOString().slice(0, 16) : '' })}
-                            onDelete={() => handleDeleteExam(exam.id)} />
+                            onDelete={() => handleDeleteExam(exam.id)}
+                            onDuplicate={() => handleDuplicateExam(exam)} />
                         ))}
                       </div>
                     </div>
@@ -1410,7 +1450,7 @@ function ClassCard({ c, onEdit }: { c: any; onEdit?: () => void }) {
   );
 }
 
-function ExamCard({ title, type, detail, questions, onClick, onEdit, onDelete, exam }: { title: string; type: string; detail: string; questions: number; onClick?: () => void; onEdit?: () => void; onDelete?: () => void; exam?: any }) {
+function ExamCard({ title, type, detail, questions, onClick, onEdit, onDelete, onDuplicate, exam }: { title: string; type: string; detail: string; questions: number; onClick?: () => void; onEdit?: () => void; onDelete?: () => void; onDuplicate?: () => void; exam?: any }) {
   return (
     <div className="bg-surface border border-foreground/10 p-5 rounded-2xl flex justify-between items-center hover:bg-foreground/5 transition-colors">
       <div className="flex-1 cursor-pointer" onClick={onClick}>
@@ -1422,6 +1462,7 @@ function ExamCard({ title, type, detail, questions, onClick, onEdit, onDelete, e
         <p className="text-sm text-foreground/60 mt-1">Giao cho: <span className="font-medium text-foreground">{detail}</span> • {questions} câu • {exam?.duration || 45} phút</p>
       </div>
       <div className="flex items-center gap-2 ml-4 shrink-0">
+        <button onClick={e => { e.stopPropagation(); onDuplicate?.(); }} className="px-3 py-2 text-sm font-bold bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20 cursor-pointer">📋 Nhân bản</button>
         <button onClick={onClick} className="px-3 py-2 text-sm font-bold bg-foreground/10 rounded-lg hover:bg-foreground/20 cursor-pointer">👁 Xem</button>
         <button onClick={e => { e.stopPropagation(); onEdit?.(); }} className="px-3 py-2 text-sm font-bold bg-primary/10 text-primary rounded-lg hover:bg-primary/20 cursor-pointer">✏️ Sửa</button>
         <button onClick={e => { e.stopPropagation(); onDelete?.(); }} className="px-3 py-2 text-sm font-bold bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500/20 cursor-pointer">🗑 Xóa</button>
