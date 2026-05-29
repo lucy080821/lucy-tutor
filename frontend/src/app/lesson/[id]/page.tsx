@@ -33,10 +33,10 @@ export default function LessonPage() {
       });
   }, [id, router]);
 
-  const handleSpeak = (text: string) => {
+  const handleSpeak = (text: string, lang: string = 'en-US') => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-US';
+      utterance.lang = lang;
       window.speechSynthesis.speak(utterance);
     } else {
       Swal.fire('Lỗi', 'Trình duyệt không hỗ trợ phát âm', 'error');
@@ -112,7 +112,7 @@ export default function LessonPage() {
                 <Flashcard 
                   key={i} 
                   vocab={vocab} 
-                  onSpeak={() => handleSpeak(vocab.word)} 
+                  onSpeak={(lang) => handleSpeak(vocab.word, lang)} 
                   onFlip={() => {
                     setLearnedIndices(prev => {
                       const next = new Set(prev);
@@ -191,7 +191,7 @@ export default function LessonPage() {
 }
 
 // Flashcard Component
-function Flashcard({ vocab, onSpeak, onFlip, isLearned }: { vocab: any, onSpeak: () => void, onFlip: () => void, isLearned: boolean }) {
+function Flashcard({ vocab, onSpeak, onFlip, isLearned }: { vocab: any, onSpeak: (lang: string) => void, onFlip: () => void, isLearned: boolean }) {
   const [flipped, setFlipped] = useState(false);
 
   return (
@@ -206,13 +206,22 @@ function Flashcard({ vocab, onSpeak, onFlip, isLearned }: { vocab: any, onSpeak:
         
         {/* Front */}
         <div className={`absolute w-full h-full backface-hidden bg-surface border-2 ${isLearned ? 'border-green-500/50' : 'border-foreground/10'} hover:border-primary/50 rounded-3xl p-6 flex flex-col items-center justify-center shadow-sm text-center transition-colors`}>
-          <button 
-            onClick={(e) => { e.stopPropagation(); onSpeak(); }}
-            className="absolute top-4 right-4 w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
-            title="Nghe phát âm"
-          >
-            🔊
-          </button>
+          <div className="absolute top-4 right-4 flex gap-2">
+            <button 
+              onClick={(e) => { e.stopPropagation(); onSpeak('en-GB'); }}
+              className="w-8 h-8 bg-primary/10 text-primary font-bold text-xs rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
+              title="Phát âm giọng Anh (UK)"
+            >
+              UK
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); onSpeak('en-US'); }}
+              className="w-8 h-8 bg-primary/10 text-primary font-bold text-xs rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
+              title="Phát âm giọng Mỹ (US)"
+            >
+              US
+            </button>
+          </div>
           <h3 className="text-3xl font-black text-primary mb-2">{vocab.word}</h3>
           <p className="text-foreground/50 font-medium italic">{vocab.pos}</p>
           <p className="text-foreground/70 font-mono mt-1">{vocab.phonetic}</p>
