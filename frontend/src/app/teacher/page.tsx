@@ -304,17 +304,24 @@ export default function TeacherDashboard() {
     }
   }, [attClassroomId, attDate, attMonth, attView, activeTab]);
 
-  const handleSaveAttendance = async () => {
+  const handleSaveAttendance = async (recordsToSave = attRecords, showToast = true) => {
     if (!attClassroomId || !attDate) return;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/mark`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ classroomId: attClassroomId, date: attDate, records: attRecords })
+        body: JSON.stringify({ classroomId: attClassroomId, date: attDate, records: recordsToSave })
       });
-      if (res.ok) {
-        Swal.fire('Thành công', 'Lưu điểm danh thành công!', 'success');
-      } else {
+      if (res.ok && showToast) {
+        Swal.fire({
+          title: 'Đã lưu điểm danh',
+          icon: 'success',
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 1500
+        });
+      } else if (!res.ok) {
         Swal.fire('Lỗi', 'Lưu thất bại', 'error');
       }
     } catch (err) { console.error(err); }
@@ -864,6 +871,7 @@ export default function TeacherDashboard() {
                         onClick={() => {
                           const next = attRecords.map(r => ({ ...r, status: 'PRESENT' }));
                           setAttRecords(next);
+                          handleSaveAttendance(next);
                         }}
                         className="px-4 py-2 bg-green-500/10 text-green-600 font-bold text-sm rounded-xl hover:bg-green-500/20 transition-colors shrink-0"
                       >
@@ -899,6 +907,7 @@ export default function TeacherDashboard() {
                                           const next = [...attRecords];
                                           next[i].status = 'PRESENT';
                                           setAttRecords(next);
+                                          handleSaveAttendance(next, false);
                                         }}
                                         className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${rec.status === 'PRESENT' ? 'bg-green-500 text-white shadow-md shadow-green-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
                                       >
@@ -909,6 +918,7 @@ export default function TeacherDashboard() {
                                           const next = [...attRecords];
                                           next[i].status = 'EXCUSED_ABSENCE';
                                           setAttRecords(next);
+                                          handleSaveAttendance(next, false);
                                         }}
                                         className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${rec.status === 'EXCUSED_ABSENCE' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
                                       >
@@ -919,6 +929,7 @@ export default function TeacherDashboard() {
                                           const next = [...attRecords];
                                           next[i].status = 'UNEXCUSED_ABSENCE';
                                           setAttRecords(next);
+                                          handleSaveAttendance(next, false);
                                         }}
                                         className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${rec.status === 'UNEXCUSED_ABSENCE' ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
                                       >
@@ -936,6 +947,7 @@ export default function TeacherDashboard() {
                                         next[i].notes = e.target.value;
                                         setAttRecords(next);
                                       }}
+                                      onBlur={() => handleSaveAttendance(attRecords, false)}
                                       className="w-full px-3 py-1.5 bg-transparent border border-foreground/10 focus:border-primary rounded-lg outline-none text-sm transition-colors"
                                     />
                                   </td>
@@ -944,9 +956,6 @@ export default function TeacherDashboard() {
                             </tbody>
                           </table>
                         </div>
-                        <button onClick={handleSaveAttendance} className="w-full py-4 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-colors">
-                          Lưu Điểm Danh
-                        </button>
                       </>
                     ) : (
                       <p className="text-center text-foreground/50 py-8">Lớp chưa có học sinh nào.</p>
