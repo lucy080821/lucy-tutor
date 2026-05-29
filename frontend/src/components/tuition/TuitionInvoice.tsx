@@ -23,43 +23,24 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
       {/* Header */}
       <div className="flex justify-between items-start mb-12 border-b-2 border-primary pb-8">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-lg">
-            LT
-          </div>
+          <img src="/logo.png" alt="LucyTutor Logo" className="w-16 h-16 object-contain" />
           <div>
             <h1 className="text-3xl font-black text-primary tracking-tight">LUCYTUTOR</h1>
             <p className="text-sm font-medium text-slate-500 mt-1">Học tập không ngừng, vươn tới thành công</p>
           </div>
         </div>
         <div className="text-right">
-          <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tighter">HÓA ĐƠN</h2>
+          <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tighter">THÔNG BÁO HỌC PHÍ</h2>
           <p className="text-slate-500 font-medium">Tháng {month} / {year}</p>
           {paymentId && <p className="text-slate-400 text-xs mt-1">Mã GD: #{paymentId.slice(-6).toUpperCase()}</p>}
         </div>
       </div>
 
       {/* Info Section */}
-      <div className="flex justify-between mb-12 bg-slate-50 p-6 rounded-2xl border border-slate-100">
-        <div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Thông tin học viên</p>
-          <h3 className="text-xl font-bold text-primary mb-1">{studentName}</h3>
-          <p className="text-sm font-medium text-slate-600">Lớp: {classroomName}</p>
-        </div>
-        <div className="text-right">
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Trạng thái thanh toán</p>
-          {isPaid ? (
-            <div>
-              <div className="inline-block px-4 py-1.5 bg-green-100 text-green-700 font-bold rounded-full text-sm mb-1">
-                ĐÃ THANH TOÁN
-              </div>
-              {paidAt && <p className="text-xs text-slate-500 mt-1">Vào lúc: {new Date(paidAt).toLocaleDateString('vi-VN')} {new Date(paidAt).toLocaleTimeString('vi-VN')}</p>}
-            </div>
-          ) : (
-            <div className="inline-block px-4 py-1.5 bg-rose-100 text-rose-700 font-bold rounded-full text-sm">
-              CHƯA THANH TOÁN
-            </div>
-          )}
-        </div>
+      <div className="mb-12 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Thông tin học viên</p>
+        <h3 className="text-xl font-bold text-primary mb-1">{studentName}</h3>
+        <p className="text-sm font-medium text-slate-600">Lớp: {classroomName}</p>
       </div>
 
       {/* Table Section */}
@@ -79,9 +60,9 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
                 <p className="font-bold text-slate-800">Học phí tháng {month}/{year}</p>
                 <p className="text-sm text-slate-500 mt-1">Lớp {classroomName} (Tính theo số buổi đi học thực tế)</p>
               </td>
-              <td className="py-6 px-6 text-center font-semibold text-slate-700">{presentCount} buổi</td>
-              <td className="py-6 px-6 text-right font-semibold text-slate-700">{feePerLesson.toLocaleString('vi-VN')} đ</td>
-              <td className="py-6 px-6 text-right font-black text-primary text-lg">{totalAmount.toLocaleString('vi-VN')} đ</td>
+              <td className="py-6 px-6 text-center font-semibold text-slate-700 whitespace-nowrap">{presentCount} buổi</td>
+              <td className="py-6 px-6 text-right font-semibold text-slate-700 whitespace-nowrap">{feePerLesson.toLocaleString('vi-VN')} đ</td>
+              <td className="py-6 px-6 text-right font-black text-primary text-lg whitespace-nowrap">{totalAmount.toLocaleString('vi-VN')} đ</td>
             </tr>
           </tbody>
         </table>
@@ -105,15 +86,15 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
           )}
         </div>
         <div className="w-5/12">
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex justify-between items-center mb-2 whitespace-nowrap gap-4">
             <span className="text-slate-500 font-semibold">Cộng tiền học:</span>
             <span className="font-bold">{totalAmount.toLocaleString('vi-VN')} đ</span>
           </div>
-          <div className="flex justify-between items-center mb-4">
+          <div className="flex justify-between items-center mb-4 whitespace-nowrap gap-4">
             <span className="text-slate-500 font-semibold">Khuyến mãi / Giảm trừ:</span>
             <span className="font-bold">0 đ</span>
           </div>
-          <div className="flex justify-between items-center pt-4 border-t-2 border-primary/20">
+          <div className="flex justify-between items-center pt-4 border-t-2 border-primary/20 whitespace-nowrap gap-4">
             <span className="text-xl font-black text-slate-800">TỔNG CỘNG:</span>
             <span className="text-3xl font-black text-primary">{totalAmount.toLocaleString('vi-VN')} đ</span>
           </div>
