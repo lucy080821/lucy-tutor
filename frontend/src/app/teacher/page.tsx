@@ -316,9 +316,9 @@ export default function TeacherDashboard() {
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [800, 1131] });
       pdf.addImage(imgData, 'PNG', 0, 0, 800, 1131);
       pdf.save(`${studentName.replace(/\s+/g, '_')}_${attMonth.replace('-', '_')}.pdf`);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      Swal.fire('Lỗi', 'Không thể xuất PDF', 'error');
+      Swal.fire('Lỗi', `Không thể xuất PDF: ${err.message || String(err)}`, 'error');
     } finally {
       setIsExporting(false);
     }
@@ -342,9 +342,9 @@ export default function TeacherDashboard() {
       }
       const content = await zip.generateAsync({ type: 'blob' });
       saveAs(content, `HoaDon_${attMonth.replace('-', '_')}.zip`);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      Swal.fire('Lỗi', 'Không thể xuất file ZIP', 'error');
+      Swal.fire('Lỗi', `Không thể xuất file ZIP: ${err.message || String(err)}`, 'error');
     } finally {
       setIsExporting(false);
     }
@@ -1793,7 +1793,7 @@ export default function TeacherDashboard() {
 
       {/* HIDDEN INVOICE TEMPLATES FOR PDF EXPORT */}
       {attReport?.report?.length > 0 && (
-        <div className="fixed top-[200vh] left-[200vw] pointer-events-none opacity-0 z-[-9999]">
+        <div style={{ position: 'absolute', top: '-10000px', left: '-10000px', zIndex: -1 }}>
           {attReport.report.map((sr: any) => {
             const [year, month] = attMonth.split('-');
             return (
