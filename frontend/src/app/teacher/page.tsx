@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import CalendarComponent from "@/components/calendar/CalendarComponent";
 import Swal from 'sweetalert2';
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 const BLANK_QUESTION = () => ({
   type: "MULTIPLE_CHOICE" as "MULTIPLE_CHOICE" | "ESSAY",
@@ -146,6 +146,54 @@ export default function TeacherDashboard() {
     const ws = XLSX.utils.json_to_sheet([
       { word: "apple", pos: "Noun", phonetic: "/ˈæpl/", meaning: "quả táo", example: "I eat an apple." }
     ]);
+
+    const headerStyle = {
+      font: { name: 'Calibri', bold: true, color: { rgb: "FFFFFF" }, sz: 12 },
+      fill: { fgColor: { rgb: "1E3A8A" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { auto: 1 } },
+        bottom: { style: "thin", color: { auto: 1 } },
+        left: { style: "thin", color: { auto: 1 } },
+        right: { style: "thin", color: { auto: 1 } }
+      }
+    };
+
+    const dataStyle = {
+      font: { name: 'Calibri', sz: 11 },
+      alignment: { vertical: "center" },
+      border: {
+        top: { style: "thin", color: { rgb: "EEEEEE" } },
+        bottom: { style: "thin", color: { rgb: "EEEEEE" } },
+        left: { style: "thin", color: { rgb: "EEEEEE" } },
+        right: { style: "thin", color: { rgb: "EEEEEE" } }
+      }
+    };
+
+    const range = XLSX.utils.decode_range(ws['!ref'] || "A1:E2");
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cell_ref = XLSX.utils.encode_cell({ c: C, r: R });
+        if (!ws[cell_ref]) continue;
+        if (R === 0) {
+          ws[cell_ref].s = headerStyle;
+          if (typeof ws[cell_ref].v === 'string') {
+            ws[cell_ref].v = ws[cell_ref].v.toUpperCase();
+          }
+        } else {
+          ws[cell_ref].s = dataStyle;
+        }
+      }
+    }
+
+    ws['!cols'] = [
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 25 },
+      { wch: 40 }
+    ];
+
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Vocabulary");
     XLSX.writeFile(wb, "VocabTemplate.xlsx");
