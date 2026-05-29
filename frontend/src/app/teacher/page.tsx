@@ -25,6 +25,7 @@ export default function TeacherDashboard() {
   const [scheduleDays, setScheduleDays] = useState<number[]>([]);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [feePerLesson, setFeePerLesson] = useState("");
   const [searchStudentQuery, setSearchStudentQuery] = useState("");
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -86,7 +87,8 @@ export default function TeacherDashboard() {
         name: newClassName,
         scheduleDays: JSON.stringify(scheduleDays),
         startTime,
-        endTime
+        endTime,
+        feePerLesson: feePerLesson ? parseInt(feePerLesson) : 0
       };
       if (!isEditing) payload.teacherId = user.id;
 
@@ -100,6 +102,7 @@ export default function TeacherDashboard() {
         setScheduleDays([]);
         setStartTime("");
         setEndTime("");
+        setFeePerLesson("");
         setShowModal(false);
         setEditClassroom(null);
         fetchTeacherData();
@@ -115,6 +118,7 @@ export default function TeacherDashboard() {
     try { setScheduleDays(c.scheduleDays ? JSON.parse(c.scheduleDays) : []); } catch { setScheduleDays([]); }
     setStartTime(c.startTime || "");
     setEndTime(c.endTime || "");
+    setFeePerLesson(c.feePerLesson ? String(c.feePerLesson) : "");
     setShowModal(true);
   };
   
@@ -124,6 +128,7 @@ export default function TeacherDashboard() {
     setScheduleDays([]);
     setStartTime("");
     setEndTime("");
+    setFeePerLesson("");
     setShowModal(true);
   };
 
@@ -247,6 +252,90 @@ export default function TeacherDashboard() {
     } catch (err) {
       console.error(err);
     }
+  };
+
+  // ── ATTENDANCE & TUITION state ──
+  const [attClassroomId, setAttClassroomId] = useState("");
+  const [attView, setAttView] = useState("MARK"); // "MARK" or "REPORT"
+  const [attDate, setAttDate] = useState(new Date().toISOString().split("T")[0]);
+  const [attMonth, setAttMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
+  const [attRecords, setAttRecords] = useState<any[]>([]); // { userId, status, notes, user }
+  const [attReport, setAttReport] = useState<any>(null);
+
+  const fetchAttendance = async () => {
+    if (!attClassroomId || !attDate) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/class/${attClassroomId}?date=${attDate}`);
+      if (res.ok) {
+        const data = await res.json();
+        // Initialize records for all students in class
+        const crm = classrooms.find(c => c.id === attClassroomId);
+        if (crm?.students) {
+          const records = crm.students.map((s: any) => {
+            const existing = data.find((d: any) => d.userId === s.id);
+            return {
+              userId: s.id,
+              user: s,
+              status: existing ? existing.status : 'PRESENT',
+              notes: existing ? existing.notes : ''
+            };
+          });
+          setAttRecords(records);
+        }
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchAttReport = async () => {
+    if (!attClassroomId || !attMonth) return;
+    try {
+      const [year, month] = attMonth.split("-");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/report/${attClassroomId}?month=${month}&year=${year}`);
+      if (res.ok) {
+        setAttReport(await res.json());
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => {
+    if (activeTab === "ATTENDANCE") {
+      if (attView === "MARK") fetchAttendance();
+      if (attView === "REPORT") fetchAttReport();
+    }
+  }, [attClassroomId, attDate, attMonth, attView, activeTab]);
+
+  const handleSaveAttendance = async () => {
+    if (!attClassroomId || !attDate) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/mark`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ classroomId: attClassroomId, date: attDate, records: attRecords })
+      });
+      if (res.ok) {
+        Swal.fire('Thành công', 'Lưu điểm danh thành công!', 'success');
+      } else {
+        Swal.fire('Lỗi', 'Lưu thất bại', 'error');
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handlePayTuition = async (userId: string, totalAmount: number) => {
+    if (!attClassroomId || !attMonth) return;
+    try {
+      const [year, month] = attMonth.split("-");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ classroomId: attClassroomId, userId, month, year, totalAmount })
+      });
+      if (res.ok) {
+        Swal.fire('Thành công', 'Đã xác nhận thanh toán!', 'success');
+        fetchAttReport();
+      } else {
+        Swal.fire('Lỗi', 'Thất bại', 'error');
+      }
+    } catch (err) { console.error(err); }
   };
 
   const handleDuplicateLesson = (oldLesson: any) => {
@@ -481,6 +570,7 @@ export default function TeacherDashboard() {
       subItems: [
         { id: "CLASSES", label: "Lớp Học" },
         { id: "STUDENTS", label: "Học Sinh" },
+        { id: "ATTENDANCE", label: "Điểm Danh & Học Phí" },
         { id: "CALENDAR", label: "Thời Khóa Biểu" }
       ]
     },
@@ -721,6 +811,170 @@ export default function TeacherDashboard() {
               </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* ── ATTENDANCE & TUITION ── */}
+        {activeTab === "ATTENDANCE" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h1 className="text-3xl font-bold mb-6">Điểm Danh & Học Phí</h1>
+            
+            <div className="bg-surface border border-foreground/10 p-6 rounded-3xl mb-6 flex flex-wrap gap-4 items-end">
+              <div className="flex-1 min-w-[200px]">
+                <label className="block text-sm font-bold mb-2">Chọn Lớp Học</label>
+                <select 
+                  className="w-full p-3 rounded-xl border border-foreground/20 bg-transparent"
+                  value={attClassroomId} onChange={e => setAttClassroomId(e.target.value)}
+                >
+                  <option value="">-- Chọn lớp --</option>
+                  {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="flex bg-foreground/5 p-1 rounded-xl">
+                <button 
+                  onClick={() => setAttView('MARK')} 
+                  className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${attView === 'MARK' ? 'bg-white shadow text-primary' : 'text-foreground/60 hover:text-foreground'}`}
+                >
+                  Điểm Danh
+                </button>
+                <button 
+                  onClick={() => setAttView('REPORT')} 
+                  className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${attView === 'REPORT' ? 'bg-white shadow text-primary' : 'text-foreground/60 hover:text-foreground'}`}
+                >
+                  Báo Cáo Học Phí
+                </button>
+              </div>
+            </div>
+
+            {attClassroomId ? (
+              <>
+                {attView === 'MARK' && (
+                  <div className="bg-surface border border-foreground/10 p-6 rounded-3xl">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold">Điểm danh ngày</h2>
+                      <input 
+                        type="date" 
+                        value={attDate} 
+                        onChange={e => setAttDate(e.target.value)} 
+                        className="p-2 border border-foreground/20 rounded-lg bg-transparent"
+                      />
+                    </div>
+                    {attRecords.length > 0 ? (
+                      <>
+                        <div className="space-y-4 mb-6">
+                          {attRecords.map((rec, i) => (
+                            <div key={rec.userId} className="flex items-center justify-between p-4 bg-foreground/5 rounded-2xl">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold">
+                                  {rec.user?.avatar ? <img src={rec.user.avatar} className="w-full h-full rounded-full object-cover" /> : rec.user?.name?.charAt(0)}
+                                </div>
+                                <span className="font-bold">{rec.user?.name}</span>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <select 
+                                  value={rec.status} 
+                                  onChange={e => {
+                                    const next = [...attRecords];
+                                    next[i].status = e.target.value;
+                                    setAttRecords(next);
+                                  }}
+                                  className={`p-2 rounded-lg font-bold text-sm border-none outline-none ${
+                                    rec.status === 'PRESENT' ? 'bg-green-500/10 text-green-600' :
+                                    rec.status === 'EXCUSED_ABSENCE' ? 'bg-amber-500/10 text-amber-600' :
+                                    'bg-rose-500/10 text-rose-600'
+                                  }`}
+                                >
+                                  <option value="PRESENT">Có mặt</option>
+                                  <option value="EXCUSED_ABSENCE">Vắng có phép</option>
+                                  <option value="UNEXCUSED_ABSENCE">Vắng không phép</option>
+                                </select>
+                                <input 
+                                  type="text" 
+                                  placeholder="Ghi chú..." 
+                                  value={rec.notes} 
+                                  onChange={e => {
+                                    const next = [...attRecords];
+                                    next[i].notes = e.target.value;
+                                    setAttRecords(next);
+                                  }}
+                                  className="p-2 bg-transparent border-b border-foreground/20 focus:border-primary outline-none text-sm w-32"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <button onClick={handleSaveAttendance} className="w-full py-4 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-colors">
+                          Lưu Điểm Danh
+                        </button>
+                      </>
+                    ) : (
+                      <p className="text-center text-foreground/50 py-8">Lớp chưa có học sinh nào.</p>
+                    )}
+                  </div>
+                )}
+
+                {attView === 'REPORT' && (
+                  <div className="bg-surface border border-foreground/10 p-6 rounded-3xl">
+                    <div className="flex justify-between items-center mb-6">
+                      <h2 className="text-xl font-bold">Báo Cáo Học Phí</h2>
+                      <input 
+                        type="month" 
+                        value={attMonth} 
+                        onChange={e => setAttMonth(e.target.value)} 
+                        className="p-2 border border-foreground/20 rounded-lg bg-transparent"
+                      />
+                    </div>
+                    {attReport ? (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left">
+                          <thead className="bg-foreground/5">
+                            <tr>
+                              <th className="p-4 font-bold border-b border-foreground/10">Học Sinh</th>
+                              <th className="p-4 font-bold border-b border-foreground/10">Số Buổi Học</th>
+                              <th className="p-4 font-bold border-b border-foreground/10 text-right">Tổng Học Phí</th>
+                              <th className="p-4 font-bold border-b border-foreground/10 text-center">Trạng Thái</th>
+                              <th className="p-4 font-bold border-b border-foreground/10 text-center">Hành Động</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {attReport.studentReports.map((sr: any) => (
+                              <tr key={sr.userId} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5">
+                                <td className="p-4 font-medium">{sr.user.name}</td>
+                                <td className="p-4">{sr.presentCount} buổi</td>
+                                <td className="p-4 font-black text-primary text-right">{sr.totalAmount.toLocaleString()} VNĐ</td>
+                                <td className="p-4 text-center">
+                                  {sr.isPaid ? (
+                                    <span className="text-xs bg-green-500/10 text-green-600 font-bold px-3 py-1 rounded-full">Đã nộp ({new Date(sr.paidAt).toLocaleDateString('vi-VN')})</span>
+                                  ) : (
+                                    <span className="text-xs bg-rose-500/10 text-rose-600 font-bold px-3 py-1 rounded-full">Chưa nộp</span>
+                                  )}
+                                </td>
+                                <td className="p-4 text-center">
+                                  {!sr.isPaid && sr.totalAmount > 0 && (
+                                    <button 
+                                      onClick={() => handlePayTuition(sr.userId, sr.totalAmount)}
+                                      className="text-xs bg-primary text-white font-bold px-3 py-1.5 rounded-lg hover:bg-primary/90"
+                                    >
+                                      Xác nhận đã nộp
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="text-center text-foreground/50 py-8">Đang tải báo cáo...</p>
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="text-center text-foreground/40 py-12 bg-foreground/5 rounded-3xl border-2 border-dashed border-foreground/10">
+                Vui lòng chọn lớp học để xem điểm danh
+              </div>
+            )}
           </div>
         )}
 
@@ -1198,6 +1452,13 @@ export default function TeacherDashboard() {
                   <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-foreground/20 bg-transparent focus:outline-none focus:border-primary" />
                 </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-bold mb-2">Học phí mỗi buổi (VNĐ)</label>
+                <input type="number" value={feePerLesson} onChange={e => setFeePerLesson(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-foreground/20 bg-transparent focus:outline-none focus:border-primary"
+                  placeholder="VD: 100000" />
               </div>
 
               <div className="flex gap-3 justify-end">

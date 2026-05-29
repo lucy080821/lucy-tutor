@@ -195,6 +195,7 @@ export default function StudentDashboard() {
         { id: "LESSONS", label: "Bài Học" },
         { id: "PRACTICE", label: "Bài Tập" },
         { id: "EXAMS", label: "Bài Kiểm Tra" },
+        { id: "ATTENDANCE", label: "Chuyên Cần" },
       ]
     },
     { id: "CALENDAR", label: "Thời Khóa Biểu" },
@@ -206,6 +207,30 @@ export default function StudentDashboard() {
   const [chartViewMode, setChartViewMode] = useState<'day' | 'week' | 'month'>('day');
   const [selectedNotebookForView, setSelectedNotebookForView] = useState<any>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // ── ATTENDANCE & TUITION state ──
+  const [attMonth, setAttMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
+  const [attReports, setAttReports] = useState<any[]>([]); // Array of reports for each joined classroom
+
+  useEffect(() => {
+    if (activeTab === "ATTENDANCE" && user?.id && user?.classroomsJoined?.length > 0) {
+      const [year, month] = attMonth.split("-");
+      Promise.all(user.classroomsJoined.map((c: any) =>
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/report/${c.id}?month=${month}&year=${year}`)
+          .then(res => res.json())
+          .then(data => {
+            const myReport = data.studentReports?.find((r: any) => r.userId === user.id);
+            return {
+              classroomId: c.id,
+              classroomName: c.name,
+              ...myReport
+            };
+          })
+      )).then(reports => {
+        setAttReports(reports.filter(r => r && r.userId)); // only valid reports
+      }).catch(console.error);
+    }
+  }, [activeTab, attMonth, user]);
 
   const totalExams = history.length;
   const avgScore = totalExams > 0 ? (history.reduce((acc, curr) => acc + curr.score, 0) / totalExams).toFixed(1) : "0.0";
@@ -706,6 +731,61 @@ export default function StudentDashboard() {
                 </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* VIEW: ATTENDANCE */}
+        {activeTab === "ATTENDANCE" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex justify-between items-center mb-6">
+              <h1 className="text-3xl font-bold">Chuyên Cần & Học Phí</h1>
+              <input 
+                type="month" 
+                value={attMonth} 
+                onChange={e => setAttMonth(e.target.value)} 
+                className="p-3 border border-foreground/20 rounded-xl bg-surface font-bold shadow-sm"
+              />
+            </div>
+
+            {attReports.length === 0 ? (
+              <div className="text-center text-foreground/40 py-12 bg-foreground/5 rounded-3xl border-2 border-dashed border-foreground/10">
+                <p className="text-lg font-medium mb-2">Không có dữ liệu tháng này</p>
+                <p className="text-sm">Tháng này bạn chưa tham gia hoặc chưa được điểm danh lớp nào.</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {attReports.map((report: any) => (
+                  <div key={report.classroomId} className="bg-surface border border-foreground/10 p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex justify-between items-center border-b border-foreground/10 pb-4 mb-4">
+                      <h2 className="text-xl font-bold flex items-center gap-2">
+                        <span className="w-3 h-3 rounded-full bg-primary inline-block"></span>
+                        {report.classroomName}
+                      </h2>
+                      {report.isPaid ? (
+                        <div className="bg-green-500/10 text-green-600 px-4 py-1.5 rounded-full font-bold text-sm border border-green-500/20">
+                          Đã thanh toán: {new Date(report.paidAt).toLocaleDateString('vi-VN')}
+                        </div>
+                      ) : (
+                        <div className="bg-rose-500/10 text-rose-600 px-4 py-1.5 rounded-full font-bold text-sm border border-rose-500/20">
+                          Chưa thanh toán
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="p-4 bg-foreground/5 rounded-2xl">
+                        <p className="text-sm text-foreground/60 mb-1">Số buổi đã học (có mặt)</p>
+                        <p className="text-2xl font-black">{report.presentCount}</p>
+                      </div>
+                      <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                        <p className="text-sm text-primary/80 mb-1 font-bold">Học phí tháng {attMonth.split('-')[1]}</p>
+                        <p className="text-2xl font-black text-primary">{report.totalAmount.toLocaleString()} VNĐ</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -34,6 +34,9 @@ model User {
   uploadedLessons   Lesson[]    @relation("TeacherLessons")
   lessonProgress    LessonProgress[]
   
+  attendances       Attendance[]
+  tuitionPayments   TuitionPayment[]
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -147,12 +150,15 @@ model Classroom {
   scheduleDays String?  // e.g. "1,3,5" for Mon, Wed, Fri (0 = Sunday)
   startTime    String?  // e.g. "18:00"
   endTime      String?  // e.g. "20:00"
+  feePerLesson Int      @default(0)
   
   teacher     User     @relation("TeacherClassrooms", fields: [teacherId], references: [id], onDelete: Cascade)
   students    User[]   @relation("StudentClassrooms")
   exams       Exam[]
   classSessions ClassSession[]
   lessons     Lesson[]
+  attendances Attendance[]
+  tuitionPayments TuitionPayment[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -230,4 +236,38 @@ model LessonProgress {
   updatedAt     DateTime @updatedAt
   
   @@unique([userId, lessonId])
+}
+
+model Attendance {
+  id          String   @id @default(uuid())
+  classroomId String
+  userId      String
+  date        DateTime
+  status      String   // "PRESENT", "EXCUSED", "UNEXCUSED"
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([classroomId, userId, date])
+}
+
+model TuitionPayment {
+  id            String   @id @default(uuid())
+  classroomId   String
+  userId        String
+  month         Int      
+  year          Int      
+  totalAmount   Int      
+  status        String   @default("PAID") // "PAID", "UNPAID"
+  paidAt        DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  classroom     Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([classroomId, userId, month, year])
 }
