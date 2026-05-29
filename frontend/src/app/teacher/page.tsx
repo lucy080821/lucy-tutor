@@ -1,8 +1,13 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, createRef } from "react";
 import CalendarComponent from "@/components/calendar/CalendarComponent";
 import Swal from 'sweetalert2';
 import * as XLSX from 'xlsx-js-style';
+import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
+import { TuitionInvoice } from '@/components/tuition/TuitionInvoice';
 
 const BLANK_QUESTION = () => ({
   type: "MULTIPLE_CHOICE" as "MULTIPLE_CHOICE" | "ESSAY",
@@ -261,6 +266,8 @@ export default function TeacherDashboard() {
   const [attMonth, setAttMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
   const [attRecords, setAttRecords] = useState<any[]>([]); // { userId, status, notes, user }
   const [attReport, setAttReport] = useState<any>(null);
+  const invoiceRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const [isExporting, setIsExporting] = useState(false);
 
   const fetchAttendance = async () => {
     if (!attClassroomId || !attDate) return;
@@ -295,6 +302,52 @@ export default function TeacherDashboard() {
         setAttReport(await res.json());
       }
     } catch (err) { console.error(err); }
+  };
+
+  const exportSinglePDF = async (studentId: string, studentName: string) => {
+    const el = invoiceRefs.current[studentId];
+    if (!el) return;
+    try {
+      setIsExporting(true);
+      // Brief timeout to let any styles settle
+      await new Promise(r => setTimeout(r, 100));
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [800, 1131] });
+      pdf.addImage(imgData, 'PNG', 0, 0, 800, 1131);
+      pdf.save(`${studentName.replace(/\s+/g, '_')}_${attMonth.replace('-', '_')}.pdf`);
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Lỗi', 'Không thể xuất PDF', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const exportAllPDFs = async () => {
+    if (!attReport?.report?.length) return;
+    try {
+      setIsExporting(true);
+      const zip = new JSZip();
+      for (const sr of attReport.report) {
+        const el = invoiceRefs.current[sr.user.id];
+        if (el) {
+          const canvas = await html2canvas(el, { scale: 2, useCORS: true });
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [800, 1131] });
+          pdf.addImage(imgData, 'PNG', 0, 0, 800, 1131);
+          const pdfBlob = pdf.output('blob');
+          zip.file(`${sr.user.name.replace(/\s+/g, '_')}_${attMonth.replace('-', '_')}.pdf`, pdfBlob);
+        }
+      }
+      const content = await zip.generateAsync({ type: 'blob' });
+      saveAs(content, `HoaDon_${attMonth.replace('-', '_')}.zip`);
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Lỗi', 'Không thể xuất file ZIP', 'error');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   useEffect(() => {
@@ -972,7 +1025,6 @@ export default function TeacherDashboard() {
 
                 {attView === 'REPORT' && (
                   <div className="bg-surface border border-foreground/10 p-6 rounded-3xl">
-                    <div className="flex justify-between items-center mb-6">
                       <h2 className="text-xl font-bold">Báo Cáo Học Phí</h2>
                       <input 
                         type="month" 
@@ -1007,14 +1059,23 @@ export default function TeacherDashboard() {
                                   )}
                                 </td>
                                 <td className="p-4 text-center">
-                                  {!sr.isPaid && sr.totalAmount > 0 && (
+                                  <div className="flex items-center justify-center gap-2">
                                     <button 
-                                      onClick={() => handlePayTuition(sr.user.id, sr.totalAmount)}
-                                      className="text-xs bg-primary text-white font-bold px-3 py-1.5 rounded-lg hover:bg-primary/90"
+                                      onClick={() => exportSinglePDF(sr.user.id, sr.user.name)}
+                                      disabled={isExporting}
+                                      className="text-xs bg-slate-100 text-slate-600 font-bold px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-1"
                                     >
-                                      Xác nhận đã nộp
+                                      📄 Xuất PDF
                                     </button>
-                                  )}
+                                    {!sr.isPaid && sr.totalAmount > 0 && (
+                                      <button 
+                                        onClick={() => handlePayTuition(sr.user.id, sr.totalAmount)}
+                                        className="text-xs bg-primary text-white font-bold px-3 py-1.5 rounded-lg hover:bg-primary/90"
+                                      >
+                                        Xác nhận đã nộp
+                                      </button>
+                                    )}
+                                  </div>
                                 </td>
                               </tr>
                             ))}
@@ -1717,6 +1778,32 @@ export default function TeacherDashboard() {
           </div>
         </div>
       )}
+
+      {/* HIDDEN INVOICE TEMPLATES FOR PDF EXPORT */}
+      {attReport?.report?.length > 0 && (
+        <div className="fixed top-[200vh] left-[200vw] pointer-events-none opacity-0 z-[-9999]">
+          {attReport.report.map((sr: any) => {
+            const [year, month] = attMonth.split('-');
+            return (
+              <TuitionInvoice
+                key={sr.user.id}
+                ref={(el) => { invoiceRefs.current[sr.user.id] = el; }}
+                studentName={sr.user.name}
+                classroomName={attReport.classroom.name}
+                month={parseInt(month)}
+                year={parseInt(year)}
+                presentCount={sr.presentCount}
+                feePerLesson={attReport.classroom.feePerLesson}
+                totalAmount={sr.totalAmount}
+                isPaid={sr.isPaid}
+                paidAt={sr.paidAt}
+                paymentId={sr.paymentId}
+              />
+            );
+          })}
+        </div>
+      )}
+
     </div>
   );
 }
