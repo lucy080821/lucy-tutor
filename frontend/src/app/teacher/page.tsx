@@ -1025,13 +1025,25 @@ export default function TeacherDashboard() {
 
                 {attView === 'REPORT' && (
                   <div className="bg-surface border border-foreground/10 p-6 rounded-3xl">
-                      <h2 className="text-xl font-bold">Báo Cáo Học Phí</h2>
-                      <input 
-                        type="month" 
-                        value={attMonth} 
-                        onChange={e => setAttMonth(e.target.value)} 
-                        className="p-2 border border-foreground/20 rounded-lg bg-transparent"
-                      />
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                      <div className="flex items-center gap-4">
+                        <h2 className="text-xl font-bold">Báo Cáo Học Phí</h2>
+                        <input 
+                          type="month" 
+                          value={attMonth} 
+                          onChange={e => setAttMonth(e.target.value)} 
+                          className="p-2 border border-foreground/20 rounded-lg bg-transparent"
+                        />
+                      </div>
+                      {attReport?.report?.length > 0 && (
+                        <button 
+                          onClick={exportAllPDFs}
+                          disabled={isExporting}
+                          className="px-4 py-2 bg-indigo-500/10 text-indigo-600 font-bold text-sm rounded-xl hover:bg-indigo-500/20 transition-colors shrink-0 flex items-center gap-2"
+                        >
+                          {isExporting ? 'Đang xuất...' : '📦 Xuất PDF tất cả (ZIP)'}
+                        </button>
+                      )}
                     </div>
                     {attReport ? (
                       <div className="overflow-x-auto">
