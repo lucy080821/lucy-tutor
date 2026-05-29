@@ -978,8 +978,8 @@ export default function TeacherDashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {attReport.studentReports.map((sr: any) => (
-                              <tr key={sr.userId} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5">
+                            {attReport.report?.map((sr: any) => (
+                              <tr key={sr.user.id} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5">
                                 <td className="p-4 font-medium">{sr.user.name}</td>
                                 <td className="p-4">{sr.presentCount} buổi</td>
                                 <td className="p-4 font-black text-primary text-right">{sr.totalAmount.toLocaleString()} VNĐ</td>
@@ -993,7 +993,7 @@ export default function TeacherDashboard() {
                                 <td className="p-4 text-center">
                                   {!sr.isPaid && sr.totalAmount > 0 && (
                                     <button 
-                                      onClick={() => handlePayTuition(sr.userId, sr.totalAmount)}
+                                      onClick={() => handlePayTuition(sr.user.id, sr.totalAmount)}
                                       className="text-xs bg-primary text-white font-bold px-3 py-1.5 rounded-lg hover:bg-primary/90"
                                     >
                                       Xác nhận đã nộp

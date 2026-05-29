@@ -219,7 +219,7 @@ export default function StudentDashboard() {
         fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/report/${c.id}?month=${month}&year=${year}`)
           .then(res => res.json())
           .then(data => {
-            const myReport = data.studentReports?.find((r: any) => r.userId === user.id);
+            const myReport = data.report?.find((r: any) => r.user?.id === user.id);
             return {
               classroomId: c.id,
               classroomName: c.name,
