@@ -48,3 +48,8 @@ body {
 .rotate-y-180 {
   transform: rotateY(180deg);
 }
+
+/* Global button styles */
+button {
+  cursor: pointer;
+}
