@@ -850,58 +850,99 @@ export default function TeacherDashboard() {
               <>
                 {attView === 'MARK' && (
                   <div className="bg-surface border border-foreground/10 p-6 rounded-3xl">
-                    <div className="flex justify-between items-center mb-6">
-                      <h2 className="text-xl font-bold">Điểm danh ngày</h2>
-                      <input 
-                        type="date" 
-                        value={attDate} 
-                        onChange={e => setAttDate(e.target.value)} 
-                        className="p-2 border border-foreground/20 rounded-lg bg-transparent"
-                      />
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                      <div className="flex items-center gap-4">
+                        <h2 className="text-xl font-bold">Điểm danh ngày</h2>
+                        <input 
+                          type="date" 
+                          value={attDate} 
+                          onChange={e => setAttDate(e.target.value)} 
+                          className="p-2 border border-foreground/20 rounded-lg bg-transparent font-medium"
+                        />
+                      </div>
+                      <button 
+                        onClick={() => {
+                          const next = attRecords.map(r => ({ ...r, status: 'PRESENT' }));
+                          setAttRecords(next);
+                        }}
+                        className="px-4 py-2 bg-green-500/10 text-green-600 font-bold text-sm rounded-xl hover:bg-green-500/20 transition-colors shrink-0"
+                      >
+                        ✓ Đánh dấu tất cả có mặt
+                      </button>
                     </div>
                     {attRecords.length > 0 ? (
                       <>
-                        <div className="space-y-4 mb-6">
-                          {attRecords.map((rec, i) => (
-                            <div key={rec.userId} className="flex items-center justify-between p-4 bg-foreground/5 rounded-2xl">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center font-bold">
-                                  {rec.user?.avatar ? <img src={rec.user.avatar} className="w-full h-full rounded-full object-cover" /> : rec.user?.name?.charAt(0)}
-                                </div>
-                                <span className="font-bold">{rec.user?.name}</span>
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <select 
-                                  value={rec.status} 
-                                  onChange={e => {
-                                    const next = [...attRecords];
-                                    next[i].status = e.target.value;
-                                    setAttRecords(next);
-                                  }}
-                                  className={`p-2 rounded-lg font-bold text-sm border-none outline-none ${
-                                    rec.status === 'PRESENT' ? 'bg-green-500/10 text-green-600' :
-                                    rec.status === 'EXCUSED_ABSENCE' ? 'bg-amber-500/10 text-amber-600' :
-                                    'bg-rose-500/10 text-rose-600'
-                                  }`}
-                                >
-                                  <option value="PRESENT">Có mặt</option>
-                                  <option value="EXCUSED_ABSENCE">Vắng có phép</option>
-                                  <option value="UNEXCUSED_ABSENCE">Vắng không phép</option>
-                                </select>
-                                <input 
-                                  type="text" 
-                                  placeholder="Ghi chú..." 
-                                  value={rec.notes} 
-                                  onChange={e => {
-                                    const next = [...attRecords];
-                                    next[i].notes = e.target.value;
-                                    setAttRecords(next);
-                                  }}
-                                  className="p-2 bg-transparent border-b border-foreground/20 focus:border-primary outline-none text-sm w-32"
-                                />
-                              </div>
-                            </div>
-                          ))}
+                        <div className="border border-foreground/10 rounded-2xl overflow-hidden mb-6">
+                          <table className="w-full text-left text-sm">
+                            <thead className="bg-foreground/5">
+                              <tr>
+                                <th className="p-3 font-bold border-b border-foreground/10">Học Sinh</th>
+                                <th className="p-3 font-bold border-b border-foreground/10 text-center">Trạng Thái</th>
+                                <th className="p-3 font-bold border-b border-foreground/10">Ghi chú</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {attRecords.map((rec, i) => (
+                                <tr key={rec.userId} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5 transition-colors">
+                                  <td className="p-3">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+                                        {rec.user?.avatar ? <img src={rec.user.avatar} className="w-full h-full object-cover" /> : rec.user?.name?.charAt(0)}
+                                      </div>
+                                      <span className="font-semibold whitespace-nowrap">{rec.user?.name}</span>
+                                    </div>
+                                  </td>
+                                  <td className="p-3">
+                                    <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
+                                      <button 
+                                        onClick={() => {
+                                          const next = [...attRecords];
+                                          next[i].status = 'PRESENT';
+                                          setAttRecords(next);
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${rec.status === 'PRESENT' ? 'bg-green-500 text-white shadow-md shadow-green-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
+                                      >
+                                        Có mặt
+                                      </button>
+                                      <button 
+                                        onClick={() => {
+                                          const next = [...attRecords];
+                                          next[i].status = 'EXCUSED_ABSENCE';
+                                          setAttRecords(next);
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${rec.status === 'EXCUSED_ABSENCE' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
+                                      >
+                                        Vắng (Có phép)
+                                      </button>
+                                      <button 
+                                        onClick={() => {
+                                          const next = [...attRecords];
+                                          next[i].status = 'UNEXCUSED_ABSENCE';
+                                          setAttRecords(next);
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${rec.status === 'UNEXCUSED_ABSENCE' ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
+                                      >
+                                        Vắng (Không phép)
+                                      </button>
+                                    </div>
+                                  </td>
+                                  <td className="p-3 w-1/3 sm:w-1/4">
+                                    <input 
+                                      type="text" 
+                                      placeholder="Ghi chú..." 
+                                      value={rec.notes} 
+                                      onChange={e => {
+                                        const next = [...attRecords];
+                                        next[i].notes = e.target.value;
+                                        setAttRecords(next);
+                                      }}
+                                      className="w-full px-3 py-1.5 bg-transparent border border-foreground/10 focus:border-primary rounded-lg outline-none text-sm transition-colors"
+                                    />
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
                         </div>
                         <button onClick={handleSaveAttendance} className="w-full py-4 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-colors">
                           Lưu Điểm Danh
