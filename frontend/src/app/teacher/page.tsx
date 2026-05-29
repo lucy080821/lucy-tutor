@@ -276,7 +276,7 @@ export default function TeacherDashboard() {
             return {
               userId: s.id,
               user: s,
-              status: existing ? existing.status : 'PRESENT',
+              status: existing ? existing.status : null,
               notes: existing ? existing.notes : ''
             };
           });
@@ -869,13 +869,13 @@ export default function TeacherDashboard() {
                       </div>
                       <button 
                         onClick={() => {
-                          const next = attRecords.map(r => ({ ...r, status: 'PRESENT' }));
+                          const next = attRecords.map(r => ({ ...r, status: r.status || 'PRESENT' }));
                           setAttRecords(next);
                           handleSaveAttendance(next);
                         }}
                         className="px-4 py-2 bg-green-500/10 text-green-600 font-bold text-sm rounded-xl hover:bg-green-500/20 transition-colors shrink-0"
                       >
-                        ✓ Đánh dấu tất cả có mặt
+                        ✓ Đánh dấu tất cả có mặt (những người chưa ĐD)
                       </button>
                     </div>
                     {attRecords.length > 0 ? (
@@ -897,7 +897,14 @@ export default function TeacherDashboard() {
                                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
                                         {rec.user?.avatar ? <img src={rec.user.avatar} className="w-full h-full object-cover" /> : rec.user?.name?.charAt(0)}
                                       </div>
-                                      <span className="font-semibold whitespace-nowrap">{rec.user?.name}</span>
+                                      <div className="flex flex-col">
+                                        <span className="font-semibold whitespace-nowrap">{rec.user?.name}</span>
+                                        {!rec.status ? (
+                                          <span className="text-[10px] text-rose-500 font-bold uppercase tracking-wider">Chưa điểm danh</span>
+                                        ) : (
+                                          <span className="text-[10px] text-green-500 font-bold uppercase tracking-wider">✓ Đã lưu</span>
+                                        )}
+                                      </div>
                                     </div>
                                   </td>
                                   <td className="p-3">
