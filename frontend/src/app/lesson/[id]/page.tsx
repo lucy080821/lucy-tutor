@@ -11,6 +11,7 @@ export default function LessonPage() {
   const [lesson, setLesson] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [learnedIndices, setLearnedIndices] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     const uid = localStorage.getItem('userId');
@@ -42,8 +43,16 @@ export default function LessonPage() {
     }
   };
 
+  const totalVocabs = lesson?.vocabularies?.length || 0;
+  const learnedCount = learnedIndices.size;
+  const percent = totalVocabs > 0 ? Math.round((learnedCount / totalVocabs) * 100) : 100;
+
   const handleComplete = async () => {
     if (!userId) return;
+    if (percent < 60) {
+      Swal.fire('Chưa hoàn thành', `Bạn mới học ${percent}% từ vựng. Cần tối thiểu 60% để hoàn thành bài học này!`, 'warning');
+      return;
+    }
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/${id}/progress`, {
         method: 'POST',
@@ -100,7 +109,19 @@ export default function LessonPage() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {lesson.vocabularies.map((vocab: any, i: number) => (
-                <Flashcard key={i} vocab={vocab} onSpeak={() => handleSpeak(vocab.word)} />
+                <Flashcard 
+                  key={i} 
+                  vocab={vocab} 
+                  onSpeak={() => handleSpeak(vocab.word)} 
+                  onFlip={() => {
+                    setLearnedIndices(prev => {
+                      const next = new Set(prev);
+                      next.add(i);
+                      return next;
+                    });
+                  }}
+                  isLearned={learnedIndices.has(i)}
+                />
               ))}
             </div>
           </section>
@@ -132,10 +153,34 @@ export default function LessonPage() {
         )}
 
         {/* Action Button */}
-        <div className="flex justify-center pt-8 border-t border-foreground/10">
+        <div className="flex flex-col items-center pt-8 border-t border-foreground/10 gap-6">
+          {totalVocabs > 0 && (
+            <div className="w-full max-w-md">
+              <div className="flex justify-between text-sm font-bold text-foreground/60 mb-2">
+                <span>Tiến độ từ vựng: {learnedCount}/{totalVocabs}</span>
+                <span className={percent >= 60 ? 'text-green-500' : 'text-orange-500'}>{percent}%</span>
+              </div>
+              <div className="w-full h-3 bg-foreground/5 rounded-full overflow-hidden">
+                <div 
+                  className={`h-full transition-all duration-500 ${percent >= 60 ? 'bg-green-500' : 'bg-orange-500'}`}
+                  style={{ width: `${percent}%` }}
+                />
+              </div>
+              {percent < 60 && (
+                <p className="text-xs text-orange-500 font-medium text-center mt-2">
+                  * Lật thẻ để học. Cần học ít nhất 60% từ vựng để hoàn thành bài học
+                </p>
+              )}
+            </div>
+          )}
+
           <button 
             onClick={handleComplete}
-            className="px-8 py-4 bg-primary text-white font-black text-lg rounded-2xl hover:scale-105 transition-transform shadow-xl shadow-primary/30 flex items-center gap-3"
+            className={`px-8 py-4 font-black text-lg rounded-2xl transition-all flex items-center gap-3 ${
+              percent >= 60 
+                ? 'bg-primary text-white hover:scale-105 shadow-xl shadow-primary/30' 
+                : 'bg-foreground/10 text-foreground/40'
+            }`}
           >
             ✅ Đã hiểu & Hoàn thành
           </button>
@@ -146,18 +191,21 @@ export default function LessonPage() {
 }
 
 // Flashcard Component
-function Flashcard({ vocab, onSpeak }: { vocab: any, onSpeak: () => void }) {
+function Flashcard({ vocab, onSpeak, onFlip, isLearned }: { vocab: any, onSpeak: () => void, onFlip: () => void, isLearned: boolean }) {
   const [flipped, setFlipped] = useState(false);
 
   return (
     <div 
       className="relative h-64 w-full perspective-1000 cursor-pointer group"
-      onClick={() => setFlipped(!flipped)}
+      onClick={() => {
+        setFlipped(!flipped);
+        if (!flipped) onFlip();
+      }}
     >
       <div className={`w-full h-full absolute transition-transform duration-500 transform-style-3d ${flipped ? 'rotate-y-180' : ''}`}>
         
         {/* Front */}
-        <div className="absolute w-full h-full backface-hidden bg-surface border-2 border-foreground/10 hover:border-primary/50 rounded-3xl p-6 flex flex-col items-center justify-center shadow-sm text-center">
+        <div className={`absolute w-full h-full backface-hidden bg-surface border-2 ${isLearned ? 'border-green-500/50' : 'border-foreground/10'} hover:border-primary/50 rounded-3xl p-6 flex flex-col items-center justify-center shadow-sm text-center transition-colors`}>
           <button 
             onClick={(e) => { e.stopPropagation(); onSpeak(); }}
             className="absolute top-4 right-4 w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
