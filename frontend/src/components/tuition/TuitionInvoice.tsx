@@ -2,20 +2,20 @@ import React from 'react';
 
 interface TuitionInvoiceProps {
   studentName: string;
-  classroomName: string;
   month: number;
   year: number;
-  presentCount: number;
-  feePerLesson: number;
+  classes: Array<{
+    classroomName: string;
+    presentCount: number;
+    feePerLesson: number;
+    totalAmount: number;
+  }>;
   totalAmount: number;
-  isPaid: boolean;
-  paidAt?: string | null;
-  paymentId?: string | null;
 }
 
 // Ensure this component is wrapped in a div with a fixed width (e.g., 800px) when rendering to PDF
 export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoiceProps>(({
-  studentName, classroomName, month, year, presentCount, feePerLesson, totalAmount, isPaid, paidAt, paymentId
+  studentName, month, year, classes, totalAmount
 }, ref) => {
   return (
     <div ref={ref} className="bg-white text-slate-800 p-10 font-sans mx-auto" style={{ width: '800px', height: '1131px', boxSizing: 'border-box', position: 'relative' }}>
@@ -32,7 +32,6 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
         <div className="text-right">
           <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tighter">THÔNG BÁO HỌC PHÍ</h2>
           <p className="text-slate-500 font-medium">Tháng {month} / {year}</p>
-          {paymentId && <p className="text-slate-400 text-xs mt-1">Mã GD: #{paymentId.slice(-6).toUpperCase()}</p>}
         </div>
       </div>
 
@@ -40,7 +39,7 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
       <div className="mb-12 bg-slate-50 p-6 rounded-2xl border border-slate-100">
         <p className="text-sm font-semibold text-slate-500 mb-1">Kính gửi Phụ huynh bé</p>
         <h3 className="text-2xl font-bold text-primary mb-1">{studentName}</h3>
-        <p className="text-sm font-medium text-slate-600">Lớp: {classroomName}</p>
+        <p className="text-sm font-medium text-slate-600">Lớp: {classes.map(c => c.classroomName).join(', ')}</p>
       </div>
 
       {/* Table Section */}
@@ -55,15 +54,17 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b border-slate-100">
-              <td className="py-6 px-6">
-                <p className="font-bold text-slate-800">Học phí tháng {month}/{year}</p>
-                <p className="text-sm text-slate-500 mt-1">Lớp {classroomName} (Tính theo số buổi đi học thực tế)</p>
-              </td>
-              <td className="py-6 px-6 text-center font-semibold text-slate-700 whitespace-nowrap">{presentCount} buổi</td>
-              <td className="py-6 px-6 text-right font-semibold text-slate-700 whitespace-nowrap">{feePerLesson.toLocaleString('vi-VN')} đ</td>
-              <td className="py-6 px-6 text-right font-black text-primary text-lg whitespace-nowrap">{totalAmount.toLocaleString('vi-VN')} đ</td>
-            </tr>
+            {classes.map((cls, idx) => (
+              <tr key={idx} className="border-b border-slate-100">
+                <td className="py-6 px-6">
+                  <p className="font-bold text-slate-800">Học phí tháng {month}/{year}</p>
+                  <p className="text-sm text-slate-500 mt-1">Lớp {cls.classroomName} (Tính theo số buổi đi học thực tế)</p>
+                </td>
+                <td className="py-6 px-6 text-center font-semibold text-slate-700 whitespace-nowrap">{cls.presentCount} buổi</td>
+                <td className="py-6 px-6 text-right font-semibold text-slate-700 whitespace-nowrap">{cls.feePerLesson.toLocaleString('vi-VN')} đ</td>
+                <td className="py-6 px-6 text-right font-black text-primary text-lg whitespace-nowrap">{cls.totalAmount.toLocaleString('vi-VN')} đ</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -71,7 +72,7 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
       {/* Total & Payment Info */}
       <div className="flex justify-between items-end bg-primary/5 p-8 rounded-3xl border border-primary/10 mb-12">
         <div className="w-1/2">
-          {!isPaid && totalAmount > 0 && (
+          {totalAmount > 0 && (
             <>
               <p className="text-xs font-bold text-primary uppercase tracking-wider mb-3">Thông tin chuyển khoản</p>
               <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4">

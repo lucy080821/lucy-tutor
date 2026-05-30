@@ -266,6 +266,7 @@ export default function TeacherDashboard() {
   const [attMonth, setAttMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
   const [attRecords, setAttRecords] = useState<any[]>([]); // { userId, status, notes, user }
   const [attReport, setAttReport] = useState<any>(null);
+  const [aggregatedReports, setAggregatedReports] = useState<Record<string, any>>({});
   const invoiceRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [isExporting, setIsExporting] = useState(false);
 
@@ -301,6 +302,30 @@ export default function TeacherDashboard() {
       if (res.ok) {
         setAttReport(await res.json());
       }
+
+      const allReports: Record<string, any> = {};
+      await Promise.all(classrooms.map(async (c: any) => {
+        const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/report/${c.id}?month=${month}&year=${year}`);
+        if (r.ok) {
+          const data = await r.json();
+          data.report.forEach((sr: any) => {
+            if (!allReports[sr.user.id]) {
+              allReports[sr.user.id] = { user: sr.user, classes: [], totalAmount: 0 };
+            }
+            if (sr.totalAmount > 0 || sr.presentCount > 0) {
+              allReports[sr.user.id].classes.push({
+                classroomName: data.classroom.name,
+                presentCount: sr.presentCount,
+                feePerLesson: data.classroom.feePerLesson,
+                totalAmount: sr.totalAmount,
+              });
+              allReports[sr.user.id].totalAmount += sr.totalAmount;
+            }
+          });
+        }
+      }));
+      setAggregatedReports(allReports);
+
     } catch (err) { console.error(err); }
   };
 
@@ -1790,25 +1815,21 @@ export default function TeacherDashboard() {
       )}
 
       {/* HIDDEN INVOICE TEMPLATES FOR PDF EXPORT */}
-      {attReport?.report?.length > 0 && (
+      {Object.keys(aggregatedReports).length > 0 && (
         <div style={{ position: 'absolute', top: '-10000px', left: '-10000px', zIndex: -1 }}>
-          {attReport.report.map((sr: any) => {
+          {Object.values(aggregatedReports).map((studentData: any) => {
             const [year, month] = attMonth.split('-');
             return (
-              <TuitionInvoice
-                key={sr.user.id}
-                ref={(el) => { invoiceRefs.current[sr.user.id] = el; }}
-                studentName={sr.user.name}
-                classroomName={attReport.classroom.name}
-                month={parseInt(month)}
-                year={parseInt(year)}
-                presentCount={sr.presentCount}
-                feePerLesson={attReport.classroom.feePerLesson}
-                totalAmount={sr.totalAmount}
-                isPaid={sr.isPaid}
-                paidAt={sr.paidAt}
-                paymentId={sr.paymentId}
-              />
+              <div key={`pdf-${studentData.user.id}`}>
+                <TuitionInvoice
+                  ref={(el) => { if (el) invoiceRefs.current[studentData.user.id] = el; }}
+                  studentName={studentData.user.name}
+                  month={parseInt(month)}
+                  year={parseInt(year)}
+                  classes={studentData.classes}
+                  totalAmount={studentData.totalAmount}
+                />
+              </div>
             );
           })}
         </div>
