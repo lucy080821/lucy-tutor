@@ -782,15 +782,9 @@ export default function StudentDashboard() {
                   <div>
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4">
                        {doc.fileType === '.pdf' ? (
-                          <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="4" y="4" width="40" height="40" rx="8" fill="#FF4B4B"/>
-                            <path d="M18 16H28C30.7614 16 33 18.2386 33 21C33 23.7614 30.7614 26 28 26H22V32H18V16ZM22 20V22H28C28.5523 22 29 21.5523 29 21C29 20.4477 28.5523 20 28 20H22Z" fill="white"/>
-                          </svg>
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF" className="w-10 h-10 object-contain" />
                        ) : (
-                          <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="4" y="4" width="40" height="40" rx="8" fill="#185ABD"/>
-                            <path d="M14 15L17.5 33H21.5L24 21L26.5 33H30.5L34 15H30L28 28.5L25 15H23L20 28.5L18 15H14Z" fill="white"/>
-                          </svg>
+                          <img src="https://upload.wikimedia.org/wikipedia/commons/d/d4/Microsoft_Word_2013_logo.svg" alt="Word" className="w-10 h-10 object-contain" />
                        )}
                     </div>
                     <h3 className="font-bold text-lg line-clamp-2 mb-1 group-hover:text-primary transition-colors" title={doc.title}>{doc.title}</h3>
