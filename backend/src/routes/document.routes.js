@@ -35,7 +35,11 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     if (!supabase) return res.status(500).json({ error: 'Supabase credentials not configured in backend' });
 
     const file = req.file;
-    const fileName = `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const removeVietnameseAccents = (str) => {
+       return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+    };
+    const sanitizedName = removeVietnameseAccents(file.originalname).replace(/[^a-zA-Z0-9.-]/g, '_');
+    const fileName = `${Date.now()}-${sanitizedName}`;
 
     const { data, error } = await supabase.storage
       .from('documents')

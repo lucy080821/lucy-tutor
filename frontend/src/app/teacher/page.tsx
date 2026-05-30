@@ -1112,9 +1112,9 @@ export default function TeacherDashboard() {
                     <h3 className="font-bold text-lg line-clamp-2 mb-1 group-hover:text-primary transition-colors" title={doc.title}>{doc.title}</h3>
                     <p className="text-xs text-foreground/50 mb-4">{new Date(doc.createdAt).toLocaleDateString('vi-VN')} • {(doc.size / 1024 / 1024).toFixed(2)} MB</p>
                   </div>
-                  <div className="flex gap-2">
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="flex-1 py-2 text-center bg-primary/10 text-primary rounded-xl text-sm font-bold hover:bg-primary hover:text-white transition-colors">Tải xuống</a>
-                    <button onClick={() => handleDeleteDocument(doc.id)} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-colors" title="Xóa">🗑️</button>
+                  <div className="flex gap-2 z-10">
+                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" download={doc.title} className="flex-1 py-2 text-center bg-primary/10 text-primary rounded-xl text-sm font-bold hover:bg-primary hover:text-white transition-colors cursor-pointer block">Tải xuống</a>
+                    <button onClick={() => handleDeleteDocument(doc.id)} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-colors cursor-pointer z-10 relative" title="Xóa">🗑️</button>
                   </div>
                 </div>
               ))}
