@@ -48,10 +48,10 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-primary/5">
-              <th className="py-4 px-6 font-bold text-slate-600 border-b-2 border-primary/20 rounded-tl-xl">Mô tả chi tiết</th>
-              <th className="py-4 px-6 font-bold text-slate-600 border-b-2 border-primary/20 text-center">Số lượng</th>
-              <th className="py-4 px-6 font-bold text-slate-600 border-b-2 border-primary/20 text-right">Đơn giá</th>
-              <th className="py-4 px-6 font-bold text-primary border-b-2 border-primary/20 text-right rounded-tr-xl">Thành tiền</th>
+              <th className="py-4 px-6 font-bold text-slate-600 border-b-2 border-primary/20 rounded-tl-xl whitespace-nowrap">Mô tả chi tiết</th>
+              <th className="py-4 px-6 font-bold text-slate-600 border-b-2 border-primary/20 text-center whitespace-nowrap">Số lượng</th>
+              <th className="py-4 px-6 font-bold text-slate-600 border-b-2 border-primary/20 text-right whitespace-nowrap">Đơn giá</th>
+              <th className="py-4 px-6 font-bold text-primary border-b-2 border-primary/20 text-right rounded-tr-xl whitespace-nowrap">Thành tiền</th>
             </tr>
           </thead>
           <tbody>
@@ -74,13 +74,23 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
           {!isPaid && totalAmount > 0 && (
             <>
               <p className="text-xs font-bold text-primary uppercase tracking-wider mb-3">Thông tin chuyển khoản</p>
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
-                <p className="text-sm font-semibold mb-1"><span className="text-slate-500">Ngân hàng:</span> Vietcombank (VCB)</p>
-                <p className="text-sm font-semibold mb-1"><span className="text-slate-500">Chủ TK:</span> HO THI THUY CO</p>
-                <p className="text-sm font-semibold mb-1"><span className="text-slate-500">Số TK:</span> 0123456789</p>
-                <p className="text-sm font-semibold mt-3 pt-3 border-t border-slate-100 text-primary">
-                  <span className="text-slate-500">Nội dung:</span> {studentName} HP T{month}
-                </p>
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4">
+                <div className="flex-1">
+                  <p className="text-sm font-semibold mb-1"><span className="text-slate-500">Ngân hàng:</span> TPBank</p>
+                  <p className="text-sm font-semibold mb-1"><span className="text-slate-500">Chủ TK:</span> TA HOANG ANH TUAN</p>
+                  <p className="text-sm font-semibold mb-1"><span className="text-slate-500">Số TK:</span> 86812121993</p>
+                  <p className="text-sm font-semibold mt-3 pt-3 border-t border-slate-100 text-primary">
+                    <span className="text-slate-500">Nội dung:</span> {studentName} HP T{month}
+                  </p>
+                </div>
+                <div className="shrink-0 p-1 border-2 border-primary/20 rounded-lg">
+                  <img 
+                    src={`https://img.vietqr.io/image/tpbank-86812121993-qr_only.png?amount=${totalAmount}&addInfo=${encodeURIComponent(studentName + " HP T" + month)}&accountName=TA%20HOANG%20ANH%20TUAN`} 
+                    alt="QR Code" 
+                    className="w-24 h-24 object-contain" 
+                    crossOrigin="anonymous" 
+                  />
+                </div>
               </div>
             </>
           )}
