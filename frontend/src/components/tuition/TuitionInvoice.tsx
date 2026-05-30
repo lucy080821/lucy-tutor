@@ -36,11 +36,15 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
       </div>
 
       {/* Info Section */}
-      <div className="mb-12 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+      <div className="mb-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
         <p className="text-sm font-semibold text-slate-500 mb-1">Kính gửi Phụ huynh bé</p>
         <h3 className="text-2xl font-bold text-primary mb-1">{studentName}</h3>
         <p className="text-sm font-medium text-slate-600">Lớp: {classes.map(c => c.classroomName).join(', ')}</p>
       </div>
+
+      <p className="mb-4 text-base text-slate-700 font-medium">
+        Lucy Tutor xin thông báo đến quý Phụ Huynh thông tin học phí của bé <span className="font-bold text-primary">{studentName}</span> như sau:
+      </p>
 
       {/* Table Section */}
       <div className="mb-12">
