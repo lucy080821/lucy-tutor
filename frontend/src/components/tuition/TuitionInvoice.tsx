@@ -114,7 +114,7 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
       {/* Footer */}
       <div className="absolute bottom-10 left-10 right-10 text-center border-t border-slate-200 pt-6">
         <p className="text-sm font-semibold text-slate-600 mb-1">Cảm ơn bạn đã tin tưởng và đồng hành cùng LucyTutor!</p>
-        <p className="text-xs text-slate-400">Mọi thắc mắc vui lòng liên hệ Zalo/SĐT: 0909.xxx.xxx</p>
+        <p className="text-xs text-slate-400">Mọi thắc mắc vui lòng liên hệ Zalo/SĐT: 0869.603.164</p>
       </div>
       
     </div>
