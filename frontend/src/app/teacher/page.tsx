@@ -215,6 +215,53 @@ export default function TeacherDashboard() {
     } catch (err) { console.error(err); }
   };
 
+  const handleUpdateDocumentVisibility = async (doc: any) => {
+    const inputOptions: Record<string, string> = {
+      'PUBLIC': 'Tất cả trung tâm (Public)',
+      'PRIVATE': 'Chỉ mình tôi (Private)'
+    };
+    classrooms.forEach((c: any) => {
+      inputOptions[`CLASS_${c.id}`] = `Lớp: ${c.name}`;
+    });
+
+    const currentVal = doc.visibility === 'CLASS' ? `CLASS_${doc.classroomId}` : doc.visibility;
+
+    const { value: selectedOption } = await Swal.fire({
+      title: 'Đổi trạng thái chia sẻ',
+      input: 'select',
+      inputOptions,
+      inputValue: currentVal,
+      showCancelButton: true,
+      confirmButtonText: 'Lưu',
+      cancelButtonText: 'Hủy'
+    });
+
+    if (selectedOption && selectedOption !== currentVal) {
+      let newVisibility = selectedOption;
+      let newClassroomId = null;
+      if (selectedOption.startsWith('CLASS_')) {
+         newVisibility = 'CLASS';
+         newClassroomId = selectedOption.replace('CLASS_', '');
+      }
+
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/documents/${doc.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ visibility: newVisibility, classroomId: newClassroomId })
+        });
+        if (res.ok) {
+          fetchDocuments();
+          Swal.fire('Thành công', 'Đã cập nhật trạng thái', 'success');
+        } else {
+          Swal.fire('Lỗi', 'Cập nhật thất bại', 'error');
+        }
+      } catch(err) {
+        console.error(err);
+      }
+    }
+  };
+
   // ── Lesson management state ──
   const [localLessons, setLocalLessons] = useState<any[]>([]);
   useEffect(() => {
@@ -1035,10 +1082,10 @@ export default function TeacherDashboard() {
               {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).length === 0 && <div className="text-foreground/50 italic col-span-full">Không tìm thấy tài liệu phù hợp</div>}
               {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).map((doc: any) => (
                 <div key={doc.id} className="bg-surface p-6 rounded-3xl border border-foreground/10 hover:border-primary/30 transition-all flex flex-col justify-between group relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-3 flex gap-2">
-                     <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${doc.visibility === 'PUBLIC' ? 'bg-green-500/10 text-green-500' : doc.visibility === 'CLASS' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>
+                  <div className="absolute top-0 right-0 p-3 flex gap-2 z-10">
+                     <button onClick={() => handleUpdateDocumentVisibility(doc)} className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase hover:opacity-80 cursor-pointer transition-opacity ${doc.visibility === 'PUBLIC' ? 'bg-green-500/10 text-green-500' : doc.visibility === 'CLASS' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`} title="Nhấn để đổi trạng thái">
                         {doc.visibility === 'CLASS' ? (doc.classroom?.name || 'Lớp') : doc.visibility}
-                     </span>
+                     </button>
                   </div>
                   <div>
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4">

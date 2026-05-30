@@ -121,5 +121,26 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+router.patch('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { visibility, classroomId } = req.body;
+    
+    const doc = await prisma.document.findUnique({ where: { id } });
+    if (!doc) return res.status(404).json({ error: 'Not found' });
+    
+    const updatedDoc = await prisma.document.update({
+      where: { id },
+      data: {
+        visibility,
+        classroomId: (visibility === 'CLASS' && classroomId) ? classroomId : null
+      }
+    });
+    
+    res.json({ message: 'Cập nhật thành công', document: updatedDoc });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 module.exports = router;
