@@ -28,6 +28,7 @@ const aiRoutes = require('./routes/ai.routes');
 const calendarRoutes = require('./routes/calendar.routes');
 const lessonRoutes = require('./routes/lessons.routes');
 const attendanceRoutes = require('./routes/attendance.routes');
+const documentRoutes = require('./routes/document.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
@@ -40,6 +41,7 @@ app.use('/api/ai', aiRoutes);
 app.use('/api/calendar', calendarRoutes);
 app.use('/api/lessons', lessonRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/documents', documentRoutes);
 
 const PORT = process.env.PORT || 5000;
 

@@ -33,6 +33,7 @@ model User {
   
   uploadedLessons   Lesson[]    @relation("TeacherLessons")
   lessonProgress    LessonProgress[]
+  uploadedDocuments Document[]  @relation("TeacherDocuments")
   
   attendances       Attendance[]
   tuitionPayments   TuitionPayment[]
@@ -159,6 +160,7 @@ model Classroom {
   lessons     Lesson[]
   attendances Attendance[]
   tuitionPayments TuitionPayment[]
+  documents   Document[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -270,4 +272,22 @@ model TuitionPayment {
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   @@unique([classroomId, userId, month, year])
+}
+
+model Document {
+  id            String   @id @default(uuid())
+  title         String
+  fileUrl       String
+  fileType      String
+  size          Int
+  visibility    String   @default("PUBLIC") // "PUBLIC", "CLASS", "PRIVATE"
+  
+  classroomId   String?
+  classroom     Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  
+  uploadedById  String
+  uploadedBy    User     @relation("TeacherDocuments", fields: [uploadedById], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

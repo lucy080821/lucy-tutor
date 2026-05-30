@@ -137,6 +137,83 @@ export default function TeacherDashboard() {
     setShowModal(true);
   };
 
+  // ── Document management state ──
+  const [documents, setDocuments] = useState<any[]>([]);
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docTitle, setDocTitle] = useState("");
+  const [docVisibility, setDocVisibility] = useState("PUBLIC");
+  const [docClassroomId, setDocClassroomId] = useState("");
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+
+  const fetchDocuments = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/documents?teacherId=${user.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setDocuments(data);
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => {
+    if (activeTab === "DOCUMENTS" && user) {
+      fetchDocuments();
+    }
+  }, [activeTab, user]);
+
+  const handleUploadDocument = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!docFile || !user) return;
+    setIsUploadingDoc(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', docFile);
+      formData.append('title', docTitle);
+      formData.append('visibility', docVisibility);
+      if (docVisibility === 'CLASS' && docClassroomId) {
+        formData.append('classroomId', docClassroomId);
+      }
+      formData.append('uploadedById', user.id);
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/documents/upload`, {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        Swal.fire('Thành công', 'Tải tài liệu lên thành công!', 'success');
+        setDocFile(null);
+        setDocTitle("");
+        setDocVisibility("PUBLIC");
+        setDocClassroomId("");
+        fetchDocuments();
+      } else {
+        const errData = await res.json();
+        Swal.fire('Lỗi', errData.error || 'Tải lên thất bại', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Lỗi', 'Lỗi kết nối mạng', 'error');
+    } finally {
+      setIsUploadingDoc(false);
+    }
+  };
+
+  const handleDeleteDocument = async (docId: string) => {
+    if (!confirm('Bạn có chắc muốn xóa tài liệu này?')) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/documents/${docId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        Swal.fire('Đã xóa', 'Xóa tài liệu thành công', 'success');
+        fetchDocuments();
+      } else {
+        Swal.fire('Lỗi', 'Xóa thất bại', 'error');
+      }
+    } catch (err) { console.error(err); }
+  };
+
   // ── Lesson management state ──
   const [localLessons, setLocalLessons] = useState<any[]>([]);
   useEffect(() => {
@@ -638,6 +715,7 @@ export default function TeacherDashboard() {
   // ── Nav ──
   const [expandedNav, setExpandedNav] = useState<Record<string, boolean>>({
     'QUANLY': true,
+    'DOCUMENTS_GROUP': true,
     'LESSONS_GROUP': true,
     'EXAMS_GROUP': true,
   });
@@ -662,6 +740,12 @@ export default function TeacherDashboard() {
       subItems: [
         { id: "LESSONS", label: "Danh Sách Bài Học" },
         { id: "CREATE_LESSON", label: "Tạo Bài Học" }
+      ]
+    },
+    {
+      id: "DOCUMENTS_GROUP", label: "Tài Liệu",
+      subItems: [
+        { id: "DOCUMENTS", label: "Kho Tài Liệu" }
       ]
     },
     {
@@ -894,6 +978,70 @@ export default function TeacherDashboard() {
               </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* ── DOCUMENTS ── */}
+        {activeTab === "DOCUMENTS" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h1 className="text-3xl font-bold mb-6">Kho Tài Liệu</h1>
+            <div className="bg-surface p-6 rounded-3xl border border-foreground/10 mb-8">
+              <h2 className="text-xl font-bold mb-4">Tải tài liệu lên</h2>
+              <form onSubmit={handleUploadDocument} className="flex flex-wrap gap-4 items-end">
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-sm font-bold mb-2">Chọn file (PDF, Word)</label>
+                  <input type="file" accept=".pdf,.doc,.docx" onChange={e => setDocFile(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" required />
+                </div>
+                <div className="flex-1 min-w-[200px]">
+                  <label className="block text-sm font-bold mb-2">Tiêu đề (Tùy chọn)</label>
+                  <input type="text" value={docTitle} onChange={e => setDocTitle(e.target.value)} placeholder="Tên tài liệu..." className="w-full p-3 rounded-xl border border-foreground/20 bg-transparent" />
+                </div>
+                <div className="flex-1 min-w-[150px]">
+                  <label className="block text-sm font-bold mb-2">Phạm vi chia sẻ</label>
+                  <select value={docVisibility} onChange={e => setDocVisibility(e.target.value)} className="w-full p-3 rounded-xl border border-foreground/20 bg-transparent font-bold">
+                    <option value="PUBLIC">Tất cả trung tâm</option>
+                    <option value="CLASS">Chỉ lớp học</option>
+                    <option value="PRIVATE">Chỉ mình tôi</option>
+                  </select>
+                </div>
+                {docVisibility === 'CLASS' && (
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="block text-sm font-bold mb-2">Chọn Lớp Học</label>
+                    <select value={docClassroomId} onChange={e => setDocClassroomId(e.target.value)} className="w-full p-3 rounded-xl border border-foreground/20 bg-transparent font-bold" required>
+                      <option value="">-- Chọn lớp --</option>
+                      {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                )}
+                <button type="submit" disabled={isUploadingDoc} className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 disabled:opacity-50 min-w-[120px]">
+                  {isUploadingDoc ? 'Đang tải...' : 'Upload'}
+                </button>
+              </form>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {documents.length === 0 && <div className="text-foreground/50 italic col-span-full">Chưa có tài liệu nào</div>}
+              {documents.map((doc: any) => (
+                <div key={doc.id} className="bg-surface p-6 rounded-3xl border border-foreground/10 hover:border-primary/30 transition-all flex flex-col justify-between group relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-3 flex gap-2">
+                     <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${doc.visibility === 'PUBLIC' ? 'bg-green-500/10 text-green-500' : doc.visibility === 'CLASS' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>
+                        {doc.visibility === 'CLASS' ? (doc.classroom?.name || 'Lớp') : doc.visibility}
+                     </span>
+                  </div>
+                  <div>
+                    <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-4 text-2xl font-bold">
+                       {doc.fileType === '.pdf' ? '📄' : '📝'}
+                    </div>
+                    <h3 className="font-bold text-lg line-clamp-2 mb-1 group-hover:text-primary transition-colors" title={doc.title}>{doc.title}</h3>
+                    <p className="text-xs text-foreground/50 mb-4">{new Date(doc.createdAt).toLocaleDateString('vi-VN')} • {(doc.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="flex-1 py-2 text-center bg-primary/10 text-primary rounded-xl text-sm font-bold hover:bg-primary hover:text-white transition-colors">Tải xuống</a>
+                    <button onClick={() => handleDeleteDocument(doc.id)} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-colors" title="Xóa">🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 

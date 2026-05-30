@@ -196,6 +196,7 @@ export default function StudentDashboard() {
         { id: "PRACTICE", label: "Bài Tập" },
         { id: "EXAMS", label: "Bài Kiểm Tra" },
         { id: "ATTENDANCE", label: "Chuyên Cần" },
+        { id: "DOCUMENTS", label: "Tài Liệu" },
       ]
     },
     { id: "CALENDAR", label: "Thời Khóa Biểu" },
@@ -231,6 +232,27 @@ export default function StudentDashboard() {
       }).catch(console.error);
     }
   }, [activeTab, attMonth, user]);
+
+  // ── DOCUMENTS state ──
+  const [documents, setDocuments] = useState<any[]>([]);
+  useEffect(() => {
+    if (activeTab === "DOCUMENTS" && user) {
+      const classroomIds = user.classroomsJoined?.map((c: any) => c.id) || [];
+      const fetchPromises = classroomIds.map((id: string) => 
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/documents?classroomId=${id}`).then(r => r.json())
+      );
+      if (classroomIds.length === 0) {
+        fetchPromises.push(fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/documents`).then(r => r.json()));
+      }
+      Promise.all(fetchPromises)
+        .then(results => {
+          const allDocs = results.flat();
+          const uniqueDocs = Array.from(new Map(allDocs.map((d: any) => [d.id, d])).values());
+          setDocuments(uniqueDocs.sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()));
+        })
+        .catch(console.error);
+    }
+  }, [activeTab, user]);
 
   const totalExams = history.length;
   const avgScore = totalExams > 0 ? (history.reduce((acc, curr) => acc + curr.score, 0) / totalExams).toFixed(1) : "0.0";
@@ -734,7 +756,36 @@ export default function StudentDashboard() {
           </div>
         )}
 
-        {/* VIEW: ATTENDANCE */}
+        {/* ── DOCUMENTS ── */}
+        {activeTab === "DOCUMENTS" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h1 className="text-3xl font-bold mb-6">Kho Tài Liệu</h1>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {documents.length === 0 && <div className="text-foreground/50 italic col-span-full">Chưa có tài liệu nào</div>}
+              {documents.map((doc: any) => (
+                <div key={doc.id} className="bg-surface p-6 rounded-3xl border border-foreground/10 hover:border-primary/30 transition-all flex flex-col justify-between group relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-3 flex gap-2">
+                     <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${doc.visibility === 'PUBLIC' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                        {doc.visibility === 'CLASS' ? (doc.classroom?.name || 'Lớp') : 'Chung'}
+                     </span>
+                  </div>
+                  <div>
+                    <div className="w-12 h-12 bg-primary/10 text-primary rounded-xl flex items-center justify-center mb-4 text-2xl font-bold">
+                       {doc.fileType === '.pdf' ? '📄' : '📝'}
+                    </div>
+                    <h3 className="font-bold text-lg line-clamp-2 mb-1 group-hover:text-primary transition-colors" title={doc.title}>{doc.title}</h3>
+                    <p className="text-xs text-foreground/50 mb-4">{new Date(doc.createdAt).toLocaleDateString('vi-VN')} • {(doc.size / 1024 / 1024).toFixed(2)} MB</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" className="flex-1 py-2 text-center bg-primary/10 text-primary rounded-xl text-sm font-bold hover:bg-primary hover:text-white transition-colors">Tải xuống</a>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── ATTENDANCE ── */}
         {activeTab === "ATTENDANCE" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center mb-6">
