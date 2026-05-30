@@ -235,6 +235,7 @@ export default function StudentDashboard() {
 
   // ── DOCUMENTS state ──
   const [documents, setDocuments] = useState<any[]>([]);
+  const [searchDocQuery, setSearchDocQuery] = useState("");
   useEffect(() => {
     if (activeTab === "DOCUMENTS" && user) {
       const classroomIds = user.classroomsJoined?.map((c: any) => c.id) || [];
@@ -759,10 +760,19 @@ export default function StudentDashboard() {
         {/* ── DOCUMENTS ── */}
         {activeTab === "DOCUMENTS" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h1 className="text-3xl font-bold mb-6">Kho Tài Liệu</h1>
+            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+               <h1 className="text-3xl font-bold">Kho Tài Liệu</h1>
+               <input 
+                 type="text" 
+                 placeholder="Tìm kiếm tài liệu..." 
+                 value={searchDocQuery}
+                 onChange={e => setSearchDocQuery(e.target.value)}
+                 className="w-full md:w-1/3 p-3 rounded-xl border border-foreground/20 bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50" 
+               />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {documents.length === 0 && <div className="text-foreground/50 italic col-span-full">Chưa có tài liệu nào</div>}
-              {documents.map((doc: any) => (
+              {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).length === 0 && <div className="text-foreground/50 italic col-span-full">Không tìm thấy tài liệu phù hợp</div>}
+              {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).map((doc: any) => (
                 <div key={doc.id} className="bg-surface p-6 rounded-3xl border border-foreground/10 hover:border-primary/30 transition-all flex flex-col justify-between group relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-3 flex gap-2">
                      <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${doc.visibility === 'PUBLIC' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}`}>

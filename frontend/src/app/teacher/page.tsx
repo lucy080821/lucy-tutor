@@ -144,6 +144,7 @@ export default function TeacherDashboard() {
   const [docVisibility, setDocVisibility] = useState("PUBLIC");
   const [docClassroomId, setDocClassroomId] = useState("");
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [searchDocQuery, setSearchDocQuery] = useState("");
 
   const fetchDocuments = async () => {
     if (!user) return;
@@ -1018,10 +1019,21 @@ export default function TeacherDashboard() {
                 </button>
               </form>
             </div>
+            
+            <div className="flex justify-between items-center mb-6">
+               <h2 className="text-xl font-bold">Danh sách tài liệu</h2>
+               <input 
+                 type="text" 
+                 placeholder="Tìm kiếm tài liệu..." 
+                 value={searchDocQuery}
+                 onChange={e => setSearchDocQuery(e.target.value)}
+                 className="w-full md:w-1/3 p-3 rounded-xl border border-foreground/20 bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50" 
+               />
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {documents.length === 0 && <div className="text-foreground/50 italic col-span-full">Chưa có tài liệu nào</div>}
-              {documents.map((doc: any) => (
+              {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).length === 0 && <div className="text-foreground/50 italic col-span-full">Không tìm thấy tài liệu phù hợp</div>}
+              {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).map((doc: any) => (
                 <div key={doc.id} className="bg-surface p-6 rounded-3xl border border-foreground/10 hover:border-primary/30 transition-all flex flex-col justify-between group relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-3 flex gap-2">
                      <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${doc.visibility === 'PUBLIC' ? 'bg-green-500/10 text-green-500' : doc.visibility === 'CLASS' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>
