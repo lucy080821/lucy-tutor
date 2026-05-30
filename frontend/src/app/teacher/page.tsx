@@ -8,6 +8,7 @@ import { toPng } from 'html-to-image';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { TuitionInvoice } from '@/components/tuition/TuitionInvoice';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
 const BLANK_QUESTION = () => ({
   type: "MULTIPLE_CHOICE" as "MULTIPLE_CHOICE" | "ESSAY",
@@ -912,6 +913,25 @@ export default function TeacherDashboard() {
               <StatCard title="Bài Tập / Đề Thi" value={String(classrooms.flatMap(c => c.exams || []).length)} />
               <StatCard title="Câu Hỏi" value={String(classrooms.flatMap(c => c.exams || []).reduce((s: number, e: any) => s + (e.totalQuestions || 0), 0))} />
             </div>
+
+            {/* Overview Chart */}
+            <div className="bg-surface p-6 rounded-3xl border border-foreground/10 shadow-sm mt-6 mb-6">
+              <h3 className="font-bold mb-6 text-foreground/80">Thống kê Lớp học</h3>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={classrooms.map(c => ({ name: c.name, HọcSinh: c.students?.length || 0, BàiTập: c.exams?.length || 0 }))} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.1} />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'currentColor', opacity: 0.5 }} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'currentColor', opacity: 0.5 }} allowDecimals={false} />
+                    <Tooltip cursor={{ fill: 'currentColor', opacity: 0.05 }} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
+                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '14px' }} />
+                    <Bar dataKey="HọcSinh" name="Số Học Sinh" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={32} />
+                    <Bar dataKey="BàiTập" name="Số Bài Tập" fill="#10b981" radius={[4, 4, 0, 0]} barSize={32} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {classrooms.map(c => <ClassCard key={c.id} c={c} onEdit={() => openEditModal(c)} />)}
               <button onClick={openCreateModal} className="border-2 border-dashed border-foreground/20 rounded-2xl p-5 flex items-center justify-center gap-2 text-foreground/40 font-bold hover:border-primary/40 hover:text-primary/60 transition-colors cursor-pointer">
