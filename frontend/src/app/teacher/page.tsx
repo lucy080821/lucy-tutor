@@ -1088,11 +1088,25 @@ export default function TeacherDashboard() {
                      </button>
                   </div>
                   <div>
-                    <div className="w-12 h-12 rounded-xl flex items-center justify-center mb-4">
+                    <div className="w-12 h-12 flex items-center justify-center mb-4">
                        {doc.fileType === '.pdf' ? (
-                          <img src="https://upload.wikimedia.org/wikipedia/commons/8/87/PDF_file_icon.svg" alt="PDF" className="w-10 h-10 object-contain" />
+                          <svg viewBox="0 0 48 48" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 4 h22 l10 10 v30 h-32 Z" fill="#fff" stroke="#e11d48" strokeWidth="2" strokeLinejoin="round"/>
+                            <path d="M30 4 v10 h10" fill="none" stroke="#e11d48" strokeWidth="2" strokeLinejoin="round"/>
+                            <path d="M22 20 c0 0 -2 -6 -5 -6 c-2 0 -3 2 -1 4 c2 2 4 4 6 7 c2 3 1 6 3 6 c2 0 3 -1 2 -3 c-1 -2 -3 -3 -5 -5 c-1 -2 -2 -5 -2 -5 c0 0 2 0 2 2 z" fill="none" stroke="#e11d48" strokeWidth="2"/>
+                            <text x="13" y="38" fontFamily="Arial" fontSize="12" fontWeight="bold" fill="#1f2937">PDF</text>
+                          </svg>
                        ) : (
-                          <img src="https://upload.wikimedia.org/wikipedia/commons/d/d4/Microsoft_Word_2013_logo.svg" alt="Word" className="w-10 h-10 object-contain" />
+                          <svg viewBox="0 0 48 48" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+                            <rect x="18" y="8" width="24" height="32" fill="#fff" stroke="#1d4ed8" strokeWidth="2" rx="2"/>
+                            <rect x="24" y="14" width="14" height="2" fill="#1d4ed8"/>
+                            <rect x="24" y="19" width="14" height="2" fill="#1d4ed8"/>
+                            <rect x="24" y="24" width="14" height="2" fill="#1d4ed8"/>
+                            <rect x="24" y="29" width="14" height="2" fill="#1d4ed8"/>
+                            <rect x="24" y="34" width="14" height="2" fill="#1d4ed8"/>
+                            <path d="M4 12 L20 8 L20 40 L4 36 Z" fill="#1d4ed8" stroke="#1d4ed8" strokeWidth="1" strokeLinejoin="round"/>
+                            <text x="6" y="31" fontFamily="Arial" fontSize="18" fontWeight="bold" fill="#fff">W</text>
+                          </svg>
                        )}
                     </div>
                     <h3 className="font-bold text-lg line-clamp-2 mb-1 group-hover:text-primary transition-colors" title={doc.title}>{doc.title}</h3>
