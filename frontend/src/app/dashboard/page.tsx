@@ -312,12 +312,20 @@ export default function StudentDashboard() {
       {/* Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-72 bg-surface/95 md:bg-surface/80 backdrop-blur-2xl rounded-r-3xl md:rounded-3xl p-6 flex flex-col gap-2 shrink-0 h-full overflow-y-auto border-r md:border border-foreground/5 shadow-2xl md:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         
-        <div className="mb-10 px-2 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-black text-xl shadow-lg shadow-primary/30">
-            L
-          </div>
-          <div>
-            <h2 className="text-xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent tracking-tight">Lucy Tutor</h2>
+        <div className="mb-10 px-2 flex items-center gap-4">
+          <label className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 text-primary flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer relative overflow-hidden ring-2 ring-transparent hover:ring-primary/30 transition-all group shadow-sm">
+            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
+            {user?.avatar ? (
+              <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              user?.name?.charAt(0)?.toUpperCase() || 'H'
+            )}
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+              <span className="text-[10px] font-bold text-white tracking-wider">ĐỔI</span>
+            </div>
+          </label>
+          <div className="overflow-hidden">
+            <h2 className="text-xl font-black text-foreground truncate tracking-tight">{user?.name || 'Học sinh'}</h2>
             <p className="text-[10px] text-foreground/50 font-bold uppercase tracking-widest mt-0.5">Học sinh</p>
           </div>
         </div>
