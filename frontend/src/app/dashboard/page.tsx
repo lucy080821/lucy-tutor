@@ -470,11 +470,11 @@ export default function StudentDashboard() {
                         >
                           Cấp {level} - {rank.label}
                         </span>
-                        <div className="flex items-center gap-2" title={`Tiến độ lên Cấp ${level + 1}: ${xp} / ${nextLevelXP} XP`}>
+                        <div className="flex items-center gap-2" title={`Cấp ${level}: ${xpInCurrentLevel} / ${xpNeededForNext} XP`}>
                           <div className="w-24 h-1.5 bg-foreground/10 rounded-full overflow-hidden shadow-inner relative group">
-                            <div className="h-full bg-primary/80 rounded-full" style={{ width: `${(xp / nextLevelXP) * 100}%` }} />
+                            <div className="h-full bg-primary/80 rounded-full" style={{ width: `${(xpInCurrentLevel / xpNeededForNext) * 100}%` }} />
                           </div>
-                          <span className="text-xs text-foreground/40 font-bold">{xp}/{nextLevelXP}</span>
+                          <span className="text-xs text-foreground/40 font-bold">{xpInCurrentLevel}/{xpNeededForNext}</span>
                         </div>
                       </div>
                     );
