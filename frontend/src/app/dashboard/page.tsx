@@ -647,8 +647,8 @@ export default function StudentDashboard() {
                         ) : (
                           <span className="px-3 py-1 bg-amber-500/10 text-amber-600 font-bold rounded-lg text-sm">⏳ Chưa học</span>
                         )}
-                        <Link href={`/lesson/${lesson.id}`} className="px-5 py-2 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors text-sm">
-                          Học Ngay →
+                        <Link href={`/lesson/${lesson.id}`} className="px-5 py-2 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors text-sm whitespace-nowrap flex items-center justify-center gap-2">
+                          Học Ngay <span>→</span>
                         </Link>
                       </div>
                     </div>
@@ -700,8 +700,8 @@ export default function StudentDashboard() {
                           return <span className="px-6 py-2 bg-foreground/10 text-foreground/50 font-bold rounded-xl cursor-not-allowed w-full sm:w-auto text-center">Hết Lượt ({attempts}/{maxAttempts})</span>;
                         }
                         return (
-                          <Link href={`/exam/${e.id}`} className="px-6 py-2 bg-foreground text-background font-bold rounded-xl hover:bg-foreground/80 transition-colors w-full sm:w-auto text-center mt-2 sm:mt-0">
-                            Làm Bài ({attempts}/{maxAttempts}) →
+                          <Link href={`/exam/${e.id}`} className="px-6 py-2 bg-foreground text-background font-bold rounded-xl hover:bg-foreground/80 transition-colors w-full sm:w-auto mt-2 sm:mt-0 whitespace-nowrap flex items-center justify-center gap-2">
+                            Làm Bài ({attempts}/{maxAttempts}) <span>→</span>
                           </Link>
                         );
                       })()}
@@ -760,8 +760,8 @@ export default function StudentDashboard() {
                           return <span className="px-6 py-2 bg-foreground/10 text-foreground/50 font-bold rounded-xl cursor-not-allowed w-full sm:w-auto text-center mt-2 sm:mt-0">Hết Lượt ({attempts}/{maxAttempts})</span>;
                         }
                         return (
-                          <Link href={`/exam/${e.id}`} className="px-6 py-2 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 transition-colors w-full sm:w-auto text-center mt-2 sm:mt-0">
-                            Thi Ngay ({attempts}/{maxAttempts}) →
+                          <Link href={`/exam/${e.id}`} className="px-6 py-2 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 transition-colors w-full sm:w-auto mt-2 sm:mt-0 whitespace-nowrap flex items-center justify-center gap-2">
+                            Thi Ngay ({attempts}/{maxAttempts}) <span>→</span>
                           </Link>
                         );
                       })()}
