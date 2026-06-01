@@ -1905,7 +1905,6 @@ export default function TeacherDashboard() {
               </button>
             </form>
           </div>
-          </div>
         )}
 
         {/* VIEW: LEADERBOARD */}
