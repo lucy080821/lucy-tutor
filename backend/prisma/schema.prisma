@@ -211,6 +211,7 @@ model VocabItem {
   phonetic      String?
   meaning       String
   example       String?
+  imageUrl      String?
   
   lesson        Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 }

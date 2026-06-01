@@ -277,6 +277,7 @@ export default function TeacherDashboard() {
   const [createLessonClassroomId, setCreateLessonClassroomId] = useState("");
   const [lessonVocabs, setLessonVocabs] = useState<any[]>([]);
   const [lessonGrammars, setLessonGrammars] = useState<any[]>([]);
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
 
   const handleDownloadVocabTemplate = () => {
     const ws = XLSX.utils.json_to_sheet([
@@ -360,6 +361,32 @@ export default function TeacherDashboard() {
     e.target.value = '';
   };
 
+  const handleUploadVocabImage = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('image', file);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/upload/image`, {
+        method: 'POST',
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const updatedVocabs = [...lessonVocabs];
+        updatedVocabs[index].imageUrl = data.imageUrl;
+        setLessonVocabs(updatedVocabs);
+      } else {
+        Swal.fire('Lỗi', 'Tải ảnh thất bại', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Lỗi', 'Lỗi kết nối mạng khi tải ảnh', 'error');
+    }
+    e.target.value = '';
+  };
+
   const handleCreateLesson = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!createLessonTitle.trim()) return Swal.fire('Cảnh báo', 'Vui lòng nhập tiêu đề bài học', 'warning');
@@ -367,27 +394,38 @@ export default function TeacherDashboard() {
     if (lessonVocabs.length === 0 && lessonGrammars.length === 0) return Swal.fire('Cảnh báo', 'Bài học cần có ít nhất 1 từ vựng hoặc 1 điểm ngữ pháp', 'warning');
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/create`, {
-        method: 'POST',
+      const isEditing = !!editingLessonId;
+      const url = isEditing 
+        ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/${editingLessonId}`
+        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/create`;
+      const method = isEditing ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: createLessonTitle,
           description: createLessonDesc,
           classroomId: createLessonClassroomId,
           uploadedById: user.id,
-          vocabularies: lessonVocabs,
-          grammars: lessonGrammars
+          vocabularies: lessonVocabs.map((v: any) => ({ word: v.word, pos: v.pos, phonetic: v.phonetic, meaning: v.meaning, example: v.example, imageUrl: v.imageUrl })),
+          grammars: lessonGrammars.map((g: any) => ({ title: g.title, structure: g.structure, explanation: g.explanation }))
         })
       });
       if (res.ok) {
         const data = await res.json();
-        setLocalLessons([data, ...localLessons]);
+        if (isEditing) {
+          setLocalLessons(localLessons.map(l => l.id === editingLessonId ? data : l));
+          Swal.fire('Thành công', 'Cập nhật bài học thành công!', 'success');
+        } else {
+          setLocalLessons([data, ...localLessons]);
+          Swal.fire('Thành công', 'Tạo bài học thành công!', 'success');
+        }
         setCreateLessonTitle(""); setCreateLessonDesc(""); setCreateLessonClassroomId("");
-        setLessonVocabs([]); setLessonGrammars([]);
+        setLessonVocabs([]); setLessonGrammars([]); setEditingLessonId(null);
         setActiveTab("LESSONS");
-        Swal.fire('Thành công', 'Tạo bài học thành công!', 'success');
       } else {
-        Swal.fire('Lỗi', 'Tạo thất bại', 'error');
+        Swal.fire('Lỗi', isEditing ? 'Cập nhật thất bại' : 'Tạo thất bại', 'error');
       }
     } catch (err) {
       console.error(err);
@@ -560,8 +598,20 @@ export default function TeacherDashboard() {
     setCreateLessonTitle(`[Bản sao] ${oldLesson.title}`);
     setCreateLessonDesc(oldLesson.description || "");
     setCreateLessonClassroomId("");
-    setLessonVocabs(oldLesson.vocabularies?.map((v: any) => ({ word: v.word, pos: v.pos, phonetic: v.phonetic, meaning: v.meaning, example: v.example })) || []);
+    setLessonVocabs(oldLesson.vocabularies?.map((v: any) => ({ word: v.word, pos: v.pos, phonetic: v.phonetic, meaning: v.meaning, example: v.example, imageUrl: v.imageUrl })) || []);
     setLessonGrammars(oldLesson.grammars?.map((g: any) => ({ title: g.title, structure: g.structure, explanation: g.explanation })) || []);
+    setEditingLessonId(null);
+    setActiveTab("CREATE_LESSON");
+    setExpandedNav(prev => ({ ...prev, 'LESSONS_GROUP': true }));
+  };
+
+  const handleEditLessonSetup = (lesson: any) => {
+    setCreateLessonTitle(lesson.title);
+    setCreateLessonDesc(lesson.description || "");
+    setCreateLessonClassroomId(lesson.classroomId || "");
+    setLessonVocabs(lesson.vocabularies?.map((v: any) => ({ word: v.word, pos: v.pos, phonetic: v.phonetic, meaning: v.meaning, example: v.example, imageUrl: v.imageUrl })) || []);
+    setLessonGrammars(lesson.grammars?.map((g: any) => ({ title: g.title, structure: g.structure, explanation: g.explanation })) || []);
+    setEditingLessonId(lesson.id);
     setActiveTab("CREATE_LESSON");
     setExpandedNav(prev => ({ ...prev, 'LESSONS_GROUP': true }));
   };
@@ -1392,7 +1442,11 @@ export default function TeacherDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-3xl font-bold">Ngân Hàng Bài Học</h1>
-              <button onClick={() => setActiveTab('CREATE_LESSON')} className="px-4 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Mới</button>
+              <button onClick={() => {
+                setCreateLessonTitle(""); setCreateLessonDesc(""); setCreateLessonClassroomId("");
+                setLessonVocabs([]); setLessonGrammars([]); setEditingLessonId(null);
+                setActiveTab('CREATE_LESSON');
+              }} className="px-4 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Mới</button>
             </div>
             {localLessons.length === 0 ? (
                 <div className="bg-surface border border-foreground/10 p-12 rounded-3xl flex flex-col items-center text-center">
@@ -1413,6 +1467,7 @@ export default function TeacherDashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        <button onClick={() => handleEditLessonSetup(lesson)} className="text-amber-500 hover:text-amber-600 font-bold text-sm px-3 py-1.5 hover:bg-amber-500/10 rounded-lg transition-colors cursor-pointer mr-2">✏️ Sửa</button>
                         <button onClick={() => handleDuplicateLesson(lesson)} className="text-blue-500 hover:text-blue-600 font-bold text-sm px-3 py-1.5 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer mr-2">📋 Nhân bản</button>
                         <button onClick={async () => {
                           if (confirm('Bạn có chắc muốn xóa bài học này?')) {
@@ -1432,8 +1487,8 @@ export default function TeacherDashboard() {
         {activeTab === "CREATE_LESSON" && (
           <div className="space-y-6 max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
-              <h1 className="text-3xl font-bold mb-1">Tạo Bài Học Mới</h1>
-              <p className="text-foreground/50">Thêm từ vựng qua file Excel và tạo ngữ pháp</p>
+              <h1 className="text-3xl font-bold mb-1">{editingLessonId ? "Sửa Bài Học" : "Tạo Bài Học Mới"}</h1>
+              <p className="text-foreground/50">Thêm từ vựng qua file Excel, upload ảnh và tạo ngữ pháp</p>
             </div>
             <form onSubmit={handleCreateLesson} className="space-y-6">
               <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-4">
@@ -1478,15 +1533,32 @@ export default function TeacherDashboard() {
                           <th className="p-2 font-bold">Loại</th>
                           <th className="p-2 font-bold">Phiên âm</th>
                           <th className="p-2 font-bold">Nghĩa</th>
+                          <th className="p-2 font-bold text-center">Ảnh</th>
                         </tr>
                       </thead>
                       <tbody>
                         {lessonVocabs.map((v, i) => (
-                          <tr key={i} className="border-b border-foreground/10 last:border-0">
+                          <tr key={i} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5 transition-colors">
                             <td className="p-2">{v.word}</td>
                             <td className="p-2 text-foreground/50">{v.pos}</td>
                             <td className="p-2 text-primary">{v.phonetic}</td>
                             <td className="p-2">{v.meaning}</td>
+                            <td className="p-2 text-center">
+                              {v.imageUrl ? (
+                                <div className="flex flex-col items-center gap-1">
+                                  <img src={v.imageUrl} alt={v.word} className="w-12 h-12 object-cover rounded shadow-sm border border-foreground/10" />
+                                  <label className="cursor-pointer text-[10px] text-blue-500 hover:underline">
+                                    Đổi ảnh
+                                    <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadVocabImage(i, e)} />
+                                  </label>
+                                </div>
+                              ) : (
+                                <label className="cursor-pointer text-xs bg-foreground/5 hover:bg-foreground/10 px-2 py-1 rounded text-foreground/70 transition-colors">
+                                  + Thêm ảnh
+                                  <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadVocabImage(i, e)} />
+                                </label>
+                              )}
+                            </td>
                           </tr>
                         ))}
                       </tbody>

@@ -6,9 +6,36 @@ const parser = require('../utils/documentParser');
 const prisma = new PrismaClient();
 const router = express.Router();
 
-// Configure multer for memory storage
+// Configure multer for memory storage (used for exams)
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
+
+const path = require('path');
+const fs = require('fs');
+
+const diskStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const dir = path.join(__dirname, '../../public/uploads');
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
+const uploadDisk = multer({ storage: diskStorage });
+
+router.post('/image', uploadDisk.single('image'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No image file provided' });
+  }
+  const API_URL = process.env.API_URL || 'http://localhost:5000';
+  const imageUrl = `${API_URL}/uploads/${req.file.filename}`;
+  res.json({ imageUrl });
+});
 
 router.post('/exam', upload.fields([
   { name: 'examFile', maxCount: 1 },

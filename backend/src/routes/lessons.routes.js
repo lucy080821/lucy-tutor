@@ -36,6 +36,48 @@ router.post('/create', async (req, res) => {
     res.status(500).json({ error: 'Failed to create lesson' });
   }
 });
+// Update a lesson
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, classroomId, publishTime, deadline, vocabularies, grammars } = req.body;
+
+    // Check if lesson exists
+    const existingLesson = await prisma.lesson.findUnique({ where: { id } });
+    if (!existingLesson) {
+      return res.status(404).json({ error: 'Lesson not found' });
+    }
+
+    // Update the lesson fields and completely replace vocabularies and grammars
+    const updatedLesson = await prisma.lesson.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        classroomId: classroomId || null,
+        publishTime: publishTime ? new Date(publishTime) : null,
+        deadline: deadline ? new Date(deadline) : null,
+        vocabularies: {
+          deleteMany: {}, // delete all old ones
+          create: vocabularies || [] // create new ones
+        },
+        grammars: {
+          deleteMany: {}, // delete all old ones
+          create: grammars || [] // create new ones
+        }
+      },
+      include: {
+        vocabularies: true,
+        grammars: true
+      }
+    });
+
+    res.json(updatedLesson);
+  } catch (error) {
+    console.error('Error updating lesson:', error);
+    res.status(500).json({ error: 'Failed to update lesson' });
+  }
+});
 
 // Get all lessons for a specific classroom
 router.get('/classroom/:classroomId', async (req, res) => {
