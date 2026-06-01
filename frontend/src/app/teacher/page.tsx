@@ -344,7 +344,16 @@ export default function TeacherDashboard() {
       const wb = XLSX.read(bstr, { type: 'binary' });
       const wsname = wb.SheetNames[0];
       const ws = wb.Sheets[wsname];
-      const data = XLSX.utils.sheet_to_json(ws);
+      const rawData = XLSX.utils.sheet_to_json(ws);
+      
+      const data = rawData.map((item: any) => {
+        const normalizedItem: any = {};
+        for (const key in item) {
+          normalizedItem[key.toLowerCase()] = item[key];
+        }
+        return normalizedItem;
+      });
+
       setLessonVocabs([...lessonVocabs, ...data]);
     };
     reader.readAsBinaryString(file);
