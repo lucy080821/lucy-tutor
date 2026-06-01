@@ -265,6 +265,7 @@ export default function StudentDashboard() {
   const totalExams = history.length;
   const avgScore = totalExams > 0 ? (history.reduce((acc, curr) => acc + curr.score, 0) / totalExams).toFixed(1) : "0.0";
   const totalXP = user?.totalXP || 0;
+  const percentToTarget = user?.targetScore > 0 ? Math.min(100, Math.round((parseFloat(avgScore) / user.targetScore) * 100)) : 0;
   
   const needsActionExams = (user?.assignedExams || []).filter((e: any) => {
     const examHistory = history.filter(h => h.examId === e.id);
@@ -509,13 +510,27 @@ export default function StudentDashboard() {
               </div>
             )}
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
               <div className="bg-surface border border-foreground/10 p-8 rounded-3xl relative overflow-hidden flex flex-col justify-center hover:border-primary/30 transition-colors shadow-sm">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[50px] rounded-full" />
                 <p className="text-sm font-bold text-foreground/50 mb-2 uppercase tracking-wide">Điểm Trung Bình</p>
                 <div className="flex items-baseline gap-2">
                   <p className="text-5xl font-black text-primary">{avgScore}</p>
                   <span className="text-xl text-foreground/50 font-medium">/10</span>
+                </div>
+              </div>
+
+              <div className="bg-surface border border-foreground/10 p-8 rounded-3xl flex flex-col justify-center hover:border-emerald-500/30 transition-colors shadow-sm relative overflow-hidden">
+                <div className="absolute bottom-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full" />
+                <p className="text-sm font-bold text-foreground/50 mb-2 uppercase tracking-wide">Tiến Độ Mục Tiêu</p>
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-end justify-between">
+                    <p className="text-5xl font-black text-emerald-500">{percentToTarget}<span className="text-xl text-foreground/50 font-medium">%</span></p>
+                    <span className="text-xs font-bold text-foreground/40 mb-2">Mục tiêu: {user?.targetScore}+</span>
+                  </div>
+                  <div className="w-full bg-foreground/5 rounded-full h-2 mt-2">
+                    <div className="bg-emerald-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${percentToTarget}%` }}></div>
+                  </div>
                 </div>
               </div>
 
