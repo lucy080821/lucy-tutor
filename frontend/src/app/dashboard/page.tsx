@@ -197,6 +197,7 @@ export default function StudentDashboard() {
         { id: "EXAMS", label: "Bài Kiểm Tra" },
         { id: "ATTENDANCE", label: "Chuyên Cần" },
         { id: "DOCUMENTS", label: "Tài Liệu" },
+        { id: "GYM_LINK", label: "Phòng Gym từ vựng", isLink: true, href: '/gym' },
       ]
     },
     { id: "CALENDAR", label: "Thời Khóa Biểu" },
@@ -344,11 +345,18 @@ export default function StudentDashboard() {
                   </button>
                   {expandedNav[group.id] && (
                     <div className="flex flex-col gap-1 pl-4">
-                      {group.subItems.map(item => (
-                        <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                          className={`flex items-center px-5 py-2.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left text-sm group ${activeTab === item.id ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-md shadow-primary/25 scale-[1.02]' : 'hover:bg-foreground/5 text-foreground/60 hover:text-foreground hover:translate-x-1'}`}>
-                          <span className="tracking-wide">{item.label}</span>
-                        </button>
+                      {group.subItems.map((item: any) => (
+                        item.isLink ? (
+                          <Link key={item.id} href={item.href}
+                            className={`flex items-center px-5 py-2.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left text-sm group hover:bg-foreground/5 text-foreground/60 hover:text-foreground hover:translate-x-1`}>
+                            <span className="tracking-wide">{item.label}</span>
+                          </Link>
+                        ) : (
+                          <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
+                            className={`flex items-center px-5 py-2.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left text-sm group ${activeTab === item.id ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-md shadow-primary/25 scale-[1.02]' : 'hover:bg-foreground/5 text-foreground/60 hover:text-foreground hover:translate-x-1'}`}>
+                            <span className="tracking-wide">{item.label}</span>
+                          </button>
+                        )
                       ))}
                     </div>
                   )}

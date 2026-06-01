@@ -54,6 +54,17 @@ export default function LessonPage() {
       return;
     }
     try {
+      // 1. Add flipped vocabs to SRS
+      const flippedVocabIds = Array.from(learnedIndices).map(idx => lesson.vocabularies[idx].id);
+      if (flippedVocabIds.length > 0) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/srs/add-from-lesson`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, vocabIds: flippedVocabIds })
+        }).catch(err => console.error("SRS Add Error:", err));
+      }
+
+      // 2. Mark lesson as completed
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/${id}/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
