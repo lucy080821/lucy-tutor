@@ -9,7 +9,10 @@ import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { TuitionInvoice } from '@/components/tuition/TuitionInvoice';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+import dynamic from 'next/dynamic';
+import 'react-quill-new/dist/quill.snow.css';
 
+const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 const BLANK_QUESTION = () => ({
   type: "MULTIPLE_CHOICE" as "MULTIPLE_CHOICE" | "ESSAY",
   heading: "",
@@ -1570,7 +1573,7 @@ export default function TeacherDashboard() {
                     <button type="button" onClick={() => setLessonGrammars(lessonGrammars.filter((_, idx) => idx !== i))} className="absolute top-2 right-2 text-rose-500 font-bold cursor-pointer hover:underline text-xs">Xóa</button>
                     <input type="text" placeholder="Tên điểm ngữ pháp (VD: Thì hiện tại đơn)" className="w-full p-2 border-b border-foreground/15 bg-transparent font-bold outline-none" value={g.title} onChange={e => { const n = [...lessonGrammars]; n[i].title = e.target.value; setLessonGrammars(n); }} />
                     <input type="text" placeholder="Công thức (S + V + O)" className="w-full p-2 border-b border-foreground/15 bg-transparent outline-none text-primary font-mono text-sm" value={g.structure} onChange={e => { const n = [...lessonGrammars]; n[i].structure = e.target.value; setLessonGrammars(n); }} />
-                    <textarea placeholder="Giải thích chi tiết..." className="w-full p-2 border border-foreground/15 rounded bg-transparent outline-none text-sm" rows={3} value={g.explanation} onChange={e => { const n = [...lessonGrammars]; n[i].explanation = e.target.value; setLessonGrammars(n); }} />
+                    <ReactQuill theme="snow" placeholder="Giải thích chi tiết..." className="bg-white text-black" value={g.explanation} onChange={(content) => { const n = [...lessonGrammars]; n[i].explanation = content; setLessonGrammars(n); }} />
                   </div>
                 ))}
               </div>
@@ -1795,9 +1798,9 @@ export default function TeacherDashboard() {
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-foreground/50 mb-1 uppercase tracking-wide">Nội dung câu hỏi *</label>
-                        <textarea rows={2} className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent resize-none focus:border-primary outline-none transition-colors"
+                        <ReactQuill theme="snow" className="bg-white text-black"
                           placeholder={q.type === 'ESSAY' ? 'Nhập câu hỏi tự luận...' : 'Nhập câu hỏi trắc nghiệm...'}
-                          value={q.content} onChange={e => updateQuestion(qi, { content: e.target.value })} />
+                          value={q.content} onChange={content => updateQuestion(qi, { content })} />
                       </div>
                       
                       {/* Image upload for question */}

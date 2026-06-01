@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import DOMPurify from 'dompurify';
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import confetti from "canvas-confetti";
@@ -243,9 +244,9 @@ export default function ExamPage() {
               </div>
             )}
 
-            <p className="text-xl font-semibold leading-relaxed mb-8">
+            <p className="text-xl leading-relaxed mb-8">
               {question?.content ? (
-                <span dangerouslySetInnerHTML={{__html: question.content.replace(/\n/g, '<br/>')}}></span>
+                <span className="quill-content" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(question.content)}}></span>
               ) : (
                 <span className="text-foreground/40 italic text-base">Nội dung trống</span>
               )}
@@ -313,7 +314,7 @@ export default function ExamPage() {
             {isReviewMode && question?.explanation && (
               <div className="mt-6 p-5 bg-blue-500/10 border border-blue-500/20 rounded-2xl animate-fade-in">
                 <p className="font-bold text-blue-700 mb-2 flex items-center gap-2">💡 Giải thích / Hướng dẫn</p>
-                <div className="text-blue-900/80 leading-relaxed text-sm whitespace-pre-wrap">{question.explanation}</div>
+                <div className="text-blue-900/80 leading-relaxed text-sm whitespace-pre-wrap quill-content" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(question.explanation)}}></div>
               </div>
             )}
 

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
 import confetti from "canvas-confetti";
-import ReactMarkdown from "react-markdown";
+import DOMPurify from 'dompurify';
 
 export default function LessonPage() {
   const { id } = useParams();
@@ -154,8 +154,7 @@ export default function LessonPage() {
                       {grammar.structure}
                     </div>
                   )}
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                    <ReactMarkdown>{grammar.explanation}</ReactMarkdown>
+                  <div className="prose prose-sm dark:prose-invert max-w-none quill-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(grammar.explanation) }}>
                   </div>
                 </div>
               ))}
