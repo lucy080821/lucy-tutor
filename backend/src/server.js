@@ -33,6 +33,7 @@ const lessonRoutes = require('./routes/lessons.routes');
 const attendanceRoutes = require('./routes/attendance.routes');
 const documentRoutes = require('./routes/document.routes');
 const srsRoutes = require('./routes/srs.routes');
+const leaderboardRoutes = require('./routes/leaderboard.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
@@ -47,6 +48,7 @@ app.use('/api/lessons', lessonRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/srs', srsRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
 
 const PORT = process.env.PORT || 5000;
 

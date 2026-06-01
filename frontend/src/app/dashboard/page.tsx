@@ -208,6 +208,7 @@ export default function StudentDashboard() {
     },
     { id: "CALENDAR", label: "Thời Khóa Biểu" },
     { id: "NOTEBOOK", label: "Sổ Tay Lỗi Sai" },
+    { id: "LEADERBOARD", label: "Bảng Xếp Hạng" },
     { id: "SETTINGS", label: "Cài Đặt" },
   ];
 
@@ -261,6 +262,27 @@ export default function StudentDashboard() {
         .catch(console.error);
     }
   }, [activeTab, user]);
+
+  // ── LEADERBOARD state ──
+  const [leaderboardFilter, setLeaderboardFilter] = useState<string>("GLOBAL");
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [leaderboardCurrentUser, setLeaderboardCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    if (activeTab === "LEADERBOARD" && user) {
+      let url = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/leaderboard?currentUserId=${user.id}`;
+      if (leaderboardFilter !== "GLOBAL") {
+        url += `&classroomId=${leaderboardFilter}`;
+      }
+      fetch(url)
+        .then(res => res.json())
+        .then(data => {
+          setLeaderboardData(data.leaderboard || []);
+          setLeaderboardCurrentUser(data.currentUser || null);
+        })
+        .catch(console.error);
+    }
+  }, [activeTab, leaderboardFilter, user]);
 
   const uniqueHistory = Object.values(history.reduce((acc: any, curr: any) => {
     if (!acc[curr.examId] || curr.score > acc[curr.examId].score) {
@@ -988,6 +1010,118 @@ export default function StudentDashboard() {
             )}
           </div>
         )}
+
+        {/* VIEW: LEADERBOARD */}
+        {activeTab === "LEADERBOARD" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl relative pb-24">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+              <h1 className="text-3xl font-bold">🏆 Bảng Xếp Hạng</h1>
+              <div className="bg-surface border border-foreground/10 rounded-xl p-1 flex overflow-x-auto max-w-full">
+                <button 
+                  onClick={() => setLeaderboardFilter('GLOBAL')} 
+                  className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap cursor-pointer ${leaderboardFilter === 'GLOBAL' ? 'bg-amber-500 text-white shadow-md' : 'text-foreground/60 hover:text-foreground'}`}
+                >
+                  🌍 Toàn Hệ Thống
+                </button>
+                {(user?.classroomsJoined || []).map((c: any) => (
+                  <button 
+                    key={c.id}
+                    onClick={() => setLeaderboardFilter(c.id)} 
+                    className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap cursor-pointer ${leaderboardFilter === c.id ? 'bg-amber-500 text-white shadow-md' : 'text-foreground/60 hover:text-foreground'}`}
+                  >
+                    🏫 {c.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Podium for Top 3 */}
+            {leaderboardData.length > 0 && (
+              <div className="flex justify-center items-end gap-2 sm:gap-6 mb-12 mt-12">
+                {/* 2nd Place */}
+                {leaderboardData.length > 1 && (
+                  <div className="flex flex-col items-center animate-in slide-in-from-bottom-8 duration-700 delay-100 w-1/3 max-w-[120px]">
+                    <div className="relative mb-2">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-[#C0C0C0] bg-surface flex items-center justify-center font-bold text-xl overflow-hidden shadow-[0_0_15px_rgba(192,192,192,0.5)]">
+                        {leaderboardData[1].avatar ? <img src={leaderboardData[1].avatar} className="w-full h-full object-cover"/> : leaderboardData[1].name.charAt(0)}
+                      </div>
+                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#C0C0C0] text-black text-xs font-black px-2 py-0.5 rounded-full border border-surface">#2</div>
+                    </div>
+                    <div className="text-sm font-bold mt-3 text-center w-full truncate">{leaderboardData[1].name}</div>
+                    <div className="text-xs text-amber-500 font-bold">{leaderboardData[1].totalXP} XP</div>
+                    <div className="w-full h-24 sm:h-32 bg-gradient-to-t from-[#C0C0C0]/20 to-[#C0C0C0]/40 rounded-t-xl mt-2 border-t-2 border-[#C0C0C0]/50 backdrop-blur-sm"></div>
+                  </div>
+                )}
+                
+                {/* 1st Place */}
+                {leaderboardData.length > 0 && (
+                  <div className="flex flex-col items-center animate-in slide-in-from-bottom-12 duration-700 z-10 relative w-1/3 max-w-[140px]">
+                    <div className="absolute -top-10 text-4xl animate-bounce">👑</div>
+                    <div className="relative mb-2">
+                      <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-4 border-[#FFD700] bg-surface flex items-center justify-center font-bold text-3xl overflow-hidden shadow-[0_0_30px_rgba(255,215,0,0.6)]">
+                        {leaderboardData[0].avatar ? <img src={leaderboardData[0].avatar} className="w-full h-full object-cover"/> : leaderboardData[0].name.charAt(0)}
+                      </div>
+                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FFD700] text-black text-xs font-black px-3 py-0.5 rounded-full border border-surface">#1</div>
+                    </div>
+                    <div className="text-base font-black mt-3 text-center w-full truncate text-[#FFD700]">{leaderboardData[0].name}</div>
+                    <div className="text-sm text-amber-500 font-bold">{leaderboardData[0].totalXP} XP</div>
+                    <div className="w-full h-32 sm:h-40 bg-gradient-to-t from-[#FFD700]/20 to-[#FFD700]/40 rounded-t-xl mt-2 border-t-2 border-[#FFD700]/50 backdrop-blur-sm"></div>
+                  </div>
+                )}
+
+                {/* 3rd Place */}
+                {leaderboardData.length > 2 && (
+                  <div className="flex flex-col items-center animate-in slide-in-from-bottom-8 duration-700 delay-200 w-1/3 max-w-[120px]">
+                    <div className="relative mb-2">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-[#CD7F32] bg-surface flex items-center justify-center font-bold text-xl overflow-hidden shadow-[0_0_15px_rgba(205,127,50,0.5)]">
+                        {leaderboardData[2].avatar ? <img src={leaderboardData[2].avatar} className="w-full h-full object-cover"/> : leaderboardData[2].name.charAt(0)}
+                      </div>
+                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white text-xs font-black px-2 py-0.5 rounded-full border border-surface">#3</div>
+                    </div>
+                    <div className="text-sm font-bold mt-3 text-center w-full truncate">{leaderboardData[2].name}</div>
+                    <div className="text-xs text-amber-500 font-bold">{leaderboardData[2].totalXP} XP</div>
+                    <div className="w-full h-20 sm:h-24 bg-gradient-to-t from-[#CD7F32]/20 to-[#CD7F32]/40 rounded-t-xl mt-2 border-t-2 border-[#CD7F32]/50 backdrop-blur-sm"></div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* List */}
+            {leaderboardData.length === 0 ? (
+              <div className="text-center p-12 bg-surface rounded-3xl border border-foreground/10 text-foreground/50">Chưa có dữ liệu xếp hạng.</div>
+            ) : (
+              <div className="bg-surface border border-foreground/10 rounded-3xl overflow-hidden shadow-sm">
+                {leaderboardData.slice(3).map((u, idx) => (
+                  <div key={u.id} className={`flex items-center p-4 border-b border-foreground/5 last:border-0 hover:bg-foreground/5 transition-colors ${u.id === user?.id ? 'bg-primary/5 border-l-4 border-l-primary' : ''}`}>
+                    <div className="w-12 text-center font-bold text-foreground/50">#{u.rank}</div>
+                    <div className="w-10 h-10 rounded-full bg-foreground/10 flex items-center justify-center overflow-hidden mr-4 shrink-0 font-bold text-sm">
+                      {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : u.name.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-bold truncate text-sm sm:text-base">{u.name} {u.id === user?.id && <span className="ml-2 text-xs bg-primary text-white px-2 py-0.5 rounded-full">Bạn</span>}</div>
+                      <div className="text-xs text-foreground/50">Mục tiêu: {u.targetScore || 7.0}+</div>
+                    </div>
+                    <div className="font-black text-amber-500 text-sm sm:text-base">{u.totalXP} <span className="text-xs text-foreground/50 font-normal">XP</span></div>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {/* Current User Fixed Bottom Bar */}
+            {leaderboardCurrentUser && (
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-3xl bg-surface/90 backdrop-blur-xl border-2 border-primary/50 shadow-[0_10px_40px_-10px_rgba(79,70,229,0.5)] p-4 rounded-2xl flex items-center z-50 animate-in slide-in-from-bottom-10">
+                <div className="w-12 text-center font-black text-xl text-primary">#{leaderboardCurrentUser.rank}</div>
+                <div className="w-10 h-10 rounded-full bg-foreground/10 flex items-center justify-center overflow-hidden mr-4 shrink-0 font-bold text-sm border-2 border-primary/20">
+                  {leaderboardCurrentUser.avatar ? <img src={leaderboardCurrentUser.avatar} className="w-full h-full object-cover"/> : leaderboardCurrentUser.name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-primary truncate text-sm sm:text-base">Thứ hạng của bạn</div>
+                  <div className="text-xs text-foreground/70">{leaderboardFilter === 'GLOBAL' ? 'Toàn hệ thống' : 'Trong lớp học'}</div>
+                </div>
+                <div className="font-black text-amber-500 text-lg sm:text-xl">{leaderboardCurrentUser.totalXP} <span className="text-xs text-foreground/50 font-normal">XP</span></div>
+              </div>
+            )}
+          </div>
 
         {/* VIEW: SETTINGS */}
         {activeTab === "SETTINGS" && (
