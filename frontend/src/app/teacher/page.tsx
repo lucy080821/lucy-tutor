@@ -10,6 +10,7 @@ import { saveAs } from 'file-saver';
 import { TuitionInvoice } from '@/components/tuition/TuitionInvoice';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import dynamic from 'next/dynamic';
+import DOMPurify from 'dompurify';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
