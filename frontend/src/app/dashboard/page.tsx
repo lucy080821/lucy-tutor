@@ -197,8 +197,13 @@ export default function StudentDashboard() {
         { id: "EXAMS", label: "Bài Kiểm Tra" },
         { id: "ATTENDANCE", label: "Chuyên Cần" },
         { id: "DOCUMENTS", label: "Tài Liệu" },
-        { id: "GYM_LINK", label: "Phòng Gym từ vựng", isLink: true, href: '/gym' },
-        { id: "GRAMMAR_GYM_LINK", label: "Phòng Gym ngữ pháp", isLink: true, href: '/grammar-gym' },
+      ]
+    },
+    { 
+      id: "TRAINING_CENTER", label: "Trại Huấn Luyện", 
+      subItems: [
+        { id: "GYM_LINK", label: "💪 Phòng Gym từ vựng", isLink: true, href: '/gym' },
+        { id: "GRAMMAR_GYM_LINK", label: "🏋️ Phòng Gym ngữ pháp", isLink: true, href: '/grammar-gym' },
       ]
     },
     { id: "CALENDAR", label: "Thời Khóa Biểu" },
