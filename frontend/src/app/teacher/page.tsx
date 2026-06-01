@@ -360,31 +360,24 @@ export default function TeacherDashboard() {
     reader.readAsBinaryString(file);
     e.target.value = '';
   };
-
   const handleUploadVocabImage = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const formData = new FormData();
-    formData.append('image', file);
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/upload/image`, {
-        method: 'POST',
-        body: formData
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const updatedVocabs = [...lessonVocabs];
-        updatedVocabs[index].imageUrl = data.imageUrl;
-        setLessonVocabs(updatedVocabs);
-      } else {
-        Swal.fire('Lỗi', 'Tải ảnh thất bại', 'error');
-      }
-    } catch (err) {
-      console.error(err);
-      Swal.fire('Lỗi', 'Lỗi kết nối mạng khi tải ảnh', 'error');
+    if (file.size > 5 * 1024 * 1024) {
+      return Swal.fire('Lỗi', 'Kích thước ảnh tối đa 5MB', 'error');
     }
-    e.target.value = '';
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const base64 = e.target?.result as string;
+      const newVocabs = [...lessonVocabs];
+      newVocabs[index].imageUrl = base64;
+      setLessonVocabs(newVocabs);
+    };
+    reader.readAsDataURL(file);
+    
+    // reset input
+    if (e.target) e.target.value = '';
   };
 
   const handleCreateLesson = async (e: React.FormEvent) => {
