@@ -192,7 +192,8 @@ router.post('/submit', async (req, res) => {
               userId: userId
             };
             
-            await fetch(`http://localhost:5000/api/ai/explain`, {
+            const port = process.env.PORT || 5000;
+            await fetch(`http://127.0.0.1:${port}/api/ai/explain`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(payload)
