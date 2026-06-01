@@ -245,6 +245,21 @@ export default function GymPage() {
                     
                     {/* Front */}
                     <div className="absolute w-full h-full backface-hidden bg-surface border-2 border-foreground/10 rounded-[2rem] p-8 flex flex-col items-center justify-center shadow-xl text-center">
+                      {dueVocabs[currentCardIndex].vocab.imageUrl && (
+                        <div className="w-32 h-32 mb-6 rounded-3xl overflow-hidden shadow-md shrink-0 border border-foreground/10">
+                          <img src={dueVocabs[currentCardIndex].vocab.imageUrl} className="w-full h-full object-cover" alt="vocab" />
+                        </div>
+                      )}
+                      
+                      <h3 className="text-3xl font-bold text-primary mb-4">{dueVocabs[currentCardIndex].vocab.meaning}</h3>
+                      
+                      <div className="absolute bottom-6 text-sm font-bold text-foreground/30 uppercase tracking-widest animate-pulse">
+                        Nhấn để xem đáp án
+                      </div>
+                    </div>
+
+                    {/* Back */}
+                    <div className="absolute w-full h-full backface-hidden bg-primary/5 border-2 border-primary/20 rounded-[2rem] p-8 flex flex-col items-center justify-center shadow-xl text-center rotate-y-180">
                       <div className="absolute top-6 right-6 flex gap-2">
                         <button 
                           onClick={(e) => { e.stopPropagation(); handleSpeak(dueVocabs[currentCardIndex].vocab.word, 'en-GB'); }}
@@ -256,24 +271,10 @@ export default function GymPage() {
                         >US</button>
                       </div>
                       
-                      {dueVocabs[currentCardIndex].vocab.imageUrl && (
-                        <div className="w-32 h-32 mb-6 rounded-3xl overflow-hidden shadow-md shrink-0 border border-foreground/10">
-                          <img src={dueVocabs[currentCardIndex].vocab.imageUrl} className="w-full h-full object-cover" alt="vocab" />
-                        </div>
-                      )}
-                      
                       <h3 className="text-4xl font-black text-primary mb-2">{dueVocabs[currentCardIndex].vocab.word}</h3>
                       <p className="text-foreground/50 font-medium italic text-lg">{dueVocabs[currentCardIndex].vocab.pos}</p>
                       <p className="text-foreground/70 font-mono mt-2">{dueVocabs[currentCardIndex].vocab.phonetic}</p>
                       
-                      <div className="absolute bottom-6 text-sm font-bold text-foreground/30 uppercase tracking-widest animate-pulse">
-                        Nhấn để xem đáp án
-                      </div>
-                    </div>
-
-                    {/* Back */}
-                    <div className="absolute w-full h-full backface-hidden bg-primary/5 border-2 border-primary/20 rounded-[2rem] p-8 flex flex-col items-center justify-center shadow-xl text-center rotate-y-180">
-                      <h3 className="text-3xl font-bold mb-4">{dueVocabs[currentCardIndex].vocab.meaning}</h3>
                       {dueVocabs[currentCardIndex].vocab.example && (
                         <p className="text-foreground/70 italic text-lg mt-4 bg-white/50 p-4 rounded-xl">"{dueVocabs[currentCardIndex].vocab.example}"</p>
                       )}
