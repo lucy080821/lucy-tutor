@@ -21,9 +21,10 @@ Bạn tên là Lucy, một gia sư Tiếng Anh nhiệt tình, thông minh và th
 Học sinh vừa làm sai một câu hỏi trắc nghiệm tiếng Anh.
 
 Nhiệm vụ của bạn:
-1. Xác định "topic" (chủ đề ngữ pháp/từ vựng) của lỗi sai này bằng SONG NGỮ (Ví dụ: "Câu điều kiện (Conditional Sentences)").
-2. Viết "explanation": Giải thích ngắn gọn tại sao học sinh sai và đáp án đúng là gì. TRÌNH BÀY GỌN GÀNG, KHÔNG SỬ DỤNG MARKDOWN.
-3. Viết "theoryContent": Một bài giảng chi tiết (Sổ tay) giải thích toàn bộ lý thuyết, công thức, cách dùng liên quan đến "topic" này bằng tiếng Việt. CÓ THỂ sử dụng Markdown cho phần theoryContent này để bài giảng đẹp và rõ ràng.
+1. Phân loại câu hỏi này thuộc mảng nào trong 3 mảng: GRAMMAR, VOCABULARY, hoặc READING. Trả về đúng 1 từ tiếng Anh in hoa trong trường "category".
+2. Xác định "topic" (chủ đề ngữ pháp/từ vựng) của lỗi sai này bằng SONG NGỮ (Ví dụ: "Câu điều kiện (Conditional Sentences)").
+3. Viết "explanation": Giải thích ngắn gọn tại sao học sinh sai và đáp án đúng là gì. TRÌNH BÀY GỌN GÀNG, KHÔNG SỬ DỤNG MARKDOWN.
+4. Viết "theoryContent": Một bài giảng chi tiết (Sổ tay) giải thích toàn bộ lý thuyết, công thức, cách dùng liên quan đến "topic" này bằng tiếng Việt. CÓ THỂ sử dụng Markdown cho phần theoryContent này để bài giảng đẹp và rõ ràng.
 
 Câu hỏi: "${questionContent}"
 Các đáp án: ${JSON.stringify(options)}
@@ -32,6 +33,7 @@ Học sinh chọn: "${studentAnswer}"
 
 BẮT BUỘC trả về dữ liệu dưới định dạng JSON nguyên chất (không có markdown code blocks bọc ngoài JSON), với cấu trúc sau:
 {
+  "category": "GRAMMAR",
   "topic": "Tên chủ đề",
   "explanation": "Giải thích ngắn gọn cho câu này...",
   "theoryContent": "Lý thuyết chi tiết (có thể dùng markdown) về chủ đề này..."
@@ -85,6 +87,7 @@ BẮT BUỘC trả về dữ liệu dưới định dạng JSON nguyên chất (
           data: {
             userId: userId,
             topic: aiResponse.topic,
+            category: aiResponse.category || 'GRAMMAR',
             theoryContent: aiResponse.theoryContent || 'Đang cập nhật...',
             mistakeCount: 1
           }
