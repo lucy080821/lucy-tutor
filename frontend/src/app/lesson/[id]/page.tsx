@@ -196,7 +196,7 @@ function Flashcard({ vocab, onSpeak, onFlip, isLearned }: { vocab: any, onSpeak:
 
   return (
     <div 
-      className="relative h-64 w-full perspective-1000 cursor-pointer group"
+      className="relative h-72 w-full perspective-1000 cursor-pointer group"
       onClick={() => {
         setFlipped(!flipped);
         if (!flipped) onFlip();
@@ -222,9 +222,14 @@ function Flashcard({ vocab, onSpeak, onFlip, isLearned }: { vocab: any, onSpeak:
               US
             </button>
           </div>
-          <h3 className="text-3xl font-black text-primary mb-2">{vocab.word}</h3>
-          <p className="text-foreground/50 font-medium italic">{vocab.pos}</p>
-          <p className="text-foreground/70 font-mono mt-1">{vocab.phonetic}</p>
+          {vocab.imageUrl && (
+            <div className="w-24 h-24 mb-3 rounded-2xl overflow-hidden shadow border border-foreground/10 shrink-0">
+              <img src={vocab.imageUrl} alt={vocab.word} className="w-full h-full object-cover" />
+            </div>
+          )}
+          <h3 className="text-3xl font-black text-primary mb-1">{vocab.word}</h3>
+          <p className="text-foreground/50 font-medium italic text-sm">{vocab.pos}</p>
+          <p className="text-foreground/70 font-mono mt-1 text-sm">{vocab.phonetic}</p>
           <div className="absolute bottom-4 text-xs font-bold text-foreground/30 uppercase tracking-widest">
             Nhấn để lật
           </div>
