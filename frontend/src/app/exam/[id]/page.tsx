@@ -27,7 +27,7 @@ export default function ExamPage() {
   const [isReviewMode, setIsReviewMode] = useState(false);
 
   useEffect(() => {
-    const uid = localStorage.getItem('userId');
+    const uid = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
     setUserId(uid);
     const url = `${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/exams/${examId}${uid ? `?userId=${uid}` : ''}`;
     fetch(url)

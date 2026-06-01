@@ -1,5 +1,5 @@
 "use client";
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
 function AuthForm() {
@@ -14,6 +14,31 @@ function AuthForm() {
   const [password, setPassword] = useState('');
   const [classCode, setClassCode] = useState('');
   const [error, setError] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+
+  useEffect(() => {
+    // Check if already logged in
+    const userId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
+    if (userId) {
+      // We don't have the role locally, so we check the URL intent or try to fetch user
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/users/profile/${userId}`)
+        .then(res => {
+          if (res.ok) return res.json();
+          throw new Error('Invalid session');
+        })
+        .then(data => {
+          if (data.role === 'TEACHER') {
+            window.location.href = '/teacher';
+          } else {
+            window.location.href = '/dashboard';
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('userId');
+          sessionStorage.removeItem('userId');
+        });
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +63,11 @@ function AuthForm() {
       }
 
       // Save user ID to simulate session
-      localStorage.setItem('userId', data.id);
+      if (rememberMe) {
+        localStorage.setItem('userId', data.id);
+      } else {
+        sessionStorage.setItem('userId', data.id);
+      }
 
       if (role === 'TEACHER') {
         window.location.href = '/teacher';
@@ -106,6 +135,13 @@ function AuthForm() {
             <div className="pt-2">
               <label className="block text-sm font-medium mb-1 text-secondary">Mã Lớp Học (Class Code) - Tuỳ chọn</label>
               <input type="text" value={classCode} onChange={e => setClassCode(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-secondary/30 bg-secondary/5 focus:outline-none focus:border-secondary" placeholder="Nhập mã giáo viên cấp..." />
+            </div>
+          )}
+
+          {isLogin && (
+            <div className="flex items-center gap-2 mt-2">
+              <input type="checkbox" id="rememberMe" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="w-4 h-4 rounded border-gray-300 text-primary focus:ring-primary" />
+              <label htmlFor="rememberMe" className="text-sm text-foreground/80 cursor-pointer">Ghi nhớ đăng nhập trên thiết bị này</label>
             </div>
           )}
 

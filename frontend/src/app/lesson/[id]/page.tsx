@@ -14,7 +14,7 @@ export default function LessonPage() {
   const [learnedIndices, setLearnedIndices] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    const uid = localStorage.getItem('userId');
+    const uid = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
     setUserId(uid);
     if (!uid) {
       router.push('/');

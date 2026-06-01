@@ -77,7 +77,7 @@ export default function StudentDashboard() {
   };
 
   useEffect(() => {
-    const userId = localStorage.getItem('userId');
+    const userId = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
     const url = userId ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me?userId=${userId}` : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`;
     
     fetch(url)
@@ -991,7 +991,7 @@ export default function StudentDashboard() {
               onSubmit={async (e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
-                const userId = localStorage.getItem('userId');
+                const userId = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
                 if (!userId) return;
                 
                 try {

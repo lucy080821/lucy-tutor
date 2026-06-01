@@ -19,7 +19,7 @@ export default function GymPage() {
   const [flipped, setFlipped] = useState(false);
 
   useEffect(() => {
-    const uid = localStorage.getItem('userId');
+    const uid = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
     if (!uid) {
       router.push('/');
       return;

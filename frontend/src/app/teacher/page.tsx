@@ -66,7 +66,7 @@ export default function TeacherDashboard() {
   };
 
   useEffect(() => {
-    const userId = localStorage.getItem('userId');
+    const userId = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
     const url = userId ? `${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/auth/me?userId=${userId}` : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me`;
     fetch(url).then(res => res.json()).then(data => setUser(data)).catch(console.error);
   }, []);
