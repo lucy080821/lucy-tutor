@@ -116,7 +116,7 @@ router.get('/notebook/:userId', async (req, res) => {
   }
 });
 
-module.exports = router;
+
 
 router.post('/solve-question', async (req, res) => {
   try {
@@ -164,3 +164,72 @@ ${type === 'MULTIPLE_CHOICE' ? `Các đáp án:\nA. ${options[0]}\nB. ${options[
     res.status(500).json({ error: 'Failed to solve question', details: error.message });
   }
 });
+
+router.post('/generate-grammar-exercise', async (req, res) => {
+  try {
+    const { topic } = req.body;
+    if (!topic) {
+      return res.status(400).json({ error: 'Missing topic' });
+    }
+
+    const prompt = `
+Bạn là chuyên gia ra đề thi tiếng Anh.
+Tạo 3 câu hỏi thực hành ngữ pháp tiếng Anh về chủ đề: "${topic}".
+Phải có đủ 3 dạng (mỗi dạng 1 câu):
+1. type: "FIND_FIX" (Sửa lỗi sai): Cho một câu sai ngữ pháp (incorrectSentence), học sinh cần viết lại câu đúng (correctSentence).
+2. type: "BUILDING" (Sắp xếp câu): Cho một mảng các từ xáo trộn (scrambledWords), học sinh cần sắp xếp thành câu đúng (correctSentence).
+3. type: "TRANSFORM" (Biến đổi câu): Cho một câu gốc (originalSentence) và từ gợi ý (hint), học sinh cần viết lại câu (correctSentence) giữ nguyên nghĩa.
+
+BẮT BUỘC TRẢ VỀ CHỈ MỘT JSON VỚI CẤU TRÚC SAU (không có markdown code blocks bọc ngoài JSON):
+{
+  "questions": [
+    {
+      "type": "FIND_FIX",
+      "incorrectSentence": "Câu sai tiếng Anh",
+      "correctSentence": "Câu đúng tiếng Anh",
+      "explanation": "Giải thích ngắn gọn tiếng Việt"
+    },
+    {
+      "type": "BUILDING",
+      "scrambledWords": ["word1", "word2", "word3"],
+      "correctSentence": "Câu đúng hoàn chỉnh tiếng Anh",
+      "explanation": "Giải thích ngắn gọn tiếng Việt"
+    },
+    {
+      "type": "TRANSFORM",
+      "originalSentence": "Câu gốc tiếng Anh",
+      "hint": "Gợi ý (ví dụ 'If I...')",
+      "correctSentence": "Câu hoàn chỉnh tiếng Anh",
+      "explanation": "Giải thích ngắn gọn tiếng Việt"
+    }
+  ]
+}
+`;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: 'You must respond in valid JSON format only.' },
+        { role: 'user', content: prompt }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.7,
+      response_format: { type: "json_object" }
+    });
+
+    const aiResponseStr = chatCompletion.choices[0]?.message?.content || '{"questions":[]}';
+    let aiResponse;
+    try {
+      aiResponse = JSON.parse(aiResponseStr);
+    } catch (e) {
+      console.error('Failed to parse AI exercise:', e);
+      return res.status(500).json({ error: 'AI response was not valid JSON' });
+    }
+
+    res.json(aiResponse);
+  } catch (error) {
+    console.error('Groq AI Error (Exercise):', error);
+    res.status(500).json({ error: 'Failed to generate exercise' });
+  }
+});
+
+module.exports = router;

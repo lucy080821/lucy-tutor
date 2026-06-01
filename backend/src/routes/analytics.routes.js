@@ -58,4 +58,32 @@ router.get('/history/:userId', async (req, res) => {
   }
 });
 
+// Update MistakeNotebook progress
+router.post('/notebook/:id/progress', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body; // "CORRECT" or "MISTAKE"
+    
+    const notebook = await prisma.mistakeNotebook.findUnique({ where: { id } });
+    if (!notebook) return res.status(404).json({ error: 'Notebook not found' });
+    
+    let updateData = {};
+    if (action === 'CORRECT') {
+      updateData.correctCount = { increment: 1 };
+      updateData.mistakeCount = { decrement: notebook.mistakeCount > 0 ? 1 : 0 };
+    } else if (action === 'MISTAKE') {
+      updateData.mistakeCount = { increment: 1 };
+    }
+    
+    const updated = await prisma.mistakeNotebook.update({
+      where: { id },
+      data: updateData
+    });
+    
+    res.json(updated);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 module.exports = router;

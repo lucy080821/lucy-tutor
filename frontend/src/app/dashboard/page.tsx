@@ -198,6 +198,7 @@ export default function StudentDashboard() {
         { id: "ATTENDANCE", label: "Chuyên Cần" },
         { id: "DOCUMENTS", label: "Tài Liệu" },
         { id: "GYM_LINK", label: "Phòng Gym từ vựng", isLink: true, href: '/gym' },
+        { id: "GRAMMAR_GYM_LINK", label: "Phòng Gym ngữ pháp", isLink: true, href: '/grammar-gym' },
       ]
     },
     { id: "CALENDAR", label: "Thời Khóa Biểu" },
