@@ -1122,6 +1122,7 @@ export default function StudentDashboard() {
               </div>
             )}
           </div>
+        )}
 
         {/* VIEW: SETTINGS */}
         {activeTab === "SETTINGS" && (
