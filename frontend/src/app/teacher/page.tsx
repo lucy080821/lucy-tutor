@@ -1972,11 +1972,11 @@ export default function TeacherDashboard() {
                             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${isEssay ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'}`}>{isEssay ? '✍️ Tự luận' : '🔘 Trắc nghiệm'}</span>
                           </div>
                           {q.question.heading && (
-                            <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-700/80 font-medium whitespace-pre-wrap">
+                            <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-700/80 font-bold whitespace-pre-wrap">
                               {q.question.heading}
                             </div>
                           )}
-                          <p className="font-semibold mb-3" dangerouslySetInnerHTML={{ __html: q.question.content }}></p>
+                          <div className="mb-3 quill-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(q.question.content) }}></div>
                           {!isEssay && opts.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {opts.map((opt: string, idx: number) => (

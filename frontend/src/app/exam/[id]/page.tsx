@@ -233,7 +233,7 @@ export default function ExamPage() {
             </div>
 
             {question?.heading && (
-              <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-700/90 font-medium whitespace-pre-wrap leading-relaxed">
+              <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-700/90 font-bold whitespace-pre-wrap leading-relaxed">
                 {question.heading}
               </div>
             )}
