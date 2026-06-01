@@ -32,7 +32,9 @@ router.post('/image', uploadDisk.single('image'), (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No image file provided' });
   }
-  const API_URL = process.env.API_URL || 'http://localhost:5000';
+  const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+  const host = req.get('host');
+  const API_URL = process.env.API_URL || `${protocol}://${host}`;
   const imageUrl = `${API_URL}/uploads/${req.file.filename}`;
   res.json({ imageUrl });
 });
