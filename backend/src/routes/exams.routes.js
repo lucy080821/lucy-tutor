@@ -87,10 +87,12 @@ router.get('/:id', async (req, res) => {
     let attemptsCount = 0;
     const userId = req.query.userId;
     if (userId) {
-      attemptsCount = await prisma.examResult.count({
+      const pastResults = await prisma.examResult.findMany({
         where: { examId: req.params.id, userId: userId }
       });
-      if (attemptsCount >= exam.maxAttempts) {
+      attemptsCount = pastResults.length;
+      const hasPerfectScore = pastResults.some(r => r.score >= 10);
+      if (attemptsCount >= exam.maxAttempts || hasPerfectScore) {
         canAttempt = false;
       }
     }

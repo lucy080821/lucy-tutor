@@ -1053,7 +1053,11 @@ export default function TeacherDashboard() {
                     <tbody>
                       {filteredStudents.map((s: any) => {
                         const studentResults = s.examResults || [];
-                        const avgScore = studentResults.length > 0 ? (studentResults.reduce((acc: number, r: any) => acc + r.score, 0) / studentResults.length) : 0;
+                        const uniqueResults: any[] = Object.values(studentResults.reduce((acc: any, r: any) => {
+                          if (!acc[r.examId] || r.score > acc[r.examId].score) acc[r.examId] = r;
+                          return acc;
+                        }, {}));
+                        const avgScore = uniqueResults.length > 0 ? (uniqueResults.reduce((acc: number, r: any) => acc + r.score, 0) / uniqueResults.length) : 0;
                         const percentToTarget = s.targetScore > 0 ? Math.min(100, Math.round((avgScore / s.targetScore) * 100)) : 0;
                         const tier = getTier(s.totalXP || 0);
 

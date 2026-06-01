@@ -262,8 +262,15 @@ export default function StudentDashboard() {
     }
   }, [activeTab, user]);
 
-  const totalExams = history.length;
-  const avgScore = totalExams > 0 ? (history.reduce((acc, curr) => acc + curr.score, 0) / totalExams).toFixed(1) : "0.0";
+  const uniqueHistory = Object.values(history.reduce((acc: any, curr: any) => {
+    if (!acc[curr.examId] || curr.score > acc[curr.examId].score) {
+      acc[curr.examId] = curr;
+    }
+    return acc;
+  }, {}));
+
+  const totalExams = uniqueHistory.length;
+  const avgScore = totalExams > 0 ? (uniqueHistory.reduce((acc: number, curr: any) => acc + curr.score, 0) / totalExams).toFixed(1) : "0.0";
   const totalXP = user?.totalXP || 0;
   const percentToTarget = user?.targetScore > 0 ? Math.min(100, Math.round((parseFloat(avgScore) / user.targetScore) * 100)) : 0;
   
