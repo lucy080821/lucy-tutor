@@ -102,6 +102,20 @@ export default function ExamPage() {
         throw new Error(data.error || 'Lỗi khi nộp bài');
       }
       setResult(data);
+      if (data.userId) {
+        // store returned userId (guest/fallback) so further requests use the same id
+        setUserId(data.userId);
+        try { localStorage.setItem('user', JSON.stringify({ id: data.userId })); } catch(e) {}
+        // refresh exam info (attempts count / canAttempt)
+        try {
+          const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/${examId}?userId=${data.userId}`);
+          const refreshed = await refreshRes.json();
+          if (refreshRes.ok) setExam(refreshed);
+        } catch (e) {
+          console.warn('Failed to refresh exam after submit', e);
+        }
+      }
+
       if (data.result?.gradingDetails) {
         try {
           setGradingDetails(JSON.parse(data.result.gradingDetails));
