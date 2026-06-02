@@ -26,6 +26,59 @@ export default function ExamPage() {
   const [submitting, setSubmitting] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [isReviewMode, setIsReviewMode] = useState(false);
+  const [isTabFocused, setIsTabFocused] = useState(true);
+
+  // Anti-cheat measures
+  useEffect(() => {
+    if (submitted || isReviewMode || loading) return;
+
+    const preventCopyPaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      Swal.fire({ title: 'Cảnh báo', text: 'Không được phép sao chép/dán trong lúc làm bài!', icon: 'warning', timer: 2000, toast: true, position: 'top-end' });
+    };
+
+    const preventContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    const preventShortcuts = (e: KeyboardEvent) => {
+      // Prevent F12, Ctrl+Shift+I, Ctrl+C, Ctrl+V, PrintScreen, Ctrl+P, Ctrl+S
+      if (
+        e.key === 'F12' ||
+        e.key === 'PrintScreen' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) ||
+        (e.ctrlKey && (e.key === 'c' || e.key === 'C')) ||
+        (e.ctrlKey && (e.key === 'v' || e.key === 'V')) ||
+        (e.ctrlKey && (e.key === 'p' || e.key === 'P')) ||
+        (e.ctrlKey && (e.key === 's' || e.key === 'S')) ||
+        (e.metaKey && e.shiftKey && (e.key === 's' || e.key === 'S'))
+      ) {
+        e.preventDefault();
+        Swal.fire({ title: 'Cảnh báo', text: 'Thao tác này bị cấm trong lúc làm bài!', icon: 'warning', timer: 2000, toast: true, position: 'top-end' });
+      }
+    };
+
+    const handleBlur = () => {
+      setIsTabFocused(false);
+    };
+
+    document.addEventListener('copy', preventCopyPaste);
+    document.addEventListener('cut', preventCopyPaste);
+    document.addEventListener('paste', preventCopyPaste);
+    document.addEventListener('contextmenu', preventContextMenu);
+    document.addEventListener('keydown', preventShortcuts);
+    window.addEventListener('blur', handleBlur);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) setIsTabFocused(false); });
+
+    return () => {
+      document.removeEventListener('copy', preventCopyPaste);
+      document.removeEventListener('cut', preventCopyPaste);
+      document.removeEventListener('paste', preventCopyPaste);
+      document.removeEventListener('contextmenu', preventContextMenu);
+      document.removeEventListener('keydown', preventShortcuts);
+      window.removeEventListener('blur', handleBlur);
+    };
+  }, [submitted, isReviewMode, loading]);
 
   useEffect(() => {
     const uid = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
@@ -120,6 +173,23 @@ export default function ExamPage() {
     </div>
   );
 
+  if (!isTabFocused && !submitted && !isReviewMode && !loading && !error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black/95 p-6 z-[9999] fixed inset-0">
+        <div className="text-center space-y-6 max-w-lg w-full bg-surface/10 p-10 rounded-3xl border border-rose-500/30 backdrop-blur-md">
+          <div className="w-20 h-20 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mx-auto text-4xl mb-2 animate-pulse">⚠️</div>
+          <h2 className="text-rose-500 text-2xl font-black uppercase tracking-widest">Cảnh báo gian lận</h2>
+          <p className="text-white/80 text-lg leading-relaxed">
+            Hệ thống phát hiện bạn vừa rời khỏi màn hình bài thi (có thể là mở tab mới, chuyển cửa sổ hoặc dùng công cụ chụp ảnh màn hình).
+          </p>
+          <button onClick={() => setIsTabFocused(true)} className="w-full py-4 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-2xl transition-all shadow-[0_0_20px_rgba(225,29,72,0.4)]">
+            Tôi hiểu, Quay lại bài thi
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (submitted && result && !isReviewMode) {
     const score = result.result?.score ?? 0;
     const percent = Math.round((score / 10) * 100);
@@ -183,7 +253,7 @@ export default function ExamPage() {
   const isTimeWarning = timeLeft < 300;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className={`min-h-screen bg-background flex flex-col ${!isReviewMode && !submitted ? 'select-none' : ''}`}>
       {/* Header */}
       <header className="sticky top-0 z-40 bg-surface/90 backdrop-blur-md border-b border-foreground/10 px-4 md:px-8 py-3 md:py-4 flex flex-wrap items-center justify-between shadow-sm gap-3 md:gap-4">
         <div className="flex items-center gap-2 md:gap-3">
