@@ -14,7 +14,7 @@ export default function ExamPage() {
   const [exam, setExam] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [aiGradingDetails, setAiGradingDetails] = useState<any[]>([]);
+  const [gradingDetails, setGradingDetails] = useState<any[]>([]);
 
   // Exam state
   const [currentQ, setCurrentQ] = useState(0);
@@ -84,7 +84,7 @@ export default function ExamPage() {
       setResult(data);
       if (data.result?.gradingDetails) {
         try {
-          setAiGradingDetails(JSON.parse(data.result.gradingDetails));
+          setGradingDetails(JSON.parse(data.result.gradingDetails));
         } catch(e) {}
       }
       setSubmitted(true);
@@ -458,18 +458,18 @@ export default function ExamPage() {
             
             {isReviewMode && isEssay && (
               <div className="mt-6 p-5 bg-purple-500/10 border border-purple-500/20 rounded-2xl animate-fade-in">
-                <p className="font-bold text-purple-700 mb-2 flex items-center gap-2">🤖 AI Nhận Xét & Chấm Điểm</p>
-                {aiGradingDetails.find(g => g.questionId === question?.id) ? (
+                <p className="font-bold text-purple-700 mb-2 flex items-center gap-2">📝 Kết quả chấm điểm</p>
+                {gradingDetails.find(g => g.questionId === question?.id) ? (
                   <div className="space-y-3">
                     <p className="text-sm font-bold text-purple-900/80">
-                      Điểm: {aiGradingDetails.find(g => g.questionId === question?.id)?.pointsEarned?.toFixed(1)} / {aiGradingDetails.find(g => g.questionId === question?.id)?.maxPoints}
+                      Điểm: {gradingDetails.find(g => g.questionId === question?.id)?.pointsEarned?.toFixed(1)} / {gradingDetails.find(g => g.questionId === question?.id)?.maxPoints}
                     </p>
                     <div className="text-purple-900/80 leading-relaxed text-sm whitespace-pre-wrap">
-                      {aiGradingDetails.find(g => g.questionId === question?.id)?.feedback}
+                      {gradingDetails.find(g => g.questionId === question?.id)?.feedback}
                     </div>
                   </div>
                 ) : (
-                  <p className="text-purple-900/60 italic text-sm">Không có dữ liệu chấm điểm từ AI cho câu này.</p>
+                  <p className="text-purple-900/60 italic text-sm">Không có dữ liệu chấm điểm cho câu này.</p>
                 )}
               </div>
             )}
