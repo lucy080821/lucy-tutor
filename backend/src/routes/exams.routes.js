@@ -187,13 +187,20 @@ Trả về ĐÚNG MỘT JSON với định dạng sau (KHÔNG CÓ markdown code 
           // It checks for exact match or leaves it for manual grading (score=0 for now)
           if (userAnswer.trim().toLowerCase() === q.correctOption.trim().toLowerCase()) {
             earnedPoints += qPoints;
+            gradingDetails.push({
+              questionId: q.id,
+              pointsEarned: qPoints,
+              maxPoints: qPoints,
+              feedback: 'Chính xác! (Chấm tự động theo đáp án của giáo viên)'
+            });
           } else {
             gradingDetails.push({
               questionId: q.id,
               pointsEarned: 0,
               maxPoints: qPoints,
-              feedback: 'Câu này giáo viên sẽ chấm điểm thủ công sau.'
+              feedback: 'Chưa chính xác hoặc cần giáo viên chấm thủ công.'
             });
+            mistakeData.push({ userId, questionId: q.id });
           }
         }
       }
