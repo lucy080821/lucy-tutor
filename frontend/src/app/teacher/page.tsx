@@ -46,6 +46,7 @@ export default function TeacherDashboard() {
   const [endTime, setEndTime] = useState("");
   const [feePerLesson, setFeePerLesson] = useState("");
   const [searchStudentQuery, setSearchStudentQuery] = useState("");
+  const [globalLoading, setGlobalLoading] = useState({ isLoading: false, message: "" });
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -420,6 +421,7 @@ export default function TeacherDashboard() {
     if (!createLessonClassroomId) return Swal.fire('Cảnh báo', 'Vui lòng chọn lớp học', 'warning');
     if (lessonVocabs.length === 0 && lessonGrammars.length === 0) return Swal.fire('Cảnh báo', 'Bài học cần có ít nhất 1 từ vựng hoặc 1 điểm ngữ pháp', 'warning');
 
+    setGlobalLoading({ isLoading: true, message: "Đang lưu bài học..." });
     try {
       const isEditing = !!editingLessonId;
       const url = isEditing 
@@ -456,6 +458,8 @@ export default function TeacherDashboard() {
       }
     } catch (err) {
       console.error(err);
+    } finally {
+      setGlobalLoading({ isLoading: false, message: "" });
     }
   };
 
@@ -644,6 +648,7 @@ export default function TeacherDashboard() {
   };
 
   const handleDuplicateExam = async (oldExam: any) => {
+    setGlobalLoading({ isLoading: true, message: "Đang tải dữ liệu để nhân bản..." });
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/${oldExam.id}`);
       const fullExam = await res.json();
@@ -680,6 +685,8 @@ export default function TeacherDashboard() {
       setExpandedNav(prev => ({ ...prev, 'EXAMS_GROUP': true }));
     } catch (e: any) {
       Swal.fire('Lỗi', 'Không thể tải chi tiết đề thi để nhân bản.', 'error');
+    } finally {
+      setGlobalLoading({ isLoading: false, message: "" });
     }
   };
 
@@ -724,6 +731,7 @@ export default function TeacherDashboard() {
   const handleUpdateExam = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editExam) return;
+    setGlobalLoading({ isLoading: true, message: "Đang lưu thay đổi đề thi..." });
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/exams/${editExam.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -739,7 +747,7 @@ export default function TeacherDashboard() {
         setClassrooms(refreshed);
         setEditExam(null);
       } else { Swal.fire('Lỗi', 'Cập nhật thất bại', 'error'); }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); } finally { setGlobalLoading({ isLoading: false, message: "" }); }
   };
 
   // ── CREATE EXAM state ──
@@ -782,6 +790,7 @@ export default function TeacherDashboard() {
     }
 
     setSolvingAI(prev => ({ ...prev, [qi]: true }));
+    setGlobalLoading({ isLoading: true, message: "AI đang chọn đáp án & giải thích..." });
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/ai/solve-question`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -801,8 +810,10 @@ export default function TeacherDashboard() {
       });
     } catch (err: any) {
       Swal.fire('Lỗi AI', err.message, 'error');
+    } finally {
+      setSolvingAI(prev => ({ ...prev, [qi]: false }));
+      setGlobalLoading({ isLoading: false, message: "" });
     }
-    setSolvingAI(prev => ({ ...prev, [qi]: false }));
   };
 
   const handleCreateExam = async (e: React.FormEvent) => {
@@ -818,6 +829,7 @@ export default function TeacherDashboard() {
       }
     }
     setIsCreating(true);
+    setGlobalLoading({ isLoading: true, message: "Đang lưu đề thi..." });
     try {
       const payload = {
         title: createTitle, examType: createType,
@@ -859,8 +871,10 @@ export default function TeacherDashboard() {
     } catch (err: any) {
       Swal.fire('Lỗi', err.message, 'error');
       console.error(err);
+    } finally {
+      setIsCreating(false);
+      setGlobalLoading({ isLoading: false, message: "" });
     }
-    setIsCreating(false);
   };
 
   // ── Nav ──
@@ -2373,6 +2387,15 @@ function ClassCard({ c, onEdit }: { c: any; onEdit?: () => void }) {
         <p className="text-xs text-foreground/50 mb-1">Mã tham gia</p>
         <div className="bg-primary/10 text-primary font-mono font-bold px-3 py-1 rounded text-lg tracking-widest">{c.joinCode}</div>
       </div>
+      {globalLoading.isLoading && (
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center space-y-6 max-w-sm w-full border border-foreground/10">
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-lg font-bold text-center">{globalLoading.message || 'Đang xử lý...'}</p>
+            <p className="text-sm text-foreground/50 text-center">Vui lòng chờ trong giây lát</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
