@@ -1,7 +1,12 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
+const { Groq } = require('groq-sdk');
 const prisma = new PrismaClient();
 const router = express.Router();
+
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY || 'fake_key_for_now' 
+});
 // Create exam manually with questions
 router.post('/create', async (req, res) => {
   try {
@@ -52,6 +57,7 @@ router.post('/create', async (req, res) => {
           correctOption: q.correctOption || '',
           explanation: q.explanation || '',
           imageUrl: q.imageUrl || null,
+          points: q.points !== undefined ? parseFloat(q.points) : 1.0,
         }
       });
       await prisma.examQuestion.create({
@@ -114,24 +120,81 @@ router.post('/submit', async (req, res) => {
       include: { questions: { include: { question: true } } }
     });
     
-    let correctCount = 0;
+    let earnedPoints = 0;
+    let totalPossiblePoints = 0;
     const mistakeData = [];
+    const essayPromises = [];
+    const gradingDetails = [];
     
     exam.questions.forEach(eq => {
       const q = eq.question;
       const userAnswer = selectedAnswers[q.id];
-      if (userAnswer === q.correctOption) {
-        correctCount++;
-      } else if (userAnswer) {
-        // Record mistake if wrong answer was provided
-        mistakeData.push({
-          userId,
-          questionId: q.id,
+      const qPoints = q.points !== undefined ? parseFloat(q.points) : 1.0;
+      totalPossiblePoints += qPoints;
+      
+      if (q.type === 'MULTIPLE_CHOICE') {
+        if (userAnswer === q.correctOption) {
+          earnedPoints += qPoints;
+        } else if (userAnswer) {
+          mistakeData.push({ userId, questionId: q.id });
+        }
+      } else if (q.type === 'ESSAY' && userAnswer) {
+        // Prepare AI grading promise
+        const prompt = `
+Bạn là một giáo viên Tiếng Anh đang chấm bài tự luận của học sinh.
+Câu hỏi: "${q.content}"
+Đáp án mẫu hoặc Tiêu chí chấm (Rubric): "${q.correctOption}"
+Học sinh trả lời: "${userAnswer}"
+
+Hãy đánh giá câu trả lời của học sinh dựa trên ngữ nghĩa, ngữ pháp và đáp án mẫu. 
+Trả về ĐÚNG MỘT JSON với định dạng sau (KHÔNG CÓ markdown code blocks bọc ngoài):
+{
+  "scoreRatio": 0.8, // Tỉ lệ điểm học sinh đạt được (từ 0.0 đến 1.0)
+  "feedback": "Nhận xét chi tiết cho học sinh..."
+}
+`;
+        const gradingPromise = groq.chat.completions.create({
+          messages: [
+            { role: 'system', content: 'You must respond in valid JSON format.' },
+            { role: 'user', content: prompt }
+          ],
+          model: 'llama-3.3-70b-versatile',
+          temperature: 0.1,
+          response_format: { type: "json_object" }
+        }).then(res => {
+          let aiResult = { scoreRatio: 0, feedback: 'Lỗi chấm điểm.' };
+          try {
+            aiResult = JSON.parse(res.choices[0]?.message?.content || '{}');
+          } catch (e) {}
+          
+          const finalRatio = Math.max(0, Math.min(1, parseFloat(aiResult.scoreRatio) || 0));
+          const scoreForThis = qPoints * finalRatio;
+          
+          return {
+            questionId: q.id,
+            pointsEarned: scoreForThis,
+            maxPoints: qPoints,
+            feedback: aiResult.feedback
+          };
+        }).catch(err => {
+          console.error("AI grading failed:", err);
+          return { questionId: q.id, pointsEarned: 0, maxPoints: qPoints, feedback: 'AI không thể chấm câu này.' };
         });
+        
+        essayPromises.push(gradingPromise);
       }
     });
     
-    const score = (correctCount / exam.totalQuestions) * 10; // Scale to 10
+    // Wait for all AI grading to complete
+    if (essayPromises.length > 0) {
+      const essayResults = await Promise.all(essayPromises);
+      essayResults.forEach(res => {
+        earnedPoints += res.pointsEarned;
+        gradingDetails.push(res);
+      });
+    }
+    
+    const score = totalPossiblePoints > 0 ? (earnedPoints / totalPossiblePoints) * 10 : 0;
     
     // Save Result
     const result = await prisma.examResult.create({
@@ -140,7 +203,8 @@ router.post('/submit', async (req, res) => {
         examId,
         selectedAnswers: JSON.stringify(selectedAnswers),
         score,
-        timeSpent
+        timeSpent,
+        gradingDetails: JSON.stringify(gradingDetails)
       }
     });
     

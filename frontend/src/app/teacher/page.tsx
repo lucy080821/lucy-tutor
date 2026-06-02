@@ -22,6 +22,7 @@ const BLANK_QUESTION = () => ({
   correctOption: "A",
   explanation: "",
   imageUrl: "",
+  points: 1,
 });
 
 export default function TeacherDashboard() {
@@ -653,7 +654,8 @@ export default function TeacherDashboard() {
       options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options,
       correctOption: q.correctOption,
       explanation: q.explanation || "",
-      imageUrl: q.imageUrl || ""
+      imageUrl: q.imageUrl || "",
+      points: q.points || 1
     })) || [BLANK_QUESTION()]);
     setActiveTab("CREATE");
     setExpandedNav(prev => ({ ...prev, 'EXAMS_GROUP': true }));
@@ -1804,6 +1806,11 @@ export default function TeacherDashboard() {
                             ✍️ Tự Luận
                           </button>
                         </div>
+                        <div className="flex items-center gap-2 bg-foreground/5 px-3 py-1.5 rounded-lg ml-4">
+                          <label className="text-xs font-bold text-foreground/50">Điểm:</label>
+                          <input type="number" min="0" step="0.5" className="w-16 bg-transparent text-sm font-bold outline-none text-primary"
+                            value={q.points || 1} onChange={e => updateQuestion(qi, { points: parseFloat(e.target.value) || 0 })} />
+                        </div>
                       </div>
                       {createQuestions.length > 1 && (
                         <button type="button" onClick={() => removeQuestion(qi)}
@@ -1872,10 +1879,14 @@ export default function TeacherDashboard() {
                       </div>
                     )}
 
-                    {/* ESSAY hint */}
+                    {/* ESSAY hint & Rubric input */}
                     {q.type === 'ESSAY' && (
-                      <div className="p-3 bg-secondary/5 border border-secondary/20 rounded-xl">
-                        <p className="text-xs text-secondary/70">✍️ Học sinh sẽ nhập câu trả lời tự do vào ô văn bản. Giáo viên chấm thủ công sau.</p>
+                      <div className="space-y-3 p-4 bg-secondary/5 border border-secondary/20 rounded-xl">
+                        <p className="text-xs font-bold text-secondary/90">✍️ Nhập Tiêu chí chấm (Rubric) hoặc Đáp án mẫu</p>
+                        <p className="text-[11px] text-secondary/70">Hệ thống AI sẽ dựa vào thông tin này để chấm điểm tự động bài làm của học sinh.</p>
+                        <textarea rows={4} className="w-full p-3 rounded-xl border border-secondary/30 bg-white/50 resize-none focus:border-secondary outline-none transition-colors text-sm"
+                          placeholder="VD: Học sinh cần đề cập đến 3 ý chính: 1. Môi trường, 2. Xã hội, 3. Kinh tế..."
+                          value={q.correctOption === 'A' ? '' : q.correctOption} onChange={e => updateQuestion(qi, { correctOption: e.target.value })} />
                       </div>
                     )}
 

@@ -53,6 +53,7 @@ model Question {
   correctOption String
   explanation   String?
   imageUrl      String?
+  points        Float    @default(1.0)
   
   mistakeBank   MistakeBank[]
   exams         ExamQuestion[]
@@ -107,6 +108,7 @@ model ExamResult {
   selectedAnswers String   // stored as JSON string
   score          Float
   timeSpent      Int      // in seconds
+  gradingDetails String?  // stored as JSON string (AI feedback)
   
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   exam           Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)

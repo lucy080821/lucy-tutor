@@ -14,6 +14,7 @@ export default function ExamPage() {
   const [exam, setExam] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [aiGradingDetails, setAiGradingDetails] = useState<any[]>([]);
 
   // Exam state
   const [currentQ, setCurrentQ] = useState(0);
@@ -59,6 +60,11 @@ export default function ExamPage() {
       });
       const data = await res.json();
       setResult(data);
+      if (data.result?.gradingDetails) {
+        try {
+          setAiGradingDetails(JSON.parse(data.result.gradingDetails));
+        } catch(e) {}
+      }
       setSubmitted(true);
     } catch (err) {
       console.error(err);
@@ -215,7 +221,7 @@ export default function ExamPage() {
                 disabled={submitting}
                 className="px-5 py-2 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors cursor-pointer disabled:opacity-50"
               >
-                {submitting ? 'Đang nộp...' : 'Nộp Bài'}
+                {submitting ? 'Đang chấm điểm bằng AI...' : 'Nộp Bài'}
               </button>
             </>
           )}
@@ -315,6 +321,24 @@ export default function ExamPage() {
               <div className="mt-6 p-5 bg-blue-500/10 border border-blue-500/20 rounded-2xl animate-fade-in">
                 <p className="font-bold text-blue-700 mb-2 flex items-center gap-2">💡 Giải thích / Hướng dẫn</p>
                 <div className="text-blue-900/80 leading-relaxed text-sm whitespace-pre-wrap quill-content" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(question.explanation)}}></div>
+              </div>
+            )}
+            
+            {isReviewMode && isEssay && (
+              <div className="mt-6 p-5 bg-purple-500/10 border border-purple-500/20 rounded-2xl animate-fade-in">
+                <p className="font-bold text-purple-700 mb-2 flex items-center gap-2">🤖 AI Nhận Xét & Chấm Điểm</p>
+                {aiGradingDetails.find(g => g.questionId === question?.id) ? (
+                  <div className="space-y-3">
+                    <p className="text-sm font-bold text-purple-900/80">
+                      Điểm: {aiGradingDetails.find(g => g.questionId === question?.id)?.pointsEarned?.toFixed(1)} / {aiGradingDetails.find(g => g.questionId === question?.id)?.maxPoints}
+                    </p>
+                    <div className="text-purple-900/80 leading-relaxed text-sm whitespace-pre-wrap">
+                      {aiGradingDetails.find(g => g.questionId === question?.id)?.feedback}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-purple-900/60 italic text-sm">Không có dữ liệu chấm điểm từ AI cho câu này.</p>
+                )}
               </div>
             )}
 
