@@ -188,9 +188,24 @@ router.post('/submit', async (req, res) => {
         const cleanExplanation = q.explanation ? q.explanation.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim().toLowerCase() : '';
         const cleanCorrectOpt = q.correctOption ? q.correctOption.trim().toLowerCase() : '';
 
-        // Check exact match first
-        if ((cleanCorrectOpt && cleanCorrectOpt !== 'a' && cleanAnswer === cleanCorrectOpt) ||
-            (cleanExplanation && cleanAnswer === cleanExplanation)) {
+        // Check exact match
+        let isCorrect = false;
+
+        if (cleanCorrectOpt && cleanCorrectOpt !== 'a' && cleanAnswer === cleanCorrectOpt) {
+          isCorrect = true;
+        } else if (cleanExplanation) {
+          if (cleanAnswer === cleanExplanation) {
+            isCorrect = true;
+          } else {
+            // Check if explanation is in format "word: meaning" or "word - meaning"
+            const explanationParts = cleanExplanation.split(/[:;\-]/).map(p => p.trim());
+            if (explanationParts.includes(cleanAnswer)) {
+              isCorrect = true;
+            }
+          }
+        }
+
+        if (isCorrect) {
           earnedPoints += qPoints;
           gradingDetails.push({
             questionId: q.id,
