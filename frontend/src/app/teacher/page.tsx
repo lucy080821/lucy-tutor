@@ -2395,6 +2395,7 @@ function ClassCard({ c, onEdit }: { c: any; onEdit?: () => void }) {
       <div className="text-right shrink-0">
         <p className="text-xs text-foreground/50 mb-1">Mã tham gia</p>
         <div className="bg-primary/10 text-primary font-mono font-bold px-3 py-1 rounded text-lg tracking-widest">{c.joinCode}</div>
+      </div>
     </div>
   );
 }
