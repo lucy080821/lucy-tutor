@@ -73,40 +73,28 @@ router.post('/create', async (req, res) => {
 router.post('/cheat', async (req, res) => {
   try {
     const { userId, examId, cheatCount, isAutoSubmitted } = req.body;
-    if (!examId) return res.status(400).json({ error: 'Missing examId' });
+    if (!userId || !examId) return res.status(400).json({ error: 'Missing userId or examId' });
 
-    // Ensure user exists or create fallback guest
-    let user = null;
-    if (userId) {
-      user = await prisma.user.findUnique({ where: { id: userId } });
-    }
+    const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user) {
-      try {
-        const isAnonymous = !userId || userId === 'anonymous' || userId === 'undefined';
-        user = await prisma.user.create({ data: { name: isAnonymous ? 'Guest Student' : 'Fallback Student', email: `${isAnonymous ? 'guest' : 'fallback'}_${Date.now()}@example.com`, role: 'STUDENT', password: '' } });
-      } catch (createErr) {
-        console.error('Failed to create fallback user for cheat log:', createErr);
-        return res.status(500).json({ error: 'Không thể tạo người dùng tạm thời cho cheat log' });
-      }
+      return res.status(401).json({ error: 'Người dùng không hợp lệ. Vui lòng đăng nhập lại.' });
     }
-
-    const effectiveUserId = user.id;
 
     const log = await prisma.cheatLog.upsert({
-      where: { userId_examId: { userId: effectiveUserId, examId } },
+      where: { userId_examId: { userId, examId } },
       update: {
         cheatCount: cheatCount || 1,
         isAutoSubmitted: isAutoSubmitted || false,
         updatedAt: new Date()
       },
       create: {
-        userId: effectiveUserId,
+        userId,
         examId,
         cheatCount: cheatCount || 1,
         isAutoSubmitted: isAutoSubmitted || false
       }
     });
-    res.json({ log, userId: effectiveUserId });
+    res.json({ log, userId });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -179,6 +167,11 @@ router.post('/submit', async (req, res) => {
 
     if (!userId || !examId) {
       return res.status(400).json({ error: 'Thiếu userId hoặc examId' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(401).json({ error: 'Người dùng không hợp lệ. Vui lòng đăng nhập lại.' });
     }
     
     // Fetch exam questions to calculate score
@@ -253,28 +246,12 @@ router.post('/submit', async (req, res) => {
       user = await prisma.user.findUnique({ where: { id: userId } });
     }
 
-    // If the frontend sent 'anonymous' or no valid userId, create a temporary guest user
-    if (!user) {
-      try {
-        const isAnonymous = !userId || userId === 'anonymous' || userId === 'undefined';
-        if (isAnonymous) {
-          user = await prisma.user.create({ data: { name: 'Guest Student', email: `guest_${Date.now()}@example.com`, role: 'STUDENT', password: '' } });
-        } else {
-          // If a specific userId was provided but not found, create a guest fallback to avoid blocking submission
-          user = await prisma.user.create({ data: { name: 'Fallback Student', email: `fallback_${Date.now()}@example.com`, role: 'STUDENT', password: '' } });
-        }
-      } catch (createErr) {
-        console.error('Failed to create fallback user:', createErr);
-        return res.status(500).json({ error: 'Không thể tạo người dùng tạm thời' });
-      }
-    }
-
     // Save Result
     let result;
     try {
       result = await prisma.examResult.create({
       data: {
-        userId: user.id,
+        userId,
         examId,
         selectedAnswers: JSON.stringify(selectedAnswers),
         score,
@@ -291,10 +268,10 @@ router.post('/submit', async (req, res) => {
       throw err;
     }
     
-    // Use effectiveUserId (found or fallback) for subsequent operations
-    const effectiveUserId = user.id;
+    // Use logged-in userId for subsequent operations
+    const effectiveUserId = userId;
 
-    // Update Mistake Bank (upsert) - normalize userId to effectiveUserId
+    // Update Mistake Bank (upsert)
     const effectiveMistakes = mistakeData.map(m => ({ ...m, userId: effectiveUserId }));
     for (const mistake of effectiveMistakes) {
       await prisma.mistakeBank.upsert({

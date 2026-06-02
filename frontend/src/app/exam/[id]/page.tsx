@@ -36,12 +36,11 @@ export default function ExamPage() {
   useEffect(() => {
     const fetchExam = async () => {
       try {
-        const u = localStorage.getItem('user');
+        const storedUserId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
         let currentUserId = null;
-        if (u) {
-          const parsed = JSON.parse(u);
-          currentUserId = parsed.id;
-          setUserId(parsed.id);
+        if (storedUserId) {
+          currentUserId = storedUserId;
+          setUserId(storedUserId);
         }
 
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/${examId}${currentUserId ? `?userId=${currentUserId}` : ''}`);
@@ -68,29 +67,24 @@ export default function ExamPage() {
   const handleSubmit = useCallback(async (isAutoSubmit = false, forceCheatLogs: any[] | null = null) => {
     if (submitting || submitted) return;
     setSubmitting(true);
-    // If user is not logged in, prompt to login or continue as guest
+    // If user is not logged in, require login before submitting
     if (!userId && !isAutoSubmit) {
-      const resp = await Swal.fire({
+      await Swal.fire({
         title: 'Bạn chưa đăng nhập',
-        text: 'Bạn cần đăng nhập để lưu kết quả và nhận XP. Đăng nhập ngay?',
+        text: 'Bạn phải đăng nhập để lưu kết quả và nhận XP. Vui lòng đăng nhập trước khi nộp bài.',
         icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Đăng nhập',
-        cancelButtonText: 'Nộp tạm (không lưu tài khoản)'
+        confirmButtonText: 'Đăng nhập'
       });
-      if (resp.isConfirmed) {
-        setSubmitting(false);
-        router.push('/auth');
-        return;
-      }
-      // else proceed as guest (backend will handle guest fallback)
+      setSubmitting(false);
+      router.push('/auth');
+      return;
     }
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: userId || 'anonymous',
+          userId,
           examId,
           selectedAnswers: { ...answers, ...essayAnswers },
           timeSpent: (exam?.duration * 60 || 2700) - timeLeft,
@@ -103,17 +97,15 @@ export default function ExamPage() {
       }
       setResult(data);
       if (data.userId) {
-        // store returned userId (guest/fallback) so further requests use the same id
         setUserId(data.userId);
-        try { localStorage.setItem('user', JSON.stringify({ id: data.userId })); } catch(e) {}
-        // refresh exam info (attempts count / canAttempt)
-        try {
-          const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/${examId}?userId=${data.userId}`);
-          const refreshed = await refreshRes.json();
-          if (refreshRes.ok) setExam(refreshed);
-        } catch (e) {
-          console.warn('Failed to refresh exam after submit', e);
-        }
+      }
+      const refreshUserId = data.userId || userId;
+      try {
+        const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/${examId}?userId=${refreshUserId}`);
+        const refreshed = await refreshRes.json();
+        if (refreshRes.ok) setExam(refreshed);
+      } catch (e) {
+        console.warn('Failed to refresh exam after submit', e);
       }
 
       if (data.result?.gradingDetails) {
