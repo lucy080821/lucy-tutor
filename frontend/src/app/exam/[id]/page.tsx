@@ -33,6 +33,38 @@ export default function ExamPage() {
   const lastCheatTimeRef = useRef(0);
   const handleSubmitRef = useRef<any>(null);
 
+  useEffect(() => {
+    const fetchExam = async () => {
+      try {
+        const u = localStorage.getItem('user');
+        let currentUserId = null;
+        if (u) {
+          const parsed = JSON.parse(u);
+          currentUserId = parsed.id;
+          setUserId(parsed.id);
+        }
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/${examId}${currentUserId ? `?userId=${currentUserId}` : ''}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Lỗi khi tải đề thi');
+        
+        if (data.canAttempt === false) {
+           setError(`Bạn đã hết lượt làm bài (Đã làm ${data.attemptsCount}/${data.maxAttempts} lần)`);
+           setLoading(false);
+           return;
+        }
+
+        setExam(data);
+        setTimeLeft(data.duration * 60 || 2700);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    if (examId) fetchExam();
+  }, [examId]);
+
   const handleSubmit = useCallback(async (isAutoSubmit = false, forceCheatLogs: any[] | null = null) => {
     if (submitting || submitted) return;
     setSubmitting(true);
