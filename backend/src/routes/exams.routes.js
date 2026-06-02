@@ -139,7 +139,7 @@ router.post('/submit', async (req, res) => {
           mistakeData.push({ userId, questionId: q.id });
         }
       } else if (q.type === 'ESSAY' && userAnswer) {
-        if (!q.correctOption || q.correctOption.trim() === '') {
+        if (!q.correctOption || q.correctOption.trim() === '' || q.correctOption.trim().toLowerCase() === 'a') {
           // AI Grades if teacher left it blank
           const prompt = `
 Bạn là một giáo viên Tiếng Anh đang chấm bài tự luận của học sinh.
