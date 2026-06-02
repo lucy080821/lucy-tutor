@@ -1872,9 +1872,16 @@ export default function TeacherDashboard() {
                         <label className="block text-xs font-bold text-foreground/50 mb-1 uppercase tracking-wide">
                           Heading / Câu hỏi tổng (Không bắt buộc)
                         </label>
-                        <textarea rows={2} className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent resize-none focus:border-primary outline-none transition-colors"
-                          placeholder="VD: Read the following passage and answer the questions..."
-                          value={q.heading || ''} onChange={e => updateQuestion(qi, { heading: e.target.value })} />
+                        <div className="bg-white rounded-lg overflow-hidden border border-foreground/15">
+                          <ReactQuill 
+                            theme="snow" 
+                            modules={miniQuillModules}
+                            className="text-black [&_.ql-editor]:min-h-[40px] [&_.ql-editor]:py-2 [&_.ql-toolbar]:py-1 [&_.ql-toolbar]:px-2"
+                            placeholder="VD: Read the following passage and answer the questions..."
+                            value={q.heading || ''} 
+                            onChange={content => updateQuestion(qi, { heading: content })} 
+                          />
+                        </div>
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-foreground/50 mb-1 uppercase tracking-wide">Nội dung câu hỏi *</label>
