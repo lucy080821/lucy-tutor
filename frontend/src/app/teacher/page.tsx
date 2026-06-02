@@ -1945,7 +1945,7 @@ export default function TeacherDashboard() {
                             🔘 Trắc Nghiệm
                           </button>
                           <button type="button"
-                            onClick={() => updateQuestion(qi, { type: 'ESSAY' })}
+                            onClick={() => updateQuestion(qi, { type: 'ESSAY', correctOption: '' })}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all cursor-pointer ${q.type === 'ESSAY' ? 'border-secondary bg-secondary/10 text-secondary' : 'border-foreground/10 hover:border-foreground/30'}`}>
                             ✍️ Tự Luận
                           </button>
@@ -2036,15 +2036,13 @@ export default function TeacherDashboard() {
                         ))}
                       </div>
                     )}
-
-                    {/* ESSAY hint & Rubric input */}
                     {q.type === 'ESSAY' && (
                       <div className="space-y-3 p-4 bg-secondary/5 border border-secondary/20 rounded-xl">
-                        <p className="text-xs font-bold text-secondary/90">✍️ Nhập Đáp án chính xác (Nếu có)</p>
-                        <p className="text-[11px] text-secondary/70">Nếu bạn để trống, AI sẽ tự động chấm điểm bài làm bằng kiến thức của nó. Nếu bạn nhập một đáp án, AI sẽ không tham gia chấm điểm (hệ thống sẽ so sánh khớp chính xác hoặc chờ bạn chấm thủ công).</p>
-                        <textarea rows={4} className="w-full p-3 rounded-xl border border-secondary/30 bg-white/50 resize-none focus:border-secondary outline-none transition-colors text-sm"
-                          placeholder="VD: Học sinh cần đề cập đến 3 ý chính: 1. Môi trường, 2. Xã hội, 3. Kinh tế..."
-                          value={q.correctOption === 'A' ? '' : q.correctOption} onChange={e => updateQuestion(qi, { correctOption: e.target.value.toLowerCase() })} />
+                        <p className="text-xs font-bold text-secondary/90">✍️ Nhập Đáp án chính xác (Để hệ thống tự động chấm)</p>
+                        <p className="text-[11px] text-secondary/70">Hệ thống sẽ cộng điểm nếu học sinh nhập trùng khớp với đáp án này. Vui lòng nhập ngắn gọn (VD: book, apple). Nếu để trống, giáo viên sẽ phải chấm thủ công cho câu này.</p>
+                        <textarea rows={2} className="w-full p-3 rounded-xl border border-secondary/30 bg-white/50 resize-none focus:border-secondary outline-none transition-colors text-sm"
+                          placeholder="VD: book, apple, can... (nhập ngắn gọn, hệ thống sẽ so sánh chính xác)"
+                          value={!q.correctOption || q.correctOption === 'A' ? '' : q.correctOption} onChange={e => updateQuestion(qi, { correctOption: e.target.value.toLowerCase() })} />
                       </div>
                     )}
 

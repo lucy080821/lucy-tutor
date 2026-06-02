@@ -185,42 +185,37 @@ router.post('/submit', async (req, res) => {
         }
       } else if (q.type === 'ESSAY' && userAnswer) {
         const cleanAnswer = userAnswer.trim().toLowerCase();
-        const cleanExplanation = q.explanation ? q.explanation.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim().toLowerCase() : '';
-        const cleanCorrectOpt = q.correctOption ? q.correctOption.trim().toLowerCase() : '';
+        // Only grade if teacher provided a correct answer (not the default empty/"a" value)
+        const rawCorrectOpt = q.correctOption ? q.correctOption.trim() : '';
+        const hasCorrectAnswer = rawCorrectOpt && rawCorrectOpt.toLowerCase() !== 'a';
 
-        // Check exact match
-        let isCorrect = false;
-
-        if (cleanCorrectOpt && cleanCorrectOpt !== 'a' && cleanAnswer === cleanCorrectOpt) {
-          isCorrect = true;
-        } else if (cleanExplanation) {
-          if (cleanAnswer === cleanExplanation) {
-            isCorrect = true;
+        if (hasCorrectAnswer) {
+          const isCorrect = cleanAnswer === rawCorrectOpt.toLowerCase();
+          if (isCorrect) {
+            earnedPoints += qPoints;
+            gradingDetails.push({
+              questionId: q.id,
+              pointsEarned: qPoints,
+              maxPoints: qPoints,
+              feedback: 'Chính xác!'
+            });
           } else {
-            // Check if explanation is in format "word: meaning" or "word - meaning"
-            const explanationParts = cleanExplanation.split(/[:;\-]/).map(p => p.trim());
-            if (explanationParts.includes(cleanAnswer)) {
-              isCorrect = true;
-            }
+            gradingDetails.push({
+              questionId: q.id,
+              pointsEarned: 0,
+              maxPoints: qPoints,
+              feedback: `Chưa chính xác. Đáp án đúng: "${rawCorrectOpt}".`
+            });
+            mistakeData.push({ userId, questionId: q.id });
           }
-        }
-
-        if (isCorrect) {
-          earnedPoints += qPoints;
-          gradingDetails.push({
-            questionId: q.id,
-            pointsEarned: qPoints,
-            maxPoints: qPoints,
-            feedback: 'Chính xác! (Trùng khớp với đáp án của giáo viên)'
-          });
         } else {
+          // No correct answer provided by teacher - give 0, pending manual grading
           gradingDetails.push({
             questionId: q.id,
             pointsEarned: 0,
             maxPoints: qPoints,
-            feedback: 'Chưa chính xác. Đáp án của bạn không khớp với đáp án của giáo viên.'
+            feedback: 'Chờ giáo viên chấm thủ công.'
           });
-          mistakeData.push({ userId, questionId: q.id });
         }
       }
     });
