@@ -73,23 +73,40 @@ router.post('/create', async (req, res) => {
 router.post('/cheat', async (req, res) => {
   try {
     const { userId, examId, cheatCount, isAutoSubmitted } = req.body;
-    if (!userId || !examId) return res.status(400).json({ error: 'Missing data' });
-    
+    if (!examId) return res.status(400).json({ error: 'Missing examId' });
+
+    // Ensure user exists or create fallback guest
+    let user = null;
+    if (userId) {
+      user = await prisma.user.findUnique({ where: { id: userId } });
+    }
+    if (!user) {
+      try {
+        const isAnonymous = !userId || userId === 'anonymous' || userId === 'undefined';
+        user = await prisma.user.create({ data: { name: isAnonymous ? 'Guest Student' : 'Fallback Student', email: `${isAnonymous ? 'guest' : 'fallback'}_${Date.now()}@example.com`, role: 'STUDENT', password: '' } });
+      } catch (createErr) {
+        console.error('Failed to create fallback user for cheat log:', createErr);
+        return res.status(500).json({ error: 'Không thể tạo người dùng tạm thời cho cheat log' });
+      }
+    }
+
+    const effectiveUserId = user.id;
+
     const log = await prisma.cheatLog.upsert({
-      where: { userId_examId: { userId, examId } },
-      update: { 
-        cheatCount: cheatCount || 1, 
+      where: { userId_examId: { userId: effectiveUserId, examId } },
+      update: {
+        cheatCount: cheatCount || 1,
         isAutoSubmitted: isAutoSubmitted || false,
         updatedAt: new Date()
       },
-      create: { 
-        userId, 
-        examId, 
-        cheatCount: cheatCount || 1, 
-        isAutoSubmitted: isAutoSubmitted || false 
+      create: {
+        userId: effectiveUserId,
+        examId,
+        cheatCount: cheatCount || 1,
+        isAutoSubmitted: isAutoSubmitted || false
       }
     });
-    res.json(log);
+    res.json({ log, userId: effectiveUserId });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
