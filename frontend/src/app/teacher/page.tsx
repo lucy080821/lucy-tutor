@@ -1914,8 +1914,16 @@ export default function TeacherDashboard() {
                           {solvingAI[qi] ? '⏳ Đang giải...' : '🪄 AI Chọn & Giải Thích'}
                         </button>
                       </div>
-                      <input type="text" className="w-full p-2.5 rounded-xl border border-foreground/10 bg-transparent text-sm focus:border-primary outline-none transition-colors"
-                        placeholder="Giải thích đáp án..." value={q.explanation} onChange={e => updateQuestion(qi, { explanation: e.target.value })} />
+                      <div className="bg-white rounded-lg overflow-hidden border border-foreground/10">
+                        <ReactQuill 
+                          theme="snow" 
+                          modules={miniQuillModules}
+                          className="text-black [&_.ql-editor]:min-h-[40px] [&_.ql-editor]:py-2 [&_.ql-toolbar]:py-1 [&_.ql-toolbar]:px-2"
+                          placeholder="Giải thích đáp án..."
+                          value={q.explanation} 
+                          onChange={content => updateQuestion(qi, { explanation: content })} 
+                        />
+                      </div>
                     </div>
                   </div>
                 ))}
