@@ -812,9 +812,10 @@ export default function TeacherDashboard() {
           type: q.type,
           content: q.content,
           options: q.type === 'MULTIPLE_CHOICE' ? JSON.stringify(q.options.filter(o => o.trim())) : '[]',
-          correctOption: q.type === 'MULTIPLE_CHOICE' ? q.correctOption : null,
+          correctOption: q.correctOption || '',
           explanation: q.explanation || '',
           imageUrl: q.imageUrl || null,
+          points: q.points || 1,
         }))
       };
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/create`, {
