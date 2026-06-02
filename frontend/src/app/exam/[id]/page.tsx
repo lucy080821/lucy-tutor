@@ -106,8 +106,7 @@ export default function ExamPage() {
         body: JSON.stringify({
           userId: userId || 'anonymous',
           examId,
-          selectedAnswers: answers,
-          essayAnswers,
+          selectedAnswers: { ...answers, ...essayAnswers },
           timeSpent: (exam?.duration * 60 || 2700) - timeLeft
         })
       });
@@ -124,7 +123,7 @@ export default function ExamPage() {
       Swal.fire('Lỗi', 'Lỗi khi nộp bài', 'error');
     }
     setSubmitting(false);
-  }, [submitting, submitted, userId, examId, answers, exam, timeLeft]);
+  }, [submitting, submitted, userId, examId, answers, essayAnswers, exam, timeLeft]);
 
   // Countdown timer
   useEffect(() => {
