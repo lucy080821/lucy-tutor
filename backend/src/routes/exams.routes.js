@@ -1,5 +1,5 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
+const { PrismaClient, Prisma } = require('@prisma/client');
 const prisma = new PrismaClient();
 const router = express.Router();
 
@@ -229,9 +229,17 @@ router.post('/submit', async (req, res) => {
     });
     
     const score = totalPossiblePoints > 0 ? (earnedPoints / totalPossiblePoints) * 10 : 0;
-    
+
+    // Ensure user exists before creating ExamResult to avoid FK violations
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      return res.status(404).json({ error: 'Người dùng không tồn tại' });
+    }
+
     // Save Result
-    const result = await prisma.examResult.create({
+    let result;
+    try {
+      result = await prisma.examResult.create({
       data: {
         userId,
         examId,
@@ -241,7 +249,14 @@ router.post('/submit', async (req, res) => {
         gradingDetails: JSON.stringify(gradingDetails),
         cheatLogs: cheatLogs ? JSON.stringify(cheatLogs) : null
       }
-    });
+      });
+    } catch (err) {
+      // Prisma foreign key error code P2003 indicates a missing related record
+      if (err && (err.code === 'P2003' || (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003'))) {
+        return res.status(400).json({ error: 'Ràng buộc khóa ngoại bị vi phạm - có thể user hoặc exam không tồn tại' });
+      }
+      throw err;
+    }
     
     // Update Mistake Bank (upsert)
     for (const mistake of mistakeData) {

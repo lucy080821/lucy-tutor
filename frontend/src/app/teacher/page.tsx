@@ -1952,8 +1952,8 @@ export default function TeacherDashboard() {
                         </div>
                         <div className="flex items-center gap-2 bg-foreground/5 px-3 py-1.5 rounded-lg ml-4">
                           <label className="text-xs font-bold text-foreground/50">Điểm:</label>
-                          <input type="number" min="0" step="0.5" className="w-16 bg-transparent text-sm font-bold outline-none text-primary"
-                            value={q.points || 1} onChange={e => updateQuestion(qi, { points: parseFloat(e.target.value) || 0 })} />
+                          <input type="number" min="0" step="0.01" className="w-20 bg-transparent text-sm font-bold outline-none text-primary"
+                            value={q.points ?? 1} onChange={e => updateQuestion(qi, { points: parseFloat(e.target.value) || 0 })} />
                         </div>
                       </div>
                       {createQuestions.length > 1 && (

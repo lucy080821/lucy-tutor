@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
@@ -15,8 +16,11 @@ async function testEssaySubmit() {
     console.log(`  Q: type=${q.type}, correctOption='${q.correctOption}'`);
   });
 
-  const user = await prisma.user.findFirst({ where: { role: 'STUDENT' } });
-  if (!user) { console.log("No student found"); return; }
+  let user = await prisma.user.findFirst({ where: { role: 'STUDENT' } });
+  if (!user) {
+    user = await prisma.user.create({ data: { name: 'Test Student', email: `test_student_${Date.now()}@example.com`, role: 'STUDENT', password: '' } });
+    console.log('Created temporary test user:', user.id);
+  }
 
   // Simulate submit with correct answers
   const selectedAnswers = {};
