@@ -313,7 +313,9 @@ export default function TeacherDashboard() {
               className: log.exam?.classroom?.name || "Lớp chung",
               cheatCount: log.cheatCount,
               autoSubmitted: log.isAutoSubmitted,
-              createdAt: log.updatedAt
+              createdAt: log.updatedAt,
+              studentEmail: log.user?.email || "",
+              studentAvatar: log.user?.avatar || ""
             })));
           }
         })
@@ -1566,8 +1568,16 @@ export default function TeacherDashboard() {
                             {new Date(incident.createdAt).toLocaleString('vi-VN')}
                           </td>
                           <td className="py-4 font-bold">
-                            {incident.studentName}
-                            <div className="text-xs text-foreground/50 font-normal">{incident.className}</div>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden text-primary">
+                                {incident.studentAvatar ? <img src={incident.studentAvatar} className="w-full h-full object-cover" alt="avatar" /> : incident.studentName.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex flex-col leading-tight">
+                                <span>{incident.studentName}</span>
+                                {incident.studentEmail && <span className="text-xs text-foreground/50 font-normal">{incident.studentEmail}</span>}
+                                <span className="text-[10px] bg-foreground/5 w-fit px-1.5 py-0.5 rounded text-foreground/60 font-normal mt-1">{incident.className}</span>
+                              </div>
+                            </div>
                           </td>
                           <td className="py-4">{incident.examTitle}</td>
                           <td className="py-4 text-center">

@@ -189,8 +189,22 @@ router.post('/submit', async (req, res) => {
           mistakeData.push({ userId, questionId: q.id });
         }
       } else if (q.type === 'ESSAY' && userAnswer) {
-        if (!q.correctOption || q.correctOption.trim() === '' || q.correctOption.trim().toLowerCase() === 'a') {
-          // AI Grades if teacher left it blank
+        const cleanAnswer = userAnswer.trim().toLowerCase();
+        const cleanExplanation = q.explanation ? q.explanation.replace(/<[^>]*>?/gm, '').trim().toLowerCase() : '';
+        const cleanCorrectOpt = q.correctOption ? q.correctOption.trim().toLowerCase() : '';
+
+        // Check exact match first
+        if ((cleanCorrectOpt && cleanCorrectOpt !== 'a' && cleanAnswer === cleanCorrectOpt) ||
+            (cleanExplanation && cleanAnswer === cleanExplanation)) {
+          earnedPoints += qPoints;
+          gradingDetails.push({
+            questionId: q.id,
+            pointsEarned: qPoints,
+            maxPoints: qPoints,
+            feedback: 'Chính xác! (Trùng khớp với đáp án của giáo viên)'
+          });
+        } else if (!cleanCorrectOpt || cleanCorrectOpt === 'a') {
+          // AI Grades if teacher left exact option blank
           const prompt = `
 Bạn là một giáo viên Tiếng Anh đang chấm bài tự luận của học sinh.
 Câu hỏi: "${q.content}"
@@ -237,25 +251,14 @@ Trả về ĐÚNG MỘT JSON với định dạng sau (KHÔNG CÓ markdown code 
           
           essayPromises.push(gradingPromise);
         } else {
-          // Teacher provided an exact answer, so AI does not grade it automatically.
-          // It checks for exact match or leaves it for manual grading (score=0 for now)
-          if (userAnswer.trim().toLowerCase() === q.correctOption.trim().toLowerCase()) {
-            earnedPoints += qPoints;
-            gradingDetails.push({
-              questionId: q.id,
-              pointsEarned: qPoints,
-              maxPoints: qPoints,
-              feedback: 'Chính xác! (Chấm tự động theo đáp án của giáo viên)'
-            });
-          } else {
-            gradingDetails.push({
-              questionId: q.id,
-              pointsEarned: 0,
-              maxPoints: qPoints,
-              feedback: 'Chưa chính xác hoặc cần giáo viên chấm thủ công.'
-            });
-            mistakeData.push({ userId, questionId: q.id });
-          }
+          // If not exact match and NOT graded by AI
+          gradingDetails.push({
+            questionId: q.id,
+            pointsEarned: 0,
+            maxPoints: qPoints,
+            feedback: 'Chưa chính xác hoặc cần giáo viên chấm thủ công.'
+          });
+          mistakeData.push({ userId, questionId: q.id });
         }
       }
     });
