@@ -190,7 +190,7 @@ router.post('/submit', async (req, res) => {
         }
       } else if (q.type === 'ESSAY' && userAnswer) {
         const cleanAnswer = userAnswer.trim().toLowerCase();
-        const cleanExplanation = q.explanation ? q.explanation.replace(/<[^>]*>?/gm, '').trim().toLowerCase() : '';
+        const cleanExplanation = q.explanation ? q.explanation.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/g, ' ').trim().toLowerCase() : '';
         const cleanCorrectOpt = q.correctOption ? q.correctOption.trim().toLowerCase() : '';
 
         // Check exact match first
@@ -214,10 +214,10 @@ ${q.explanation ? `Đáp án tham khảo / Gợi ý của giáo viên: "${q.expl
 Học sinh trả lời: "${userAnswer}"
 
 Hãy đánh giá câu trả lời của học sinh dựa trên ngữ nghĩa, ngữ pháp và đối chiếu với đáp án tham khảo (nếu có). 
-Đặc biệt: Nếu câu hỏi yêu cầu nhìn ảnh và học sinh trả lời một từ ngắn khớp với bức ảnh/đáp án tham khảo, hãy cho điểm tối đa.
+QUAN TRỌNG TỐI ĐA: Nếu câu hỏi yêu cầu nhìn ảnh và học sinh trả lời bằng một TỪ NGẮN GỌN (ví dụ: book, apple) mà khớp với nội dung chính của bức ảnh hoặc đáp án tham khảo, BẠN BẮT BUỘC PHẢI CHO ĐIỂM TỐI ĐA (scoreRatio: 1.0). KHÔNG ĐƯỢC trừ điểm vì câu trả lời quá ngắn.
 Trả về ĐÚNG MỘT JSON với định dạng sau (KHÔNG CÓ markdown code blocks bọc ngoài):
 {
-  "scoreRatio": 0.8, // Tỉ lệ điểm học sinh đạt được (từ 0.0 đến 1.0)
+  "scoreRatio": 1.0, // Tỉ lệ điểm học sinh đạt được (từ 0.0 đến 1.0, ví dụ 1.0 là đúng hoàn toàn, 0.0 là sai)
   "feedback": "Nhận xét chi tiết cho học sinh..."
 }
 `;

@@ -133,7 +133,7 @@ Nhiệm vụ của bạn là giải quyết câu hỏi sau và cung cấp đáp 
 ${heading ? `Đoạn văn chung / Tiêu đề:\n"${heading}"\n` : ''}
 Câu hỏi:\n"${content}"
 
-${type === 'MULTIPLE_CHOICE' ? `Các đáp án:\nA. ${options[0]}\nB. ${options[1]}\nC. ${options[2]}\nD. ${options[3]}\n\nYêu cầu trả về JSON có dạng:\n{\n  "correctOption": "A hoặc B hoặc C hoặc D",\n  "explanation": "Giải thích ngắn gọn tại sao..."\n}` : `Đây là câu hỏi Tự luận.\nYêu cầu trả về JSON có dạng:\n{\n  "explanation": "Câu trả lời mẫu và giải thích ngắn gọn..."\n}`}
+${type === 'MULTIPLE_CHOICE' ? `Các đáp án:\nA. ${options[0]}\nB. ${options[1]}\nC. ${options[2]}\nD. ${options[3]}\n\nYêu cầu trả về JSON có dạng:\n{\n  "correctOption": "A hoặc B hoặc C hoặc D",\n  "explanation": "Giải thích ngắn gọn tại sao..."\n}` : `Đây là câu hỏi Tự luận.\nYêu cầu trả về JSON có dạng:\n{\n  "correctOption": "Từ khóa / Đáp án đúng ngắn gọn nhất (ví dụ: book, apple, can)",\n  "explanation": "Câu trả lời mẫu và giải thích chi tiết..."\n}`}
 `;
 
     // Real API Call
