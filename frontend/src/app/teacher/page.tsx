@@ -643,30 +643,44 @@ export default function TeacherDashboard() {
     setExpandedNav(prev => ({ ...prev, 'LESSONS_GROUP': true }));
   };
 
-  const handleDuplicateExam = (oldExam: any) => {
-    setCreateTitle(`[Bản sao] ${oldExam.title}`);
-    setCreateType(oldExam.examType || "ASSIGNMENT");
-    setCreateClassroomId("");
-    setCreateAssignMode("CLASS");
-    setCreateStudentIds([]);
-    setCreateDuration((oldExam.duration || 45).toString());
-    setCreateMaxAttempts((oldExam.maxAttempts || 1).toString());
-    setCreatePublishMode("NOW");
-    setCreatePublishTime("");
-    setCreateDeadline("");
-    setCreateNotes(oldExam.notes || "");
-    setCreateQuestions(oldExam.questions?.map((q: any) => ({
-      heading: q.heading || "",
-      type: q.type,
-      content: q.content,
-      options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options,
-      correctOption: q.correctOption,
-      explanation: q.explanation || "",
-      imageUrl: q.imageUrl || "",
-      points: q.points || 1
-    })) || [BLANK_QUESTION()]);
-    setActiveTab("CREATE");
-    setExpandedNav(prev => ({ ...prev, 'EXAMS_GROUP': true }));
+  const handleDuplicateExam = async (oldExam: any) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/${oldExam.id}`);
+      const fullExam = await res.json();
+      if (fullExam.error) throw new Error(fullExam.error);
+
+      setCreateTitle(`[Bản sao] ${fullExam.title}`);
+      setCreateType(fullExam.examType || "ASSIGNMENT");
+      setCreateClassroomId("");
+      setCreateAssignMode("CLASS");
+      setCreateStudentIds([]);
+      setCreateDuration((fullExam.duration || 45).toString());
+      setCreateMaxAttempts((fullExam.maxAttempts || 1).toString());
+      setCreatePublishMode("NOW");
+      setCreatePublishTime("");
+      setCreateDeadline("");
+      setCreateNotes(fullExam.notes || "");
+      
+      const qArray = (fullExam.questions && fullExam.questions.length > 0) ? fullExam.questions.map((qObj: any) => {
+        const q = qObj.question || qObj; // Handle both nested and unnested structures just in case
+        return {
+          heading: q.heading || "",
+          type: q.type,
+          content: q.content,
+          options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options,
+          correctOption: q.correctOption || "A",
+          explanation: q.explanation || "",
+          imageUrl: q.imageUrl || "",
+          points: q.points || 1
+        };
+      }) : [BLANK_QUESTION()];
+
+      setCreateQuestions(qArray);
+      setActiveTab("CREATE");
+      setExpandedNav(prev => ({ ...prev, 'EXAMS_GROUP': true }));
+    } catch (e: any) {
+      Swal.fire('Lỗi', 'Không thể tải chi tiết đề thi để nhân bản.', 'error');
+    }
   };
 
   // ── Handlers for exams ──management state ──
