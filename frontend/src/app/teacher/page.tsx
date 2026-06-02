@@ -2340,6 +2340,15 @@ export default function TeacherDashboard() {
         </div>
       )}
 
+      {globalLoading.isLoading && (
+        <div className="fixed inset-0 bg-black/60 z-[9999] flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center space-y-6 max-w-sm w-full border border-foreground/10">
+            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-lg font-bold text-center">{globalLoading.message || 'Đang xử lý...'}</p>
+            <p className="text-sm text-foreground/50 text-center">Vui lòng chờ trong giây lát</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2386,16 +2395,6 @@ function ClassCard({ c, onEdit }: { c: any; onEdit?: () => void }) {
       <div className="text-right shrink-0">
         <p className="text-xs text-foreground/50 mb-1">Mã tham gia</p>
         <div className="bg-primary/10 text-primary font-mono font-bold px-3 py-1 rounded text-lg tracking-widest">{c.joinCode}</div>
-      </div>
-      {globalLoading.isLoading && (
-        <div className="fixed inset-0 bg-black/60 z-[9999] flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center space-y-6 max-w-sm w-full border border-foreground/10">
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-            <p className="text-lg font-bold text-center">{globalLoading.message || 'Đang xử lý...'}</p>
-            <p className="text-sm text-foreground/50 text-center">Vui lòng chờ trong giây lát</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
