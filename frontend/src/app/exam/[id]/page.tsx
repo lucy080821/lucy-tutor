@@ -320,13 +320,13 @@ export default function ExamPage() {
               </div>
             )}
 
-            <p className="text-xl leading-relaxed mb-8">
+            <div className="text-xl leading-relaxed mb-8 break-words min-w-0">
               {question?.content ? (
-                <span className="quill-content" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(question.content)}}></span>
+                <div className="quill-content" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(question.content)}}></div>
               ) : (
-                <span className="text-foreground/40 italic text-base">Nội dung trống</span>
+                <div className="text-foreground/40 italic text-base">Nội dung trống</div>
               )}
-            </p>
+            </div>
 
             <div className="space-y-3">
               {isEssay ? (
@@ -374,13 +374,13 @@ export default function ExamPage() {
                     <button
                       key={idx}
                       onClick={() => !isReviewMode && setAnswers({ ...answers, [question.id]: letter })}
-                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-[inherit] font-medium ${borderClass}`}
+                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-[inherit] font-medium flex items-start ${borderClass}`}
                       disabled={isReviewMode}
                     >
-                      <span className={`inline-flex w-8 h-8 rounded-full items-center justify-center font-bold text-sm mr-3 ${iconClass}`}>
+                      <span className={`inline-flex w-8 h-8 rounded-full items-center justify-center font-bold text-sm mr-3 shrink-0 ${iconClass}`}>
                         {iconText}
                       </span>
-                      <span dangerouslySetInnerHTML={{ __html: opt }}></span>
+                      <div className="flex-1 min-w-0 break-words quill-content [&>p]:m-0" dangerouslySetInnerHTML={{ __html: opt }}></div>
                     </button>
                   );
                 })
