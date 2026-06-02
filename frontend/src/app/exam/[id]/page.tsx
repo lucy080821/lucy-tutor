@@ -67,11 +67,12 @@ export default function ExamPage() {
   const handleSubmit = useCallback(async (isAutoSubmit = false, forceCheatLogs: any[] | null = null) => {
     if (submitting || submitted) return;
     setSubmitting(true);
-    // If user is not logged in, require login before submitting
-    if (!userId && !isAutoSubmit) {
+
+    const storedUserId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
+    if (!storedUserId && !isAutoSubmit) {
       await Swal.fire({
         title: 'Bạn chưa đăng nhập',
-        text: 'Bạn phải đăng nhập để lưu kết quả và nhận XP. Vui lòng đăng nhập trước khi nộp bài.',
+        text: 'Bạn phải đăng nhập để lưu kết quả và nhận XP. Vui lòng đăng nhập lại.',
         icon: 'warning',
         confirmButtonText: 'Đăng nhập'
       });
@@ -79,12 +80,14 @@ export default function ExamPage() {
       router.push('/auth');
       return;
     }
+
+    const actualUserId = storedUserId || userId;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId,
+          userId: actualUserId,
           examId,
           selectedAnswers: { ...answers, ...essayAnswers },
           timeSpent: (exam?.duration * 60 || 2700) - timeLeft,
@@ -99,7 +102,7 @@ export default function ExamPage() {
       if (data.userId) {
         setUserId(data.userId);
       }
-      const refreshUserId = data.userId || userId;
+      const refreshUserId = data.userId || actualUserId;
       try {
         const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/${examId}?userId=${refreshUserId}`);
         const refreshed = await refreshRes.json();
@@ -163,6 +166,12 @@ export default function ExamPage() {
       if (now - lastCheatTimeRef.current < 2000) return; // Debounce 2s
       lastCheatTimeRef.current = now;
       
+      const storedUserId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
+      if (!storedUserId) {
+        console.warn('Cheat event ignored because user is not authenticated');
+        return;
+      }
+
       setCheatCount(c => {
         const newCount = c + 1;
         setCheatLogs(prev => {
@@ -173,7 +182,7 @@ export default function ExamPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              userId: userId || 'anonymous',
+              userId: storedUserId,
               examId,
               cheatCount: newCount,
               isAutoSubmitted: newCount >= 3
