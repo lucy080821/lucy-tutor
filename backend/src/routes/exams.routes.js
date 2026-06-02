@@ -12,7 +12,7 @@ router.post('/create', async (req, res) => {
   try {
     const {
       title, examType, classroomId, assignMode, studentIds,
-      duration, publishTime, deadline, notes, maxAttempts, questions = []
+      duration, publishTime, deadline, notes, maxAttempts, questions = [], uploadedById
     } = req.body;
 
     // Resolve target students
@@ -34,6 +34,7 @@ router.post('/create', async (req, res) => {
         title: title || 'Đề Thi Không Tên',
         examType: examType || 'ASSIGNMENT',
         classroomId: classroomId || null,
+        uploadedById: uploadedById || null,
         duration: parseInt(duration) || 45,
         totalQuestions: questions.length,
         publishTime: publishTime ? new Date(publishTime) : null,
@@ -103,9 +104,10 @@ router.get('/cheat-logs/:teacherId', async (req, res) => {
   try {
     const logs = await prisma.cheatLog.findMany({
       where: {
-        exam: {
-          classroom: { teacherId: req.params.teacherId }
-        }
+        OR: [
+          { exam: { classroom: { teacherId: req.params.teacherId } } },
+          { exam: { uploadedById: req.params.teacherId } }
+        ]
       },
       include: {
         user: true,

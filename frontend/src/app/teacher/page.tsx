@@ -884,6 +884,9 @@ export default function TeacherDashboard() {
           points: q.points || 1,
         }))
       };
+      if (user?.id) {
+        (payload as any).uploadedById = user.id;
+      }
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/create`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
