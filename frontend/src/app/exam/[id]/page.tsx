@@ -68,6 +68,23 @@ export default function ExamPage() {
   const handleSubmit = useCallback(async (isAutoSubmit = false, forceCheatLogs: any[] | null = null) => {
     if (submitting || submitted) return;
     setSubmitting(true);
+    // If user is not logged in, prompt to login or continue as guest
+    if (!userId && !isAutoSubmit) {
+      const resp = await Swal.fire({
+        title: 'Bạn chưa đăng nhập',
+        text: 'Bạn cần đăng nhập để lưu kết quả và nhận XP. Đăng nhập ngay?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Đăng nhập',
+        cancelButtonText: 'Nộp tạm (không lưu tài khoản)'
+      });
+      if (resp.isConfirmed) {
+        setSubmitting(false);
+        router.push('/auth');
+        return;
+      }
+      // else proceed as guest (backend will handle guest fallback)
+    }
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/submit`, {
         method: 'POST',
