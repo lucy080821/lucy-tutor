@@ -339,8 +339,8 @@ export default function ExamPage() {
                     rows={8}
                     className="w-full p-4 rounded-2xl border-2 border-foreground/15 bg-transparent resize-none focus:border-secondary outline-none transition-colors text-base leading-relaxed"
                     placeholder="Viết câu trả lời của bạn tại đây..."
-                    value={essayAnswers[question?.id] || ''}
-                    onChange={e => setEssayAnswers({ ...essayAnswers, [question.id]: e.target.value })}
+                    value={(essayAnswers[question?.id] || '').toLowerCase()}
+                    onChange={e => setEssayAnswers({ ...essayAnswers, [question.id]: e.target.value.toLowerCase() })}
                     readOnly={isReviewMode}
                   />
                 </div>
