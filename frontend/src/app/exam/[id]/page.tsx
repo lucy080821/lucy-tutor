@@ -33,7 +33,7 @@ export default function ExamPage() {
   const lastCheatTimeRef = useRef(0);
   const handleSubmitRef = useRef<any>(null);
 
-  const handleSubmit = useCallback(async (isAutoSubmit = false, forceCheatLogs: any[] = null) => {
+  const handleSubmit = useCallback(async (isAutoSubmit = false, forceCheatLogs: any[] | null = null) => {
     if (submitting || submitted) return;
     setSubmitting(true);
     try {
