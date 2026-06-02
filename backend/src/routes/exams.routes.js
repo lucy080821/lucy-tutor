@@ -139,49 +139,63 @@ router.post('/submit', async (req, res) => {
           mistakeData.push({ userId, questionId: q.id });
         }
       } else if (q.type === 'ESSAY' && userAnswer) {
-        // Prepare AI grading promise
-        const prompt = `
+        if (!q.correctOption || q.correctOption.trim() === '') {
+          // AI Grades if teacher left it blank
+          const prompt = `
 Bạn là một giáo viên Tiếng Anh đang chấm bài tự luận của học sinh.
 Câu hỏi: "${q.content}"
-Đáp án mẫu hoặc Tiêu chí chấm (Rubric): "${q.correctOption}"
 Học sinh trả lời: "${userAnswer}"
 
-Hãy đánh giá câu trả lời của học sinh dựa trên ngữ nghĩa, ngữ pháp và đáp án mẫu. 
+Hãy đánh giá câu trả lời của học sinh dựa trên ngữ nghĩa và ngữ pháp. 
 Trả về ĐÚNG MỘT JSON với định dạng sau (KHÔNG CÓ markdown code blocks bọc ngoài):
 {
   "scoreRatio": 0.8, // Tỉ lệ điểm học sinh đạt được (từ 0.0 đến 1.0)
   "feedback": "Nhận xét chi tiết cho học sinh..."
 }
 `;
-        const gradingPromise = groq.chat.completions.create({
-          messages: [
-            { role: 'system', content: 'You must respond in valid JSON format.' },
-            { role: 'user', content: prompt }
-          ],
-          model: 'llama-3.3-70b-versatile',
-          temperature: 0.1,
-          response_format: { type: "json_object" }
-        }).then(res => {
-          let aiResult = { scoreRatio: 0, feedback: 'Lỗi chấm điểm.' };
-          try {
-            aiResult = JSON.parse(res.choices[0]?.message?.content || '{}');
-          } catch (e) {}
+          const gradingPromise = groq.chat.completions.create({
+            messages: [
+              { role: 'system', content: 'You must respond in valid JSON format.' },
+              { role: 'user', content: prompt }
+            ],
+            model: 'llama-3.3-70b-versatile',
+            temperature: 0.1,
+            response_format: { type: "json_object" }
+          }).then(res => {
+            let aiResult = { scoreRatio: 0, feedback: 'Lỗi chấm điểm.' };
+            try {
+              aiResult = JSON.parse(res.choices[0]?.message?.content || '{}');
+            } catch (e) {}
+            
+            const finalRatio = Math.max(0, Math.min(1, parseFloat(aiResult.scoreRatio) || 0));
+            const scoreForThis = qPoints * finalRatio;
+            
+            return {
+              questionId: q.id,
+              pointsEarned: scoreForThis,
+              maxPoints: qPoints,
+              feedback: aiResult.feedback
+            };
+          }).catch(err => {
+            console.error("AI grading failed:", err);
+            return { questionId: q.id, pointsEarned: 0, maxPoints: qPoints, feedback: 'AI không thể chấm câu này.' };
+          });
           
-          const finalRatio = Math.max(0, Math.min(1, parseFloat(aiResult.scoreRatio) || 0));
-          const scoreForThis = qPoints * finalRatio;
-          
-          return {
-            questionId: q.id,
-            pointsEarned: scoreForThis,
-            maxPoints: qPoints,
-            feedback: aiResult.feedback
-          };
-        }).catch(err => {
-          console.error("AI grading failed:", err);
-          return { questionId: q.id, pointsEarned: 0, maxPoints: qPoints, feedback: 'AI không thể chấm câu này.' };
-        });
-        
-        essayPromises.push(gradingPromise);
+          essayPromises.push(gradingPromise);
+        } else {
+          // Teacher provided an exact answer, so AI does not grade it automatically.
+          // It checks for exact match or leaves it for manual grading (score=0 for now)
+          if (userAnswer.trim().toLowerCase() === q.correctOption.trim().toLowerCase()) {
+            earnedPoints += qPoints;
+          } else {
+            gradingDetails.push({
+              questionId: q.id,
+              pointsEarned: 0,
+              maxPoints: qPoints,
+              feedback: 'Câu này giáo viên sẽ chấm điểm thủ công sau.'
+            });
+          }
+        }
       }
     });
     

@@ -1883,8 +1883,8 @@ export default function TeacherDashboard() {
                     {/* ESSAY hint & Rubric input */}
                     {q.type === 'ESSAY' && (
                       <div className="space-y-3 p-4 bg-secondary/5 border border-secondary/20 rounded-xl">
-                        <p className="text-xs font-bold text-secondary/90">✍️ Nhập Tiêu chí chấm (Rubric) hoặc Đáp án mẫu</p>
-                        <p className="text-[11px] text-secondary/70">Hệ thống AI sẽ dựa vào thông tin này để chấm điểm tự động bài làm của học sinh.</p>
+                        <p className="text-xs font-bold text-secondary/90">✍️ Nhập Đáp án chính xác (Nếu có)</p>
+                        <p className="text-[11px] text-secondary/70">Nếu bạn để trống, AI sẽ tự động chấm điểm bài làm bằng kiến thức của nó. Nếu bạn nhập một đáp án, AI sẽ không tham gia chấm điểm (hệ thống sẽ so sánh khớp chính xác hoặc chờ bạn chấm thủ công).</p>
                         <textarea rows={4} className="w-full p-3 rounded-xl border border-secondary/30 bg-white/50 resize-none focus:border-secondary outline-none transition-colors text-sm"
                           placeholder="VD: Học sinh cần đề cập đến 3 ý chính: 1. Môi trường, 2. Xã hội, 3. Kinh tế..."
                           value={q.correctOption === 'A' ? '' : q.correctOption} onChange={e => updateQuestion(qi, { correctOption: e.target.value })} />
