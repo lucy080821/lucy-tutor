@@ -358,7 +358,9 @@ router.post('/submit', async (req, res) => {
       }, 100);
     }
 
-    res.json({ result, earnedXP });
+    // Return attempts count and effective user id so frontend can refresh state
+    const attemptsCount = await prisma.examResult.count({ where: { examId, userId: effectiveUserId } });
+    res.json({ result, earnedXP, attemptsCount, userId: effectiveUserId });
   } catch (error) {
     console.error("Submit exam error:", error.message, error.stack);
     res.status(400).json({ error: error.message });
