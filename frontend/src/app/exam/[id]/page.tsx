@@ -81,6 +81,9 @@ export default function ExamPage() {
         })
       });
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Lỗi khi nộp bài');
+      }
       setResult(data);
       if (data.result?.gradingDetails) {
         try {
@@ -91,9 +94,9 @@ export default function ExamPage() {
       if (isAutoSubmit) {
         Swal.fire({ title: 'Đã thu bài', text: 'Bài thi của bạn đã bị thu tự động do vi phạm quy chế quá 2 lần!', icon: 'error' });
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      Swal.fire('Lỗi', 'Lỗi khi nộp bài', 'error');
+      Swal.fire('Lỗi', err.message || 'Lỗi khi nộp bài', 'error');
     }
     setSubmitting(false);
   }, [submitting, submitted, userId, examId, answers, essayAnswers, exam, timeLeft, cheatLogs]);

@@ -159,12 +159,20 @@ router.get('/:id', async (req, res) => {
 router.post('/submit', async (req, res) => {
   try {
     const { userId, examId, selectedAnswers, timeSpent, cheatLogs } = req.body;
+
+    if (!userId || !examId) {
+      return res.status(400).json({ error: 'Thiếu userId hoặc examId' });
+    }
     
     // Fetch exam questions to calculate score
     const exam = await prisma.exam.findUnique({
       where: { id: examId },
       include: { questions: { include: { question: true } } }
     });
+
+    if (!exam) {
+      return res.status(404).json({ error: 'Không tìm thấy đề thi. Vui lòng tải lại trang.' });
+    }
     
     let earnedPoints = 0;
     let totalPossiblePoints = 0;
