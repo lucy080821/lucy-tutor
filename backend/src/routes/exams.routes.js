@@ -72,43 +72,6 @@ router.post('/create', async (req, res) => {
   }
 });
 
-
-// Get an exam with its questions
-router.get('/:id', async (req, res) => {
-  try {
-    const exam = await prisma.exam.findUnique({
-      where: { id: req.params.id },
-      include: {
-        assignedStudents: true,
-        results: true,
-        questions: {
-          include: { question: true },
-          orderBy: { order: 'asc' }
-        }
-      }
-    });
-    if (!exam) return res.status(404).json({ error: 'Exam not found' });
-
-    let canAttempt = true;
-    let attemptsCount = 0;
-    const userId = req.query.userId;
-    if (userId) {
-      const pastResults = await prisma.examResult.findMany({
-        where: { examId: req.params.id, userId: userId }
-      });
-      attemptsCount = pastResults.length;
-      const hasPerfectScore = pastResults.some(r => r.score >= 10);
-      if (attemptsCount >= exam.maxAttempts || hasPerfectScore) {
-        canAttempt = false;
-      }
-    }
-
-    res.json({ ...exam, canAttempt, attemptsCount });
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-});
-
 // Log cheat live
 router.post('/cheat', async (req, res) => {
   try {
@@ -153,6 +116,42 @@ router.get('/cheat-logs/:teacherId', async (req, res) => {
       orderBy: { updatedAt: 'desc' }
     });
     res.json(logs);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get an exam with its questions
+router.get('/:id', async (req, res) => {
+  try {
+    const exam = await prisma.exam.findUnique({
+      where: { id: req.params.id },
+      include: {
+        assignedStudents: true,
+        results: true,
+        questions: {
+          include: { question: true },
+          orderBy: { order: 'asc' }
+        }
+      }
+    });
+    if (!exam) return res.status(404).json({ error: 'Exam not found' });
+
+    let canAttempt = true;
+    let attemptsCount = 0;
+    const userId = req.query.userId;
+    if (userId) {
+      const pastResults = await prisma.examResult.findMany({
+        where: { examId: req.params.id, userId: userId }
+      });
+      attemptsCount = pastResults.length;
+      const hasPerfectScore = pastResults.some(r => r.score >= 10);
+      if (attemptsCount >= exam.maxAttempts || hasPerfectScore) {
+        canAttempt = false;
+      }
+    }
+
+    res.json({ ...exam, canAttempt, attemptsCount });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
