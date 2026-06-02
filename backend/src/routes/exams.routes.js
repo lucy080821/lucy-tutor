@@ -300,6 +300,7 @@ router.post('/submit', async (req, res) => {
 
     res.json({ result, earnedXP });
   } catch (error) {
+    console.error("Submit exam error:", error.message, error.stack);
     res.status(400).json({ error: error.message });
   }
 });
