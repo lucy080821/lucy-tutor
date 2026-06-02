@@ -668,11 +668,20 @@ export default function TeacherDashboard() {
       
       const qArray = (fullExam.questions && fullExam.questions.length > 0) ? fullExam.questions.map((qObj: any) => {
         const q = qObj.question || qObj; // Handle both nested and unnested structures just in case
+        let parsedOpts = ["", "", "", ""];
+        if (q.type === 'MULTIPLE_CHOICE') {
+          try {
+            const arr = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+            if (Array.isArray(arr)) {
+              parsedOpts = [arr[0] || "", arr[1] || "", arr[2] || "", arr[3] || ""];
+            }
+          } catch (e) {}
+        }
         return {
           heading: q.heading || "",
           type: q.type,
           content: q.content,
-          options: typeof q.options === 'string' ? JSON.parse(q.options) : q.options,
+          options: parsedOpts,
           correctOption: q.correctOption || "A",
           explanation: q.explanation || "",
           imageUrl: q.imageUrl || "",
