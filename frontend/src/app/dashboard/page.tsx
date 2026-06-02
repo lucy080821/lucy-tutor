@@ -1255,7 +1255,7 @@ export default function StudentDashboard() {
                     .replace(/_(.*?)_/g, '<em>$1</em>');
                 };
 
-                lines.forEach((line, i) => {
+                lines.forEach((line: string, i: number) => {
                   const trimmed = line.trim();
                   if (!trimmed) {
                     flushList();
