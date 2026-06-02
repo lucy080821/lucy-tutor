@@ -14,6 +14,14 @@ import DOMPurify from 'dompurify';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
+const miniQuillModules = {
+  toolbar: [
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'color': [] }, { 'background': [] }],
+    ['clean']
+  ]
+};
+
 const BLANK_QUESTION = () => ({
   type: "MULTIPLE_CHOICE" as "MULTIPLE_CHOICE" | "ESSAY",
   heading: "",
@@ -1871,9 +1879,16 @@ export default function TeacherDashboard() {
                               className={`w-8 h-8 rounded-full font-bold text-sm shrink-0 transition-all cursor-pointer ${q.correctOption === letter ? 'bg-primary text-white' : 'bg-foreground/10 hover:bg-foreground/20'}`}>
                               {letter}
                             </button>
-                            <input type="text" className="flex-1 bg-transparent outline-none font-medium placeholder:text-foreground/30"
-                              placeholder={`Đáp án ${letter}...`}
-                              value={q.options[oi]} onChange={e => updateOption(qi, oi, e.target.value)} />
+                            <div className="flex-1 min-w-0 bg-white rounded-lg overflow-hidden border border-foreground/10">
+                              <ReactQuill 
+                                theme="snow" 
+                                modules={miniQuillModules}
+                                className="text-black [&_.ql-editor]:min-h-[40px] [&_.ql-editor]:py-2 [&_.ql-toolbar]:py-1 [&_.ql-toolbar]:px-2"
+                                placeholder={`Đáp án ${letter}...`}
+                                value={q.options[oi]} 
+                                onChange={content => updateOption(qi, oi, content)} 
+                              />
+                            </div>
                             {q.correctOption === letter && <span className="text-primary text-xs font-bold shrink-0">✓ Đúng</span>}
                           </div>
                         ))}
