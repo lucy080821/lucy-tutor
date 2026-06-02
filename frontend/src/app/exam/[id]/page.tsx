@@ -1,5 +1,4 @@
-"use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import DOMPurify from 'dompurify';
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -27,6 +26,48 @@ export default function ExamPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [isReviewMode, setIsReviewMode] = useState(false);
   const [isTabFocused, setIsTabFocused] = useState(true);
+  
+  const [cheatCount, setCheatCount] = useState(0);
+  const [cheatLogs, setCheatLogs] = useState<{time: number}[]>([]);
+  const lastCheatTimeRef = useRef(0);
+  const handleSubmitRef = useRef<any>(null);
+
+  const handleSubmit = useCallback(async (isAutoSubmit = false, forceCheatLogs: any[] = null) => {
+    if (submitting || submitted) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/submit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: userId || 'anonymous',
+          examId,
+          selectedAnswers: { ...answers, ...essayAnswers },
+          timeSpent: (exam?.duration * 60 || 2700) - timeLeft,
+          cheatLogs: forceCheatLogs || cheatLogs
+        })
+      });
+      const data = await res.json();
+      setResult(data);
+      if (data.result?.gradingDetails) {
+        try {
+          setAiGradingDetails(JSON.parse(data.result.gradingDetails));
+        } catch(e) {}
+      }
+      setSubmitted(true);
+      if (isAutoSubmit) {
+        Swal.fire({ title: 'Đã thu bài', text: 'Bài thi của bạn đã bị thu tự động do vi phạm quy chế quá 2 lần!', icon: 'error' });
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Lỗi', 'Lỗi khi nộp bài', 'error');
+    }
+    setSubmitting(false);
+  }, [submitting, submitted, userId, examId, answers, essayAnswers, exam, timeLeft, cheatLogs]);
+
+  useEffect(() => {
+    handleSubmitRef.current = handleSubmit;
+  }, [handleSubmit]);
 
   // Anti-cheat measures
   useEffect(() => {
@@ -58,9 +99,42 @@ export default function ExamPage() {
       }
     };
 
-    const handleBlur = () => {
+    const registerCheat = () => {
+      const now = Date.now();
+      if (now - lastCheatTimeRef.current < 2000) return; // Debounce 2s
+      lastCheatTimeRef.current = now;
+      
+      setCheatCount(c => {
+        const newCount = c + 1;
+        setCheatLogs(prev => {
+          const newLogs = [...prev, { time: now }];
+          
+          // Send live cheat log to backend
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/cheat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId: userId || 'anonymous',
+              examId,
+              cheatCount: newCount,
+              isAutoSubmitted: newCount >= 3
+            })
+          }).catch(console.error);
+
+          if (newCount >= 3) {
+            setTimeout(() => {
+              if (handleSubmitRef.current) handleSubmitRef.current(true, newLogs);
+            }, 100);
+          }
+          return newLogs;
+        });
+        return newCount;
+      });
       setIsTabFocused(false);
     };
+
+    const handleBlur = () => registerCheat();
+    const handleVisibility = () => { if (document.hidden) registerCheat(); };
 
     document.addEventListener('copy', preventCopyPaste);
     document.addEventListener('cut', preventCopyPaste);
@@ -68,7 +142,7 @@ export default function ExamPage() {
     document.addEventListener('contextmenu', preventContextMenu);
     document.addEventListener('keydown', preventShortcuts);
     window.addEventListener('blur', handleBlur);
-    document.addEventListener('visibilitychange', () => { if (document.hidden) setIsTabFocused(false); });
+    document.addEventListener('visibilitychange', handleVisibility);
 
     return () => {
       document.removeEventListener('copy', preventCopyPaste);
@@ -77,53 +151,9 @@ export default function ExamPage() {
       document.removeEventListener('contextmenu', preventContextMenu);
       document.removeEventListener('keydown', preventShortcuts);
       window.removeEventListener('blur', handleBlur);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [submitted, isReviewMode, loading]);
-
-  useEffect(() => {
-    const uid = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
-    setUserId(uid);
-    const url = `${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/exams/${examId}${uid ? `?userId=${uid}` : ''}`;
-    fetch(url)
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) { setError(data.error); setLoading(false); return; }
-        if (data.canAttempt === false) { setError("Bạn đã hết lượt làm bài thi này!"); setLoading(false); return; }
-        setExam(data);
-        setTimeLeft((data.duration || 45) * 60);
-        setLoading(false);
-      })
-      .catch(() => { setError("Không thể tải đề thi"); setLoading(false); });
-  }, [examId]);
-
-  const handleSubmit = useCallback(async () => {
-    if (submitting || submitted) return;
-    setSubmitting(true);
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/submit`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: userId || 'anonymous',
-          examId,
-          selectedAnswers: { ...answers, ...essayAnswers },
-          timeSpent: (exam?.duration * 60 || 2700) - timeLeft
-        })
-      });
-      const data = await res.json();
-      setResult(data);
-      if (data.result?.gradingDetails) {
-        try {
-          setAiGradingDetails(JSON.parse(data.result.gradingDetails));
-        } catch(e) {}
-      }
-      setSubmitted(true);
-    } catch (err) {
-      console.error(err);
-      Swal.fire('Lỗi', 'Lỗi khi nộp bài', 'error');
-    }
-    setSubmitting(false);
-  }, [submitting, submitted, userId, examId, answers, essayAnswers, exam, timeLeft]);
 
   // Countdown timer
   useEffect(() => {
@@ -177,10 +207,11 @@ export default function ExamPage() {
       <div className="min-h-screen flex items-center justify-center bg-black/95 p-6 z-[9999] fixed inset-0">
         <div className="text-center space-y-6 max-w-lg w-full bg-surface/10 p-10 rounded-3xl border border-rose-500/30 backdrop-blur-md">
           <div className="w-20 h-20 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mx-auto text-4xl mb-2 animate-pulse">⚠️</div>
-          <h2 className="text-rose-500 text-2xl font-black uppercase tracking-widest">Cảnh báo gian lận</h2>
+          <h2 className="text-rose-500 text-2xl font-black uppercase tracking-widest">Cảnh báo gian lận ({cheatCount}/2)</h2>
           <p className="text-white/80 text-lg leading-relaxed">
-            Hệ thống phát hiện bạn vừa rời khỏi màn hình bài thi (có thể là mở tab mới, chuyển cửa sổ hoặc dùng công cụ chụp ảnh màn hình).
+            Hệ thống phát hiện bạn vừa rời khỏi màn hình bài thi (có thể là chuyển ứng dụng hoặc chụp ảnh màn hình).
           </p>
+          <p className="text-rose-400 font-bold">Nếu vi phạm lần thứ 3, bài thi sẽ bị tự động thu lại ngay lập tức!</p>
           <button onClick={() => setIsTabFocused(true)} className="w-full py-4 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-2xl transition-all shadow-[0_0_20px_rgba(225,29,72,0.4)]">
             Tôi hiểu, Quay lại bài thi
           </button>

@@ -298,6 +298,29 @@ export default function TeacherDashboard() {
     }
   }, [activeTab, leaderboardFilter, user]);
 
+  // ── Cheat Logs state ──
+  const [cheatIncidents, setCheatIncidents] = useState<any[]>([]);
+  useEffect(() => {
+    if (activeTab === "CHEAT_CONTROL" && user) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/cheat-logs/${user.id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (Array.isArray(data)) {
+            setCheatIncidents(data.map(log => ({
+              id: log.id,
+              studentName: log.user?.name || "Học sinh ẩn danh",
+              examTitle: log.exam?.title || "Bài thi",
+              className: log.exam?.classroom?.name || "Lớp chung",
+              cheatCount: log.cheatCount,
+              autoSubmitted: log.isAutoSubmitted,
+              createdAt: log.updatedAt
+            })));
+          }
+        })
+        .catch(console.error);
+    }
+  }, [activeTab, user]);
+
   // ── Lesson management state ──
   const [localLessons, setLocalLessons] = useState<any[]>([]);
   useEffect(() => {
@@ -906,7 +929,8 @@ export default function TeacherDashboard() {
         { id: "CLASSES", label: "Lớp Học" },
         { id: "STUDENTS", label: "Học Sinh" },
         { id: "ATTENDANCE", label: "Điểm Danh & Học Phí" },
-        { id: "CALENDAR", label: "Thời Khóa Biểu" }
+        { id: "CALENDAR", label: "Thời Khóa Biểu" },
+        { id: "CHEAT_CONTROL", label: "Kiểm Soát Gian Lận" }
       ]
     },
     {
@@ -1504,6 +1528,67 @@ export default function TeacherDashboard() {
             <h1 className="text-3xl font-bold mb-6">Quản Lý Lịch Dạy</h1>
             <div className="flex-1 min-h-[500px]">
               <CalendarComponent user={user} role="TEACHER" classrooms={classrooms} />
+            </div>
+          </div>
+        )}
+
+        {/* ── CHEAT_CONTROL ── */}
+        {activeTab === "CHEAT_CONTROL" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h1 className="text-3xl font-bold text-rose-500 flex items-center gap-2">
+              ⚠️ Kiểm Soát Gian Lận
+            </h1>
+            <div className="bg-surface border border-foreground/10 rounded-3xl p-6 shadow-sm overflow-hidden">
+              {cheatIncidents.length === 0 ? (
+                <div className="text-center py-10 text-foreground/50">
+                  <div className="text-4xl mb-4 opacity-50">✨</div>
+                  <p>Tuyệt vời! Chưa phát hiện hành vi gian lận nào.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-foreground/10 text-left text-foreground/60 text-sm">
+                        <th className="pb-4 font-bold">Thời gian</th>
+                        <th className="pb-4 font-bold">Học sinh</th>
+                        <th className="pb-4 font-bold">Bài thi</th>
+                        <th className="pb-4 font-bold text-center">Số lần vi phạm</th>
+                        <th className="pb-4 font-bold text-right">Trạng thái</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-foreground/5">
+                      {cheatIncidents.map((incident: any) => (
+                        <tr key={incident.id} className="hover:bg-foreground/5 transition-colors">
+                          <td className="py-4 text-sm">
+                            {new Date(incident.createdAt).toLocaleString('vi-VN')}
+                          </td>
+                          <td className="py-4 font-bold">
+                            {incident.studentName}
+                            <div className="text-xs text-foreground/50 font-normal">{incident.className}</div>
+                          </td>
+                          <td className="py-4">{incident.examTitle}</td>
+                          <td className="py-4 text-center">
+                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white ${incident.cheatCount >= 3 ? 'bg-rose-500' : 'bg-amber-500'}`}>
+                              {incident.cheatCount}
+                            </span>
+                          </td>
+                          <td className="py-4 text-right">
+                            {incident.autoSubmitted ? (
+                              <span className="text-xs bg-rose-500/10 text-rose-500 font-bold px-3 py-1 rounded-full border border-rose-500/20">
+                                Thu bài tự động
+                              </span>
+                            ) : (
+                              <span className="text-xs bg-foreground/5 text-foreground/60 font-bold px-3 py-1 rounded-full">
+                                Đã cảnh cáo
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}

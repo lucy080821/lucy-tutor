@@ -109,10 +109,59 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Log cheat live
+router.post('/cheat', async (req, res) => {
+  try {
+    const { userId, examId, cheatCount, isAutoSubmitted } = req.body;
+    if (!userId || !examId) return res.status(400).json({ error: 'Missing data' });
+    
+    const log = await prisma.cheatLog.upsert({
+      where: { userId_examId: { userId, examId } },
+      update: { 
+        cheatCount: cheatCount || 1, 
+        isAutoSubmitted: isAutoSubmitted || false,
+        updatedAt: new Date()
+      },
+      create: { 
+        userId, 
+        examId, 
+        cheatCount: cheatCount || 1, 
+        isAutoSubmitted: isAutoSubmitted || false 
+      }
+    });
+    res.json(log);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get cheat logs for a teacher
+router.get('/cheat-logs/:teacherId', async (req, res) => {
+  try {
+    const logs = await prisma.cheatLog.findMany({
+      where: {
+        exam: {
+          classroom: { teacherId: req.params.teacherId }
+        }
+      },
+      include: {
+        user: true,
+        exam: {
+          include: { classroom: true }
+        }
+      },
+      orderBy: { updatedAt: 'desc' }
+    });
+    res.json(logs);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Submit exam results
 router.post('/submit', async (req, res) => {
   try {
-    const { userId, examId, selectedAnswers, timeSpent } = req.body;
+    const { userId, examId, selectedAnswers, timeSpent, cheatLogs } = req.body;
     
     // Fetch exam questions to calculate score
     const exam = await prisma.exam.findUnique({
@@ -229,7 +278,8 @@ Trả về ĐÚNG MỘT JSON với định dạng sau (KHÔNG CÓ markdown code 
         selectedAnswers: JSON.stringify(selectedAnswers),
         score,
         timeSpent,
-        gradingDetails: JSON.stringify(gradingDetails)
+        gradingDetails: JSON.stringify(gradingDetails),
+        cheatLogs: cheatLogs ? JSON.stringify(cheatLogs) : null
       }
     });
     
