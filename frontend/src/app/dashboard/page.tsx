@@ -1233,21 +1233,77 @@ export default function StudentDashboard() {
             
             <div className="flex-1 overflow-y-auto pr-2">
               <div className="prose prose-sm dark:prose-invert max-w-none text-foreground/80">
-                {/* We use a simple markdown parser approach for basic formatting since ReactMarkdown isn't imported */}
-                {selectedNotebookForView.theoryContent.split('\n').map((line: string, i: number) => {
-                  if (line.startsWith('### ')) return <h3 key={i} className="text-lg font-bold mt-4 mb-2">{line.replace('### ', '')}</h3>;
-                  if (line.startsWith('## ')) return <h2 key={i} className="text-xl font-bold mt-5 mb-2 border-b pb-1">{line.replace('## ', '')}</h2>;
-                  if (line.startsWith('# ')) return <h1 key={i} className="text-2xl font-bold mt-6 mb-3">{line.replace('# ', '')}</h1>;
-                  if (line.startsWith('- ')) {
-                    const liContent = line.replace('- ', '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
-                    return <li key={i} className="ml-4 mb-1 list-disc" dangerouslySetInnerHTML={{ __html: liContent }} />;
+              {(() => {
+                const lines = selectedNotebookForView.theoryContent.split('\n');
+                const blocks: any[] = [];
+                let currentList: { type: 'ul' | 'ol'; items: string[] } | null = null;
+
+                const flushList = () => {
+                  if (!currentList) return;
+                  const listNode = currentList.type === 'ol'
+                    ? <ol key={blocks.length} className="list-decimal pl-6 space-y-2 mb-4">{currentList.items.map((item, index) => <li key={index} dangerouslySetInnerHTML={{ __html: item }} />)}</ol>
+                    : <ul key={blocks.length} className="list-disc pl-6 space-y-2 mb-4">{currentList.items.map((item, index) => <li key={index} dangerouslySetInnerHTML={{ __html: item }} />)}</ul>;
+                  blocks.push(listNode);
+                  currentList = null;
+                };
+
+                const formatInline = (text: string) => {
+                  return text
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                    .replace(/_(.*?)_/g, '<em>$1</em>');
+                };
+
+                lines.forEach((line, i) => {
+                  const trimmed = line.trim();
+                  if (!trimmed) {
+                    flushList();
+                    blocks.push(<div key={i} className="py-1" />);
+                    return;
                   }
-                  if (line.trim() === '') return <br key={i} />;
-                  // Bold text parser
-                  const formattedLine = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>');
-                  return <p key={i} className="mb-2" dangerouslySetInnerHTML={{ __html: formattedLine }} />;
-                })}
-              </div>
+
+                  const headingMatch = trimmed.match(/^(#{1,6})\s+(.*)$/);
+                  if (headingMatch) {
+                    flushList();
+                    const level = headingMatch[1].length;
+                    const text = formatInline(headingMatch[2]);
+                    const headingClass = [
+                      'text-2xl font-bold mt-6 mb-3',
+                      'text-xl font-bold mt-5 mb-3',
+                      'text-lg font-bold mt-4 mb-2',
+                      'text-base font-semibold mt-4 mb-2',
+                      'text-base font-semibold mt-4 mb-2',
+                      'text-base font-semibold mt-4 mb-2'
+                    ][Math.min(level - 1, 5)];
+                    blocks.push(
+                      <div key={i} className={headingClass} dangerouslySetInnerHTML={{ __html: text }} />
+                    );
+                    return;
+                  }
+
+                  const unorderedMatch = trimmed.match(/^[-*]\s+(.*)$/);
+                  const orderedMatch = trimmed.match(/^\d+\.\s+(.*)$/);
+                  if (unorderedMatch || orderedMatch) {
+                    const itemText = formatInline((unorderedMatch || orderedMatch)![1]);
+                    const listType = orderedMatch ? 'ol' : 'ul';
+                    if (!currentList || currentList.type !== listType) {
+                      flushList();
+                      currentList = { type: listType, items: [] };
+                    }
+                    currentList.items.push(itemText);
+                    return;
+                  }
+
+                  flushList();
+                  blocks.push(
+                    <p key={i} className="mb-4" dangerouslySetInnerHTML={{ __html: formatInline(trimmed) }} />
+                  );
+                });
+                flushList();
+                return blocks;
+              })()}
+            </div>
             </div>
             
             <div className="mt-6 flex justify-end pt-4 border-t border-foreground/10">
