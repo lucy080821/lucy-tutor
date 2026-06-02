@@ -144,9 +144,13 @@ router.post('/submit', async (req, res) => {
           const prompt = `
 Bạn là một giáo viên Tiếng Anh đang chấm bài tự luận của học sinh.
 Câu hỏi: "${q.content}"
+${q.imageUrl ? '(Lưu ý: Câu hỏi này có kèm một bức ảnh mà học sinh đang nhìn thấy)' : ''}
+${q.explanation ? `Đáp án tham khảo / Gợi ý của giáo viên: "${q.explanation}"` : ''}
+
 Học sinh trả lời: "${userAnswer}"
 
-Hãy đánh giá câu trả lời của học sinh dựa trên ngữ nghĩa và ngữ pháp. 
+Hãy đánh giá câu trả lời của học sinh dựa trên ngữ nghĩa, ngữ pháp và đối chiếu với đáp án tham khảo (nếu có). 
+Đặc biệt: Nếu câu hỏi yêu cầu nhìn ảnh và học sinh trả lời một từ ngắn khớp với bức ảnh/đáp án tham khảo, hãy cho điểm tối đa.
 Trả về ĐÚNG MỘT JSON với định dạng sau (KHÔNG CÓ markdown code blocks bọc ngoài):
 {
   "scoreRatio": 0.8, // Tỉ lệ điểm học sinh đạt được (từ 0.0 đến 1.0)
