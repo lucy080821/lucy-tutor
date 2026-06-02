@@ -274,8 +274,12 @@ router.post('/submit', async (req, res) => {
       throw err;
     }
     
-    // Update Mistake Bank (upsert)
-    for (const mistake of mistakeData) {
+    // Use effectiveUserId (found or fallback) for subsequent operations
+    const effectiveUserId = user.id;
+
+    // Update Mistake Bank (upsert) - normalize userId to effectiveUserId
+    const effectiveMistakes = mistakeData.map(m => ({ ...m, userId: effectiveUserId }));
+    for (const mistake of effectiveMistakes) {
       await prisma.mistakeBank.upsert({
         where: { userId_questionId: { userId: mistake.userId, questionId: mistake.questionId } },
         update: { wrongAnswerCount: { increment: 1 } },
@@ -302,7 +306,7 @@ router.post('/submit', async (req, res) => {
     const earnedXP = Math.max(0, (baseXP + bonusXP - penaltyXP) * multiplier);
 
     await prisma.user.update({
-      where: { id: userId },
+      where: { id: effectiveUserId },
       data: { totalXP: { increment: earnedXP } }
     });
 
@@ -316,12 +320,12 @@ router.post('/submit', async (req, res) => {
             const eq = exam.questions.find(eq => eq.questionId === mistake.questionId);
             if (!eq) continue;
             const q = eq.question;
-            const payload = {
+              const payload = {
               questionContent: q.content,
               options: JSON.parse(q.options || '[]'),
               studentAnswer: selectedAnswers[q.id],
               correctAnswer: q.correctOption,
-              userId: userId
+              userId: effectiveUserId
             };
             
             const port = process.env.PORT || 5000;
