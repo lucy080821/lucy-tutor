@@ -1013,18 +1013,19 @@ export default function TeacherDashboard() {
             <div key={group.id} className="flex flex-col">
               {group.subItems ? (
                 <>
+                  {/* Section label — muted, không phải nav item */}
                   <button
                     onClick={() => toggleNavGroup(group.id)}
-                    className="flex items-center justify-between px-3 py-2.5 font-semibold transition-colors duration-150 cursor-pointer text-left text-foreground/60 hover:bg-foreground/5 hover:text-foreground text-xs uppercase tracking-wider mt-2"
+                    className="flex items-center justify-between px-3 pt-5 pb-1.5 transition-colors duration-150 cursor-pointer text-left text-[10px] font-bold uppercase tracking-widest text-foreground/35 hover:text-foreground/60"
                   >
                     <span>{group.label}</span>
-                    <span className={`transform transition-transform text-[10px] ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▼</span>
+                    <span className={`transform transition-transform ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▾</span>
                   </button>
                   {expandedNav[group.id] && (
                     <div className="flex flex-col gap-0.5">
                       {group.subItems.map(item => (
                         <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                          className={`flex items-center px-3 py-2 font-medium transition-colors duration-150 cursor-pointer text-left text-sm w-full ${activeTab === item.id ? 'bg-primary/10 text-primary font-semibold border-l-[3px] border-primary pl-[9px]' : 'text-foreground/60 hover:bg-foreground/5 hover:text-foreground'}`}>
+                          className={`flex items-center pr-3 py-2 text-sm font-medium transition-colors duration-150 cursor-pointer text-left w-full ${activeTab === item.id ? 'bg-primary/10 text-primary font-semibold border-l-[3px] border-primary pl-[13px]' : 'pl-4 text-foreground/65 hover:bg-foreground/5 hover:text-foreground'}`}>
                           <span>{item.label}</span>
                         </button>
                       ))}
@@ -1032,8 +1033,9 @@ export default function TeacherDashboard() {
                   )}
                 </>
               ) : (
+                /* Top-level nav item — rõ hơn section label */
                 <button onClick={() => { setActiveTab(group.id); setIsMobileMenuOpen(false); }}
-                  className={`flex items-center px-3 py-2.5 font-medium transition-colors duration-150 cursor-pointer text-left text-sm w-full ${activeTab === group.id ? 'bg-primary/10 text-primary font-semibold border-l-[3px] border-primary pl-[9px]' : 'text-foreground/60 hover:bg-foreground/5 hover:text-foreground'}`}>
+                  className={`flex items-center pr-3 py-2.5 text-sm font-medium transition-colors duration-150 cursor-pointer text-left w-full ${activeTab === group.id ? 'bg-primary/10 text-primary font-semibold border-l-[3px] border-primary pl-[9px]' : 'pl-3 text-foreground/80 hover:bg-foreground/5 hover:text-foreground'}`}>
                   <span>{group.label}</span>
                 </button>
               )}

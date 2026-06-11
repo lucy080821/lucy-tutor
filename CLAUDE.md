@@ -57,6 +57,10 @@ Biến môi trường frontend: `NEXT_PUBLIC_API_URL` (mặc định `http://loc
 - `text-foreground` — màu chữ chính
 - Không dùng glassmorphism (backdrop-blur + border nhạt)
 
+### Font mặc định
+
+**Calibri** là font duy nhất của toàn app. Được set tại `globals.css` trên cả `html`, `body` và `*, *::before, *::after { font-family: inherit }` để override Tailwind preflight. Không import Google Fonts hay font nào khác.
+
 ---
 
 ## Các trang (App Router)
