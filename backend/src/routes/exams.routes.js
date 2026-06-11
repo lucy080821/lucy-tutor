@@ -249,12 +249,6 @@ router.post('/submit', async (req, res) => {
     
     const score = totalPossiblePoints > 0 ? (earnedPoints / totalPossiblePoints) * 10 : 0;
 
-    // Ensure user exists before creating ExamResult to avoid FK violations
-    let user = null;
-    if (userId) {
-      user = await prisma.user.findUnique({ where: { id: userId } });
-    }
-
     // Save Result
     let result;
     try {
