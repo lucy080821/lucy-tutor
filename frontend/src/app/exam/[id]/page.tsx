@@ -135,32 +135,6 @@ export default function ExamPage() {
   useEffect(() => {
     if (submitted || isReviewMode || loading) return;
 
-    const preventCopyPaste = (e: ClipboardEvent) => {
-      e.preventDefault();
-      Swal.fire({ title: 'Cảnh báo', text: 'Không được phép sao chép/dán trong lúc làm bài!', icon: 'warning', timer: 2000, toast: true, position: 'top-end' });
-    };
-
-    const preventContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-    };
-
-    const preventShortcuts = (e: KeyboardEvent) => {
-      // Prevent F12, Ctrl+Shift+I, Ctrl+C, Ctrl+V, PrintScreen, Ctrl+P, Ctrl+S
-      if (
-        e.key === 'F12' ||
-        e.key === 'PrintScreen' ||
-        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) ||
-        (e.ctrlKey && (e.key === 'c' || e.key === 'C')) ||
-        (e.ctrlKey && (e.key === 'v' || e.key === 'V')) ||
-        (e.ctrlKey && (e.key === 'p' || e.key === 'P')) ||
-        (e.ctrlKey && (e.key === 's' || e.key === 'S')) ||
-        (e.metaKey && e.shiftKey && (e.key === 's' || e.key === 'S'))
-      ) {
-        e.preventDefault();
-        Swal.fire({ title: 'Cảnh báo', text: 'Thao tác này bị cấm trong lúc làm bài!', icon: 'warning', timer: 2000, toast: true, position: 'top-end' });
-      }
-    };
-
     const registerCheat = () => {
       const now = Date.now();
       if (now - lastCheatTimeRef.current < 2000) return; // Debounce 2s
@@ -199,6 +173,33 @@ export default function ExamPage() {
         return newCount;
       });
       setIsTabFocused(false);
+    };
+
+    const preventCopyPaste = (e: ClipboardEvent) => {
+      e.preventDefault();
+      registerCheat();
+      Swal.fire({ title: 'Cảnh báo', text: 'Không được phép sao chép/dán trong lúc làm bài!', icon: 'warning', timer: 2000, toast: true, position: 'top-end' });
+    };
+
+    const preventContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    const preventShortcuts = (e: KeyboardEvent) => {
+      const isCopyPaste = (e.ctrlKey && (e.key === 'c' || e.key === 'C' || e.key === 'v' || e.key === 'V' || e.key === 'x' || e.key === 'X'));
+      if (
+        e.key === 'F12' ||
+        e.key === 'PrintScreen' ||
+        (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i')) ||
+        isCopyPaste ||
+        (e.ctrlKey && (e.key === 'p' || e.key === 'P')) ||
+        (e.ctrlKey && (e.key === 's' || e.key === 'S')) ||
+        (e.metaKey && e.shiftKey && (e.key === 's' || e.key === 'S'))
+      ) {
+        e.preventDefault();
+        if (isCopyPaste) registerCheat();
+        else Swal.fire({ title: 'Cảnh báo', text: 'Thao tác này bị cấm trong lúc làm bài!', icon: 'warning', timer: 2000, toast: true, position: 'top-end' });
+      }
     };
 
     const handleBlur = () => registerCheat();

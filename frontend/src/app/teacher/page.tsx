@@ -305,27 +305,38 @@ export default function TeacherDashboard() {
 
   // ── Cheat Logs state ──
   const [cheatIncidents, setCheatIncidents] = useState<any[]>([]);
+  const [cheatLoading, setCheatLoading] = useState(false);
+  const [cheatSearch, setCheatSearch] = useState("");
+  const [cheatClassFilter, setCheatClassFilter] = useState("ALL");
+
+  const fetchCheatLogs = (userId: string) => {
+    setCheatLoading(true);
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/cheat-logs/${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setCheatIncidents(data.map(log => ({
+            id: log.id,
+            studentName: log.user?.name || "Học sinh ẩn danh",
+            examTitle: log.exam?.title || "Bài thi",
+            className: log.exam?.classroom?.name || "Lớp chung",
+            cheatCount: log.cheatCount,
+            autoSubmitted: log.isAutoSubmitted,
+            createdAt: log.updatedAt,
+            studentEmail: log.user?.email || "",
+            studentAvatar: log.user?.avatar || ""
+          })));
+        }
+      })
+      .catch(console.error)
+      .finally(() => setCheatLoading(false));
+  };
+
   useEffect(() => {
-    if (activeTab === "CHEAT_CONTROL" && user) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/cheat-logs/${user.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setCheatIncidents(data.map(log => ({
-              id: log.id,
-              studentName: log.user?.name || "Học sinh ẩn danh",
-              examTitle: log.exam?.title || "Bài thi",
-              className: log.exam?.classroom?.name || "Lớp chung",
-              cheatCount: log.cheatCount,
-              autoSubmitted: log.isAutoSubmitted,
-              createdAt: log.updatedAt,
-              studentEmail: log.user?.email || "",
-              studentAvatar: log.user?.avatar || ""
-            })));
-          }
-        })
-        .catch(console.error);
-    }
+    if (activeTab !== "CHEAT_CONTROL" || !user) return;
+    fetchCheatLogs(user.id);
+    const interval = setInterval(() => fetchCheatLogs(user.id), 30000);
+    return () => clearInterval(interval);
   }, [activeTab, user]);
 
   // ── Lesson management state ──
@@ -1553,73 +1564,156 @@ export default function TeacherDashboard() {
         )}
 
         {/* ── CHEAT_CONTROL ── */}
-        {activeTab === "CHEAT_CONTROL" && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h1 className="text-3xl font-bold text-rose-500 flex items-center gap-2">
-              ⚠️ Kiểm Soát Gian Lận
-            </h1>
-            <div className="bg-surface border border-foreground/10 p-6 shadow-sm overflow-hidden">
-              {cheatIncidents.length === 0 ? (
-                <div className="text-center py-10 text-foreground/50">
-                  <div className="text-4xl mb-4 opacity-50">✨</div>
-                  <p>Tuyệt vời! Chưa phát hiện hành vi gian lận nào.</p>
+        {activeTab === "CHEAT_CONTROL" && (() => {
+          const allClasses = Array.from(new Set(cheatIncidents.map(i => i.className))).sort();
+          const filtered = cheatIncidents.filter(i => {
+            const matchSearch = !cheatSearch || i.studentName.toLowerCase().includes(cheatSearch.toLowerCase()) || i.studentEmail.toLowerCase().includes(cheatSearch.toLowerCase());
+            const matchClass = cheatClassFilter === "ALL" || i.className === cheatClassFilter;
+            return matchSearch && matchClass;
+          });
+          const totalViolations = cheatIncidents.reduce((s, i) => s + i.cheatCount, 0);
+          const autoSubmittedCount = cheatIncidents.filter(i => i.autoSubmitted).length;
+          const uniqueStudents = new Set(cheatIncidents.map(i => i.studentEmail || i.studentName)).size;
+          return (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              {/* Header */}
+              <div className="flex items-center justify-between">
+                <h1 className="text-3xl font-bold text-rose-600 flex items-center gap-2">
+                  ⚠️ Kiểm Soát Gian Lận
+                </h1>
+                <button
+                  onClick={() => user && fetchCheatLogs(user.id)}
+                  className="flex items-center gap-2 text-sm px-4 py-2 border border-foreground/15 bg-surface hover:bg-foreground/5 transition-colors font-medium"
+                >
+                  <span className={cheatLoading ? "animate-spin" : ""}>↻</span>
+                  {cheatLoading ? "Đang tải..." : "Cập nhật"}
+                </button>
+              </div>
+
+              {/* Stat cards */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-surface border border-foreground/10 p-5 shadow-sm">
+                  <div className="text-2xl font-black text-rose-600">{totalViolations}</div>
+                  <div className="text-sm text-foreground/60 mt-1 font-medium">Tổng số lần vi phạm</div>
                 </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-foreground/10 text-left text-foreground/60 text-sm">
-                        <th className="pb-4 font-bold">Thời gian</th>
-                        <th className="pb-4 font-bold">Học sinh</th>
-                        <th className="pb-4 font-bold">Bài thi</th>
-                        <th className="pb-4 font-bold text-center">Số lần vi phạm</th>
-                        <th className="pb-4 font-bold text-right">Trạng thái</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-foreground/5">
-                      {cheatIncidents.map((incident: any) => (
-                        <tr key={incident.id} className="hover:bg-foreground/5 transition-colors">
-                          <td className="py-4 text-sm">
-                            {new Date(incident.createdAt).toLocaleString('vi-VN')}
-                          </td>
-                          <td className="py-4 font-bold">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden text-primary">
-                                {incident.studentAvatar ? <img src={incident.studentAvatar} className="w-full h-full object-cover" alt="avatar" /> : incident.studentName.charAt(0).toUpperCase()}
-                              </div>
-                              <div className="flex flex-col leading-tight">
-                                <span>{incident.studentName}</span>
-                                {incident.studentEmail && <span className="text-xs text-foreground/50 font-normal">{incident.studentEmail}</span>}
-                                <span className="text-[10px] bg-foreground/5 w-fit px-1.5 py-0.5 rounded text-foreground/60 font-normal mt-1">{incident.className}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="py-4">{incident.examTitle}</td>
-                          <td className="py-4 text-center">
-                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-white ${incident.cheatCount >= 3 ? 'bg-rose-500' : 'bg-amber-500'}`}>
-                              {incident.cheatCount}
-                            </span>
-                          </td>
-                          <td className="py-4 text-right">
-                            {incident.autoSubmitted ? (
-                              <span className="text-xs bg-rose-500/10 text-rose-500 font-bold px-3 py-1 rounded-full border border-rose-500/20">
-                                Thu bài tự động
-                              </span>
-                            ) : (
-                              <span className="text-xs bg-foreground/5 text-foreground/60 font-bold px-3 py-1 rounded-full">
-                                Đã cảnh cáo
-                              </span>
-                            )}
-                          </td>
+                <div className="bg-surface border border-foreground/10 p-5 shadow-sm">
+                  <div className="text-2xl font-black text-orange-500">{autoSubmittedCount}</div>
+                  <div className="text-sm text-foreground/60 mt-1 font-medium">Bài bị thu tự động</div>
+                </div>
+                <div className="bg-surface border border-foreground/10 p-5 shadow-sm">
+                  <div className="text-2xl font-black text-amber-500">{uniqueStudents}</div>
+                  <div className="text-sm text-foreground/60 mt-1 font-medium">Học sinh vi phạm</div>
+                </div>
+              </div>
+
+              {/* Filter bar */}
+              <div className="flex gap-3 items-center">
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên hoặc email học sinh..."
+                  value={cheatSearch}
+                  onChange={e => setCheatSearch(e.target.value)}
+                  className="flex-1 border border-foreground/15 bg-surface px-4 py-2 text-sm focus:outline-none focus:border-primary/50"
+                />
+                <select
+                  value={cheatClassFilter}
+                  onChange={e => setCheatClassFilter(e.target.value)}
+                  className="border border-foreground/15 bg-surface px-4 py-2 text-sm focus:outline-none focus:border-primary/50"
+                >
+                  <option value="ALL">Tất cả lớp</option>
+                  {allClasses.map(cls => <option key={cls} value={cls}>{cls}</option>)}
+                </select>
+                {(cheatSearch || cheatClassFilter !== "ALL") && (
+                  <button onClick={() => { setCheatSearch(""); setCheatClassFilter("ALL"); }} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2 border border-foreground/10 bg-surface">
+                    Xóa bộ lọc
+                  </button>
+                )}
+              </div>
+
+              {/* Table */}
+              <div className="bg-surface border border-foreground/10 shadow-sm overflow-hidden">
+                {cheatLoading && cheatIncidents.length === 0 ? (
+                  <div className="text-center py-16 text-foreground/50">
+                    <div className="text-2xl animate-spin mb-4">↻</div>
+                    <p className="text-sm">Đang tải dữ liệu...</p>
+                  </div>
+                ) : filtered.length === 0 ? (
+                  <div className="text-center py-16 text-foreground/50">
+                    <div className="text-5xl mb-4 opacity-40">✨</div>
+                    <p className="font-semibold">{cheatIncidents.length === 0 ? "Tuyệt vời! Chưa phát hiện hành vi gian lận nào." : "Không tìm thấy kết quả phù hợp."}</p>
+                    {cheatIncidents.length > 0 && <p className="text-xs mt-1">Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm</p>}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b-2 border-foreground/10 text-left text-xs text-foreground/50 uppercase tracking-wider bg-foreground/[0.02]">
+                          <th className="px-5 py-3 font-bold">Thời gian</th>
+                          <th className="px-5 py-3 font-bold">Học sinh</th>
+                          <th className="px-5 py-3 font-bold">Lớp học</th>
+                          <th className="px-5 py-3 font-bold">Bài kiểm tra</th>
+                          <th className="px-5 py-3 font-bold text-center">Vi phạm</th>
+                          <th className="px-5 py-3 font-bold text-right">Trạng thái</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                      </thead>
+                      <tbody className="divide-y divide-foreground/5">
+                        {filtered.map((incident: any) => {
+                          const severity = incident.cheatCount >= 3 ? "high" : incident.cheatCount === 2 ? "mid" : "low";
+                          return (
+                            <tr key={incident.id} className={`hover:bg-foreground/[0.025] transition-colors ${severity === "high" ? "bg-rose-50/50" : ""}`}>
+                              <td className="px-5 py-4 text-sm text-foreground/60 whitespace-nowrap">
+                                {new Date(incident.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </td>
+                              <td className="px-5 py-4">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center font-bold text-sm shrink-0 overflow-hidden text-primary border border-primary/10">
+                                    {incident.studentAvatar
+                                      ? <img src={incident.studentAvatar} className="w-full h-full object-cover" alt="avatar" />
+                                      : incident.studentName.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="leading-tight">
+                                    <div className="font-semibold text-sm">{incident.studentName}</div>
+                                    {incident.studentEmail && <div className="text-xs text-foreground/45">{incident.studentEmail}</div>}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-5 py-4">
+                                <span className="text-xs font-medium bg-primary/8 text-primary px-2 py-1 border border-primary/15">{incident.className}</span>
+                              </td>
+                              <td className="px-5 py-4 text-sm font-medium max-w-[200px] truncate">{incident.examTitle}</td>
+                              <td className="px-5 py-4 text-center">
+                                <span className={`inline-flex items-center justify-center min-w-[2rem] h-8 px-2 font-black text-sm text-white ${
+                                  severity === "high" ? "bg-rose-500" : severity === "mid" ? "bg-orange-500" : "bg-amber-400"
+                                }`}>
+                                  {incident.cheatCount}×
+                                </span>
+                              </td>
+                              <td className="px-5 py-4 text-right">
+                                {incident.autoSubmitted ? (
+                                  <span className="text-xs bg-rose-500/10 text-rose-600 font-bold px-3 py-1.5 border border-rose-500/25">
+                                    Thu bài tự động
+                                  </span>
+                                ) : (
+                                  <span className="text-xs bg-amber-50 text-amber-700 font-bold px-3 py-1.5 border border-amber-300/50">
+                                    Đang cảnh báo
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                    <div className="px-5 py-3 border-t border-foreground/5 text-xs text-foreground/40 flex justify-between items-center bg-foreground/[0.01]">
+                      <span>Hiển thị {filtered.length}/{cheatIncidents.length} vi phạm</span>
+                      <span>Tự động cập nhật mỗi 30 giây</span>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* ── LESSONS ── */}
         {activeTab === "LESSONS" && (

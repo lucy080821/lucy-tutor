@@ -110,10 +110,19 @@ router.get('/cheat-logs/:teacherId', async (req, res) => {
           { exam: { uploadedById: req.params.teacherId } }
         ]
       },
-      include: {
-        user: true,
+      select: {
+        id: true,
+        cheatCount: true,
+        isAutoSubmitted: true,
+        createdAt: true,
+        updatedAt: true,
+        user: { select: { id: true, name: true, email: true, avatar: true } },
         exam: {
-          include: { classroom: true }
+          select: {
+            id: true,
+            title: true,
+            classroom: { select: { id: true, name: true } }
+          }
         }
       },
       orderBy: { updatedAt: 'desc' }
