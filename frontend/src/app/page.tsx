@@ -20,10 +20,10 @@ export default function Home() {
         </p>
 
         <div className="pt-8 flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center w-full px-6">
-          <Link href="/auth?role=STUDENT" className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-primary text-white font-bold text-lg shadow-[0_0_40px_-10px_rgba(79,70,229,0.5)] hover:scale-105 transition-transform flex items-center justify-center gap-2">
+          <Link href="/auth?role=STUDENT" className="w-full sm:w-auto px-8 py-4 bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 border border-primary">
             Dành cho Học Sinh
           </Link>
-          <Link href="/auth?role=TEACHER" className="w-full sm:w-auto px-8 py-4 rounded-2xl glass font-bold text-lg hover:-translate-y-1 transition-transform flex items-center justify-center gap-2 border-2 border-primary/20">
+          <Link href="/auth?role=TEACHER" className="w-full sm:w-auto px-8 py-4 glass font-bold text-lg hover:bg-foreground/5 transition-colors flex items-center justify-center gap-2 border-2 border-primary/20">
             Dành cho Giáo Viên
           </Link>
         </div>
@@ -62,7 +62,7 @@ export default function Home() {
         />
       </div>
       {/* Footer */}
-      <footer className="mt-32 w-full max-w-5xl border-t border-foreground/10 pt-8 pb-4 text-center z-10 flex flex-col md:flex-row justify-between items-center gap-4">
+      <footer className="mt-32 w-full max-w-5xl border-t-2 border-foreground/10 pt-8 pb-4 text-center z-10 flex flex-col md:flex-row justify-between items-center gap-4">
         <div className="flex items-center gap-2">
           <img src="/logo.png" alt="Lucy Tutor Logo" className="w-8 h-8 object-contain" />
           <span className="font-bold text-foreground/80">Lucy Tutor</span>
@@ -78,7 +78,7 @@ export default function Home() {
 
 function FeatureCard({ icon, title, desc }: { icon: string, title: string, desc: string }) {
   return (
-    <div className="glass p-6 rounded-3xl text-left hover:-translate-y-2 hover:shadow-xl hover:border-primary/30 transition-all duration-300 group bg-surface/50 backdrop-blur-md">
+    <div className="glass p-6 text-left hover:-translate-y-1 hover:shadow-md hover:border-primary/30 transition-all duration-300 group bg-surface border-l-4 border-l-transparent hover:border-l-primary">
       <div className="text-4xl mb-4 group-hover:scale-110 transition-transform origin-left">{icon}</div>
       <h3 className="text-xl font-bold mb-2">{title}</h3>
       <p className="text-foreground/70 text-sm leading-relaxed">{desc}</p>

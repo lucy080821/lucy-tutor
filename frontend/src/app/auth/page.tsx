@@ -81,7 +81,7 @@ function AuthForm() {
 
   return (
     <div className="flex-1 flex items-center justify-center p-6">
-      <div className="glass w-full max-w-md p-8 rounded-3xl">
+      <div className="glass w-full max-w-md p-8">
         <h2 className="text-3xl font-bold text-center mb-2">
           {isLogin ? 'Đăng Nhập' : 'Đăng Ký'}
         </h2>
@@ -90,25 +90,25 @@ function AuthForm() {
         </p>
 
         {/* Role Toggle */}
-        <div className="flex p-1 bg-foreground/5 rounded-xl mb-6">
+        <div className="flex p-1 bg-foreground/5mb-6">
           <button 
             type="button"
             onClick={() => setRole('STUDENT')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors cursor-pointer ${role === 'STUDENT' ? 'bg-white shadow-sm text-primary' : 'text-foreground/60 hover:text-foreground'}`}
+            className={`flex-1 py-2 text-sm font-boldtransition-colors cursor-pointer ${role === 'STUDENT' ? 'bg-white shadow-sm text-primary' : 'text-foreground/60 hover:text-foreground'}`}
           >
             Học Sinh
           </button>
           <button 
             type="button"
             onClick={() => setRole('TEACHER')}
-            className={`flex-1 py-2 text-sm font-bold rounded-lg transition-colors cursor-pointer ${role === 'TEACHER' ? 'bg-white shadow-sm text-primary' : 'text-foreground/60 hover:text-foreground'}`}
+            className={`flex-1 py-2 text-sm font-boldtransition-colors cursor-pointer ${role === 'TEACHER' ? 'bg-white shadow-sm text-primary' : 'text-foreground/60 hover:text-foreground'}`}
           >
             Giáo Viên
           </button>
         </div>
 
         {error && (
-          <div className="bg-red-500/10 text-red-500 p-3 rounded-lg text-sm mb-6 font-medium text-center border border-red-500/20">
+          <div className="bg-red-500/10 text-red-500 p-3text-sm mb-6 font-medium text-center border border-red-500/20">
             {error}
           </div>
         )}
@@ -117,24 +117,24 @@ function AuthForm() {
           {!isLogin && (
             <div>
               <label className="block text-sm font-medium mb-1">Họ và Tên</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full px-4 py-3 rounded-xl border border-foreground/10 bg-transparent focus:outline-none focus:border-primary" placeholder="Nguyễn Văn A" />
+              <input type="text" value={name} onChange={e => setName(e.target.value)} required className="w-full px-4 py-3 border border-foreground/10 bg-transparent focus:outline-none focus:border-primary" placeholder="Nguyễn Văn A" />
             </div>
           )}
           
           <div>
             <label className="block text-sm font-medium mb-1">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-4 py-3 rounded-xl border border-foreground/10 bg-transparent focus:outline-none focus:border-primary" placeholder="email@example.com" />
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className="w-full px-4 py-3 border border-foreground/10 bg-transparent focus:outline-none focus:border-primary" placeholder="email@example.com" />
           </div>
           
           <div>
             <label className="block text-sm font-medium mb-1">Mật khẩu</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full px-4 py-3 rounded-xl border border-foreground/10 bg-transparent focus:outline-none focus:border-primary" placeholder="••••••••" />
+            <input type="password" value={password} onChange={e => setPassword(e.target.value)} required className="w-full px-4 py-3 border border-foreground/10 bg-transparent focus:outline-none focus:border-primary" placeholder="••••••••" />
           </div>
 
           {isLogin && role === 'STUDENT' && (
             <div className="pt-2">
               <label className="block text-sm font-medium mb-1 text-secondary">Mã Lớp Học (Class Code) - Tuỳ chọn</label>
-              <input type="text" value={classCode} onChange={e => setClassCode(e.target.value)} className="w-full px-4 py-3 rounded-xl border border-secondary/30 bg-secondary/5 focus:outline-none focus:border-secondary" placeholder="Nhập mã giáo viên cấp..." />
+              <input type="text" value={classCode} onChange={e => setClassCode(e.target.value)} className="w-full px-4 py-3 border border-secondary/30 bg-secondary/5 focus:outline-none focus:border-secondary" placeholder="Nhập mã giáo viên cấp..." />
             </div>
           )}
 
@@ -145,7 +145,7 @@ function AuthForm() {
             </div>
           )}
 
-          <button type="submit" className="w-full py-4 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-colors mt-6 cursor-pointer">
+          <button type="submit" className="w-full py-4bg-primary text-white font-bold hover:bg-primary/90 transition-colors mt-6 cursor-pointer">
             {isLogin ? 'Đăng Nhập' : 'Tạo Tài Khoản'}
           </button>
         </form>

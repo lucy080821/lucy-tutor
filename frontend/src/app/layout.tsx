@@ -17,9 +17,9 @@ export default function RootLayout({
       <body suppressHydrationWarning className={`antialiased min-h-screen flex flex-col`}>
         
         {/* Global Header */}
-        <header className="sticky top-0 z-50 bg-surface/90 backdrop-blur-sm border-b border-foreground/10 px-4 md:px-6 py-3 md:py-4 flex justify-between md:justify-center items-center gap-4 md:gap-10 lg:gap-32">
+        <header className="sticky top-0 z-50 bg-surface border-b border-foreground/15 px-4 md:px-6 py-3 md:py-4 flex justify-between md:justify-center items-center gap-4 md:gap-10 lg:gap-32">
           <Link href="/" className="flex items-center gap-2 md:gap-4 group">
-            <img src="/logo.png" alt="Lucy Tutor Logo" className="w-10 h-10 md:w-14 md:h-14 object-contain rounded-xl md:rounded-2xl shadow-sm group-hover:scale-105 transition-transform duration-300" />
+            <img src="/logo.png" alt="Lucy Tutor Logo" className="w-10 h-10 md:w-14 md:h-14 object-contain shadow-sm group-hover:scale-105 transition-transform duration-300" />
             <span className="text-2xl md:text-3xl font-black text-primary tracking-tight">
               LUCY<span className="text-foreground">TUTOR</span>
             </span>

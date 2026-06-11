@@ -964,7 +964,7 @@ export default function TeacherDashboard() {
   const allStudents = classrooms.flatMap(c => c.students || []).filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
 
   return (
-    <div className="flex h-[calc(100vh-80px)] overflow-hidden w-full p-2 md:p-6 gap-0 md:gap-6 relative">
+    <div className="flex h-[calc(100vh-80px)] overflow-hidden w-full relative">
       
       {/* Mobile Sidebar Backdrop */}
       {isMobileMenuOpen && (
@@ -975,9 +975,9 @@ export default function TeacherDashboard() {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-72 bg-surface/95 md:bg-surface/80 backdrop-blur-2xl rounded-r-3xl md:rounded-3xl p-6 flex flex-col gap-2 shrink-0 h-full overflow-y-auto border-r md:border border-foreground/5 shadow-2xl md:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="mb-10 px-2 flex items-center gap-4">
-          <label className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 text-primary flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer relative overflow-hidden ring-2 ring-transparent hover:ring-primary/30 transition-all group shadow-sm">
+      <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-64 bg-surface flex flex-col shrink-0 h-full overflow-y-auto border-r border-foreground/10 shadow-2xl md:shadow-none transform transition-transform duration-300 md:relative md:translate-x-0 pt-6 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="mb-6 px-5 pb-5 border-b border-foreground/10 flex items-center gap-3">
+          <label className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer relative overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all group">
             <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
             {user?.avatar ? (
               <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
@@ -989,29 +989,29 @@ export default function TeacherDashboard() {
             </div>
           </label>
           <div className="overflow-hidden">
-            <h2 className="text-xl font-black text-foreground truncate tracking-tight">{user?.name || 'Thầy/Cô'}</h2>
-            <p className="text-[10px] text-foreground/50 font-bold uppercase tracking-widest mt-0.5">Giáo viên</p>
+            <h2 className="text-base font-bold text-foreground truncate">{user?.name || 'Thầy/Cô'}</h2>
+            <p className="text-[10px] text-foreground/40 font-semibold uppercase tracking-widest">Giáo viên</p>
           </div>
         </div>
         
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-0.5 px-2">
           {navGroups.map(group => (
-            <div key={group.id} className="flex flex-col gap-1">
+            <div key={group.id} className="flex flex-col">
               {group.subItems ? (
                 <>
-                  <button 
+                  <button
                     onClick={() => toggleNavGroup(group.id)}
-                    className="flex items-center justify-between px-5 py-3 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left text-foreground/80 hover:bg-foreground/5"
+                    className="flex items-center justify-between px-3 py-2.5 font-semibold transition-colors duration-150 cursor-pointer text-left text-foreground/60 hover:bg-foreground/5 hover:text-foreground text-xs uppercase tracking-wider mt-2"
                   >
-                    <span className="tracking-wide">{group.label}</span>
-                    <span className={`transform transition-transform text-xs ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▼</span>
+                    <span>{group.label}</span>
+                    <span className={`transform transition-transform text-[10px] ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▼</span>
                   </button>
                   {expandedNav[group.id] && (
-                    <div className="flex flex-col gap-1 pl-4">
+                    <div className="flex flex-col gap-0.5">
                       {group.subItems.map(item => (
                         <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                          className={`flex items-center px-5 py-2.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left text-sm group ${activeTab === item.id ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-md shadow-primary/25 scale-[1.02]' : 'hover:bg-foreground/5 text-foreground/60 hover:text-foreground hover:translate-x-1'}`}>
-                          <span className="tracking-wide">{item.label}</span>
+                          className={`flex items-center px-3 py-2 font-medium transition-colors duration-150 cursor-pointer text-left text-sm w-full ${activeTab === item.id ? 'bg-primary/10 text-primary font-semibold border-l-[3px] border-primary pl-[9px]' : 'text-foreground/60 hover:bg-foreground/5 hover:text-foreground'}`}>
+                          <span>{item.label}</span>
                         </button>
                       ))}
                     </div>
@@ -1019,18 +1019,17 @@ export default function TeacherDashboard() {
                 </>
               ) : (
                 <button onClick={() => { setActiveTab(group.id); setIsMobileMenuOpen(false); }}
-                  className={`flex items-center px-5 py-3.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left group ${activeTab === group.id ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-xl shadow-primary/25 scale-[1.02]' : 'hover:bg-foreground/5 text-foreground/60 hover:text-foreground hover:translate-x-1'}`}>
-                  <span className="tracking-wide">{group.label}</span>
+                  className={`flex items-center px-3 py-2.5 font-medium transition-colors duration-150 cursor-pointer text-left text-sm w-full ${activeTab === group.id ? 'bg-primary/10 text-primary font-semibold border-l-[3px] border-primary pl-[9px]' : 'text-foreground/60 hover:bg-foreground/5 hover:text-foreground'}`}>
+                  <span>{group.label}</span>
                 </button>
               )}
             </div>
           ))}
         </div>
-        <div className="mt-auto pt-6 border-t border-foreground/5 px-2 flex flex-col gap-4">
-
-          <button 
+        <div className="mt-auto border-t border-foreground/10 px-2 py-3">
+          <button
             onClick={() => { localStorage.removeItem('userId'); window.location.href = '/'; }}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-rose-500/80 bg-rose-500/5 hover:bg-rose-500 hover:text-white transition-all w-full cursor-pointer text-sm shadow-sm hover:shadow-rose-500/25"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 font-semibold text-rose-500/70 hover:bg-rose-500/10 hover:text-rose-600 transition-colors w-full cursor-pointer text-sm"
           >
             Đăng xuất
           </button>
@@ -1038,12 +1037,12 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 rounded-3xl p-4 md:p-8 h-full overflow-y-auto relative bg-surface border border-foreground/10 shadow-sm flex flex-col w-full">
+      <div className="flex-1 p-6 md:p-8 h-full overflow-y-auto relative bg-background flex flex-col w-full">
         
         {/* Mobile Header with Hamburger */}
         <div className="md:hidden flex items-center justify-between mb-6 pb-4 border-b border-foreground/5">
           <div className="flex items-center gap-3">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-foreground/5 rounded-xl hover:bg-foreground/10 transition-colors">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-foreground/5 hover:bg-foreground/10 transition-colors">
               <span className="text-xl">☰</span>
             </button>
             <h2 className="font-bold text-primary tracking-tight">LUCY TUTOR</h2>
@@ -1062,7 +1061,7 @@ export default function TeacherDashboard() {
             </div>
 
             {/* Overview Chart */}
-            <div className="bg-surface p-6 rounded-3xl border border-foreground/10 shadow-sm mt-6 mb-6">
+            <div className="bg-surface p-6 border border-foreground/10 shadow-sm mt-6 mb-6">
               <h3 className="font-bold mb-6 text-foreground/80">Thống kê Lớp học</h3>
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -1081,7 +1080,7 @@ export default function TeacherDashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {classrooms.map(c => <ClassCard key={c.id} c={c} onEdit={() => openEditModal(c)} />)}
-              <button onClick={openCreateModal} className="border-2 border-dashed border-foreground/20 rounded-2xl p-5 flex items-center justify-center gap-2 text-foreground/40 font-bold hover:border-primary/40 hover:text-primary/60 transition-colors cursor-pointer">
+              <button onClick={openCreateModal} className="border-2 border-dashed border-foreground/20 p-5 flex items-center justify-center gap-2 text-foreground/40 font-bold hover:border-primary/40 hover:text-primary/60 transition-colors cursor-pointer">
                 + Tạo Lớp Mới
               </button>
             </div>
@@ -1093,7 +1092,7 @@ export default function TeacherDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center">
               <h1 className="text-3xl font-bold">Lớp Học</h1>
-              <button onClick={openCreateModal} className="px-4 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 cursor-pointer">+ Tạo Lớp</button>
+              <button onClick={openCreateModal} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">+ Tạo Lớp</button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {classrooms.map(c => <ClassCard key={c.id} c={c} onEdit={() => openEditModal(c)} />)}
@@ -1113,7 +1112,7 @@ export default function TeacherDashboard() {
                   placeholder="Tìm theo tên hoặc email..." 
                   value={searchStudentQuery}
                   onChange={(e) => setSearchStudentQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 rounded-xl border border-foreground/15 bg-surface focus:border-primary focus:outline-none min-w-[250px]"
+                  className="pl-10 pr-4 py-2 border border-foreground/15 bg-surface focus:border-primary focus:outline-none min-w-[250px]"
                 />
               </div>
             </div>
@@ -1135,7 +1134,7 @@ export default function TeacherDashboard() {
               };
 
               return (
-                <div className="bg-surface border border-foreground/10 rounded-2xl overflow-hidden shadow-sm">
+                <div className="bg-surface border border-foreground/10 overflow-hidden shadow-sm">
                   <div className="overflow-x-auto w-full">
                     <table className="w-full text-left min-w-[800px]">
                       <thead>
@@ -1172,7 +1171,7 @@ export default function TeacherDashboard() {
                               </div>
                             </td>
                             <td className="p-4">
-                              <span className={`px-2 py-1 rounded-md text-xs font-bold ${tier.color} shadow-sm`}>
+                              <span className={`px-2 py-1 text-xs font-bold ${tier.color} shadow-sm`}>
                                 {tier.name}
                               </span>
                             </td>
@@ -1204,7 +1203,7 @@ export default function TeacherDashboard() {
         {activeTab === "DOCUMENTS" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h1 className="text-3xl font-bold mb-6">Kho Tài Liệu</h1>
-            <div className="bg-surface p-6 rounded-3xl border border-foreground/10 mb-8">
+            <div className="bg-surface p-6 border border-foreground/10 mb-8">
               <h2 className="text-xl font-bold mb-4">Tải tài liệu lên</h2>
               <form onSubmit={handleUploadDocument} className="flex flex-wrap gap-4 items-end">
                 <div className="flex-1 min-w-[200px]">
@@ -1213,11 +1212,11 @@ export default function TeacherDashboard() {
                 </div>
                 <div className="flex-1 min-w-[200px]">
                   <label className="block text-sm font-bold mb-2">Tiêu đề (Tùy chọn)</label>
-                  <input type="text" value={docTitle} onChange={e => setDocTitle(e.target.value)} placeholder="Tên tài liệu..." className="w-full p-3 rounded-xl border border-foreground/20 bg-transparent" />
+                  <input type="text" value={docTitle} onChange={e => setDocTitle(e.target.value)} placeholder="Tên tài liệu..." className="w-full p-3 border border-foreground/20 bg-transparent" />
                 </div>
                 <div className="flex-1 min-w-[150px]">
                   <label className="block text-sm font-bold mb-2">Phạm vi chia sẻ</label>
-                  <select value={docVisibility} onChange={e => setDocVisibility(e.target.value)} className="w-full p-3 rounded-xl border border-foreground/20 bg-transparent font-bold">
+                  <select value={docVisibility} onChange={e => setDocVisibility(e.target.value)} className="w-full p-3 border border-foreground/20 bg-transparent font-bold">
                     <option value="PUBLIC">Tất cả trung tâm</option>
                     <option value="CLASS">Chỉ lớp học</option>
                     <option value="PRIVATE">Chỉ mình tôi</option>
@@ -1226,13 +1225,13 @@ export default function TeacherDashboard() {
                 {docVisibility === 'CLASS' && (
                   <div className="flex-1 min-w-[150px]">
                     <label className="block text-sm font-bold mb-2">Chọn Lớp Học</label>
-                    <select value={docClassroomId} onChange={e => setDocClassroomId(e.target.value)} className="w-full p-3 rounded-xl border border-foreground/20 bg-transparent font-bold" required>
+                    <select value={docClassroomId} onChange={e => setDocClassroomId(e.target.value)} className="w-full p-3 border border-foreground/20 bg-transparent font-bold" required>
                       <option value="">-- Chọn lớp --</option>
                       {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   </div>
                 )}
-                <button type="submit" disabled={isUploadingDoc} className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 disabled:opacity-50 min-w-[120px]">
+                <button type="submit" disabled={isUploadingDoc} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 disabled:opacity-50 min-w-[120px]">
                   {isUploadingDoc ? 'Đang tải...' : 'Upload'}
                 </button>
               </form>
@@ -1245,14 +1244,14 @@ export default function TeacherDashboard() {
                  placeholder="Tìm kiếm tài liệu..." 
                  value={searchDocQuery}
                  onChange={e => setSearchDocQuery(e.target.value)}
-                 className="w-full md:w-1/3 p-3 rounded-xl border border-foreground/20 bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50" 
+                 className="w-full md:w-1/3 p-3 border border-foreground/20 bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50" 
                />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).length === 0 && <div className="text-foreground/50 italic col-span-full">Không tìm thấy tài liệu phù hợp</div>}
               {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).map((doc: any) => (
-                <div key={doc.id} className="bg-surface p-6 rounded-3xl border border-foreground/10 hover:border-primary/30 transition-all flex flex-col justify-between group relative overflow-hidden">
+                <div key={doc.id} className="bg-surface p-6 border border-foreground/10 hover:border-primary/30 transition-all flex flex-col justify-between group relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-3 flex gap-2 z-10">
                      <button onClick={() => handleUpdateDocumentVisibility(doc)} className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase hover:opacity-80 cursor-pointer transition-opacity ${doc.visibility === 'PUBLIC' ? 'bg-green-500/10 text-green-500' : doc.visibility === 'CLASS' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`} title="Nhấn để đổi trạng thái">
                         {doc.visibility === 'CLASS' ? (doc.classroom?.name || 'Lớp') : doc.visibility}
@@ -1284,8 +1283,8 @@ export default function TeacherDashboard() {
                     <p className="text-xs text-foreground/50 mb-4">{new Date(doc.createdAt).toLocaleDateString('vi-VN')} • {(doc.size / 1024 / 1024).toFixed(2)} MB</p>
                   </div>
                   <div className="flex gap-2 z-10">
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" download={doc.title} className="flex-1 py-2 text-center bg-primary/10 text-primary rounded-xl text-sm font-bold hover:bg-primary hover:text-white transition-colors cursor-pointer block">Tải xuống</a>
-                    <button onClick={() => handleDeleteDocument(doc.id)} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-colors cursor-pointer z-10 relative" title="Xóa">🗑️</button>
+                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" download={doc.title} className="flex-1 py-2 text-center bg-primary/10 text-primary text-sm font-bold hover:bg-primary hover:text-white transition-colors cursor-pointer block">Tải xuống</a>
+                    <button onClick={() => handleDeleteDocument(doc.id)} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors cursor-pointer z-10 relative" title="Xóa">🗑️</button>
                   </div>
                 </div>
               ))}
@@ -1298,27 +1297,27 @@ export default function TeacherDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h1 className="text-3xl font-bold mb-6">Điểm Danh & Học Phí</h1>
             
-            <div className="bg-surface border border-foreground/10 p-6 rounded-3xl mb-6 flex flex-wrap gap-4 items-end">
+            <div className="bg-surface border border-foreground/10 p-6 mb-6 flex flex-wrap gap-4 items-end">
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm font-bold mb-2">Chọn Lớp Học</label>
                 <select 
-                  className="w-full p-3 rounded-xl border border-foreground/20 bg-transparent"
+                  className="w-full p-3 border border-foreground/20 bg-transparent"
                   value={attClassroomId} onChange={e => setAttClassroomId(e.target.value)}
                 >
                   <option value="">-- Chọn lớp --</option>
                   {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              <div className="flex bg-foreground/5 p-1 rounded-xl">
+              <div className="flex bg-foreground/5 p-1">
                 <button 
                   onClick={() => setAttView('MARK')} 
-                  className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${attView === 'MARK' ? 'bg-white shadow text-primary' : 'text-foreground/60 hover:text-foreground'}`}
+                  className={`px-4 py-2 font-bold text-sm transition-colors ${attView === 'MARK' ? 'bg-white shadow text-primary' : 'text-foreground/60 hover:text-foreground'}`}
                 >
                   Điểm Danh
                 </button>
                 <button 
                   onClick={() => setAttView('REPORT')} 
-                  className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${attView === 'REPORT' ? 'bg-white shadow text-primary' : 'text-foreground/60 hover:text-foreground'}`}
+                  className={`px-4 py-2 font-bold text-sm transition-colors ${attView === 'REPORT' ? 'bg-white shadow text-primary' : 'text-foreground/60 hover:text-foreground'}`}
                 >
                   Báo Cáo Học Phí
                 </button>
@@ -1328,7 +1327,7 @@ export default function TeacherDashboard() {
             {attClassroomId ? (
               <>
                 {attView === 'MARK' && (
-                  <div className="bg-surface border border-foreground/10 p-6 rounded-3xl">
+                  <div className="bg-surface border border-foreground/10 p-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                       <div className="flex items-center gap-4">
                         <h2 className="text-xl font-bold">Điểm danh ngày</h2>
@@ -1336,7 +1335,7 @@ export default function TeacherDashboard() {
                           type="date" 
                           value={attDate} 
                           onChange={e => setAttDate(e.target.value)} 
-                          className="p-2 border border-foreground/20 rounded-lg bg-transparent font-medium"
+                          className="p-2 border border-foreground/20 bg-transparent font-medium"
                         />
                       </div>
                       <button 
@@ -1345,14 +1344,14 @@ export default function TeacherDashboard() {
                           setAttRecords(next);
                           handleSaveAttendance(next);
                         }}
-                        className="px-4 py-2 bg-green-500/10 text-green-600 font-bold text-sm rounded-xl hover:bg-green-500/20 transition-colors shrink-0"
+                        className="px-4 py-2 bg-green-500/10 text-green-600 font-bold text-sm hover:bg-green-500/20 transition-colors shrink-0"
                       >
                         ✓ Đánh dấu tất cả có mặt (những người chưa ĐD)
                       </button>
                     </div>
                     {attRecords.length > 0 ? (
                       <>
-                        <div className="border border-foreground/10 rounded-2xl overflow-hidden mb-6">
+                        <div className="border border-foreground/10 overflow-hidden mb-6">
                           <table className="w-full text-left text-sm">
                             <thead className="bg-foreground/5">
                               <tr>
@@ -1388,7 +1387,7 @@ export default function TeacherDashboard() {
                                           setAttRecords(next);
                                           handleSaveAttendance(next, false);
                                         }}
-                                        className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${rec.status === 'PRESENT' ? 'bg-green-500 text-white shadow-md shadow-green-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
+                                        className={`px-3 py-1.5 font-bold text-xs transition-colors ${rec.status === 'PRESENT' ? 'bg-green-500 text-white shadow-md shadow-green-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
                                       >
                                         Có mặt
                                       </button>
@@ -1399,7 +1398,7 @@ export default function TeacherDashboard() {
                                           setAttRecords(next);
                                           handleSaveAttendance(next, false);
                                         }}
-                                        className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${rec.status === 'EXCUSED_ABSENCE' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
+                                        className={`px-3 py-1.5 font-bold text-xs transition-colors ${rec.status === 'EXCUSED_ABSENCE' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
                                       >
                                         Vắng (Có phép)
                                       </button>
@@ -1410,7 +1409,7 @@ export default function TeacherDashboard() {
                                           setAttRecords(next);
                                           handleSaveAttendance(next, false);
                                         }}
-                                        className={`px-3 py-1.5 rounded-lg font-bold text-xs transition-colors ${rec.status === 'UNEXCUSED_ABSENCE' ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
+                                        className={`px-3 py-1.5 font-bold text-xs transition-colors ${rec.status === 'UNEXCUSED_ABSENCE' ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
                                       >
                                         Vắng (Không phép)
                                       </button>
@@ -1427,7 +1426,7 @@ export default function TeacherDashboard() {
                                         setAttRecords(next);
                                       }}
                                       onBlur={() => handleSaveAttendance(attRecords, false)}
-                                      className="w-full px-3 py-1.5 bg-transparent border border-foreground/10 focus:border-primary rounded-lg outline-none text-sm transition-colors"
+                                      className="w-full px-3 py-1.5 bg-transparent border border-foreground/10 focus:border-primary outline-none text-sm transition-colors"
                                     />
                                   </td>
                                 </tr>
@@ -1443,7 +1442,7 @@ export default function TeacherDashboard() {
                 )}
 
                 {attView === 'REPORT' && (
-                  <div className="bg-surface border border-foreground/10 p-6 rounded-3xl">
+                  <div className="bg-surface border border-foreground/10 p-6">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                       <div className="flex items-center gap-4">
                         <h2 className="text-xl font-bold">Báo Cáo Học Phí</h2>
@@ -1451,14 +1450,14 @@ export default function TeacherDashboard() {
                           type="month" 
                           value={attMonth} 
                           onChange={e => setAttMonth(e.target.value)} 
-                          className="p-2 border border-foreground/20 rounded-lg bg-transparent"
+                          className="p-2 border border-foreground/20 bg-transparent"
                         />
                       </div>
                       {attReport?.report?.length > 0 && (
                         <button 
                           onClick={exportAllPDFs}
                           disabled={isExporting}
-                          className="px-4 py-2 bg-indigo-500/10 text-indigo-600 font-bold text-sm rounded-xl hover:bg-indigo-500/20 transition-colors shrink-0 flex items-center gap-2"
+                          className="px-4 py-2 bg-indigo-500/10 text-indigo-600 font-bold text-sm hover:bg-indigo-500/20 transition-colors shrink-0 flex items-center gap-2"
                         >
                           {isExporting ? 'Đang xuất...' : '📦 Xuất PDF tất cả (ZIP)'}
                         </button>
@@ -1494,14 +1493,14 @@ export default function TeacherDashboard() {
                                     <button 
                                       onClick={() => exportSinglePDF(sr.user.id, sr.user.name)}
                                       disabled={isExporting}
-                                      className="text-xs bg-slate-100 text-slate-600 font-bold px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors flex items-center gap-1"
+                                      className="text-xs bg-slate-100 text-slate-600 font-bold px-3 py-1.5 hover:bg-slate-200 transition-colors flex items-center gap-1"
                                     >
                                       📄 Xuất PDF
                                     </button>
                                     {!sr.isPaid && sr.totalAmount > 0 && (
                                       <button 
                                         onClick={() => handlePayTuition(sr.user.id, sr.totalAmount)}
-                                        className="text-xs bg-primary text-white font-bold px-3 py-1.5 rounded-lg hover:bg-primary/90"
+                                        className="text-xs bg-primary text-white font-bold px-3 py-1.5 hover:bg-primary/90"
                                       >
                                         Xác nhận đã nộp
                                       </button>
@@ -1520,7 +1519,7 @@ export default function TeacherDashboard() {
                 )}
               </>
             ) : (
-              <div className="text-center text-foreground/40 py-12 bg-foreground/5 rounded-3xl border-2 border-dashed border-foreground/10">
+              <div className="text-center text-foreground/40 py-12 bg-foreground/5 border-2 border-dashed border-foreground/10">
                 Vui lòng chọn lớp học để xem điểm danh
               </div>
             )}
@@ -1543,7 +1542,7 @@ export default function TeacherDashboard() {
             <h1 className="text-3xl font-bold text-rose-500 flex items-center gap-2">
               ⚠️ Kiểm Soát Gian Lận
             </h1>
-            <div className="bg-surface border border-foreground/10 rounded-3xl p-6 shadow-sm overflow-hidden">
+            <div className="bg-surface border border-foreground/10 p-6 shadow-sm overflow-hidden">
               {cheatIncidents.length === 0 ? (
                 <div className="text-center py-10 text-foreground/50">
                   <div className="text-4xl mb-4 opacity-50">✨</div>
@@ -1615,35 +1614,35 @@ export default function TeacherDashboard() {
                 setCreateLessonTitle(""); setCreateLessonDesc(""); setCreateLessonClassroomId("");
                 setLessonVocabs([]); setLessonGrammars([]); setEditingLessonId(null);
                 setActiveTab('CREATE_LESSON');
-              }} className="px-4 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Mới</button>
+              }} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Mới</button>
             </div>
             {localLessons.length === 0 ? (
-                <div className="bg-surface border border-foreground/10 p-12 rounded-3xl flex flex-col items-center text-center">
+                <div className="bg-surface border border-foreground/10 p-12 flex flex-col items-center text-center">
                   <span className="text-5xl mb-4">📚</span>
                   <h2 className="text-2xl font-bold mb-2">Chưa có bài học nào</h2>
                   <p className="text-foreground/50 mb-6">Bắt đầu bằng cách tạo bài học mới</p>
-                  <button onClick={() => setActiveTab('CREATE_LESSON')} className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Ngay</button>
+                  <button onClick={() => setActiveTab('CREATE_LESSON')} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Ngay</button>
                 </div>
             ) : (
                 <div className="space-y-3">
                   {localLessons.map((lesson: any) => (
-                    <div key={lesson.id} className="bg-surface border border-foreground/10 p-5 rounded-2xl flex items-center justify-between hover:shadow-md transition-shadow">
+                    <div key={lesson.id} className="bg-surface border border-foreground/10 p-5 flex items-center justify-between hover:shadow-md transition-shadow">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-blue-500/10 text-blue-600 rounded-xl flex items-center justify-center text-2xl">📚</div>
+                        <div className="w-12 h-12 bg-blue-500/10 text-blue-600 flex items-center justify-center text-2xl">📚</div>
                         <div>
                           <h3 className="font-bold text-lg">{lesson.title}</h3>
                           <p className="text-sm text-foreground/50">{lesson.vocabularies?.length || 0} từ vựng • {lesson.grammars?.length || 0} ngữ pháp</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button onClick={() => handleEditLessonSetup(lesson)} className="text-amber-500 hover:text-amber-600 font-bold text-sm px-3 py-1.5 hover:bg-amber-500/10 rounded-lg transition-colors cursor-pointer mr-2">✏️ Sửa</button>
-                        <button onClick={() => handleDuplicateLesson(lesson)} className="text-blue-500 hover:text-blue-600 font-bold text-sm px-3 py-1.5 hover:bg-blue-500/10 rounded-lg transition-colors cursor-pointer mr-2">📋 Nhân bản</button>
+                        <button onClick={() => handleEditLessonSetup(lesson)} className="text-amber-500 hover:text-amber-600 font-bold text-sm px-3 py-1.5 hover:bg-amber-500/10 transition-colors cursor-pointer mr-2">✏️ Sửa</button>
+                        <button onClick={() => handleDuplicateLesson(lesson)} className="text-blue-500 hover:text-blue-600 font-bold text-sm px-3 py-1.5 hover:bg-blue-500/10 transition-colors cursor-pointer mr-2">📋 Nhân bản</button>
                         <button onClick={async () => {
                           if (confirm('Bạn có chắc muốn xóa bài học này?')) {
                             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/${lesson.id}`, { method: 'DELETE' });
                             if (res.ok) setLocalLessons(localLessons.filter(l => l.id !== lesson.id));
                           }
-                        }} className="text-rose-500 hover:text-rose-600 font-bold text-sm px-3 py-1.5 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer">🗑 Xóa</button>
+                        }} className="text-rose-500 hover:text-rose-600 font-bold text-sm px-3 py-1.5 hover:bg-rose-500/10 transition-colors cursor-pointer">🗑 Xóa</button>
                       </div>
                     </div>
                   ))}
@@ -1660,16 +1659,16 @@ export default function TeacherDashboard() {
               <p className="text-foreground/50">Thêm từ vựng qua file Excel, upload ảnh và tạo ngữ pháp</p>
             </div>
             <form onSubmit={handleCreateLesson} className="space-y-6">
-              <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-4">
+              <div className="bg-surface border border-foreground/10 p-6 space-y-4">
                 <h2 className="font-bold text-lg border-b border-foreground/10 pb-3 mb-4">📋 Thông Tin Bài Học</h2>
                 <div>
                   <label className="block text-sm font-bold mb-1">Tiêu đề *</label>
-                  <input type="text" className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent focus:border-primary outline-none"
+                  <input type="text" className="w-full p-3 border border-foreground/15 bg-transparent focus:border-primary outline-none"
                     placeholder="VD: Unit 1 - Family" value={createLessonTitle} onChange={e => setCreateLessonTitle(e.target.value)} required />
                 </div>
                 <div>
                   <label className="block text-sm font-bold mb-1">Lớp học *</label>
-                  <select className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent" value={createLessonClassroomId}
+                  <select className="w-full p-3 border border-foreground/15 bg-transparent" value={createLessonClassroomId}
                     onChange={e => setCreateLessonClassroomId(e.target.value)} required>
                     <option value="">-- Chọn lớp --</option>
                     {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -1677,24 +1676,24 @@ export default function TeacherDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-bold mb-1">Mô tả (Không bắt buộc)</label>
-                  <textarea className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent focus:border-primary outline-none"
+                  <textarea className="w-full p-3 border border-foreground/15 bg-transparent focus:border-primary outline-none"
                     placeholder="Mô tả bài học..." value={createLessonDesc} onChange={e => setCreateLessonDesc(e.target.value)} />
                 </div>
               </div>
 
-              <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-4">
+              <div className="bg-surface border border-foreground/10 p-6 space-y-4">
                 <div className="flex justify-between items-center border-b border-foreground/10 pb-3 mb-4">
                   <h2 className="font-bold text-lg">📝 Từ Vựng ({lessonVocabs.length} từ)</h2>
                   <div className="flex gap-2">
-                    <button type="button" onClick={handleDownloadVocabTemplate} className="px-3 py-1.5 bg-green-500/10 text-green-600 font-bold rounded-lg text-sm cursor-pointer hover:bg-green-500/20">⬇️ Tải Excel Mẫu</button>
-                    <label className="px-3 py-1.5 bg-blue-500/10 text-blue-600 font-bold rounded-lg text-sm cursor-pointer hover:bg-blue-500/20">
+                    <button type="button" onClick={handleDownloadVocabTemplate} className="px-3 py-1.5 bg-green-500/10 text-green-600 font-bold text-sm cursor-pointer hover:bg-green-500/20">⬇️ Tải Excel Mẫu</button>
+                    <label className="px-3 py-1.5 bg-blue-500/10 text-blue-600 font-bold text-sm cursor-pointer hover:bg-blue-500/20">
                       ⬆️ Upload Excel
                       <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleUploadVocabExcel} />
                     </label>
                   </div>
                 </div>
                 {lessonVocabs.length > 0 && (
-                  <div className="max-h-60 overflow-y-auto border border-foreground/10 rounded-xl">
+                  <div className="max-h-60 overflow-y-auto border border-foreground/10">
                     <table className="w-full text-left text-sm">
                       <thead className="bg-foreground/5 sticky top-0">
                         <tr>
@@ -1736,13 +1735,13 @@ export default function TeacherDashboard() {
                 )}
               </div>
 
-              <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-4">
+              <div className="bg-surface border border-foreground/10 p-6 space-y-4">
                 <div className="flex justify-between items-center border-b border-foreground/10 pb-3 mb-4">
                   <h2 className="font-bold text-lg">📖 Ngữ Pháp ({lessonGrammars.length} mục)</h2>
-                  <button type="button" onClick={() => setLessonGrammars([...lessonGrammars, { title: '', structure: '', explanation: '' }])} className="px-3 py-1.5 bg-primary/10 text-primary font-bold rounded-lg text-sm cursor-pointer hover:bg-primary/20">+ Thêm Ngữ Pháp</button>
+                  <button type="button" onClick={() => setLessonGrammars([...lessonGrammars, { title: '', structure: '', explanation: '' }])} className="px-3 py-1.5 bg-primary/10 text-primary font-bold text-sm cursor-pointer hover:bg-primary/20">+ Thêm Ngữ Pháp</button>
                 </div>
                 {lessonGrammars.map((g, i) => (
-                  <div key={i} className="p-4 border border-foreground/10 rounded-xl space-y-3 relative">
+                  <div key={i} className="p-4 border border-foreground/10 space-y-3 relative">
                     <button type="button" onClick={() => setLessonGrammars(lessonGrammars.filter((_, idx) => idx !== i))} className="absolute top-2 right-2 text-rose-500 font-bold cursor-pointer hover:underline text-xs">Xóa</button>
                     <input type="text" placeholder="Tên điểm ngữ pháp (VD: Thì hiện tại đơn)" className="w-full p-2 border-b border-foreground/15 bg-transparent font-bold outline-none" value={g.title} onChange={e => { const n = [...lessonGrammars]; n[i].title = e.target.value; setLessonGrammars(n); }} />
                     <input type="text" placeholder="Công thức (S + V + O)" className="w-full p-2 border-b border-foreground/15 bg-transparent outline-none text-primary font-mono text-sm" value={g.structure} onChange={e => { const n = [...lessonGrammars]; n[i].structure = e.target.value; setLessonGrammars(n); }} />
@@ -1752,7 +1751,7 @@ export default function TeacherDashboard() {
               </div>
 
               <div className="flex justify-end">
-                <button type="submit" className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 cursor-pointer shadow-lg shadow-primary/30">
+                <button type="submit" className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer shadow-lg shadow-primary/30">
                   Lưu Bài Học
                 </button>
               </div>
@@ -1765,7 +1764,7 @@ export default function TeacherDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center mb-6">
               <h1 className="text-3xl font-bold">Ngân Hàng Bài Tập & Đề Thi</h1>
-              <button onClick={() => setActiveTab('CREATE')} className="px-4 py-2 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Đề Mới</button>
+              <button onClick={() => setActiveTab('CREATE')} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Đề Mới</button>
             </div>
             {(() => {
               const dbExams = classrooms.flatMap(c => c.exams || []).filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
@@ -1774,11 +1773,11 @@ export default function TeacherDashboard() {
               const assignments = allExams.filter(e => e.examType === 'ASSIGNMENT' || e.examType === 'REGULAR');
               const tests = allExams.filter(e => e.examType === 'EXAM' || e.examType === 'PLACEMENT');
               if (allExams.length === 0) return (
-                <div className="bg-surface border border-foreground/10 p-12 rounded-3xl flex flex-col items-center text-center">
+                <div className="bg-surface border border-foreground/10 p-12 flex flex-col items-center text-center">
                   <span className="text-5xl mb-4">📄</span>
                   <h2 className="text-2xl font-bold mb-2">Chưa có đề thi nào</h2>
                   <p className="text-foreground/50 mb-6">Bắt đầu bằng cách tạo đề thủ công</p>
-                  <button onClick={() => setActiveTab('CREATE')} className="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 cursor-pointer">✏️ Tạo Đề Ngay</button>
+                  <button onClick={() => setActiveTab('CREATE')} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Đề Ngay</button>
                 </div>
               );
               return (
@@ -1831,41 +1830,41 @@ export default function TeacherDashboard() {
             <form onSubmit={handleCreateExam} className="space-y-6">
 
               {/* ── SECTION 1: Thông tin đề ── */}
-              <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-4">
+              <div className="bg-surface border border-foreground/10 p-6 space-y-4">
                 <h2 className="font-bold text-lg border-b border-foreground/10 pb-3 mb-4">📋 Thông Tin Đề Thi</h2>
                 <div>
                   <label className="block text-sm font-bold mb-1">Tiêu đề *</label>
-                  <input type="text" className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent focus:border-primary outline-none transition-colors"
+                  <input type="text" className="w-full p-3 border border-foreground/15 bg-transparent focus:border-primary outline-none transition-colors"
                     placeholder="VD: Kiểm tra 15 phút – Unit 5" value={createTitle} onChange={e => setCreateTitle(e.target.value)} required />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-1">Loại đề</label>
-                    <select className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent" value={createType} onChange={e => setCreateType(e.target.value)}>
+                    <select className="w-full p-3 border border-foreground/15 bg-transparent" value={createType} onChange={e => setCreateType(e.target.value)}>
                       <option value="ASSIGNMENT">📝 Bài Tập (Luyện tập)</option>
                       <option value="EXAM">🏆 Đề Thi (Chấm điểm)</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-1">Thời gian (phút)</label>
-                    <input type="number" className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent" value={createDuration} onChange={e => setCreateDuration(e.target.value)} />
+                    <input type="number" className="w-full p-3 border border-foreground/15 bg-transparent" value={createDuration} onChange={e => setCreateDuration(e.target.value)} />
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-1">Số lần làm tối đa</label>
-                    <input type="number" min="1" className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent" value={createMaxAttempts} onChange={e => setCreateMaxAttempts(e.target.value)} />
+                    <input type="number" min="1" className="w-full p-3 border border-foreground/15 bg-transparent" value={createMaxAttempts} onChange={e => setCreateMaxAttempts(e.target.value)} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-1">Hình thức giao</label>
-                    <select className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent" value={createAssignMode} onChange={e => setCreateAssignMode(e.target.value)}>
+                    <select className="w-full p-3 border border-foreground/15 bg-transparent" value={createAssignMode} onChange={e => setCreateAssignMode(e.target.value)}>
                       <option value="CLASS">🏫 Giao cả Lớp</option>
                       <option value="STUDENT">👤 Giao cá nhân</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-1">Lớp học *</label>
-                    <select className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent" value={createClassroomId}
+                    <select className="w-full p-3 border border-foreground/15 bg-transparent" value={createClassroomId}
                       onChange={e => { setCreateClassroomId(e.target.value); setCreateStudentIds([]); }}>
                       <option value="">-- Chọn lớp --</option>
                       {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -1875,11 +1874,11 @@ export default function TeacherDashboard() {
 
                 {/* Student picker */}
                 {createAssignMode === 'STUDENT' && createClassroomId && (
-                  <div className="p-4 border border-foreground/10 rounded-xl">
+                  <div className="p-4 border border-foreground/10">
                     <label className="block text-sm font-bold mb-2">Chọn học sinh</label>
                     <div className="space-y-1 max-h-36 overflow-y-auto">
                       {classrooms.find(c => c.id === createClassroomId)?.students?.map((s: any) => (
-                        <label key={s.id} className="flex items-center gap-2 p-2 hover:bg-foreground/5 rounded-lg cursor-pointer">
+                        <label key={s.id} className="flex items-center gap-2 p-2 hover:bg-foreground/5 cursor-pointer">
                           <input type="checkbox" checked={createStudentIds.includes(s.id)}
                             onChange={e => {
                               if (e.target.checked) setCreateStudentIds([...createStudentIds, s.id]);
@@ -1895,11 +1894,11 @@ export default function TeacherDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-1">Ghi chú</label>
-                    <input type="text" className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent" placeholder="VD: Không dùng tài liệu" value={createNotes} onChange={e => setCreateNotes(e.target.value)} />
+                    <input type="text" className="w-full p-3 border border-foreground/15 bg-transparent" placeholder="VD: Không dùng tài liệu" value={createNotes} onChange={e => setCreateNotes(e.target.value)} />
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-1">Deadline</label>
-                    <input type="datetime-local" className="w-full p-3 rounded-xl border border-foreground/15 bg-transparent" value={createDeadline} onChange={e => setCreateDeadline(e.target.value)} />
+                    <input type="datetime-local" className="w-full p-3 border border-foreground/15 bg-transparent" value={createDeadline} onChange={e => setCreateDeadline(e.target.value)} />
                   </div>
                 </div>
 
@@ -1908,16 +1907,16 @@ export default function TeacherDashboard() {
                   <label className="block text-sm font-bold mb-2">Thời gian đăng bài</label>
                   <div className="flex gap-3">
                     <button type="button" onClick={() => setCreatePublishMode('NOW')}
-                      className={`flex-1 py-2.5 rounded-xl font-bold border-2 text-sm transition-all cursor-pointer ${createPublishMode === 'NOW' ? 'border-primary bg-primary/10 text-primary' : 'border-foreground/10 hover:border-foreground/30'}`}>
+                      className={`flex-1 py-2.5 font-bold border-2 text-sm transition-all cursor-pointer ${createPublishMode === 'NOW' ? 'border-primary bg-primary/10 text-primary' : 'border-foreground/10 hover:border-foreground/30'}`}>
                       ⚡ Đăng Ngay
                     </button>
                     <button type="button" onClick={() => setCreatePublishMode('SCHEDULED')}
-                      className={`flex-1 py-2.5 rounded-xl font-bold border-2 text-sm transition-all cursor-pointer ${createPublishMode === 'SCHEDULED' ? 'border-amber-500 bg-amber-500/10 text-amber-600' : 'border-foreground/10 hover:border-foreground/30'}`}>
+                      className={`flex-1 py-2.5 font-bold border-2 text-sm transition-all cursor-pointer ${createPublishMode === 'SCHEDULED' ? 'border-amber-500 bg-amber-500/10 text-amber-600' : 'border-foreground/10 hover:border-foreground/30'}`}>
                       📅 Hẹn Giờ
                     </button>
                   </div>
                   {createPublishMode === 'SCHEDULED' && (
-                    <input type="datetime-local" className="w-full mt-2 p-3 rounded-xl border border-amber-400/40 bg-amber-500/5" value={createPublishTime} onChange={e => setCreatePublishTime(e.target.value)} />
+                    <input type="datetime-local" className="w-full mt-2 p-3 border border-amber-400/40 bg-amber-500/5" value={createPublishTime} onChange={e => setCreatePublishTime(e.target.value)} />
                   )}
                 </div>
               </div>
@@ -1927,13 +1926,13 @@ export default function TeacherDashboard() {
                 <div className="flex justify-between items-center">
                   <h2 className="font-bold text-lg">❓ Câu Hỏi <span className="text-foreground/40 font-normal text-base">({createQuestions.length} câu)</span></h2>
                   <button type="button" onClick={addQuestion}
-                    className="px-4 py-2 bg-primary/10 text-primary font-bold rounded-xl hover:bg-primary/20 cursor-pointer text-sm transition-colors">
+                    className="px-4 py-2 bg-primary/10 text-primary font-bold hover:bg-primary/20 cursor-pointer text-sm transition-colors">
                     + Thêm câu hỏi
                   </button>
                 </div>
 
                 {createQuestions.map((q, qi) => (
-                  <div key={qi} className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-4 relative">
+                  <div key={qi} className="bg-surface border border-foreground/10 p-6 space-y-4 relative">
                     {/* Question header */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -1941,16 +1940,16 @@ export default function TeacherDashboard() {
                         <div className="flex gap-2">
                           <button type="button"
                             onClick={() => updateQuestion(qi, { type: 'MULTIPLE_CHOICE', correctOption: 'A' })}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all cursor-pointer ${q.type === 'MULTIPLE_CHOICE' ? 'border-primary bg-primary/10 text-primary' : 'border-foreground/10 hover:border-foreground/30'}`}>
+                            className={`px-3 py-1.5 text-xs font-bold border-2 transition-all cursor-pointer ${q.type === 'MULTIPLE_CHOICE' ? 'border-primary bg-primary/10 text-primary' : 'border-foreground/10 hover:border-foreground/30'}`}>
                             🔘 Trắc Nghiệm
                           </button>
                           <button type="button"
                             onClick={() => updateQuestion(qi, { type: 'ESSAY', correctOption: '' })}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold border-2 transition-all cursor-pointer ${q.type === 'ESSAY' ? 'border-secondary bg-secondary/10 text-secondary' : 'border-foreground/10 hover:border-foreground/30'}`}>
+                            className={`px-3 py-1.5 text-xs font-bold border-2 transition-all cursor-pointer ${q.type === 'ESSAY' ? 'border-secondary bg-secondary/10 text-secondary' : 'border-foreground/10 hover:border-foreground/30'}`}>
                             ✍️ Tự Luận
                           </button>
                         </div>
-                        <div className="flex items-center gap-2 bg-foreground/5 px-3 py-1.5 rounded-lg ml-4">
+                        <div className="flex items-center gap-2 bg-foreground/5 px-3 py-1.5 ml-4">
                           <label className="text-xs font-bold text-foreground/50">Điểm:</label>
                           <input type="number" min="0" step="0.01" className="w-20 bg-transparent text-sm font-bold outline-none text-primary"
                             value={q.points ?? 1} onChange={e => updateQuestion(qi, { points: parseFloat(e.target.value) || 0 })} />
@@ -1958,7 +1957,7 @@ export default function TeacherDashboard() {
                       </div>
                       {createQuestions.length > 1 && (
                         <button type="button" onClick={() => removeQuestion(qi)}
-                          className="text-rose-500 hover:text-rose-600 font-bold text-sm cursor-pointer px-2 py-1 hover:bg-rose-500/10 rounded-lg transition-colors">
+                          className="text-rose-500 hover:text-rose-600 font-bold text-sm cursor-pointer px-2 py-1 hover:bg-rose-500/10 transition-colors">
                           Xóa
                         </button>
                       )}
@@ -1970,7 +1969,7 @@ export default function TeacherDashboard() {
                         <label className="block text-xs font-bold text-foreground/50 mb-1 uppercase tracking-wide">
                           Heading / Câu hỏi tổng (Không bắt buộc)
                         </label>
-                        <div className="bg-white rounded-lg overflow-hidden border border-foreground/15">
+                        <div className="bg-white overflow-hidden border border-foreground/15">
                           <ReactQuill 
                             theme="snow" 
                             modules={miniQuillModules}
@@ -1993,7 +1992,7 @@ export default function TeacherDashboard() {
                         <label className="block text-xs font-bold text-foreground/50 mb-1 uppercase tracking-wide">Hình ảnh (không bắt buộc)</label>
                         {q.imageUrl ? (
                           <div className="relative inline-block mt-2">
-                            <img src={q.imageUrl} alt="Question image" className="max-h-40 rounded-xl border border-foreground/10" />
+                            <img src={q.imageUrl} alt="Question image" className="max-h-40 border border-foreground/10" />
                             <button type="button" onClick={() => updateQuestion(qi, { imageUrl: '' })} className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs cursor-pointer shadow-md">✕</button>
                           </div>
                         ) : (
@@ -2015,13 +2014,13 @@ export default function TeacherDashboard() {
                       <div className="space-y-2">
                         <label className="block text-xs font-bold text-foreground/50 mb-2 uppercase tracking-wide">Các đáp án (chọn đáp án đúng)</label>
                         {['A', 'B', 'C', 'D'].map((letter, oi) => (
-                          <div key={letter} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${q.correctOption === letter ? 'border-primary bg-primary/5' : 'border-foreground/10'}`}>
+                          <div key={letter} className={`flex items-center gap-3 p-3 border-2 transition-all ${q.correctOption === letter ? 'border-primary bg-primary/5' : 'border-foreground/10'}`}>
                             <button type="button"
                               onClick={() => updateQuestion(qi, { correctOption: letter })}
                               className={`w-8 h-8 rounded-full font-bold text-sm shrink-0 transition-all cursor-pointer ${q.correctOption === letter ? 'bg-primary text-white' : 'bg-foreground/10 hover:bg-foreground/20'}`}>
                               {letter}
                             </button>
-                            <div className="flex-1 min-w-0 bg-white rounded-lg overflow-hidden border border-foreground/10">
+                            <div className="flex-1 min-w-0 bg-white overflow-hidden border border-foreground/10">
                               <ReactQuill 
                                 theme="snow" 
                                 modules={miniQuillModules}
@@ -2037,10 +2036,10 @@ export default function TeacherDashboard() {
                       </div>
                     )}
                     {q.type === 'ESSAY' && (
-                      <div className="space-y-3 p-4 bg-secondary/5 border border-secondary/20 rounded-xl">
+                      <div className="space-y-3 p-4 bg-secondary/5 border border-secondary/20">
                         <p className="text-xs font-bold text-secondary/90">✍️ Nhập Đáp án chính xác (Để hệ thống tự động chấm)</p>
                         <p className="text-[11px] text-secondary/70">Hệ thống sẽ cộng điểm nếu học sinh nhập trùng khớp với đáp án này. Vui lòng nhập ngắn gọn (VD: book, apple). Nếu để trống, giáo viên sẽ phải chấm thủ công cho câu này.</p>
-                        <textarea rows={2} className="w-full p-3 rounded-xl border border-secondary/30 bg-white/50 resize-none focus:border-secondary outline-none transition-colors text-sm"
+                        <textarea rows={2} className="w-full p-3 border border-secondary/30 bg-white/50 resize-none focus:border-secondary outline-none transition-colors text-sm"
                           placeholder="VD: book, apple, can... (nhập ngắn gọn, hệ thống sẽ so sánh chính xác)"
                           value={!q.correctOption || q.correctOption === 'A' ? '' : q.correctOption} onChange={e => updateQuestion(qi, { correctOption: e.target.value.toLowerCase() })} />
                       </div>
@@ -2050,11 +2049,11 @@ export default function TeacherDashboard() {
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <label className="block text-xs font-bold text-foreground/50 uppercase tracking-wide">Giải thích <span className="font-normal normal-case">(không bắt buộc)</span></label>
-                        <button type="button" onClick={() => handleSolveAI(qi)} disabled={solvingAI[qi]} className="flex items-center gap-1 text-xs font-bold bg-amber-500/10 text-amber-600 px-3 py-1.5 rounded-lg hover:bg-amber-500/20 transition-colors cursor-pointer disabled:opacity-50">
+                        <button type="button" onClick={() => handleSolveAI(qi)} disabled={solvingAI[qi]} className="flex items-center gap-1 text-xs font-bold bg-amber-500/10 text-amber-600 px-3 py-1.5 hover:bg-amber-500/20 transition-colors cursor-pointer disabled:opacity-50">
                           {solvingAI[qi] ? '⏳ Đang giải...' : '🪄 AI Chọn & Giải Thích'}
                         </button>
                       </div>
-                      <div className="bg-white rounded-lg overflow-hidden border border-foreground/10">
+                      <div className="bg-white overflow-hidden border border-foreground/10">
                         <ReactQuill 
                           theme="snow" 
                           modules={miniQuillModules}
@@ -2069,13 +2068,13 @@ export default function TeacherDashboard() {
                 ))}
 
                 <button type="button" onClick={addQuestion}
-                  className="w-full py-4 border-2 border-dashed border-foreground/20 rounded-2xl text-foreground/40 font-bold hover:border-primary/40 hover:text-primary/60 transition-colors cursor-pointer">
+                  className="w-full py-4 border-2 border-dashed border-foreground/20 text-foreground/40 font-bold hover:border-primary/40 hover:text-primary/60 transition-colors cursor-pointer">
                   + Thêm câu hỏi
                 </button>
               </div>
 
               <button type="submit" disabled={isCreating}
-                className="w-full py-4 rounded-2xl bg-primary text-white font-black text-lg hover:bg-primary/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50">
+                className="w-full py-4 bg-primary text-white font-black text-lg hover:bg-primary/90 transition-colors shadow-lg cursor-pointer disabled:opacity-50">
                 {isCreating ? 'Đang lưu...' : `🚀 Lưu Đề Thi (${createQuestions.length} câu)`}
               </button>
             </form>
@@ -2087,10 +2086,10 @@ export default function TeacherDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl relative pb-24">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <h1 className="text-3xl font-bold">🏆 Bảng Xếp Hạng</h1>
-              <div className="bg-surface border border-foreground/10 rounded-xl p-1 flex overflow-x-auto max-w-full">
+              <div className="bg-surface border border-foreground/10 p-1 flex overflow-x-auto max-w-full">
                 <button 
                   onClick={() => setLeaderboardFilter('GLOBAL')} 
-                  className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap cursor-pointer ${leaderboardFilter === 'GLOBAL' ? 'bg-amber-500 text-white shadow-md' : 'text-foreground/60 hover:text-foreground'}`}
+                  className={`px-4 py-2 font-bold text-sm transition-colors whitespace-nowrap cursor-pointer ${leaderboardFilter === 'GLOBAL' ? 'bg-amber-500 text-white shadow-md' : 'text-foreground/60 hover:text-foreground'}`}
                 >
                   🌍 Toàn Hệ Thống
                 </button>
@@ -2098,7 +2097,7 @@ export default function TeacherDashboard() {
                   <button 
                     key={c.id}
                     onClick={() => setLeaderboardFilter(c.id)} 
-                    className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap cursor-pointer ${leaderboardFilter === c.id ? 'bg-amber-500 text-white shadow-md' : 'text-foreground/60 hover:text-foreground'}`}
+                    className={`px-4 py-2 font-bold text-sm transition-colors whitespace-nowrap cursor-pointer ${leaderboardFilter === c.id ? 'bg-amber-500 text-white shadow-md' : 'text-foreground/60 hover:text-foreground'}`}
                   >
                     🏫 {c.name}
                   </button>
@@ -2159,9 +2158,9 @@ export default function TeacherDashboard() {
 
             {/* List */}
             {leaderboardData.length === 0 ? (
-              <div className="text-center p-12 bg-surface rounded-3xl border border-foreground/10 text-foreground/50">Chưa có dữ liệu xếp hạng.</div>
+              <div className="text-center p-12 bg-surface border border-foreground/10 text-foreground/50">Chưa có dữ liệu xếp hạng.</div>
             ) : (
-              <div className="bg-surface border border-foreground/10 rounded-3xl overflow-hidden shadow-sm">
+              <div className="bg-surface border border-foreground/10 overflow-hidden shadow-sm">
                 {leaderboardData.slice(3).map((u, idx) => (
                   <div key={u.id} className="flex items-center p-4 border-b border-foreground/5 last:border-0 hover:bg-foreground/5 transition-colors">
                     <div className="w-12 text-center font-bold text-foreground/50">#{u.rank}</div>
@@ -2186,13 +2185,13 @@ export default function TeacherDashboard() {
       {/* ── Create / Edit Class Modal ── */}
       {showModal && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
-          <div className="bg-surface p-8 rounded-3xl w-full max-w-md border border-foreground/10 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-surface p-8 w-full max-w-md border border-foreground/10 shadow-2xl animate-in zoom-in-95 duration-200">
             <h2 className="text-2xl font-bold mb-6">{editClassroom ? 'Chỉnh Sửa Lớp Học' : 'Tạo Lớp Học Mới'}</h2>
             <form onSubmit={handleCreateOrEditClass}>
               <div className="mb-4">
                 <label className="block text-sm font-bold mb-2">Tên Lớp</label>
                 <input type="text" value={newClassName} onChange={e => setNewClassName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-foreground/20 bg-transparent focus:outline-none focus:border-primary"
+                  className="w-full px-4 py-3 border border-foreground/20 bg-transparent focus:outline-none focus:border-primary"
                   placeholder="VD: Tiếng Anh luyện thi Đại học" required autoFocus />
               </div>
               
@@ -2200,7 +2199,7 @@ export default function TeacherDashboard() {
                 <label className="block text-sm font-bold mb-2">Ngày học trong tuần</label>
                 <div className="grid grid-cols-4 gap-2">
                   {[{ id: 1, label: 'T2' }, { id: 2, label: 'T3' }, { id: 3, label: 'T4' }, { id: 4, label: 'T5' }, { id: 5, label: 'T6' }, { id: 6, label: 'T7' }, { id: 0, label: 'CN' }].map(day => (
-                    <label key={day.id} className={`flex items-center justify-center px-2 py-2 rounded-lg border font-bold text-sm cursor-pointer transition-colors ${scheduleDays.includes(day.id) ? 'bg-primary text-white border-primary' : 'border-foreground/20 text-foreground/70 hover:bg-foreground/5'}`}>
+                    <label key={day.id} className={`flex items-center justify-center px-2 py-2 border font-bold text-sm cursor-pointer transition-colors ${scheduleDays.includes(day.id) ? 'bg-primary text-white border-primary' : 'border-foreground/20 text-foreground/70 hover:bg-foreground/5'}`}>
                       <input type="checkbox" className="hidden" checked={scheduleDays.includes(day.id)} onChange={(e) => {
                         if (e.target.checked) setScheduleDays([...scheduleDays, day.id]);
                         else setScheduleDays(scheduleDays.filter(d => d !== day.id));
@@ -2215,25 +2214,25 @@ export default function TeacherDashboard() {
                 <div>
                   <label className="block text-sm font-bold mb-2">Giờ Bắt Đầu</label>
                   <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-foreground/20 bg-transparent focus:outline-none focus:border-primary" />
+                    className="w-full px-4 py-3 border border-foreground/20 bg-transparent focus:outline-none focus:border-primary" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold mb-2">Giờ Kết Thúc</label>
                   <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
-                    className="w-full px-4 py-3 rounded-xl border border-foreground/20 bg-transparent focus:outline-none focus:border-primary" />
+                    className="w-full px-4 py-3 border border-foreground/20 bg-transparent focus:outline-none focus:border-primary" />
                 </div>
               </div>
 
               <div className="mb-6">
                 <label className="block text-sm font-bold mb-2">Học phí mỗi buổi (VNĐ)</label>
                 <input type="number" value={feePerLesson} onChange={e => setFeePerLesson(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl border border-foreground/20 bg-transparent focus:outline-none focus:border-primary"
+                  className="w-full px-4 py-3 border border-foreground/20 bg-transparent focus:outline-none focus:border-primary"
                   placeholder="VD: 100000" />
               </div>
 
               <div className="flex gap-3 justify-end">
-                <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2.5 rounded-xl font-bold hover:bg-foreground/5 cursor-pointer text-foreground/70">Hủy</button>
-                <button type="submit" className="px-5 py-2.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 cursor-pointer">{editClassroom ? 'Lưu Thay Đổi' : 'Tạo Lớp'}</button>
+                <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2.5 font-bold hover:bg-foreground/5 cursor-pointer text-foreground/70">Hủy</button>
+                <button type="submit" className="px-5 py-2.5 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">{editClassroom ? 'Lưu Thay Đổi' : 'Tạo Lớp'}</button>
               </div>
             </form>
           </div>
@@ -2243,7 +2242,7 @@ export default function TeacherDashboard() {
       {/* ── Quick View Exam Modal ── */}
       {selectedExamForView && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
-          <div className="bg-surface p-8 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col border border-foreground/10 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-surface p-8 w-full max-w-4xl max-h-[90vh] flex flex-col border border-foreground/10 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-2xl font-bold">{selectedExamForView.title}</h2>
@@ -2267,7 +2266,7 @@ export default function TeacherDashboard() {
                   const isEssay = q.question.type === 'ESSAY';
                   const opts = (() => { try { return JSON.parse(q.question.options || '[]'); } catch { return []; } })();
                   return (
-                    <div key={i} className="p-5 bg-foreground/5 rounded-2xl">
+                    <div key={i} className="p-5 bg-foreground/5">
                       <div className="flex items-start gap-3">
                         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isEssay ? 'bg-secondary/20 text-secondary' : 'bg-primary/20 text-primary'}`}>{i + 1}</span>
                         <div className="flex-1">
@@ -2275,7 +2274,7 @@ export default function TeacherDashboard() {
                             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${isEssay ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'}`}>{isEssay ? '✍️ Tự luận' : '🔘 Trắc nghiệm'}</span>
                           </div>
                           {q.question.heading && (
-                            <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-700/80 font-bold whitespace-pre-wrap">
+                            <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/20 text-amber-700/80 font-bold whitespace-pre-wrap">
                               {q.question.heading}
                             </div>
                           )}
@@ -2283,7 +2282,7 @@ export default function TeacherDashboard() {
                           {!isEssay && opts.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {opts.map((opt: string, idx: number) => (
-                                <p key={idx} className={`text-sm p-2 rounded-lg ${String.fromCharCode(65 + idx) === q.question.correctOption ? 'bg-primary/10 text-primary font-bold' : 'text-foreground/70'}`}>
+                                <p key={idx} className={`text-sm p-2 ${String.fromCharCode(65 + idx) === q.question.correctOption ? 'bg-primary/10 text-primary font-bold' : 'text-foreground/70'}`}>
                                   {String.fromCharCode(65 + idx)}. {opt}
                                 </p>
                               ))}
@@ -2313,7 +2312,7 @@ export default function TeacherDashboard() {
                     
                     return (
                       <>
-                        <div className="flex gap-4 p-4 bg-primary/10 rounded-2xl mb-4">
+                        <div className="flex gap-4 p-4 bg-primary/10 mb-4">
                           <div className="flex-1 text-center">
                             <p className="text-sm font-bold text-primary mb-1">Tổng Giao</p>
                             <p className="text-2xl font-black">{targetStudents.length}</p>
@@ -2328,7 +2327,7 @@ export default function TeacherDashboard() {
                           </div>
                         </div>
                         
-                        <div className="border border-foreground/10 rounded-2xl overflow-hidden">
+                        <div className="border border-foreground/10 overflow-hidden">
                           <table className="w-full text-left text-sm">
                             <thead className="bg-foreground/5">
                               <tr>
@@ -2379,7 +2378,7 @@ export default function TeacherDashboard() {
               )}
             </div>
             <div className="mt-6 flex justify-end">
-              <button onClick={() => setSelectedExamForView(null)} className="px-6 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">Đóng</button>
+              <button onClick={() => setSelectedExamForView(null)} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">Đóng</button>
             </div>
           </div>
         </div>
@@ -2388,43 +2387,43 @@ export default function TeacherDashboard() {
       {/* ── Edit Exam Modal ── */}
       {editExam && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
-          <div className="bg-surface p-8 rounded-3xl w-full max-w-lg border border-foreground/10 shadow-2xl">
+          <div className="bg-surface p-8 w-full max-w-lg border border-foreground/10 shadow-2xl">
             <h2 className="text-2xl font-bold mb-6">Chỉnh Sửa Đề Thi</h2>
             <form onSubmit={handleUpdateExam} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold mb-1">Tiêu đề</label>
-                <input className="w-full p-3 rounded-lg border border-foreground/20 bg-transparent" value={editExam.title} onChange={e => setEditExam({ ...editExam, title: e.target.value })} />
+                <input className="w-full p-3 border border-foreground/20 bg-transparent" value={editExam.title} onChange={e => setEditExam({ ...editExam, title: e.target.value })} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold mb-1">Loại</label>
-                  <select className="w-full p-3 rounded-lg border border-foreground/20 bg-transparent" value={editExam.examType} onChange={e => setEditExam({ ...editExam, examType: e.target.value })}>
+                  <select className="w-full p-3 border border-foreground/20 bg-transparent" value={editExam.examType} onChange={e => setEditExam({ ...editExam, examType: e.target.value })}>
                     <option value="ASSIGNMENT">Bài Tập</option>
                     <option value="EXAM">Đề Thi</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-bold mb-1">Thời gian (phút)</label>
-                  <input type="number" className="w-full p-3 rounded-lg border border-foreground/20 bg-transparent" value={editExam.duration} onChange={e => setEditExam({ ...editExam, duration: e.target.value })} />
+                  <input type="number" className="w-full p-3 border border-foreground/20 bg-transparent" value={editExam.duration} onChange={e => setEditExam({ ...editExam, duration: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold mb-1">Public lúc</label>
-                  <input type="datetime-local" className="w-full p-3 rounded-lg border border-foreground/20 bg-transparent" value={editExam.publishTime || ''} onChange={e => setEditExam({ ...editExam, publishTime: e.target.value })} />
+                  <input type="datetime-local" className="w-full p-3 border border-foreground/20 bg-transparent" value={editExam.publishTime || ''} onChange={e => setEditExam({ ...editExam, publishTime: e.target.value })} />
                 </div>
                 <div>
                   <label className="block text-sm font-bold mb-1">Deadline</label>
-                  <input type="datetime-local" className="w-full p-3 rounded-lg border border-foreground/20 bg-transparent" value={editExam.deadline || ''} onChange={e => setEditExam({ ...editExam, deadline: e.target.value })} />
+                  <input type="datetime-local" className="w-full p-3 border border-foreground/20 bg-transparent" value={editExam.deadline || ''} onChange={e => setEditExam({ ...editExam, deadline: e.target.value })} />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-bold mb-1">Ghi chú</label>
-                <input type="text" className="w-full p-3 rounded-lg border border-foreground/20 bg-transparent" value={editExam.notes || ''} onChange={e => setEditExam({ ...editExam, notes: e.target.value })} />
+                <input type="text" className="w-full p-3 border border-foreground/20 bg-transparent" value={editExam.notes || ''} onChange={e => setEditExam({ ...editExam, notes: e.target.value })} />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setEditExam(null)} className="flex-1 py-3 rounded-xl border border-foreground/20 font-bold hover:bg-foreground/5 cursor-pointer">Hủy</button>
-                <button type="submit" className="flex-1 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">Lưu Thay Đổi</button>
+                <button type="button" onClick={() => setEditExam(null)} className="flex-1 py-3 border border-foreground/20 font-bold hover:bg-foreground/5 cursor-pointer">Hủy</button>
+                <button type="submit" className="flex-1 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">Lưu Thay Đổi</button>
               </div>
             </form>
           </div>
@@ -2454,7 +2453,7 @@ export default function TeacherDashboard() {
 
       {globalLoading.isLoading && (
         <div className="fixed inset-0 bg-black/60 z-[9999] flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-surface p-8 rounded-3xl shadow-2xl flex flex-col items-center space-y-6 max-w-sm w-full border border-foreground/10">
+          <div className="bg-surface p-8 shadow-2xl flex flex-col items-center space-y-6 max-w-sm w-full border border-foreground/10">
             <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
             <p className="text-lg font-bold text-center">{globalLoading.message || 'Đang xử lý...'}</p>
             <p className="text-sm text-foreground/50 text-center">Vui lòng chờ trong giây lát</p>
@@ -2467,7 +2466,7 @@ export default function TeacherDashboard() {
 
 function StatCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="bg-surface border border-foreground/10 p-6 rounded-2xl">
+    <div className="bg-surface border border-foreground/10 p-6">
       <p className="text-sm text-foreground/60 font-medium">{title}</p>
       <p className="text-3xl font-extrabold mt-1">{value}</p>
     </div>
@@ -2485,7 +2484,7 @@ function ClassCard({ c, onEdit }: { c: any; onEdit?: () => void }) {
   } catch (e) {}
 
   return (
-    <div className="bg-surface border border-foreground/10 p-5 rounded-2xl flex justify-between items-center hover:-translate-y-1 transition-transform group relative">
+    <div className="bg-surface border border-foreground/10 p-5 flex justify-between items-center hover:-translate-y-1 transition-transform group relative">
       <div>
         <h4 className="font-bold text-lg flex items-center gap-2">
           {c.name}
@@ -2498,7 +2497,7 @@ function ClassCard({ c, onEdit }: { c: any; onEdit?: () => void }) {
         <p className="text-sm text-foreground/60">{c.students?.length || 0} Học sinh</p>
         
         {(daysStr || c.startTime || c.endTime) && (
-          <div className="mt-2 text-xs font-bold bg-foreground/5 text-foreground/70 px-3 py-1.5 rounded-lg inline-flex gap-2">
+          <div className="mt-2 text-xs font-bold bg-foreground/5 text-foreground/70 px-3 py-1.5 inline-flex gap-2">
             {daysStr && <span>📅 {daysStr}</span>}
             {c.startTime && <span>⏰ {c.startTime} {c.endTime && `- ${c.endTime}`}</span>}
           </div>
@@ -2514,7 +2513,7 @@ function ClassCard({ c, onEdit }: { c: any; onEdit?: () => void }) {
 
 function ExamCard({ title, type, detail, questions, onClick, onEdit, onDelete, onDuplicate, exam }: { title: string; type: string; detail: string; questions: number; onClick?: () => void; onEdit?: () => void; onDelete?: () => void; onDuplicate?: () => void; exam?: any }) {
   return (
-    <div className="bg-surface border border-foreground/10 p-5 rounded-2xl flex justify-between items-center hover:bg-foreground/5 transition-colors">
+    <div className="bg-surface border border-foreground/10 p-5 flex justify-between items-center hover:bg-foreground/5 transition-colors">
       <div className="flex-1 cursor-pointer" onClick={onClick}>
         <h4 className="font-bold text-lg flex items-center gap-2 flex-wrap">
           {title}
@@ -2524,10 +2523,10 @@ function ExamCard({ title, type, detail, questions, onClick, onEdit, onDelete, o
         <p className="text-sm text-foreground/60 mt-1">Giao cho: <span className="font-medium text-foreground">{detail}</span> • {questions} câu • {exam?.duration || 45} phút</p>
       </div>
       <div className="flex items-center gap-2 ml-4 shrink-0">
-        <button onClick={e => { e.stopPropagation(); onDuplicate?.(); }} className="px-3 py-2 text-sm font-bold bg-blue-500/10 text-blue-600 rounded-lg hover:bg-blue-500/20 cursor-pointer">📋 Nhân bản</button>
-        <button onClick={onClick} className="px-3 py-2 text-sm font-bold bg-foreground/10 rounded-lg hover:bg-foreground/20 cursor-pointer">👁 Xem</button>
-        <button onClick={e => { e.stopPropagation(); onEdit?.(); }} className="px-3 py-2 text-sm font-bold bg-primary/10 text-primary rounded-lg hover:bg-primary/20 cursor-pointer">✏️ Sửa</button>
-        <button onClick={e => { e.stopPropagation(); onDelete?.(); }} className="px-3 py-2 text-sm font-bold bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500/20 cursor-pointer">🗑 Xóa</button>
+        <button onClick={e => { e.stopPropagation(); onDuplicate?.(); }} className="px-3 py-2 text-sm font-bold bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 cursor-pointer">📋 Nhân bản</button>
+        <button onClick={onClick} className="px-3 py-2 text-sm font-bold bg-foreground/10 hover:bg-foreground/20 cursor-pointer">👁 Xem</button>
+        <button onClick={e => { e.stopPropagation(); onEdit?.(); }} className="px-3 py-2 text-sm font-bold bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer">✏️ Sửa</button>
+        <button onClick={e => { e.stopPropagation(); onDelete?.(); }} className="px-3 py-2 text-sm font-bold bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 cursor-pointer">🗑 Xóa</button>
       </div>
     </div>
   );

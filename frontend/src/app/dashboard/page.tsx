@@ -336,7 +336,7 @@ export default function StudentDashboard() {
   }));
 
   return (
-    <div className="flex h-[calc(100vh-80px)] overflow-hidden w-full p-2 md:p-6 gap-0 md:gap-6 relative">
+    <div className="flex h-[calc(100vh-80px)] overflow-hidden w-full relative">
       
       {/* Mobile Sidebar Backdrop */}
       {isMobileMenuOpen && (
@@ -347,10 +347,10 @@ export default function StudentDashboard() {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-72 bg-surface/95 md:bg-surface/80 backdrop-blur-2xl rounded-r-3xl md:rounded-3xl p-6 flex flex-col gap-2 shrink-0 h-full overflow-y-auto border-r md:border border-foreground/5 shadow-2xl md:shadow-[0_8px_30px_rgb(0,0,0,0.04)] transform transition-transform duration-300 md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-64 bg-surface flex flex-col shrink-0 h-full overflow-y-auto border-r border-foreground/10 shadow-2xl md:shadow-none transform transition-transform duration-300 md:relative md:translate-x-0 pt-6 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         
-        <div className="mb-10 px-2 flex items-center gap-4">
-          <label className="w-12 h-12 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 text-primary flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer relative overflow-hidden ring-2 ring-transparent hover:ring-primary/30 transition-all group shadow-sm">
+        <div className="mb-6 px-5 pb-5 border-b border-foreground/10 flex items-center gap-3">
+          <label className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer relative overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all group">
             <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
             {user?.avatar ? (
               <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
@@ -362,35 +362,35 @@ export default function StudentDashboard() {
             </div>
           </label>
           <div className="overflow-hidden">
-            <h2 className="text-xl font-black text-foreground truncate tracking-tight">{user?.name || 'Học sinh'}</h2>
-            <p className="text-[10px] text-foreground/50 font-bold uppercase tracking-widest mt-0.5">Học sinh</p>
+            <h2 className="text-base font-bold text-foreground truncate">{user?.name || 'Học sinh'}</h2>
+            <p className="text-[10px] text-foreground/40 font-semibold uppercase tracking-widest">Học sinh</p>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-0.5 px-2">
           {navGroups.map(group => (
-            <div key={group.id} className="flex flex-col gap-1">
+            <div key={group.id} className="flex flex-col">
               {group.subItems ? (
                 <>
-                  <button 
+                  <button
                     onClick={() => toggleNavGroup(group.id)}
-                    className="flex items-center justify-between px-5 py-3 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left text-foreground/80 hover:bg-foreground/5"
+                    className="flex items-center justify-between px-3 py-2.5 font-semibold transition-colors duration-150 cursor-pointer text-left text-foreground/60 hover:bg-foreground/5 hover:text-foreground text-xs uppercase tracking-wider mt-2"
                   >
-                    <span className="tracking-wide">{group.label}</span>
-                    <span className={`transform transition-transform text-xs ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▼</span>
+                    <span>{group.label}</span>
+                    <span className={`transform transition-transform text-[10px] ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▼</span>
                   </button>
                   {expandedNav[group.id] && (
-                    <div className="flex flex-col gap-1 pl-4">
+                    <div className="flex flex-col gap-0.5">
                       {group.subItems.map((item: any) => (
                         item.isLink ? (
                           <Link key={item.id} href={item.href}
-                            className={`flex items-center px-5 py-2.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left text-sm group hover:bg-foreground/5 text-foreground/60 hover:text-foreground hover:translate-x-1`}>
-                            <span className="tracking-wide">{item.label}</span>
+                            className="flex items-center px-3 py-2 font-medium transition-colors duration-150 cursor-pointer text-left text-sm text-foreground/60 hover:bg-foreground/5 hover:text-foreground">
+                            <span>{item.label}</span>
                           </Link>
                         ) : (
                           <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                            className={`flex items-center px-5 py-2.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left text-sm group ${activeTab === item.id ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-md shadow-primary/25 scale-[1.02]' : 'hover:bg-foreground/5 text-foreground/60 hover:text-foreground hover:translate-x-1'}`}>
-                            <span className="tracking-wide">{item.label}</span>
+                            className={`flex items-center px-3 py-2 font-medium transition-colors duration-150 cursor-pointer text-left text-sm w-full ${activeTab === item.id ? 'bg-primary/10 text-primary font-semibold border-l-[3px] border-primary pl-[9px]' : 'text-foreground/60 hover:bg-foreground/5 hover:text-foreground'}`}>
+                            <span>{item.label}</span>
                           </button>
                         )
                       ))}
@@ -399,18 +399,18 @@ export default function StudentDashboard() {
                 </>
               ) : (
                 <button onClick={() => { setActiveTab(group.id); setIsMobileMenuOpen(false); }}
-                  className={`flex items-center px-5 py-3.5 rounded-2xl font-bold transition-all duration-300 cursor-pointer text-left group ${activeTab === group.id ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-xl shadow-primary/25 scale-[1.02]' : 'hover:bg-foreground/5 text-foreground/60 hover:text-foreground hover:translate-x-1'}`}>
-                  <span className="tracking-wide">{group.label}</span>
+                  className={`flex items-center px-3 py-2.5 font-medium transition-colors duration-150 cursor-pointer text-left text-sm w-full ${activeTab === group.id ? 'bg-primary/10 text-primary font-semibold border-l-[3px] border-primary pl-[9px]' : 'text-foreground/60 hover:bg-foreground/5 hover:text-foreground'}`}>
+                  <span>{group.label}</span>
                 </button>
               )}
             </div>
           ))}
         </div>
 
-        <div className="mt-auto pt-6 border-t border-foreground/5">
-          <button 
+        <div className="mt-auto border-t border-foreground/10 px-2 py-3">
+          <button
             onClick={() => { localStorage.removeItem('userId'); window.location.href = '/'; }}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-rose-500/80 bg-rose-500/5 hover:bg-rose-500 hover:text-white transition-all w-full cursor-pointer text-sm shadow-sm hover:shadow-rose-500/25"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 font-semibold text-rose-500/70 hover:bg-rose-500/10 hover:text-rose-600 transition-colors w-full cursor-pointer text-sm"
           >
             Đăng xuất
           </button>
@@ -418,12 +418,12 @@ export default function StudentDashboard() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 rounded-3xl p-4 md:p-8 h-full overflow-y-auto relative bg-surface border border-foreground/10 shadow-sm flex flex-col w-full">
+      <div className="flex-1 p-6 md:p-8 h-full overflow-y-auto relative bg-background flex flex-col w-full">
         
         {/* Mobile Header with Hamburger */}
         <div className="md:hidden flex items-center justify-between mb-6 pb-4 border-b border-foreground/5">
           <div className="flex items-center gap-3">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-foreground/5 rounded-xl hover:bg-foreground/10 transition-colors">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-foreground/5 hover:bg-foreground/10 transition-colors">
               <span className="text-xl">☰</span>
             </button>
             <h2 className="font-bold text-primary tracking-tight">LUCY TUTOR</h2>
@@ -432,7 +432,7 @@ export default function StudentDashboard() {
 
         {/* Dashboard Header - User Info Sync */}
         {user && (
-          <div className="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 bg-primary/5 p-4 sm:p-6 rounded-2xl border border-primary/10">
+          <div className="mb-6 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 border-b border-foreground/10 pb-6">
             <div className="flex items-center gap-4 w-full sm:w-auto">
               <label className="w-14 h-14 shrink-0 bg-gradient-to-tr from-primary to-secondary text-white rounded-full flex items-center justify-center text-2xl font-bold shadow-md cursor-pointer relative overflow-hidden group">
                 <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
@@ -495,7 +495,7 @@ export default function StudentDashboard() {
                               confirmButtonColor: '#3b82f6',
                             });
                           }}
-                          className={`px-2.5 py-0.5 rounded-md border text-xs font-bold ${rank.color} shadow-sm whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity`}
+                          className={`px-2.5 py-0.5 border text-xs font-bold ${rank.color} shadow-sm whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity`}
                         >
                           Cấp {level} - {rank.label}
                         </span>
@@ -520,7 +520,7 @@ export default function StudentDashboard() {
             <h1 className="text-3xl font-bold">Tổng Quan Học Tập</h1>
             
             {needsActionExams.length > 0 && (
-              <div className="bg-rose-500/10 border border-rose-500/20 p-5 sm:p-6 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
+              <div className="bg-rose-500/10 border border-rose-500/20 p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
                 <div className="flex items-center gap-4 w-full">
                   <div className="w-12 h-12 shrink-0 bg-rose-500 text-white rounded-full flex items-center justify-center text-2xl font-black shadow-md animate-pulse">
                     !
@@ -532,7 +532,7 @@ export default function StudentDashboard() {
                 </div>
                 <button 
                   onClick={() => setActiveTab('EXAMS')}
-                  className="px-6 py-3 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 transition-colors shadow-md cursor-pointer whitespace-nowrap w-full sm:w-auto"
+                  className="px-6 py-3 bg-rose-500 text-white font-bold hover:bg-rose-600 transition-colors shadow-md cursor-pointer whitespace-nowrap w-full sm:w-auto"
                 >
                   Xử lý ngay →
                 </button>
@@ -540,7 +540,7 @@ export default function StudentDashboard() {
             )}
             
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              <div className="bg-surface border border-foreground/10 p-8 rounded-3xl relative overflow-hidden flex flex-col justify-center hover:border-primary/30 transition-colors shadow-sm">
+              <div className="bg-surface border border-foreground/10 p-8 relative overflow-hidden flex flex-col justify-center hover:border-primary/30 transition-colors shadow-sm">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[50px] rounded-full" />
                 <p className="text-sm font-bold text-foreground/50 mb-2 uppercase tracking-wide">Điểm Trung Bình</p>
                 <div className="flex items-baseline gap-2">
@@ -549,7 +549,7 @@ export default function StudentDashboard() {
                 </div>
               </div>
 
-              <div className="bg-surface border border-foreground/10 p-8 rounded-3xl flex flex-col justify-center hover:border-emerald-500/30 transition-colors shadow-sm relative overflow-hidden">
+              <div className="bg-surface border border-foreground/10 p-8 flex flex-col justify-center hover:border-emerald-500/30 transition-colors shadow-sm relative overflow-hidden">
                 <div className="absolute bottom-0 right-0 w-32 h-32 bg-emerald-500/10 blur-[50px] rounded-full" />
                 <p className="text-sm font-bold text-foreground/50 mb-2 uppercase tracking-wide">Tiến Độ Mục Tiêu</p>
                 <div className="flex flex-col gap-2">
@@ -563,13 +563,13 @@ export default function StudentDashboard() {
                 </div>
               </div>
 
-              <div className="bg-surface border border-foreground/10 p-8 rounded-3xl flex flex-col justify-center hover:border-secondary/30 transition-colors shadow-sm relative overflow-hidden">
+              <div className="bg-surface border border-foreground/10 p-8 flex flex-col justify-center hover:border-secondary/30 transition-colors shadow-sm relative overflow-hidden">
                 <div className="absolute bottom-0 right-0 w-32 h-32 bg-secondary/10 blur-[50px] rounded-full" />
                 <p className="text-sm font-bold text-foreground/50 mb-2 uppercase tracking-wide">Số bài đã làm</p>
                 <p className="text-5xl font-black text-secondary">{totalExams} <span className="text-xl text-foreground/50 font-medium">bài</span></p>
               </div>
 
-              <div className="bg-surface border border-foreground/10 p-8 rounded-3xl flex flex-col justify-center hover:border-amber-500/30 transition-colors shadow-sm relative overflow-hidden">
+              <div className="bg-surface border border-foreground/10 p-8 flex flex-col justify-center hover:border-amber-500/30 transition-colors shadow-sm relative overflow-hidden">
                 <div className="absolute top-1/2 right-0 w-32 h-32 bg-amber-500/10 blur-[50px] rounded-full" />
                 <p className="text-sm font-bold text-foreground/50 mb-2 uppercase tracking-wide">Tổng XP Tích Lũy</p>
                 <p className="text-5xl font-black text-amber-500">{totalXP} <span className="text-xl text-foreground/50 font-medium">XP</span></p>
@@ -578,15 +578,15 @@ export default function StudentDashboard() {
 
             {/* Chart Section */}
             {history.length > 0 && (
-              <div className="bg-surface border border-foreground/10 rounded-3xl shadow-sm p-4 sm:p-8">
+              <div className="bg-surface border border-foreground/10 shadow-sm p-4 sm:p-8">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                   <h4 className="text-xl font-bold flex items-center gap-3">
-                    <span className="p-2 bg-primary/10 text-primary rounded-xl">📈</span> Biểu Đồ Tiến Bộ
+                    <span className="p-2 bg-primary/10 text-primary">📈</span> Biểu Đồ Tiến Bộ
                   </h4>
-                  <div className="flex bg-foreground/5 p-1 rounded-xl">
-                    <button onClick={() => setChartViewMode('day')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${chartViewMode === 'day' ? 'bg-surface shadow-sm text-foreground' : 'text-foreground/50 hover:text-foreground'}`}>Ngày</button>
-                    <button onClick={() => setChartViewMode('week')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${chartViewMode === 'week' ? 'bg-surface shadow-sm text-foreground' : 'text-foreground/50 hover:text-foreground'}`}>Tuần</button>
-                    <button onClick={() => setChartViewMode('month')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-colors ${chartViewMode === 'month' ? 'bg-surface shadow-sm text-foreground' : 'text-foreground/50 hover:text-foreground'}`}>Tháng</button>
+                  <div className="flex bg-foreground/5 p-1">
+                    <button onClick={() => setChartViewMode('day')} className={`px-4 py-2 text-sm font-bold transition-colors ${chartViewMode === 'day' ? 'bg-surface shadow-sm text-foreground' : 'text-foreground/50 hover:text-foreground'}`}>Ngày</button>
+                    <button onClick={() => setChartViewMode('week')} className={`px-4 py-2 text-sm font-bold transition-colors ${chartViewMode === 'week' ? 'bg-surface shadow-sm text-foreground' : 'text-foreground/50 hover:text-foreground'}`}>Tuần</button>
+                    <button onClick={() => setChartViewMode('month')} className={`px-4 py-2 text-sm font-bold transition-colors ${chartViewMode === 'month' ? 'bg-surface shadow-sm text-foreground' : 'text-foreground/50 hover:text-foreground'}`}>Tháng</button>
                   </div>
                 </div>
                 <div className="h-[250px] sm:h-[300px] w-full">
@@ -612,10 +612,10 @@ export default function StudentDashboard() {
 
             {/* History Table */}
             {history.length > 0 && (
-              <div className="bg-surface border border-foreground/10 rounded-3xl overflow-hidden shadow-sm">
+              <div className="bg-surface border border-foreground/10 overflow-hidden shadow-sm">
                 <div className="p-6 border-b border-foreground/10 bg-foreground/[0.02]">
                   <h4 className="text-xl font-bold flex items-center gap-3">
-                    <span className="p-2 bg-secondary/10 text-secondary rounded-xl">📜</span> Lịch Sử Bài Làm Gần Đây
+                    <span className="p-2 bg-secondary/10 text-secondary">📜</span> Lịch Sử Bài Làm Gần Đây
                   </h4>
                 </div>
                 <div className="overflow-x-auto w-full">
@@ -642,7 +642,7 @@ export default function StudentDashboard() {
                               {Math.floor(item.timeSpent / 60)} phút {item.timeSpent % 60} giây
                             </td>
                             <td className="p-4 text-right">
-                              <span className={`inline-flex px-3 py-1 rounded-lg font-black ${scoreBg} ${scoreColor}`}>
+                              <span className={`inline-flex px-3 py-1 font-black ${scoreBg} ${scoreColor}`}>
                                 {item.score.toFixed(1)}
                               </span>
                             </td>
@@ -656,7 +656,7 @@ export default function StudentDashboard() {
             )}
             
             {history.length === 0 && (
-              <div className="bg-surface border border-foreground/10 p-12 rounded-3xl flex flex-col justify-center items-center text-center shadow-sm">
+              <div className="bg-surface border border-foreground/10 p-12 flex flex-col justify-center items-center text-center shadow-sm">
                 <div className="w-20 h-20 rounded-full bg-foreground/5 flex items-center justify-center mb-6 text-4xl">📭</div>
                 <h2 className="text-2xl font-bold mb-2">Chưa có dữ liệu</h2>
                 <p className="text-foreground/50 max-w-md">Bạn chưa hoàn thành bài thi nào. Hãy bắt đầu làm bài để tích lũy dữ liệu thống kê nhé!</p>
@@ -670,7 +670,7 @@ export default function StudentDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h1 className="text-3xl font-bold mb-6">Bài Học Của Bạn</h1>
             {lessons.length === 0 ? (
-              <div className="bg-surface border border-foreground/10 p-12 rounded-3xl flex flex-col justify-center items-center text-center">
+              <div className="bg-surface border border-foreground/10 p-12 flex flex-col justify-center items-center text-center">
                 <div className="w-20 h-20 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center mb-6">
                   <span className="text-3xl">📚</span>
                 </div>
@@ -683,9 +683,9 @@ export default function StudentDashboard() {
                   const progress = lesson.progress?.find((p: any) => p.userId === user?.id);
                   const isCompleted = progress?.status === 'COMPLETED';
                   return (
-                    <div key={lesson.id} className="bg-surface border border-foreground/10 p-5 rounded-2xl flex flex-col gap-4 hover:border-primary/30 transition-colors shadow-sm">
+                    <div key={lesson.id} className="bg-surface border border-foreground/10 p-5 flex flex-col gap-4 hover:border-primary/30 transition-colors shadow-sm">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 shrink-0 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center text-2xl">📚</div>
+                        <div className="w-12 h-12 shrink-0 bg-blue-500/10 text-blue-500 flex items-center justify-center text-2xl">📚</div>
                         <div>
                           <h3 className="font-bold text-lg">{lesson.title}</h3>
                           <p className="text-sm text-foreground/50">{lesson.vocabularies?.length || 0} từ vựng • {lesson.grammars?.length || 0} ngữ pháp</p>
@@ -693,11 +693,11 @@ export default function StudentDashboard() {
                       </div>
                       <div className="mt-auto flex items-center justify-between pt-2 border-t border-foreground/10">
                         {isCompleted ? (
-                          <span className="px-3 py-1 bg-green-500/10 text-green-600 font-bold rounded-lg text-sm">✅ Đã học</span>
+                          <span className="px-3 py-1 bg-green-500/10 text-green-600 font-bold text-sm">✅ Đã học</span>
                         ) : (
-                          <span className="px-3 py-1 bg-amber-500/10 text-amber-600 font-bold rounded-lg text-sm">⏳ Chưa học</span>
+                          <span className="px-3 py-1 bg-amber-500/10 text-amber-600 font-bold text-sm">⏳ Chưa học</span>
                         )}
-                        <Link href={`/lesson/${lesson.id}`} className="px-5 py-2 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 transition-colors text-sm whitespace-nowrap flex items-center justify-center gap-2">
+                        <Link href={`/lesson/${lesson.id}`} className="px-5 py-2 bg-primary text-white font-bold hover:bg-primary/90 transition-colors text-sm whitespace-nowrap flex items-center justify-center gap-2">
                           Học Ngay <span>→</span>
                         </Link>
                       </div>
@@ -717,7 +717,7 @@ export default function StudentDashboard() {
             {(() => {
               const assignments = user?.assignedExams?.filter((e: any) => e.examType === 'ASSIGNMENT' || e.examType === 'REGULAR') || [];
               if (assignments.length === 0) return (
-                <div className="bg-surface border border-foreground/10 p-12 rounded-3xl flex flex-col justify-center items-center text-center">
+                <div className="bg-surface border border-foreground/10 p-12 flex flex-col justify-center items-center text-center">
                   <div className="w-20 h-20 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center mb-6">
                     <span className="text-3xl">📝</span>
                   </div>
@@ -729,9 +729,9 @@ export default function StudentDashboard() {
               return (
                 <div className="space-y-4">
                   {assignments.map((e: any) => (
-                    <div key={e.id} className="bg-surface border border-foreground/10 p-5 sm:p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-primary/30 transition-colors">
+                    <div key={e.id} className="bg-surface border border-foreground/10 p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-primary/30 transition-colors">
                       <div className="flex items-center gap-4 w-full">
-                        <div className="w-12 h-12 shrink-0 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-2xl">
+                        <div className="w-12 h-12 shrink-0 bg-primary/10 text-primary flex items-center justify-center text-2xl">
                           📝
                         </div>
                         <div>
@@ -747,10 +747,10 @@ export default function StudentDashboard() {
                         const attempts = history.filter(h => h.examId === e.id).length;
                         const maxAttempts = e.maxAttempts || 1;
                         if (attempts >= maxAttempts) {
-                          return <span className="px-6 py-2 bg-foreground/10 text-foreground/50 font-bold rounded-xl cursor-not-allowed w-full sm:w-auto text-center">Hết Lượt ({attempts}/{maxAttempts})</span>;
+                          return <span className="px-6 py-2 bg-foreground/10 text-foreground/50 font-bold cursor-not-allowed w-full sm:w-auto text-center">Hết Lượt ({attempts}/{maxAttempts})</span>;
                         }
                         return (
-                          <Link href={`/exam/${e.id}`} className="px-6 py-2 bg-foreground text-background font-bold rounded-xl hover:bg-foreground/80 transition-colors w-full sm:w-auto mt-2 sm:mt-0 whitespace-nowrap flex items-center justify-center gap-2">
+                          <Link href={`/exam/${e.id}`} className="px-6 py-2 bg-foreground text-background font-bold hover:bg-foreground/80 transition-colors w-full sm:w-auto mt-2 sm:mt-0 whitespace-nowrap flex items-center justify-center gap-2">
                             Làm Bài ({attempts}/{maxAttempts}) <span>→</span>
                           </Link>
                         );
@@ -771,7 +771,7 @@ export default function StudentDashboard() {
             {(() => {
               const tests = user?.assignedExams?.filter((e: any) => e.examType === 'EXAM' || e.examType === 'PLACEMENT') || [];
               if (tests.length === 0) return (
-                <div className="bg-surface border border-foreground/10 p-12 rounded-3xl flex flex-col justify-center items-center text-center">
+                <div className="bg-surface border border-foreground/10 p-12 flex flex-col justify-center items-center text-center">
                   <div className="w-20 h-20 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mb-6">
                     <span className="text-3xl">⏰</span>
                   </div>
@@ -783,9 +783,9 @@ export default function StudentDashboard() {
               return (
                 <div className="space-y-4">
                   {tests.map((e: any) => (
-                    <div key={e.id} className="bg-surface border border-foreground/10 p-5 sm:p-6 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-rose-500/30 transition-colors">
+                    <div key={e.id} className="bg-surface border border-foreground/10 p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-rose-500/30 transition-colors">
                       <div className="flex items-center gap-4 w-full">
-                        <div className="w-12 h-12 shrink-0 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center text-2xl">
+                        <div className="w-12 h-12 shrink-0 bg-rose-500/10 text-rose-500 flex items-center justify-center text-2xl">
                           ⏰
                         </div>
                         <div>
@@ -805,12 +805,12 @@ export default function StudentDashboard() {
                         
                         if (attempts >= maxAttempts) {
                           if (maxScore < 5) {
-                            return <span className="px-6 py-2 bg-rose-500/10 text-rose-700 font-bold rounded-xl cursor-not-allowed w-full sm:w-auto text-center mt-2 sm:mt-0">Khóa (Thi Trượt)</span>;
+                            return <span className="px-6 py-2 bg-rose-500/10 text-rose-700 font-bold cursor-not-allowed w-full sm:w-auto text-center mt-2 sm:mt-0">Khóa (Thi Trượt)</span>;
                           }
-                          return <span className="px-6 py-2 bg-foreground/10 text-foreground/50 font-bold rounded-xl cursor-not-allowed w-full sm:w-auto text-center mt-2 sm:mt-0">Hết Lượt ({attempts}/{maxAttempts})</span>;
+                          return <span className="px-6 py-2 bg-foreground/10 text-foreground/50 font-bold cursor-not-allowed w-full sm:w-auto text-center mt-2 sm:mt-0">Hết Lượt ({attempts}/{maxAttempts})</span>;
                         }
                         return (
-                          <Link href={`/exam/${e.id}`} className="px-6 py-2 bg-rose-500 text-white font-bold rounded-xl hover:bg-rose-600 transition-colors w-full sm:w-auto mt-2 sm:mt-0 whitespace-nowrap flex items-center justify-center gap-2">
+                          <Link href={`/exam/${e.id}`} className="px-6 py-2 bg-rose-500 text-white font-bold hover:bg-rose-600 transition-colors w-full sm:w-auto mt-2 sm:mt-0 whitespace-nowrap flex items-center justify-center gap-2">
                             Thi Ngay ({attempts}/{maxAttempts}) <span>→</span>
                           </Link>
                         );
@@ -833,13 +833,13 @@ export default function StudentDashboard() {
                  placeholder="Tìm kiếm tài liệu..." 
                  value={searchDocQuery}
                  onChange={e => setSearchDocQuery(e.target.value)}
-                 className="w-full md:w-1/3 p-3 rounded-xl border border-foreground/20 bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50" 
+                 className="w-full md:w-1/3 p-3 border border-foreground/20 bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50" 
                />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).length === 0 && <div className="text-foreground/50 italic col-span-full">Không tìm thấy tài liệu phù hợp</div>}
               {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).map((doc: any) => (
-                <div key={doc.id} className="bg-surface p-6 rounded-3xl border border-foreground/10 hover:border-primary/30 transition-all flex flex-col justify-between group relative overflow-hidden">
+                <div key={doc.id} className="bg-surface p-6 border border-foreground/10 hover:border-primary/30 transition-all flex flex-col justify-between group relative overflow-hidden">
                   <div className="absolute top-0 right-0 p-3 flex gap-2">
                      <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${doc.visibility === 'PUBLIC' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}`}>
                         {doc.visibility === 'CLASS' ? (doc.classroom?.name || 'Lớp') : 'Chung'}
@@ -871,7 +871,7 @@ export default function StudentDashboard() {
                     <p className="text-xs text-foreground/50 mb-4">{new Date(doc.createdAt).toLocaleDateString('vi-VN')} • {(doc.size / 1024 / 1024).toFixed(2)} MB</p>
                   </div>
                   <div className="flex gap-2 z-10">
-                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" download={doc.title} className="flex-1 py-2 text-center bg-primary/10 text-primary rounded-xl text-sm font-bold hover:bg-primary hover:text-white transition-colors cursor-pointer block z-10 relative">Tải xuống</a>
+                    <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" download={doc.title} className="flex-1 py-2 text-center bg-primary/10 text-primary text-sm font-bold hover:bg-primary hover:text-white transition-colors cursor-pointer block z-10 relative">Tải xuống</a>
                   </div>
                 </div>
               ))}
@@ -888,19 +888,19 @@ export default function StudentDashboard() {
                 type="month" 
                 value={attMonth} 
                 onChange={e => setAttMonth(e.target.value)} 
-                className="p-3 border border-foreground/20 rounded-xl bg-surface font-bold shadow-sm"
+                className="p-3 border border-foreground/20 bg-surface font-bold shadow-sm"
               />
             </div>
 
             {attReports.length === 0 ? (
-              <div className="text-center text-foreground/40 py-12 bg-foreground/5 rounded-3xl border-2 border-dashed border-foreground/10">
+              <div className="text-center text-foreground/40 py-12 bg-foreground/5 border-2 border-dashed border-foreground/10">
                 <p className="text-lg font-medium mb-2">Không có dữ liệu tháng này</p>
                 <p className="text-sm">Tháng này bạn chưa tham gia hoặc chưa được điểm danh lớp nào.</p>
               </div>
             ) : (
               <div className="space-y-6">
                 {attReports.map((report: any) => (
-                  <div key={report.classroomId} className="bg-surface border border-foreground/10 p-6 rounded-3xl shadow-sm hover:shadow-md transition-shadow">
+                  <div key={report.classroomId} className="bg-surface border border-foreground/10 p-6 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-center border-b border-foreground/10 pb-4 mb-4">
                       <h2 className="text-xl font-bold flex items-center gap-2">
                         <span className="w-3 h-3 rounded-full bg-primary inline-block"></span>
@@ -918,11 +918,11 @@ export default function StudentDashboard() {
                     </div>
                     
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="p-4 bg-foreground/5 rounded-2xl">
+                      <div className="p-4 bg-foreground/5">
                         <p className="text-sm text-foreground/60 mb-1">Số buổi đã học (có mặt)</p>
                         <p className="text-2xl font-black">{report.presentCount}</p>
                       </div>
-                      <div className="p-4 bg-primary/5 rounded-2xl border border-primary/10">
+                      <div className="p-4 bg-primary/5 border border-primary/10">
                         <p className="text-sm text-primary/80 mb-1 font-bold">Học phí tháng {attMonth.split('-')[1]}</p>
                         <p className="text-2xl font-black text-primary">{report.totalAmount.toLocaleString()} VNĐ</p>
                       </div>
@@ -957,7 +957,7 @@ export default function StudentDashboard() {
             {user?.notebooks?.length > 0 ? (
               <div className="space-y-8">
                 {/* Chart Top Mistakes */}
-                <div className="bg-surface border border-foreground/10 rounded-3xl p-6 shadow-sm">
+                <div className="bg-surface border border-foreground/10 p-6 shadow-sm">
                   <h3 className="font-bold text-lg mb-6 flex items-center gap-2">📊 Top Lỗi Mắc Phải Nhiều Nhất</h3>
                   <div className="space-y-4">
                     {[...user.notebooks].sort((a: any, b: any) => b.mistakeCount - a.mistakeCount).slice(0, 5).map((nb: any, index: number) => {
@@ -978,10 +978,10 @@ export default function StudentDashboard() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {user.notebooks.map((nb: any) => (
-                    <div key={nb.id} className="bg-surface border border-foreground/10 p-6 rounded-2xl shadow-sm hover:border-amber-500/30 transition-colors flex flex-col h-full">
+                    <div key={nb.id} className="bg-surface border border-foreground/10 p-6 shadow-sm hover:border-amber-500/30 transition-colors flex flex-col h-full">
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-bold text-lg text-amber-600 line-clamp-2 pr-4">{nb.topic}</h3>
-                        <span className="bg-rose-500/10 text-rose-500 font-bold px-3 py-1 rounded-lg text-xs whitespace-nowrap shrink-0">{nb.mistakeCount} lần sai</span>
+                        <span className="bg-rose-500/10 text-rose-500 font-bold px-3 py-1 text-xs whitespace-nowrap shrink-0">{nb.mistakeCount} lần sai</span>
                       </div>
                       <p className="text-xs text-foreground/50 mb-4 font-medium flex items-center gap-1">
                         🗓 Cập nhật: {new Date(nb.updatedAt).toLocaleDateString('vi-VN')}
@@ -990,7 +990,7 @@ export default function StudentDashboard() {
                       <div className="mt-auto pt-4 flex justify-end">
                         <button 
                           onClick={() => setSelectedNotebookForView(nb)}
-                          className="px-4 py-2 bg-amber-500/10 text-amber-600 font-bold rounded-xl hover:bg-amber-500/20 transition-colors text-sm cursor-pointer"
+                          className="px-4 py-2 bg-amber-500/10 text-amber-600 font-bold hover:bg-amber-500/20 transition-colors text-sm cursor-pointer"
                         >
                           👁 Xem Chi Tiết Giải Thích
                         </button>
@@ -1000,7 +1000,7 @@ export default function StudentDashboard() {
                 </div>
               </div>
             ) : (
-              <div className="bg-surface border border-foreground/10 p-12 rounded-3xl flex flex-col justify-center items-center text-center">
+              <div className="bg-surface border border-foreground/10 p-12 flex flex-col justify-center items-center text-center">
                 <div className="w-20 h-20 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center mb-6">
                   <span className="text-3xl">📓</span>
                 </div>
@@ -1016,10 +1016,10 @@ export default function StudentDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl relative pb-24">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <h1 className="text-3xl font-bold">🏆 Bảng Xếp Hạng</h1>
-              <div className="bg-surface border border-foreground/10 rounded-xl p-1 flex overflow-x-auto max-w-full">
+              <div className="bg-surface border border-foreground/10 p-1 flex overflow-x-auto max-w-full">
                 <button 
                   onClick={() => setLeaderboardFilter('GLOBAL')} 
-                  className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap cursor-pointer ${leaderboardFilter === 'GLOBAL' ? 'bg-amber-500 text-white shadow-md' : 'text-foreground/60 hover:text-foreground'}`}
+                  className={`px-4 py-2 font-bold text-sm transition-colors whitespace-nowrap cursor-pointer ${leaderboardFilter === 'GLOBAL' ? 'bg-amber-500 text-white shadow-md' : 'text-foreground/60 hover:text-foreground'}`}
                 >
                   🌍 Toàn Hệ Thống
                 </button>
@@ -1027,7 +1027,7 @@ export default function StudentDashboard() {
                   <button 
                     key={c.id}
                     onClick={() => setLeaderboardFilter(c.id)} 
-                    className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors whitespace-nowrap cursor-pointer ${leaderboardFilter === c.id ? 'bg-amber-500 text-white shadow-md' : 'text-foreground/60 hover:text-foreground'}`}
+                    className={`px-4 py-2 font-bold text-sm transition-colors whitespace-nowrap cursor-pointer ${leaderboardFilter === c.id ? 'bg-amber-500 text-white shadow-md' : 'text-foreground/60 hover:text-foreground'}`}
                   >
                     🏫 {c.name}
                   </button>
@@ -1088,9 +1088,9 @@ export default function StudentDashboard() {
 
             {/* List */}
             {leaderboardData.length === 0 ? (
-              <div className="text-center p-12 bg-surface rounded-3xl border border-foreground/10 text-foreground/50">Chưa có dữ liệu xếp hạng.</div>
+              <div className="text-center p-12 bg-surface border border-foreground/10 text-foreground/50">Chưa có dữ liệu xếp hạng.</div>
             ) : (
-              <div className="bg-surface border border-foreground/10 rounded-3xl overflow-hidden shadow-sm">
+              <div className="bg-surface border border-foreground/10 overflow-hidden shadow-sm">
                 {leaderboardData.slice(3).map((u, idx) => (
                   <div key={u.id} className={`flex items-center p-4 border-b border-foreground/5 last:border-0 hover:bg-foreground/5 transition-colors ${u.id === user?.id ? 'bg-primary/5 border-l-4 border-l-primary' : ''}`}>
                     <div className="w-12 text-center font-bold text-foreground/50">#{u.rank}</div>
@@ -1109,7 +1109,7 @@ export default function StudentDashboard() {
             
             {/* Current User Fixed Bottom Bar */}
             {leaderboardCurrentUser && (
-              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-3xl bg-surface/90 backdrop-blur-xl border-2 border-primary/50 shadow-[0_10px_40px_-10px_rgba(79,70,229,0.5)] p-4 rounded-2xl flex items-center z-50 animate-in slide-in-from-bottom-10">
+              <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-3xl bg-surface/90 backdrop-blur-xl border-2 border-primary/50 shadow-[0_10px_40px_-10px_rgba(79,70,229,0.5)] p-4 flex items-center z-50 animate-in slide-in-from-bottom-10">
                 <div className="w-12 text-center font-black text-xl text-primary">#{leaderboardCurrentUser.rank}</div>
                 <div className="w-10 h-10 rounded-full bg-foreground/10 flex items-center justify-center overflow-hidden mr-4 shrink-0 font-bold text-sm border-2 border-primary/20">
                   {leaderboardCurrentUser.avatar ? <img src={leaderboardCurrentUser.avatar} className="w-full h-full object-cover"/> : leaderboardCurrentUser.name.charAt(0)}
@@ -1157,26 +1157,26 @@ export default function StudentDashboard() {
                   Swal.fire('Lỗi', 'Lỗi cập nhật thông tin', 'error');
                 }
               }}
-              className="bg-surface border border-foreground/10 p-8 rounded-3xl space-y-6 shadow-sm"
+              className="bg-surface border border-foreground/10 p-8 space-y-6 shadow-sm"
             >
               <div>
                 <label className="block text-sm font-bold mb-2">Họ và Tên</label>
-                <input type="text" disabled defaultValue={user?.name} className="w-full px-4 py-3 rounded-xl border border-foreground/10 bg-foreground/5 text-foreground/50 cursor-not-allowed" />
+                <input type="text" disabled defaultValue={user?.name} className="w-full px-4 py-3 border border-foreground/10 bg-foreground/5 text-foreground/50 cursor-not-allowed" />
               </div>
               
               <div>
                 <label className="block text-sm font-bold mb-2">Email</label>
-                <input type="email" disabled defaultValue={user?.email} className="w-full px-4 py-3 rounded-xl border border-foreground/10 bg-foreground/5 text-foreground/50 cursor-not-allowed" />
+                <input type="email" disabled defaultValue={user?.email} className="w-full px-4 py-3 border border-foreground/10 bg-foreground/5 text-foreground/50 cursor-not-allowed" />
               </div>
 
               <div>
                 <label className="block text-sm font-bold mb-2">Số điện thoại liên hệ</label>
-                <input type="tel" name="phone" defaultValue={user?.phone || ''} placeholder="0987654321" className="w-full px-4 py-3 rounded-xl border border-foreground/10 bg-transparent focus:outline-none focus:border-primary" />
+                <input type="tel" name="phone" defaultValue={user?.phone || ''} placeholder="0987654321" className="w-full px-4 py-3 border border-foreground/10 bg-transparent focus:outline-none focus:border-primary" />
               </div>
               
               <div>
                 <label className="block text-sm font-bold mb-2">Mục tiêu điểm số</label>
-                <select name="targetScore" defaultValue={user?.targetScore || 7.0} className="w-full px-4 py-3 rounded-xl border border-foreground/10 bg-transparent focus:outline-none focus:border-primary">
+                <select name="targetScore" defaultValue={user?.targetScore || 7.0} className="w-full px-4 py-3 border border-foreground/10 bg-transparent focus:outline-none focus:border-primary">
                   <option value="5">5.0 - Cơ bản</option>
                   <option value="6">6.0 - Trung bình khá</option>
                   <option value="7">7.0 - Khá</option>
@@ -1186,12 +1186,12 @@ export default function StudentDashboard() {
                 </select>
               </div>
 
-              <button type="submit" className="w-full py-4 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 transition-colors shadow-lg cursor-pointer">
+              <button type="submit" className="w-full py-4 bg-primary text-white font-bold hover:bg-primary/90 transition-colors shadow-lg cursor-pointer">
                 Lưu Thay Đổi
               </button>
             </form>
 
-            <div className="bg-surface border border-foreground/10 p-4 md:p-8 rounded-3xl space-y-4 shadow-sm mt-8">
+            <div className="bg-surface border border-foreground/10 p-4 md:p-8 space-y-4 shadow-sm mt-8">
               <h2 className="text-xl font-bold">Tham Gia Lớp Học</h2>
               <p className="text-sm text-foreground/60 mb-4">Nhập mã lớp do Giáo viên cung cấp để tham gia làm bài tập và đề thi được giao.</p>
               <form onSubmit={handleJoinClass} className="flex flex-col sm:flex-row gap-4 items-end">
@@ -1202,11 +1202,11 @@ export default function StudentDashboard() {
                     value={joinCode}
                     onChange={e => setJoinCode(e.target.value)}
                     placeholder="VD: A1B2C3" 
-                    className="w-full px-4 py-3 rounded-xl border border-foreground/10 bg-transparent focus:outline-none focus:border-primary uppercase" 
+                    className="w-full px-4 py-3 border border-foreground/10 bg-transparent focus:outline-none focus:border-primary uppercase" 
                     required
                   />
                 </div>
-                <button type="submit" className="w-full sm:w-auto px-6 py-3 rounded-xl bg-green-500 text-white font-bold hover:bg-green-600 transition-colors shadow-lg cursor-pointer h-[50px] whitespace-nowrap">
+                <button type="submit" className="w-full sm:w-auto px-6 py-3 bg-green-500 text-white font-bold hover:bg-green-600 transition-colors shadow-lg cursor-pointer h-[50px] whitespace-nowrap">
                   Tham Gia
                 </button>
               </form>
@@ -1219,12 +1219,12 @@ export default function StudentDashboard() {
       {/* Notebook Detail Modal */}
       {selectedNotebookForView && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
-          <div className="bg-surface p-8 rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col border border-foreground/10 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-surface p-8 w-full max-w-2xl max-h-[90vh] flex flex-col border border-foreground/10 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-start mb-6 border-b border-foreground/10 pb-4">
               <div>
                 <h2 className="text-2xl font-bold text-amber-600 mb-2">{selectedNotebookForView.topic}</h2>
                 <div className="flex items-center gap-3">
-                  <span className="bg-rose-500/10 text-rose-500 font-bold px-3 py-1 rounded-lg text-xs">Mắc lỗi: {selectedNotebookForView.mistakeCount} lần</span>
+                  <span className="bg-rose-500/10 text-rose-500 font-bold px-3 py-1 text-xs">Mắc lỗi: {selectedNotebookForView.mistakeCount} lần</span>
                   <span className="text-xs text-foreground/50 font-medium">Cập nhật lúc: {new Date(selectedNotebookForView.updatedAt).toLocaleString('vi-VN')}</span>
                 </div>
               </div>
@@ -1307,7 +1307,7 @@ export default function StudentDashboard() {
             </div>
             
             <div className="mt-6 flex justify-end pt-4 border-t border-foreground/10">
-              <button onClick={() => setSelectedNotebookForView(null)} className="px-6 py-3 rounded-xl bg-amber-500 text-white font-bold hover:bg-amber-600 cursor-pointer">Đã hiểu rõ</button>
+              <button onClick={() => setSelectedNotebookForView(null)} className="px-6 py-3 bg-amber-500 text-white font-bold hover:bg-amber-600 cursor-pointer">Đã hiểu rõ</button>
             </div>
           </div>
         </div>
@@ -1320,9 +1320,9 @@ export default function StudentDashboard() {
 // Mini Components for UI
 function WeaknessItem({ topic, rate }: { topic: string, rate: string }) {
   return (
-    <div className="flex justify-between items-center p-4 rounded-2xl bg-foreground/5 hover:bg-foreground/10 transition-colors">
+    <div className="flex justify-between items-center p-4 bg-foreground/5 hover:bg-foreground/10 transition-colors">
       <span className="font-semibold text-foreground/90">{topic}</span>
-      <span className="text-accent font-bold bg-accent/10 border border-accent/20 px-3 py-1 rounded-lg text-sm">Sai {rate}</span>
+      <span className="text-accent font-bold bg-accent/10 border border-accent/20 px-3 py-1 text-sm">Sai {rate}</span>
     </div>
   );
 }
@@ -1338,7 +1338,7 @@ function LessonCard({ title, type }: { title: string, type: string }) {
   }
 
   return (
-    <div className="flex items-center gap-4 p-4 rounded-2xl bg-foreground/5 hover:bg-foreground/10 cursor-pointer transition-colors border border-transparent hover:border-foreground/10">
+    <div className="flex items-center gap-4 p-4 bg-foreground/5 hover:bg-foreground/10 cursor-pointer transition-colors border border-transparent hover:border-foreground/10">
       <div className="flex-1 font-semibold text-foreground/90">{title}</div>
       {getBadge()}
     </div>
@@ -1349,7 +1349,7 @@ function AssignmentCard({ title, deadline, status, teacher, score }: { title: st
   const isCompleted = status === 'COMPLETED';
   
   return (
-    <div className={`bg-surface border p-5 rounded-2xl flex justify-between items-center transition-all ${isCompleted ? 'border-foreground/10 opacity-70' : 'border-primary/20 shadow-sm hover:border-primary/50 cursor-pointer'}`}>
+    <div className={`bg-surface border p-5 flex justify-between items-center transition-all ${isCompleted ? 'border-foreground/10 opacity-70' : 'border-primary/20 shadow-sm hover:border-primary/50 cursor-pointer'}`}>
       <div>
         <h4 className="font-bold text-lg mb-1">{title}</h4>
         <p className="text-sm text-foreground/60 font-medium">Giao bởi: {teacher} • Hạn chót: <span className={isCompleted ? '' : 'text-orange-500 font-bold'}>{deadline}</span></p>
@@ -1361,7 +1361,7 @@ function AssignmentCard({ title, deadline, status, teacher, score }: { title: st
             <p className="text-xs font-bold text-foreground/40 uppercase mt-0.5">Điểm</p>
           </div>
         ) : (
-          <button className="px-5 py-2.5 bg-primary/10 text-primary font-bold rounded-xl hover:bg-primary/20 transition-colors cursor-pointer">
+          <button className="px-5 py-2.5 bg-primary/10 text-primary font-bold hover:bg-primary/20 transition-colors cursor-pointer">
             Làm Bài
           </button>
         )}
@@ -1374,7 +1374,7 @@ function NotebookEntry({ topic, mistakes, correctCount = 0, status = 'NEEDS_WORK
   const isResolved = status === 'RESOLVED';
 
   return (
-    <div className={`bg-surface border rounded-2xl overflow-hidden transition-all shadow-sm ${isResolved ? 'border-green-500/30' : 'border-foreground/10'}`}>
+    <div className={`bg-surface border overflow-hidden transition-all shadow-sm ${isResolved ? 'border-green-500/30' : 'border-foreground/10'}`}>
       <div 
         onClick={onClick}
         className={`p-5 flex justify-between items-center cursor-pointer transition-colors ${isResolved ? 'hover:bg-green-500/5' : 'hover:bg-foreground/5'}`}
