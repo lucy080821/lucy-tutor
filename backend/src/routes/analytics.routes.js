@@ -49,8 +49,11 @@ router.get('/history/:userId', async (req, res) => {
   try {
     const results = await prisma.examResult.findMany({
       where: { userId: req.params.userId },
-      include: { exam: true },
-      orderBy: { createdAt: 'asc' } // Oldest first for charting progression
+      select: {
+        id: true, score: true, timeSpent: true, createdAt: true, examId: true,
+        exam: { select: { id: true, title: true } }
+      },
+      orderBy: { createdAt: 'asc' }
     });
     res.json(results);
   } catch (error) {

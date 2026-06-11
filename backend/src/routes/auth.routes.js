@@ -62,17 +62,31 @@ router.post('/placement', async (req, res) => {
   }
 });
 
+const USER_SELECT = {
+  id: true, name: true, email: true, role: true, avatar: true,
+  totalXP: true, streakCount: true, targetScore: true, phone: true, currentLevel: true,
+  classroomsJoined: {
+    select: { id: true, name: true, joinCode: true, scheduleDays: true, startTime: true, endTime: true, feePerLesson: true }
+  },
+  assignedExams: {
+    select: { id: true, title: true, totalQuestions: true, duration: true, maxAttempts: true, deadline: true, notes: true, examType: true }
+  },
+  notebooks: {
+    select: { id: true, topic: true, mistakeCount: true, updatedAt: true }
+  }
+};
+
 // Route to get the current user
 router.get('/me', async (req, res) => {
   try {
     const { userId } = req.query;
     let user;
     if (userId) {
-      user = await prisma.user.findUnique({ where: { id: userId }, include: { classroomsJoined: true, assignedExams: true, notebooks: true } });
+      user = await prisma.user.findUnique({ where: { id: userId }, select: USER_SELECT });
     } else {
-      user = await prisma.user.findFirst({ where: { role: 'STUDENT' }, include: { classroomsJoined: true, assignedExams: true, notebooks: true } });
+      user = await prisma.user.findFirst({ where: { role: 'STUDENT' }, select: USER_SELECT });
     }
-    
+
     if (!user) {
       user = await prisma.user.create({
         data: {

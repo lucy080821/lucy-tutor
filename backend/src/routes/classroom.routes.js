@@ -51,17 +51,25 @@ router.get('/teacher/:teacherId', async (req, res) => {
   try {
     const classrooms = await prisma.classroom.findMany({
       where: { teacherId: req.params.teacherId },
-      include: { 
+      include: {
         students: {
-          include: { examResults: true }
-        }, 
+          select: {
+            id: true, name: true, email: true, avatar: true, totalXP: true, targetScore: true,
+            examResults: { select: { id: true, score: true, examId: true, createdAt: true } }
+          }
+        },
         exams: {
-          include: {
+          select: {
+            id: true, title: true, totalQuestions: true, duration: true, maxAttempts: true,
+            deadline: true, examType: true, notes: true, createdAt: true,
             results: {
-              include: { user: true }
+              select: {
+                id: true, score: true, userId: true, createdAt: true, timeSpent: true,
+                user: { select: { id: true, name: true, avatar: true } }
+              }
             }
           }
-        } 
+        }
       }
     });
     res.json(classrooms);
