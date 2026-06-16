@@ -14,21 +14,34 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning className={`antialiased min-h-screen flex flex-col`}>
-        
-        {/* Global Header */}
-        <header className="sticky top-0 z-50 bg-surface border-b border-foreground/15 px-4 md:px-6 py-3 md:py-4 flex justify-between md:justify-center items-center gap-4 md:gap-10 lg:gap-32">
-          <Link href="/" className="flex items-center gap-2 md:gap-4 group">
-            <img src="/logo.png" alt="Lucy Tutor Logo" className="w-10 h-10 md:w-14 md:h-14 object-contain shadow-sm group-hover:scale-105 transition-transform duration-300" />
-            <span className="text-2xl md:text-3xl font-black text-primary tracking-tight">
-              LUCY<span className="text-foreground">TUTOR</span>
-            </span>
-          </Link>
+      <body suppressHydrationWarning className="antialiased min-h-screen flex flex-col bg-slate-100">
 
-          <div className="hidden lg:flex items-center">
-            <p className="text-sm md:text-base italic text-foreground/70 font-medium border-l-[3px] border-primary/60 pl-4 py-1">
-              "Học tập không ngừng, vươn tới thành công"
-            </p>
+        {/* Global Header */}
+        <header className="sticky top-0 z-50 bg-white shadow-sm">
+          {/* Blue accent bar */}
+          <div className="h-1 bg-gradient-to-r from-blue-800 via-blue-600 to-indigo-500" />
+          <div className="px-4 md:px-8 py-3 flex justify-between md:justify-center items-center gap-4 md:gap-10 lg:gap-32">
+            <Link href="/" className="flex items-center gap-2 md:gap-3 group">
+              <img
+                src="/logo.png"
+                alt="Lucy Tutor Logo"
+                className="w-9 h-9 md:w-12 md:h-12 object-contain group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="flex flex-col leading-none">
+                <span className="text-xl md:text-2xl font-black text-primary tracking-tight">
+                  LUCY<span className="text-slate-400">TUTOR</span>
+                </span>
+                <span className="hidden md:block text-[10px] text-slate-400 font-medium tracking-widest uppercase">
+                  English Learning Platform
+                </span>
+              </div>
+            </Link>
+
+            <div className="hidden lg:flex items-center">
+              <p className="text-sm italic text-slate-500 font-medium border-l-2 border-primary/40 pl-4 py-0.5">
+                "Học tập không ngừng, vươn tới thành công"
+              </p>
+            </div>
           </div>
         </header>
 

@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f8fafc; /* Slate 50 */
+  --background: #f1f5f9; /* Slate 100 */
   --foreground: #0f172a; /* Slate 900 */
-  --primary: #1e3a8a;    /* Deep Blue / Classic Navy */
-  --secondary: #3b82f6;  /* Royal Blue */
-  --accent: #f59e0b;     /* Golden Yellow / Orange */
+  --primary: #1e3a8a;    /* Navy Blue */
+  --secondary: #3b82f6;  /* Blue 500 */
+  --accent: #10b981;     /* Emerald 500 */
   --surface: #ffffff;    /* White */
 }
 
@@ -18,7 +18,6 @@
   --color-surface: var(--surface);
   --font-sans: "Calibri", sans-serif;
 }
-
 
 html {
   font-family: "Calibri", Calibri, sans-serif;
@@ -39,8 +38,15 @@ body {
 /* Card utilities */
 .glass {
   background: var(--surface);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Sidebar nav active state */
+.sidebar-nav-active {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  border-left: 3px solid rgba(255, 255, 255, 0.8);
 }
 
 /* 3D Transform Utilities for Flashcards */
@@ -60,6 +66,18 @@ body {
 /* Global button styles */
 button {
   cursor: pointer;
+}
+
+/* Skeleton loading animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
 }
 
 .quill-content {

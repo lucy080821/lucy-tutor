@@ -980,10 +980,29 @@ export default function TeacherDashboard() {
   const allStudents = classrooms.flatMap(c => c.students || []).filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
 
   if (loading) return (
-    <div className="flex-1 flex items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-4">
-        <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
-        <p className="text-sm text-foreground/50 font-medium">Đang tải dữ liệu...</p>
+    <div className="flex h-[calc(100vh-64px)] overflow-hidden w-full">
+      <div className="hidden md:flex w-64 bg-[#1e3a8a] flex-col shrink-0 h-full pt-6 px-4 gap-2">
+        <div className="flex items-center gap-3 px-1 pb-4 border-b border-white/10 mb-4">
+          <div className="skeleton w-10 h-10 rounded-full shrink-0 opacity-40" />
+          <div className="flex flex-col gap-2 flex-1">
+            <div className="skeleton h-3 rounded w-3/4 opacity-40" />
+            <div className="skeleton h-2 rounded w-1/2 opacity-30" />
+          </div>
+        </div>
+        {[80, 60, 70, 50, 65, 55, 75, 45].map((w, i) => (
+          <div key={i} className="skeleton h-8 rounded-lg opacity-20" style={{ width: `${w}%` }} />
+        ))}
+      </div>
+      <div className="flex-1 p-8 bg-slate-100 flex flex-col gap-6">
+        <div className="skeleton h-8 w-64 rounded-lg" />
+        <div className="grid grid-cols-4 gap-4">
+          {[1,2,3,4].map(i => <div key={i} className="skeleton h-28 rounded-xl" />)}
+        </div>
+        <div className="skeleton h-72 rounded-xl" />
+        <div className="grid grid-cols-2 gap-4">
+          <div className="skeleton h-40 rounded-xl" />
+          <div className="skeleton h-40 rounded-xl" />
+        </div>
       </div>
     </div>
   );
@@ -1000,34 +1019,33 @@ export default function TeacherDashboard() {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-64 bg-surface flex flex-col shrink-0 h-full overflow-y-auto border-r border-foreground/10 shadow-2xl md:shadow-none transform transition-transform duration-300 md:relative md:translate-x-0 pt-6 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="mb-6 px-5 pb-5 border-b border-foreground/10 flex items-center gap-3">
-          <label className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer relative overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all group">
+      <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-64 bg-[#1e3a8a] flex flex-col shrink-0 h-full overflow-y-auto border-r border-blue-900/50 shadow-2xl md:shadow-none transform transition-transform duration-300 md:relative md:translate-x-0 pt-6 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="mb-4 px-4 pb-4 border-b border-white/10 flex items-center gap-3">
+          <label className="w-10 h-10 rounded-full bg-white/15 text-white flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer relative overflow-hidden hover:ring-2 hover:ring-white/30 transition-all group">
             <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
             {user?.avatar ? (
               <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
             ) : (
               user?.name?.charAt(0)?.toUpperCase() || 'T'
             )}
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm">
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
               <span className="text-[10px] font-bold text-white tracking-wider">ĐỔI</span>
             </div>
           </label>
           <div className="overflow-hidden">
-            <h2 className="text-base font-bold text-foreground truncate">{user?.name || 'Thầy/Cô'}</h2>
-            <p className="text-[10px] text-foreground/40 font-semibold uppercase tracking-widest">Giáo viên</p>
+            <h2 className="text-sm font-bold text-white truncate">{user?.name || 'Thầy/Cô'}</h2>
+            <p className="text-[10px] text-white/50 font-semibold uppercase tracking-widest">Giáo viên</p>
           </div>
         </div>
-        
+
         <div className="flex flex-col gap-0.5 px-2">
           {navGroups.map(group => (
             <div key={group.id} className="flex flex-col">
               {group.subItems ? (
                 <>
-                  {/* Section label — muted, không phải nav item */}
                   <button
                     onClick={() => toggleNavGroup(group.id)}
-                    className="flex items-center justify-between px-3 pt-5 pb-1.5 transition-colors duration-150 cursor-pointer text-left text-[10px] font-bold uppercase tracking-widest text-foreground/35 hover:text-foreground/60"
+                    className="flex items-center justify-between px-3 pt-5 pb-1.5 transition-colors duration-150 cursor-pointer text-left text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white/60"
                   >
                     <span>{group.label}</span>
                     <span className={`transform transition-transform ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▾</span>
@@ -1036,7 +1054,7 @@ export default function TeacherDashboard() {
                     <div className="flex flex-col gap-0.5">
                       {group.subItems.map(item => (
                         <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                          className={`flex items-center pr-3 py-2 text-sm font-medium transition-colors duration-150 cursor-pointer text-left w-full ${activeTab === item.id ? 'bg-primary/10 text-primary font-semibold border-l-[3px] border-primary pl-[13px]' : 'pl-4 text-foreground/65 hover:bg-foreground/5 hover:text-foreground'}`}>
+                          className={`flex items-center pr-3 py-2 text-sm font-medium transition-colors duration-150 cursor-pointer text-left w-full rounded-lg mx-1 ${activeTab === item.id ? 'bg-white/15 text-white font-semibold border-l-[3px] border-white/80 pl-[13px]' : 'pl-4 text-white/60 hover:bg-white/10 hover:text-white'}`}>
                           <span>{item.label}</span>
                         </button>
                       ))}
@@ -1044,19 +1062,18 @@ export default function TeacherDashboard() {
                   )}
                 </>
               ) : (
-                /* Top-level nav item — rõ hơn section label */
                 <button onClick={() => { setActiveTab(group.id); setIsMobileMenuOpen(false); }}
-                  className={`flex items-center pr-3 py-2.5 text-sm font-medium transition-colors duration-150 cursor-pointer text-left w-full ${activeTab === group.id ? 'bg-primary/10 text-primary font-semibold border-l-[3px] border-primary pl-[9px]' : 'pl-3 text-foreground/80 hover:bg-foreground/5 hover:text-foreground'}`}>
+                  className={`flex items-center pr-3 py-2.5 text-sm font-medium transition-colors duration-150 cursor-pointer text-left w-full rounded-lg mx-1 ${activeTab === group.id ? 'bg-white/15 text-white font-semibold border-l-[3px] border-white/80 pl-[9px]' : 'pl-3 text-white/70 hover:bg-white/10 hover:text-white'}`}>
                   <span>{group.label}</span>
                 </button>
               )}
             </div>
           ))}
         </div>
-        <div className="mt-auto border-t border-foreground/10 px-2 py-3">
+        <div className="mt-auto border-t border-white/10 px-3 py-3">
           <button
             onClick={() => { localStorage.removeItem('userId'); window.location.href = '/'; }}
-            className="flex items-center justify-center gap-2 px-3 py-2.5 font-semibold text-rose-500/70 hover:bg-rose-500/10 hover:text-rose-600 transition-colors w-full cursor-pointer text-sm"
+            className="flex items-center justify-center gap-2 px-3 py-2.5 font-semibold text-white/40 hover:bg-white/10 hover:text-white/80 transition-colors w-full cursor-pointer text-sm rounded-lg"
           >
             Đăng xuất
           </button>
@@ -1064,12 +1081,12 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 p-6 md:p-8 h-full overflow-y-auto relative bg-background flex flex-col w-full">
-        
+      <div className="flex-1 p-6 md:p-8 h-full overflow-y-auto relative bg-slate-100 flex flex-col w-full">
+
         {/* Mobile Header with Hamburger */}
-        <div className="md:hidden flex items-center justify-between mb-6 pb-4 border-b border-foreground/5">
+        <div className="md:hidden flex items-center justify-between mb-6 pb-4 border-b border-slate-200">
           <div className="flex items-center gap-3">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-foreground/5 hover:bg-foreground/10 transition-colors">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="p-2 bg-white rounded-lg shadow-sm hover:bg-slate-50 transition-colors">
               <span className="text-xl">☰</span>
             </button>
             <h2 className="font-bold text-primary tracking-tight">LUCY TUTOR</h2>
@@ -1088,8 +1105,8 @@ export default function TeacherDashboard() {
             </div>
 
             {/* Overview Chart */}
-            <div className="bg-surface p-6 border border-foreground/10 shadow-sm mt-6 mb-6">
-              <h3 className="font-bold mb-6 text-foreground/80">Thống kê Lớp học</h3>
+            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mt-6 mb-6">
+              <h3 className="font-bold mb-6 text-slate-700">Thống kê Lớp học</h3>
               <div className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={classrooms.map(c => ({ name: c.name, HọcSinh: c.students?.length || 0, BàiTập: c.exams?.length || 0 }))} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
@@ -1107,7 +1124,7 @@ export default function TeacherDashboard() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {classrooms.map(c => <ClassCard key={c.id} c={c} onEdit={() => openEditModal(c)} />)}
-              <button onClick={openCreateModal} className="border-2 border-dashed border-foreground/20 p-5 flex items-center justify-center gap-2 text-foreground/40 font-bold hover:border-primary/40 hover:text-primary/60 transition-colors cursor-pointer">
+              <button onClick={openCreateModal} className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-blue-300 hover:text-primary/70 transition-colors cursor-pointer bg-white">
                 + Tạo Lớp Mới
               </button>
             </div>
@@ -1119,7 +1136,7 @@ export default function TeacherDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center">
               <h1 className="text-3xl font-bold">Lớp Học</h1>
-              <button onClick={openCreateModal} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">+ Tạo Lớp</button>
+              <button onClick={openCreateModal} className="px-4 py-2 bg-primary text-white font-bold hover:bg-blue-700 rounded-lg cursor-pointer">+ Tạo Lớp</button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {classrooms.map(c => <ClassCard key={c.id} c={c} onEdit={() => openEditModal(c)} />)}
@@ -1133,13 +1150,13 @@ export default function TeacherDashboard() {
             <div className="flex justify-between items-center flex-wrap gap-4">
               <h1 className="text-3xl font-bold">Danh Sách Học Sinh</h1>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground/40">🔍</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
                 <input 
                   type="text" 
                   placeholder="Tìm theo tên hoặc email..." 
                   value={searchStudentQuery}
                   onChange={(e) => setSearchStudentQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-foreground/15 bg-surface focus:border-primary focus:outline-none min-w-[250px]"
+                  className="pl-10 pr-4 py-2 border border-gray-200 bg-white rounded-lg focus:border-primary focus:outline-none min-w-[250px]"
                 />
               </div>
             </div>
@@ -1148,8 +1165,8 @@ export default function TeacherDashboard() {
                 s.name.toLowerCase().includes(searchStudentQuery.toLowerCase()) || 
                 s.email.toLowerCase().includes(searchStudentQuery.toLowerCase())
               );
-              if (allStudents.length === 0) return <p className="text-foreground/50">Chưa có học sinh nào tham gia lớp.</p>;
-              if (filteredStudents.length === 0) return <p className="text-foreground/50">Không tìm thấy học sinh phù hợp.</p>;
+              if (allStudents.length === 0) return <p className="text-slate-400">Chưa có học sinh nào tham gia lớp.</p>;
+              if (filteredStudents.length === 0) return <p className="text-slate-400">Không tìm thấy học sinh phù hợp.</p>;
               
               const getTier = (xp: number) => {
                 const level = Math.floor((1 + Math.sqrt(1 + 4 * xp / 50)) / 2);
@@ -1161,18 +1178,18 @@ export default function TeacherDashboard() {
               };
 
               return (
-                <div className="bg-surface border border-foreground/10 overflow-hidden shadow-sm">
+                <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
                   <div className="overflow-x-auto w-full">
                     <table className="w-full text-left min-w-[800px]">
                       <thead>
-                        <tr className="bg-foreground/5 text-foreground/70 text-sm">
-                        <th className="p-4 font-bold border-b border-foreground/10">Học Sinh</th>
-                        <th className="p-4 font-bold border-b border-foreground/10">Cấp Bậc</th>
-                        <th className="p-4 font-bold border-b border-foreground/10 text-center">Điểm XP</th>
-                        <th className="p-4 font-bold border-b border-foreground/10">Lớp</th>
-                        <th className="p-4 font-bold border-b border-foreground/10 text-center">Điểm TB</th>
-                        <th className="p-4 font-bold border-b border-foreground/10 text-center">Mục tiêu</th>
-                        <th className="p-4 font-bold border-b border-foreground/10 w-32">Tiến độ</th>
+                        <tr className="bg-slate-50 text-slate-400 text-xs uppercase tracking-widest">
+                        <th className="p-4 font-bold border-b border-gray-100">Học Sinh</th>
+                        <th className="p-4 font-bold border-b border-gray-100">Cấp Bậc</th>
+                        <th className="p-4 font-bold border-b border-gray-100 text-center">Điểm XP</th>
+                        <th className="p-4 font-bold border-b border-gray-100">Lớp</th>
+                        <th className="p-4 font-bold border-b border-gray-100 text-center">Điểm TB</th>
+                        <th className="p-4 font-bold border-b border-gray-100 text-center">Mục tiêu</th>
+                        <th className="p-4 font-bold border-b border-gray-100 w-32">Tiến độ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -1187,14 +1204,14 @@ export default function TeacherDashboard() {
                         const tier = getTier(s.totalXP || 0);
 
                         return (
-                          <tr key={s.id} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5 transition-colors">
+                          <tr key={s.id} className="border-b border-gray-100 last:border-0 hover:bg-slate-50 transition-colors">
                             <td className="p-4 font-medium flex items-center gap-3">
                               <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
                                 {s.avatar ? <img src={s.avatar} alt="Avatar" className="w-full h-full object-cover" /> : s.name.charAt(0)}
                               </div>
                               <div>
                                 <div>{s.name}</div>
-                                <div className="text-xs text-foreground/50 font-normal">{s.email}</div>
+                                <div className="text-xs text-slate-400 font-normal">{s.email}</div>
                               </div>
                             </td>
                             <td className="p-4">
@@ -1207,10 +1224,10 @@ export default function TeacherDashboard() {
                             <td className="p-4 text-center font-bold text-lg">{avgScore.toFixed(1)}</td>
                             <td className="p-4 font-bold text-primary text-center">{s.targetScore}+</td>
                             <td className="p-4">
-                              <div className="flex items-center justify-between text-xs mb-1 font-bold text-foreground/60">
+                              <div className="flex items-center justify-between text-xs mb-1 font-bold text-slate-500">
                                 <span>{percentToTarget}%</span>
                               </div>
-                              <div className="w-full bg-foreground/10 rounded-full h-2">
+                              <div className="w-full bg-slate-100 rounded-full h-2">
                                 <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${percentToTarget}%` }}></div>
                               </div>
                             </td>
@@ -1230,7 +1247,7 @@ export default function TeacherDashboard() {
         {activeTab === "DOCUMENTS" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h1 className="text-3xl font-bold mb-6">Kho Tài Liệu</h1>
-            <div className="bg-surface p-6 border border-foreground/10 mb-8">
+            <div className="bg-white rounded-xl p-6 border border-gray-100 mb-8 shadow-sm">
               <h2 className="text-xl font-bold mb-4">Tải tài liệu lên</h2>
               <form onSubmit={handleUploadDocument} className="flex flex-wrap gap-4 items-end">
                 <div className="flex-1 min-w-[200px]">
@@ -1239,11 +1256,11 @@ export default function TeacherDashboard() {
                 </div>
                 <div className="flex-1 min-w-[200px]">
                   <label className="block text-sm font-bold mb-2">Tiêu đề (Tùy chọn)</label>
-                  <input type="text" value={docTitle} onChange={e => setDocTitle(e.target.value)} placeholder="Tên tài liệu..." className="w-full p-3 border border-foreground/20 bg-transparent" />
+                  <input type="text" value={docTitle} onChange={e => setDocTitle(e.target.value)} placeholder="Tên tài liệu..." className="w-full p-3 border border-gray-200 bg-white rounded-lg" />
                 </div>
                 <div className="flex-1 min-w-[150px]">
                   <label className="block text-sm font-bold mb-2">Phạm vi chia sẻ</label>
-                  <select value={docVisibility} onChange={e => setDocVisibility(e.target.value)} className="w-full p-3 border border-foreground/20 bg-transparent font-bold">
+                  <select value={docVisibility} onChange={e => setDocVisibility(e.target.value)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold">
                     <option value="PUBLIC">Tất cả trung tâm</option>
                     <option value="CLASS">Chỉ lớp học</option>
                     <option value="PRIVATE">Chỉ mình tôi</option>
@@ -1252,7 +1269,7 @@ export default function TeacherDashboard() {
                 {docVisibility === 'CLASS' && (
                   <div className="flex-1 min-w-[150px]">
                     <label className="block text-sm font-bold mb-2">Chọn Lớp Học</label>
-                    <select value={docClassroomId} onChange={e => setDocClassroomId(e.target.value)} className="w-full p-3 border border-foreground/20 bg-transparent font-bold" required>
+                    <select value={docClassroomId} onChange={e => setDocClassroomId(e.target.value)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold" required>
                       <option value="">-- Chọn lớp --</option>
                       {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
@@ -1271,14 +1288,14 @@ export default function TeacherDashboard() {
                  placeholder="Tìm kiếm tài liệu..." 
                  value={searchDocQuery}
                  onChange={e => setSearchDocQuery(e.target.value)}
-                 className="w-full md:w-1/3 p-3 border border-foreground/20 bg-surface focus:outline-none focus:ring-2 focus:ring-primary/50" 
+                 className="w-full md:w-1/3 p-3 border border-gray-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" 
                />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).length === 0 && <div className="text-foreground/50 italic col-span-full">Không tìm thấy tài liệu phù hợp</div>}
+              {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).length === 0 && <div className="text-slate-400 italic col-span-full">Không tìm thấy tài liệu phù hợp</div>}
               {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).map((doc: any) => (
-                <div key={doc.id} className="bg-surface p-6 border border-foreground/10 hover:border-primary/30 transition-all flex flex-col justify-between group relative overflow-hidden">
+                <div key={doc.id} className="bg-white rounded-xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden shadow-sm">
                   <div className="absolute top-0 right-0 p-3 flex gap-2 z-10">
                      <button onClick={() => handleUpdateDocumentVisibility(doc)} className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase hover:opacity-80 cursor-pointer transition-opacity ${doc.visibility === 'PUBLIC' ? 'bg-green-500/10 text-green-500' : doc.visibility === 'CLASS' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`} title="Nhấn để đổi trạng thái">
                         {doc.visibility === 'CLASS' ? (doc.classroom?.name || 'Lớp') : doc.visibility}
@@ -1307,7 +1324,7 @@ export default function TeacherDashboard() {
                        )}
                     </div>
                     <h3 className="font-bold text-lg line-clamp-2 mb-1 group-hover:text-primary transition-colors" title={doc.title}>{doc.title}</h3>
-                    <p className="text-xs text-foreground/50 mb-4">{new Date(doc.createdAt).toLocaleDateString('vi-VN')} • {(doc.size / 1024 / 1024).toFixed(2)} MB</p>
+                    <p className="text-xs text-slate-400 mb-4">{new Date(doc.createdAt).toLocaleDateString('vi-VN')} • {(doc.size / 1024 / 1024).toFixed(2)} MB</p>
                   </div>
                   <div className="flex gap-2 z-10">
                     <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" download={doc.title} className="flex-1 py-2 text-center bg-primary/10 text-primary text-sm font-bold hover:bg-primary hover:text-white transition-colors cursor-pointer block">Tải xuống</a>
@@ -1324,27 +1341,27 @@ export default function TeacherDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h1 className="text-3xl font-bold mb-6">Điểm Danh & Học Phí</h1>
             
-            <div className="bg-surface border border-foreground/10 p-6 mb-6 flex flex-wrap gap-4 items-end">
+            <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6 flex flex-wrap gap-4 items-end shadow-sm">
               <div className="flex-1 min-w-[200px]">
                 <label className="block text-sm font-bold mb-2">Chọn Lớp Học</label>
                 <select 
-                  className="w-full p-3 border border-foreground/20 bg-transparent"
+                  className="w-full p-3 border border-gray-200 bg-white rounded-lg"
                   value={attClassroomId} onChange={e => setAttClassroomId(e.target.value)}
                 >
                   <option value="">-- Chọn lớp --</option>
                   {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              <div className="flex bg-foreground/5 p-1">
+              <div className="flex bg-slate-50 p-1">
                 <button 
                   onClick={() => setAttView('MARK')} 
-                  className={`px-4 py-2 font-bold text-sm transition-colors ${attView === 'MARK' ? 'bg-white shadow text-primary' : 'text-foreground/60 hover:text-foreground'}`}
+                  className={`px-4 py-2 font-bold text-sm transition-colors ${attView === 'MARK' ? 'bg-white shadow text-primary' : 'text-slate-500 hover:text-slate-800'}`}
                 >
                   Điểm Danh
                 </button>
                 <button 
                   onClick={() => setAttView('REPORT')} 
-                  className={`px-4 py-2 font-bold text-sm transition-colors ${attView === 'REPORT' ? 'bg-white shadow text-primary' : 'text-foreground/60 hover:text-foreground'}`}
+                  className={`px-4 py-2 font-bold text-sm transition-colors ${attView === 'REPORT' ? 'bg-white shadow text-primary' : 'text-slate-500 hover:text-slate-800'}`}
                 >
                   Báo Cáo Học Phí
                 </button>
@@ -1354,7 +1371,7 @@ export default function TeacherDashboard() {
             {attClassroomId ? (
               <>
                 {attView === 'MARK' && (
-                  <div className="bg-surface border border-foreground/10 p-6">
+                  <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                       <div className="flex items-center gap-4">
                         <h2 className="text-xl font-bold">Điểm danh ngày</h2>
@@ -1362,7 +1379,7 @@ export default function TeacherDashboard() {
                           type="date" 
                           value={attDate} 
                           onChange={e => setAttDate(e.target.value)} 
-                          className="p-2 border border-foreground/20 bg-transparent font-medium"
+                          className="p-2 border border-gray-200 bg-white rounded-lg font-medium"
                         />
                       </div>
                       <button 
@@ -1378,18 +1395,18 @@ export default function TeacherDashboard() {
                     </div>
                     {attRecords.length > 0 ? (
                       <>
-                        <div className="border border-foreground/10 overflow-hidden mb-6">
+                        <div className="border border-gray-100 rounded-xl overflow-hidden mb-6">
                           <table className="w-full text-left text-sm">
-                            <thead className="bg-foreground/5">
+                            <thead className="bg-slate-50">
                               <tr>
-                                <th className="p-3 font-bold border-b border-foreground/10">Học Sinh</th>
-                                <th className="p-3 font-bold border-b border-foreground/10 text-center">Trạng Thái</th>
-                                <th className="p-3 font-bold border-b border-foreground/10">Ghi chú</th>
+                                <th className="p-3 font-bold border-b border-gray-200">Học Sinh</th>
+                                <th className="p-3 font-bold border-b border-gray-200 text-center">Trạng Thái</th>
+                                <th className="p-3 font-bold border-b border-gray-200">Ghi chú</th>
                               </tr>
                             </thead>
                             <tbody>
                               {attRecords.map((rec, i) => (
-                                <tr key={rec.userId} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5 transition-colors">
+                                <tr key={rec.userId} className="border-b border-gray-100 last:border-0 hover:bg-slate-50 transition-colors">
                                   <td className="p-3">
                                     <div className="flex items-center gap-3">
                                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
@@ -1414,7 +1431,7 @@ export default function TeacherDashboard() {
                                           setAttRecords(next);
                                           handleSaveAttendance(next, false);
                                         }}
-                                        className={`px-3 py-1.5 font-bold text-xs transition-colors ${rec.status === 'PRESENT' ? 'bg-green-500 text-white shadow-md shadow-green-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
+                                        className={`px-3 py-1.5 font-bold text-xs transition-colors ${rec.status === 'PRESENT' ? 'bg-green-500 text-white shadow-md shadow-green-500/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
                                       >
                                         Có mặt
                                       </button>
@@ -1425,7 +1442,7 @@ export default function TeacherDashboard() {
                                           setAttRecords(next);
                                           handleSaveAttendance(next, false);
                                         }}
-                                        className={`px-3 py-1.5 font-bold text-xs transition-colors ${rec.status === 'EXCUSED_ABSENCE' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
+                                        className={`px-3 py-1.5 font-bold text-xs transition-colors ${rec.status === 'EXCUSED_ABSENCE' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
                                       >
                                         Vắng (Có phép)
                                       </button>
@@ -1436,7 +1453,7 @@ export default function TeacherDashboard() {
                                           setAttRecords(next);
                                           handleSaveAttendance(next, false);
                                         }}
-                                        className={`px-3 py-1.5 font-bold text-xs transition-colors ${rec.status === 'UNEXCUSED_ABSENCE' ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20' : 'bg-foreground/5 text-foreground/50 hover:bg-foreground/10'}`}
+                                        className={`px-3 py-1.5 font-bold text-xs transition-colors ${rec.status === 'UNEXCUSED_ABSENCE' ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
                                       >
                                         Vắng (Không phép)
                                       </button>
@@ -1453,7 +1470,7 @@ export default function TeacherDashboard() {
                                         setAttRecords(next);
                                       }}
                                       onBlur={() => handleSaveAttendance(attRecords, false)}
-                                      className="w-full px-3 py-1.5 bg-transparent border border-foreground/10 focus:border-primary outline-none text-sm transition-colors"
+                                      className="w-full px-3 py-1.5 bg-transparent border border-gray-100 focus:border-primary outline-none text-sm transition-colors"
                                     />
                                   </td>
                                 </tr>
@@ -1463,13 +1480,13 @@ export default function TeacherDashboard() {
                         </div>
                       </>
                     ) : (
-                      <p className="text-center text-foreground/50 py-8">Lớp chưa có học sinh nào.</p>
+                      <p className="text-center text-slate-400 py-8">Lớp chưa có học sinh nào.</p>
                     )}
                   </div>
                 )}
 
                 {attView === 'REPORT' && (
-                  <div className="bg-surface border border-foreground/10 p-6">
+                  <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                       <div className="flex items-center gap-4">
                         <h2 className="text-xl font-bold">Báo Cáo Học Phí</h2>
@@ -1477,7 +1494,7 @@ export default function TeacherDashboard() {
                           type="month" 
                           value={attMonth} 
                           onChange={e => setAttMonth(e.target.value)} 
-                          className="p-2 border border-foreground/20 bg-transparent"
+                          className="p-2 border border-gray-200 bg-white rounded-lg"
                         />
                       </div>
                       {attReport?.report?.length > 0 && (
@@ -1493,18 +1510,18 @@ export default function TeacherDashboard() {
                     {attReport ? (
                       <div className="overflow-x-auto">
                         <table className="w-full text-left">
-                          <thead className="bg-foreground/5">
+                          <thead className="bg-slate-50">
                             <tr>
-                              <th className="p-4 font-bold border-b border-foreground/10">Học Sinh</th>
-                              <th className="p-4 font-bold border-b border-foreground/10">Số Buổi Học</th>
-                              <th className="p-4 font-bold border-b border-foreground/10 text-right">Tổng Học Phí</th>
-                              <th className="p-4 font-bold border-b border-foreground/10 text-center">Trạng Thái</th>
-                              <th className="p-4 font-bold border-b border-foreground/10 text-center">Hành Động</th>
+                              <th className="p-4 font-bold border-b border-gray-200">Học Sinh</th>
+                              <th className="p-4 font-bold border-b border-gray-200">Số Buổi Học</th>
+                              <th className="p-4 font-bold border-b border-gray-200 text-right">Tổng Học Phí</th>
+                              <th className="p-4 font-bold border-b border-gray-200 text-center">Trạng Thái</th>
+                              <th className="p-4 font-bold border-b border-gray-200 text-center">Hành Động</th>
                             </tr>
                           </thead>
                           <tbody>
                             {attReport.report?.map((sr: any) => (
-                              <tr key={sr.user.id} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5">
+                              <tr key={sr.user.id} className="border-b border-gray-100 last:border-0 hover:bg-slate-50">
                                 <td className="p-4 font-medium">{sr.user.name}</td>
                                 <td className="p-4">{sr.presentCount} buổi</td>
                                 <td className="p-4 font-black text-primary text-right">{sr.totalAmount.toLocaleString()} VNĐ</td>
@@ -1540,13 +1557,13 @@ export default function TeacherDashboard() {
                         </table>
                       </div>
                     ) : (
-                      <p className="text-center text-foreground/50 py-8">Đang tải báo cáo...</p>
+                      <p className="text-center text-slate-400 py-8">Đang tải báo cáo...</p>
                     )}
                   </div>
                 )}
               </>
             ) : (
-              <div className="text-center text-foreground/40 py-12 bg-foreground/5 border-2 border-dashed border-foreground/10">
+              <div className="text-center text-slate-400 py-12 bg-slate-50 border-2 border-dashed border-gray-200">
                 Vui lòng chọn lớp học để xem điểm danh
               </div>
             )}
@@ -1583,7 +1600,7 @@ export default function TeacherDashboard() {
                 </h1>
                 <button
                   onClick={() => user && fetchCheatLogs(user.id)}
-                  className="flex items-center gap-2 text-sm px-4 py-2 border border-foreground/15 bg-surface hover:bg-foreground/5 transition-colors font-medium"
+                  className="flex items-center gap-2 text-sm px-4 py-2 border border-gray-200 bg-white rounded-lg hover:bg-slate-50 transition-colors font-medium"
                 >
                   <span className={cheatLoading ? "animate-spin" : ""}>↻</span>
                   {cheatLoading ? "Đang tải..." : "Cập nhật"}
@@ -1592,17 +1609,17 @@ export default function TeacherDashboard() {
 
               {/* Stat cards */}
               <div className="grid grid-cols-3 gap-4">
-                <div className="bg-surface border border-foreground/10 p-5 shadow-sm">
+                <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
                   <div className="text-2xl font-black text-rose-600">{totalViolations}</div>
-                  <div className="text-sm text-foreground/60 mt-1 font-medium">Tổng số lần vi phạm</div>
+                  <div className="text-sm text-slate-500 mt-1 font-medium">Tổng số lần vi phạm</div>
                 </div>
-                <div className="bg-surface border border-foreground/10 p-5 shadow-sm">
+                <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
                   <div className="text-2xl font-black text-orange-500">{autoSubmittedCount}</div>
-                  <div className="text-sm text-foreground/60 mt-1 font-medium">Bài bị thu tự động</div>
+                  <div className="text-sm text-slate-500 mt-1 font-medium">Bài bị thu tự động</div>
                 </div>
-                <div className="bg-surface border border-foreground/10 p-5 shadow-sm">
+                <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
                   <div className="text-2xl font-black text-amber-500">{uniqueStudents}</div>
-                  <div className="text-sm text-foreground/60 mt-1 font-medium">Học sinh vi phạm</div>
+                  <div className="text-sm text-slate-500 mt-1 font-medium">Học sinh vi phạm</div>
                 </div>
               </div>
 
@@ -1613,32 +1630,32 @@ export default function TeacherDashboard() {
                   placeholder="Tìm theo tên hoặc email học sinh..."
                   value={cheatSearch}
                   onChange={e => setCheatSearch(e.target.value)}
-                  className="flex-1 border border-foreground/15 bg-surface px-4 py-2 text-sm focus:outline-none focus:border-primary/50"
+                  className="flex-1 border border-gray-200 bg-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary/50"
                 />
                 <select
                   value={cheatClassFilter}
                   onChange={e => setCheatClassFilter(e.target.value)}
-                  className="border border-foreground/15 bg-surface px-4 py-2 text-sm focus:outline-none focus:border-primary/50"
+                  className="border border-gray-200 bg-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary/50"
                 >
                   <option value="ALL">Tất cả lớp</option>
                   {allClasses.map(cls => <option key={cls} value={cls}>{cls}</option>)}
                 </select>
                 {(cheatSearch || cheatClassFilter !== "ALL") && (
-                  <button onClick={() => { setCheatSearch(""); setCheatClassFilter("ALL"); }} className="text-xs text-foreground/50 hover:text-foreground px-3 py-2 border border-foreground/10 bg-surface">
+                  <button onClick={() => { setCheatSearch(""); setCheatClassFilter("ALL"); }} className="text-xs text-slate-400 hover:text-slate-700 px-3 py-2 border border-gray-200 bg-white rounded-lg">
                     Xóa bộ lọc
                   </button>
                 )}
               </div>
 
               {/* Table */}
-              <div className="bg-surface border border-foreground/10 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 {cheatLoading && cheatIncidents.length === 0 ? (
-                  <div className="text-center py-16 text-foreground/50">
+                  <div className="text-center py-16 text-slate-400">
                     <div className="text-2xl animate-spin mb-4">↻</div>
                     <p className="text-sm">Đang tải dữ liệu...</p>
                   </div>
                 ) : filtered.length === 0 ? (
-                  <div className="text-center py-16 text-foreground/50">
+                  <div className="text-center py-16 text-slate-400">
                     <div className="text-5xl mb-4 opacity-40">✨</div>
                     <p className="font-semibold">{cheatIncidents.length === 0 ? "Tuyệt vời! Chưa phát hiện hành vi gian lận nào." : "Không tìm thấy kết quả phù hợp."}</p>
                     {cheatIncidents.length > 0 && <p className="text-xs mt-1">Thử thay đổi bộ lọc hoặc từ khoá tìm kiếm</p>}
@@ -1647,7 +1664,7 @@ export default function TeacherDashboard() {
                   <div className="overflow-x-auto">
                     <table className="w-full">
                       <thead>
-                        <tr className="border-b-2 border-foreground/10 text-left text-xs text-foreground/50 uppercase tracking-wider bg-foreground/[0.02]">
+                        <tr className="border-b-2 border-gray-200 text-left text-xs text-slate-400 uppercase tracking-wider bg-slate-50">
                           <th className="px-5 py-3 font-bold">Thời gian</th>
                           <th className="px-5 py-3 font-bold">Học sinh</th>
                           <th className="px-5 py-3 font-bold">Lớp học</th>
@@ -1660,8 +1677,8 @@ export default function TeacherDashboard() {
                         {filtered.map((incident: any) => {
                           const severity = incident.cheatCount >= 3 ? "high" : incident.cheatCount === 2 ? "mid" : "low";
                           return (
-                            <tr key={incident.id} className={`hover:bg-foreground/[0.025] transition-colors ${severity === "high" ? "bg-rose-50/50" : ""}`}>
-                              <td className="px-5 py-4 text-sm text-foreground/60 whitespace-nowrap">
+                            <tr key={incident.id} className={`hover:bg-slate-50 transition-colors ${severity === "high" ? "bg-rose-50/50" : ""}`}>
+                              <td className="px-5 py-4 text-sm text-slate-500 whitespace-nowrap">
                                 {new Date(incident.createdAt).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                               </td>
                               <td className="px-5 py-4">
@@ -1673,7 +1690,7 @@ export default function TeacherDashboard() {
                                   </div>
                                   <div className="leading-tight">
                                     <div className="font-semibold text-sm">{incident.studentName}</div>
-                                    {incident.studentEmail && <div className="text-xs text-foreground/45">{incident.studentEmail}</div>}
+                                    {incident.studentEmail && <div className="text-xs text-slate-400">{incident.studentEmail}</div>}
                                   </div>
                                 </div>
                               </td>
@@ -1704,7 +1721,7 @@ export default function TeacherDashboard() {
                         })}
                       </tbody>
                     </table>
-                    <div className="px-5 py-3 border-t border-foreground/5 text-xs text-foreground/40 flex justify-between items-center bg-foreground/[0.01]">
+                    <div className="px-5 py-3 border-t border-gray-100 text-xs text-slate-400 flex justify-between items-center bg-slate-50">
                       <span>Hiển thị {filtered.length}/{cheatIncidents.length} vi phạm</span>
                       <span>Tự động cập nhật mỗi 30 giây</span>
                     </div>
@@ -1727,21 +1744,21 @@ export default function TeacherDashboard() {
               }} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Mới</button>
             </div>
             {localLessons.length === 0 ? (
-                <div className="bg-surface border border-foreground/10 p-12 flex flex-col items-center text-center">
+                <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
                   <span className="text-5xl mb-4">📚</span>
                   <h2 className="text-2xl font-bold mb-2">Chưa có bài học nào</h2>
-                  <p className="text-foreground/50 mb-6">Bắt đầu bằng cách tạo bài học mới</p>
+                  <p className="text-slate-400 mb-6">Bắt đầu bằng cách tạo bài học mới</p>
                   <button onClick={() => setActiveTab('CREATE_LESSON')} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Ngay</button>
                 </div>
             ) : (
                 <div className="space-y-3">
                   {localLessons.map((lesson: any) => (
-                    <div key={lesson.id} className="bg-surface border border-foreground/10 p-5 flex items-center justify-between hover:shadow-md transition-shadow">
+                    <div key={lesson.id} className="bg-white rounded-xl border border-gray-100 p-5 flex items-center justify-between hover:shadow-md transition-all shadow-sm">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-blue-500/10 text-blue-600 flex items-center justify-center text-2xl">📚</div>
                         <div>
                           <h3 className="font-bold text-lg">{lesson.title}</h3>
-                          <p className="text-sm text-foreground/50">{lesson.vocabularies?.length || 0} từ vựng • {lesson.grammars?.length || 0} ngữ pháp</p>
+                          <p className="text-sm text-slate-400">{lesson.vocabularies?.length || 0} từ vựng • {lesson.grammars?.length || 0} ngữ pháp</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1766,19 +1783,19 @@ export default function TeacherDashboard() {
           <div className="space-y-6 max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
               <h1 className="text-3xl font-bold mb-1">{editingLessonId ? "Sửa Bài Học" : "Tạo Bài Học Mới"}</h1>
-              <p className="text-foreground/50">Thêm từ vựng qua file Excel, upload ảnh và tạo ngữ pháp</p>
+              <p className="text-slate-400">Thêm từ vựng qua file Excel, upload ảnh và tạo ngữ pháp</p>
             </div>
             <form onSubmit={handleCreateLesson} className="space-y-6">
-              <div className="bg-surface border border-foreground/10 p-6 space-y-4">
-                <h2 className="font-bold text-lg border-b border-foreground/10 pb-3 mb-4">📋 Thông Tin Bài Học</h2>
+              <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4 shadow-sm">
+                <h2 className="font-bold text-lg border-b border-gray-200 pb-3 mb-4">📋 Thông Tin Bài Học</h2>
                 <div>
                   <label className="block text-sm font-bold mb-1">Tiêu đề *</label>
-                  <input type="text" className="w-full p-3 border border-foreground/15 bg-transparent focus:border-primary outline-none"
+                  <input type="text" className="w-full p-3 border border-gray-200 bg-transparent focus:border-primary outline-none"
                     placeholder="VD: Unit 1 - Family" value={createLessonTitle} onChange={e => setCreateLessonTitle(e.target.value)} required />
                 </div>
                 <div>
                   <label className="block text-sm font-bold mb-1">Lớp học *</label>
-                  <select className="w-full p-3 border border-foreground/15 bg-transparent" value={createLessonClassroomId}
+                  <select className="w-full p-3 border border-gray-200 bg-transparent" value={createLessonClassroomId}
                     onChange={e => setCreateLessonClassroomId(e.target.value)} required>
                     <option value="">-- Chọn lớp --</option>
                     {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -1786,13 +1803,13 @@ export default function TeacherDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-bold mb-1">Mô tả (Không bắt buộc)</label>
-                  <textarea className="w-full p-3 border border-foreground/15 bg-transparent focus:border-primary outline-none"
+                  <textarea className="w-full p-3 border border-gray-200 bg-transparent focus:border-primary outline-none"
                     placeholder="Mô tả bài học..." value={createLessonDesc} onChange={e => setCreateLessonDesc(e.target.value)} />
                 </div>
               </div>
 
-              <div className="bg-surface border border-foreground/10 p-6 space-y-4">
-                <div className="flex justify-between items-center border-b border-foreground/10 pb-3 mb-4">
+              <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4 shadow-sm">
+                <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-4">
                   <h2 className="font-bold text-lg">📝 Từ Vựng ({lessonVocabs.length} từ)</h2>
                   <div className="flex gap-2">
                     <button type="button" onClick={handleDownloadVocabTemplate} className="px-3 py-1.5 bg-green-500/10 text-green-600 font-bold text-sm cursor-pointer hover:bg-green-500/20">⬇️ Tải Excel Mẫu</button>
@@ -1803,9 +1820,9 @@ export default function TeacherDashboard() {
                   </div>
                 </div>
                 {lessonVocabs.length > 0 && (
-                  <div className="max-h-60 overflow-y-auto border border-foreground/10">
+                  <div className="max-h-60 overflow-y-auto border border-gray-100">
                     <table className="w-full text-left text-sm">
-                      <thead className="bg-foreground/5 sticky top-0">
+                      <thead className="bg-slate-50 sticky top-0">
                         <tr>
                           <th className="p-2 font-bold">Từ</th>
                           <th className="p-2 font-bold">Loại</th>
@@ -1816,22 +1833,22 @@ export default function TeacherDashboard() {
                       </thead>
                       <tbody>
                         {lessonVocabs.map((v, i) => (
-                          <tr key={i} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5 transition-colors">
+                          <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-slate-50 transition-colors">
                             <td className="p-2">{v.word}</td>
-                            <td className="p-2 text-foreground/50">{v.pos}</td>
+                            <td className="p-2 text-slate-400">{v.pos}</td>
                             <td className="p-2 text-primary">{v.phonetic}</td>
                             <td className="p-2">{v.meaning}</td>
                             <td className="p-2 text-center">
                               {v.imageUrl ? (
                                 <div className="flex flex-col items-center gap-1">
-                                  <img src={v.imageUrl} alt={v.word} className="w-12 h-12 object-cover rounded shadow-sm border border-foreground/10" />
+                                  <img src={v.imageUrl} alt={v.word} className="w-12 h-12 object-cover rounded shadow-sm border border-gray-100" />
                                   <label className="cursor-pointer text-[10px] text-blue-500 hover:underline">
                                     Đổi ảnh
                                     <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadVocabImage(i, e)} />
                                   </label>
                                 </div>
                               ) : (
-                                <label className="cursor-pointer text-xs bg-foreground/5 hover:bg-foreground/10 px-2 py-1 rounded text-foreground/70 transition-colors">
+                                <label className="cursor-pointer text-xs bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded text-slate-600 transition-colors">
                                   + Thêm ảnh
                                   <input type="file" accept="image/*" className="hidden" onChange={(e) => handleUploadVocabImage(i, e)} />
                                 </label>
@@ -1845,16 +1862,16 @@ export default function TeacherDashboard() {
                 )}
               </div>
 
-              <div className="bg-surface border border-foreground/10 p-6 space-y-4">
-                <div className="flex justify-between items-center border-b border-foreground/10 pb-3 mb-4">
+              <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4 shadow-sm">
+                <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-4">
                   <h2 className="font-bold text-lg">📖 Ngữ Pháp ({lessonGrammars.length} mục)</h2>
                   <button type="button" onClick={() => setLessonGrammars([...lessonGrammars, { title: '', structure: '', explanation: '' }])} className="px-3 py-1.5 bg-primary/10 text-primary font-bold text-sm cursor-pointer hover:bg-primary/20">+ Thêm Ngữ Pháp</button>
                 </div>
                 {lessonGrammars.map((g, i) => (
-                  <div key={i} className="p-4 border border-foreground/10 space-y-3 relative">
+                  <div key={i} className="p-4 border border-gray-100 space-y-3 relative">
                     <button type="button" onClick={() => setLessonGrammars(lessonGrammars.filter((_, idx) => idx !== i))} className="absolute top-2 right-2 text-rose-500 font-bold cursor-pointer hover:underline text-xs">Xóa</button>
-                    <input type="text" placeholder="Tên điểm ngữ pháp (VD: Thì hiện tại đơn)" className="w-full p-2 border-b border-foreground/15 bg-transparent font-bold outline-none" value={g.title} onChange={e => { const n = [...lessonGrammars]; n[i].title = e.target.value; setLessonGrammars(n); }} />
-                    <input type="text" placeholder="Công thức (S + V + O)" className="w-full p-2 border-b border-foreground/15 bg-transparent outline-none text-primary font-mono text-sm" value={g.structure} onChange={e => { const n = [...lessonGrammars]; n[i].structure = e.target.value; setLessonGrammars(n); }} />
+                    <input type="text" placeholder="Tên điểm ngữ pháp (VD: Thì hiện tại đơn)" className="w-full p-2 border-b border-gray-200 bg-transparent font-bold outline-none" value={g.title} onChange={e => { const n = [...lessonGrammars]; n[i].title = e.target.value; setLessonGrammars(n); }} />
+                    <input type="text" placeholder="Công thức (S + V + O)" className="w-full p-2 border-b border-gray-200 bg-transparent outline-none text-primary font-mono text-sm" value={g.structure} onChange={e => { const n = [...lessonGrammars]; n[i].structure = e.target.value; setLessonGrammars(n); }} />
                     <ReactQuill theme="snow" placeholder="Giải thích chi tiết..." className="bg-white text-black" value={g.explanation} onChange={(content) => { const n = [...lessonGrammars]; n[i].explanation = content; setLessonGrammars(n); }} />
                   </div>
                 ))}
@@ -1883,10 +1900,10 @@ export default function TeacherDashboard() {
               const assignments = allExams.filter(e => e.examType === 'ASSIGNMENT' || e.examType === 'REGULAR');
               const tests = allExams.filter(e => e.examType === 'EXAM' || e.examType === 'PLACEMENT');
               if (allExams.length === 0) return (
-                <div className="bg-surface border border-foreground/10 p-12 flex flex-col items-center text-center">
+                <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
                   <span className="text-5xl mb-4">📄</span>
                   <h2 className="text-2xl font-bold mb-2">Chưa có đề thi nào</h2>
-                  <p className="text-foreground/50 mb-6">Bắt đầu bằng cách tạo đề thủ công</p>
+                  <p className="text-slate-400 mb-6">Bắt đầu bằng cách tạo đề thủ công</p>
                   <button onClick={() => setActiveTab('CREATE')} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Đề Ngay</button>
                 </div>
               );
@@ -1935,46 +1952,46 @@ export default function TeacherDashboard() {
           <div className="space-y-6 max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
               <h1 className="text-3xl font-bold mb-1">Tạo Đề Thi Thủ Công</h1>
-              <p className="text-foreground/50">Nhập từng câu hỏi — trắc nghiệm hoặc tự luận</p>
+              <p className="text-slate-400">Nhập từng câu hỏi — trắc nghiệm hoặc tự luận</p>
             </div>
             <form onSubmit={handleCreateExam} className="space-y-6">
 
               {/* ── SECTION 1: Thông tin đề ── */}
-              <div className="bg-surface border border-foreground/10 p-6 space-y-4">
-                <h2 className="font-bold text-lg border-b border-foreground/10 pb-3 mb-4">📋 Thông Tin Đề Thi</h2>
+              <div className="bg-white rounded-xl border border-gray-100 p-6 space-y-4 shadow-sm">
+                <h2 className="font-bold text-lg border-b border-gray-200 pb-3 mb-4">📋 Thông Tin Đề Thi</h2>
                 <div>
                   <label className="block text-sm font-bold mb-1">Tiêu đề *</label>
-                  <input type="text" className="w-full p-3 border border-foreground/15 bg-transparent focus:border-primary outline-none transition-colors"
+                  <input type="text" className="w-full p-3 border border-gray-200 bg-transparent focus:border-primary outline-none transition-colors"
                     placeholder="VD: Kiểm tra 15 phút – Unit 5" value={createTitle} onChange={e => setCreateTitle(e.target.value)} required />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-1">Loại đề</label>
-                    <select className="w-full p-3 border border-foreground/15 bg-transparent" value={createType} onChange={e => setCreateType(e.target.value)}>
+                    <select className="w-full p-3 border border-gray-200 bg-transparent" value={createType} onChange={e => setCreateType(e.target.value)}>
                       <option value="ASSIGNMENT">📝 Bài Tập (Luyện tập)</option>
                       <option value="EXAM">🏆 Đề Thi (Chấm điểm)</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-1">Thời gian (phút)</label>
-                    <input type="number" className="w-full p-3 border border-foreground/15 bg-transparent" value={createDuration} onChange={e => setCreateDuration(e.target.value)} />
+                    <input type="number" className="w-full p-3 border border-gray-200 bg-transparent" value={createDuration} onChange={e => setCreateDuration(e.target.value)} />
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-1">Số lần làm tối đa</label>
-                    <input type="number" min="1" className="w-full p-3 border border-foreground/15 bg-transparent" value={createMaxAttempts} onChange={e => setCreateMaxAttempts(e.target.value)} />
+                    <input type="number" min="1" className="w-full p-3 border border-gray-200 bg-transparent" value={createMaxAttempts} onChange={e => setCreateMaxAttempts(e.target.value)} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-1">Hình thức giao</label>
-                    <select className="w-full p-3 border border-foreground/15 bg-transparent" value={createAssignMode} onChange={e => setCreateAssignMode(e.target.value)}>
+                    <select className="w-full p-3 border border-gray-200 bg-transparent" value={createAssignMode} onChange={e => setCreateAssignMode(e.target.value)}>
                       <option value="CLASS">🏫 Giao cả Lớp</option>
                       <option value="STUDENT">👤 Giao cá nhân</option>
                     </select>
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-1">Lớp học *</label>
-                    <select className="w-full p-3 border border-foreground/15 bg-transparent" value={createClassroomId}
+                    <select className="w-full p-3 border border-gray-200 bg-transparent" value={createClassroomId}
                       onChange={e => { setCreateClassroomId(e.target.value); setCreateStudentIds([]); }}>
                       <option value="">-- Chọn lớp --</option>
                       {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -1984,11 +2001,11 @@ export default function TeacherDashboard() {
 
                 {/* Student picker */}
                 {createAssignMode === 'STUDENT' && createClassroomId && (
-                  <div className="p-4 border border-foreground/10">
+                  <div className="p-4 border border-gray-100">
                     <label className="block text-sm font-bold mb-2">Chọn học sinh</label>
                     <div className="space-y-1 max-h-36 overflow-y-auto">
                       {classrooms.find(c => c.id === createClassroomId)?.students?.map((s: any) => (
-                        <label key={s.id} className="flex items-center gap-2 p-2 hover:bg-foreground/5 cursor-pointer">
+                        <label key={s.id} className="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer">
                           <input type="checkbox" checked={createStudentIds.includes(s.id)}
                             onChange={e => {
                               if (e.target.checked) setCreateStudentIds([...createStudentIds, s.id]);
@@ -2004,11 +2021,11 @@ export default function TeacherDashboard() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-bold mb-1">Ghi chú</label>
-                    <input type="text" className="w-full p-3 border border-foreground/15 bg-transparent" placeholder="VD: Không dùng tài liệu" value={createNotes} onChange={e => setCreateNotes(e.target.value)} />
+                    <input type="text" className="w-full p-3 border border-gray-200 bg-transparent" placeholder="VD: Không dùng tài liệu" value={createNotes} onChange={e => setCreateNotes(e.target.value)} />
                   </div>
                   <div>
                     <label className="block text-sm font-bold mb-1">Deadline</label>
-                    <input type="datetime-local" className="w-full p-3 border border-foreground/15 bg-transparent" value={createDeadline} onChange={e => setCreateDeadline(e.target.value)} />
+                    <input type="datetime-local" className="w-full p-3 border border-gray-200 bg-transparent" value={createDeadline} onChange={e => setCreateDeadline(e.target.value)} />
                   </div>
                 </div>
 
@@ -2017,11 +2034,11 @@ export default function TeacherDashboard() {
                   <label className="block text-sm font-bold mb-2">Thời gian đăng bài</label>
                   <div className="flex gap-3">
                     <button type="button" onClick={() => setCreatePublishMode('NOW')}
-                      className={`flex-1 py-2.5 font-bold border-2 text-sm transition-all cursor-pointer ${createPublishMode === 'NOW' ? 'border-primary bg-primary/10 text-primary' : 'border-foreground/10 hover:border-foreground/30'}`}>
+                      className={`flex-1 py-2.5 font-bold border-2 text-sm transition-all cursor-pointer ${createPublishMode === 'NOW' ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 hover:border-gray-400'}`}>
                       ⚡ Đăng Ngay
                     </button>
                     <button type="button" onClick={() => setCreatePublishMode('SCHEDULED')}
-                      className={`flex-1 py-2.5 font-bold border-2 text-sm transition-all cursor-pointer ${createPublishMode === 'SCHEDULED' ? 'border-amber-500 bg-amber-500/10 text-amber-600' : 'border-foreground/10 hover:border-foreground/30'}`}>
+                      className={`flex-1 py-2.5 font-bold border-2 text-sm transition-all cursor-pointer ${createPublishMode === 'SCHEDULED' ? 'border-amber-500 bg-amber-500/10 text-amber-600' : 'border-gray-200 hover:border-gray-400'}`}>
                       📅 Hẹn Giờ
                     </button>
                   </div>
@@ -2034,7 +2051,7 @@ export default function TeacherDashboard() {
               {/* ── SECTION 2: Câu hỏi ── */}
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <h2 className="font-bold text-lg">❓ Câu Hỏi <span className="text-foreground/40 font-normal text-base">({createQuestions.length} câu)</span></h2>
+                  <h2 className="font-bold text-lg">❓ Câu Hỏi <span className="text-slate-400 font-normal text-base">({createQuestions.length} câu)</span></h2>
                   <button type="button" onClick={addQuestion}
                     className="px-4 py-2 bg-primary/10 text-primary font-bold hover:bg-primary/20 cursor-pointer text-sm transition-colors">
                     + Thêm câu hỏi
@@ -2042,7 +2059,7 @@ export default function TeacherDashboard() {
                 </div>
 
                 {createQuestions.map((q, qi) => (
-                  <div key={qi} className="bg-surface border border-foreground/10 p-6 space-y-4 relative">
+                  <div key={qi} className="bg-white rounded-xl border border-gray-100 p-6 space-y-4 relative shadow-sm">
                     {/* Question header */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -2050,17 +2067,17 @@ export default function TeacherDashboard() {
                         <div className="flex gap-2">
                           <button type="button"
                             onClick={() => updateQuestion(qi, { type: 'MULTIPLE_CHOICE', correctOption: 'A' })}
-                            className={`px-3 py-1.5 text-xs font-bold border-2 transition-all cursor-pointer ${q.type === 'MULTIPLE_CHOICE' ? 'border-primary bg-primary/10 text-primary' : 'border-foreground/10 hover:border-foreground/30'}`}>
+                            className={`px-3 py-1.5 text-xs font-bold border-2 transition-all cursor-pointer ${q.type === 'MULTIPLE_CHOICE' ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 hover:border-gray-400'}`}>
                             🔘 Trắc Nghiệm
                           </button>
                           <button type="button"
                             onClick={() => updateQuestion(qi, { type: 'ESSAY', correctOption: '' })}
-                            className={`px-3 py-1.5 text-xs font-bold border-2 transition-all cursor-pointer ${q.type === 'ESSAY' ? 'border-secondary bg-secondary/10 text-secondary' : 'border-foreground/10 hover:border-foreground/30'}`}>
+                            className={`px-3 py-1.5 text-xs font-bold border-2 transition-all cursor-pointer ${q.type === 'ESSAY' ? 'border-secondary bg-secondary/10 text-secondary' : 'border-gray-200 hover:border-gray-400'}`}>
                             ✍️ Tự Luận
                           </button>
                         </div>
-                        <div className="flex items-center gap-2 bg-foreground/5 px-3 py-1.5 ml-4">
-                          <label className="text-xs font-bold text-foreground/50">Điểm:</label>
+                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 ml-4">
+                          <label className="text-xs font-bold text-slate-400">Điểm:</label>
                           <input type="number" min="0" step="0.01" className="w-20 bg-transparent text-sm font-bold outline-none text-primary"
                             value={q.points ?? 1} onChange={e => updateQuestion(qi, { points: parseFloat(e.target.value) || 0 })} />
                         </div>
@@ -2076,10 +2093,10 @@ export default function TeacherDashboard() {
                     {/* Question content */}
                     <div className="space-y-4">
                       <div>
-                        <label className="block text-xs font-bold text-foreground/50 mb-1 uppercase tracking-wide">
+                        <label className="block text-xs font-bold text-slate-400 mb-1 uppercase tracking-wide">
                           Heading / Câu hỏi tổng (Không bắt buộc)
                         </label>
-                        <div className="bg-white overflow-hidden border border-foreground/15">
+                        <div className="bg-white overflow-hidden border border-gray-200">
                           <ReactQuill 
                             theme="snow" 
                             modules={miniQuillModules}
@@ -2091,7 +2108,7 @@ export default function TeacherDashboard() {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold text-foreground/50 mb-1 uppercase tracking-wide">Nội dung câu hỏi *</label>
+                        <label className="block text-xs font-bold text-slate-400 mb-1 uppercase tracking-wide">Nội dung câu hỏi *</label>
                         <ReactQuill theme="snow" className="bg-white text-black"
                           placeholder={q.type === 'ESSAY' ? 'Nhập câu hỏi tự luận...' : 'Nhập câu hỏi trắc nghiệm...'}
                           value={q.content} onChange={content => updateQuestion(qi, { content })} />
@@ -2099,10 +2116,10 @@ export default function TeacherDashboard() {
                       
                       {/* Image upload for question */}
                       <div>
-                        <label className="block text-xs font-bold text-foreground/50 mb-1 uppercase tracking-wide">Hình ảnh (không bắt buộc)</label>
+                        <label className="block text-xs font-bold text-slate-400 mb-1 uppercase tracking-wide">Hình ảnh (không bắt buộc)</label>
                         {q.imageUrl ? (
                           <div className="relative inline-block mt-2">
-                            <img src={q.imageUrl} alt="Question image" className="max-h-40 border border-foreground/10" />
+                            <img src={q.imageUrl} alt="Question image" className="max-h-40 border border-gray-100" />
                             <button type="button" onClick={() => updateQuestion(qi, { imageUrl: '' })} className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full w-6 h-6 flex items-center justify-center font-bold text-xs cursor-pointer shadow-md">✕</button>
                           </div>
                         ) : (
@@ -2114,7 +2131,7 @@ export default function TeacherDashboard() {
                               reader.onload = (ev) => updateQuestion(qi, { imageUrl: ev.target?.result as string });
                               reader.readAsDataURL(file);
                             }
-                          }} className="block w-full text-sm text-foreground/70 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer" />
+                          }} className="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20 cursor-pointer" />
                         )}
                       </div>
                     </div>
@@ -2122,15 +2139,15 @@ export default function TeacherDashboard() {
                     {/* MULTIPLE CHOICE options */}
                     {q.type === 'MULTIPLE_CHOICE' && (
                       <div className="space-y-2">
-                        <label className="block text-xs font-bold text-foreground/50 mb-2 uppercase tracking-wide">Các đáp án (chọn đáp án đúng)</label>
+                        <label className="block text-xs font-bold text-slate-400 mb-2 uppercase tracking-wide">Các đáp án (chọn đáp án đúng)</label>
                         {['A', 'B', 'C', 'D'].map((letter, oi) => (
-                          <div key={letter} className={`flex items-center gap-3 p-3 border-2 transition-all ${q.correctOption === letter ? 'border-primary bg-primary/5' : 'border-foreground/10'}`}>
+                          <div key={letter} className={`flex items-center gap-3 p-3 border-2 transition-all ${q.correctOption === letter ? 'border-primary bg-primary/5' : 'border-gray-200'}`}>
                             <button type="button"
                               onClick={() => updateQuestion(qi, { correctOption: letter })}
-                              className={`w-8 h-8 rounded-full font-bold text-sm shrink-0 transition-all cursor-pointer ${q.correctOption === letter ? 'bg-primary text-white' : 'bg-foreground/10 hover:bg-foreground/20'}`}>
+                              className={`w-8 h-8 rounded-full font-bold text-sm shrink-0 transition-all cursor-pointer ${q.correctOption === letter ? 'bg-primary text-white' : 'bg-slate-100 hover:bg-slate-200'}`}>
                               {letter}
                             </button>
-                            <div className="flex-1 min-w-0 bg-white overflow-hidden border border-foreground/10">
+                            <div className="flex-1 min-w-0 bg-white overflow-hidden border border-gray-100">
                               <ReactQuill 
                                 theme="snow" 
                                 modules={miniQuillModules}
@@ -2158,12 +2175,12 @@ export default function TeacherDashboard() {
                     {/* Explanation */}
                     <div>
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-xs font-bold text-foreground/50 uppercase tracking-wide">Giải thích <span className="font-normal normal-case">(không bắt buộc)</span></label>
+                        <label className="block text-xs font-bold text-slate-400 uppercase tracking-wide">Giải thích <span className="font-normal normal-case">(không bắt buộc)</span></label>
                         <button type="button" onClick={() => handleSolveAI(qi)} disabled={solvingAI[qi]} className="flex items-center gap-1 text-xs font-bold bg-amber-500/10 text-amber-600 px-3 py-1.5 hover:bg-amber-500/20 transition-colors cursor-pointer disabled:opacity-50">
                           {solvingAI[qi] ? '⏳ Đang giải...' : '🪄 AI Chọn & Giải Thích'}
                         </button>
                       </div>
-                      <div className="bg-white overflow-hidden border border-foreground/10">
+                      <div className="bg-white overflow-hidden border border-gray-100">
                         <ReactQuill 
                           theme="snow" 
                           modules={miniQuillModules}
@@ -2178,7 +2195,7 @@ export default function TeacherDashboard() {
                 ))}
 
                 <button type="button" onClick={addQuestion}
-                  className="w-full py-4 border-2 border-dashed border-foreground/20 text-foreground/40 font-bold hover:border-primary/40 hover:text-primary/60 transition-colors cursor-pointer">
+                  className="w-full py-4 border-2 border-dashed border-gray-300 text-slate-400 font-bold hover:border-primary/40 hover:text-primary/60 transition-colors cursor-pointer">
                   + Thêm câu hỏi
                 </button>
               </div>
@@ -2196,18 +2213,18 @@ export default function TeacherDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl relative pb-24">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <h1 className="text-3xl font-bold">🏆 Bảng Xếp Hạng</h1>
-              <div className="bg-surface border border-foreground/10 p-1 flex overflow-x-auto max-w-full">
-                <button 
-                  onClick={() => setLeaderboardFilter('GLOBAL')} 
-                  className={`px-4 py-2 font-bold text-sm transition-colors whitespace-nowrap cursor-pointer ${leaderboardFilter === 'GLOBAL' ? 'bg-amber-500 text-white shadow-md' : 'text-foreground/60 hover:text-foreground'}`}
+              <div className="bg-white border border-gray-200 rounded-xl p-1 flex overflow-x-auto max-w-full shadow-sm">
+                <button
+                  onClick={() => setLeaderboardFilter('GLOBAL')}
+                  className={`px-4 py-2 font-bold text-sm transition-colors whitespace-nowrap cursor-pointer rounded-lg ${leaderboardFilter === 'GLOBAL' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
                 >
                   🌍 Toàn Hệ Thống
                 </button>
                 {classrooms.map((c: any) => (
-                  <button 
+                  <button
                     key={c.id}
-                    onClick={() => setLeaderboardFilter(c.id)} 
-                    className={`px-4 py-2 font-bold text-sm transition-colors whitespace-nowrap cursor-pointer ${leaderboardFilter === c.id ? 'bg-amber-500 text-white shadow-md' : 'text-foreground/60 hover:text-foreground'}`}
+                    onClick={() => setLeaderboardFilter(c.id)}
+                    className={`px-4 py-2 font-bold text-sm transition-colors whitespace-nowrap cursor-pointer rounded-lg ${leaderboardFilter === c.id ? 'bg-amber-500 text-white shadow-md' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
                   >
                     🏫 {c.name}
                   </button>
@@ -2222,10 +2239,10 @@ export default function TeacherDashboard() {
                 {leaderboardData.length > 1 && (
                   <div className="flex flex-col items-center animate-in slide-in-from-bottom-8 duration-700 delay-100 w-1/3 max-w-[120px]">
                     <div className="relative mb-2">
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-[#C0C0C0] bg-surface flex items-center justify-center font-bold text-xl overflow-hidden shadow-[0_0_15px_rgba(192,192,192,0.5)]">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-[#C0C0C0] bg-white flex items-center justify-center font-bold text-xl overflow-hidden shadow-[0_0_15px_rgba(192,192,192,0.5)]">
                         {leaderboardData[1].avatar ? <img src={leaderboardData[1].avatar} className="w-full h-full object-cover"/> : leaderboardData[1].name.charAt(0)}
                       </div>
-                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#C0C0C0] text-black text-xs font-black px-2 py-0.5 rounded-full border border-surface">#2</div>
+                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#C0C0C0] text-black text-xs font-black px-2 py-0.5 rounded-full border border-white">#2</div>
                     </div>
                     <div className="text-sm font-bold mt-3 text-center w-full truncate">{leaderboardData[1].name}</div>
                     <div className="text-xs text-amber-500 font-bold">{leaderboardData[1].totalXP} XP</div>
@@ -2238,10 +2255,10 @@ export default function TeacherDashboard() {
                   <div className="flex flex-col items-center animate-in slide-in-from-bottom-12 duration-700 z-10 relative w-1/3 max-w-[140px]">
                     <div className="absolute -top-10 text-4xl animate-bounce">👑</div>
                     <div className="relative mb-2">
-                      <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-4 border-[#FFD700] bg-surface flex items-center justify-center font-bold text-3xl overflow-hidden shadow-[0_0_30px_rgba(255,215,0,0.6)]">
+                      <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-4 border-[#FFD700] bg-white flex items-center justify-center font-bold text-3xl overflow-hidden shadow-[0_0_30px_rgba(255,215,0,0.6)]">
                         {leaderboardData[0].avatar ? <img src={leaderboardData[0].avatar} className="w-full h-full object-cover"/> : leaderboardData[0].name.charAt(0)}
                       </div>
-                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FFD700] text-black text-xs font-black px-3 py-0.5 rounded-full border border-surface">#1</div>
+                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#FFD700] text-black text-xs font-black px-3 py-0.5 rounded-full border border-white">#1</div>
                     </div>
                     <div className="text-base font-black mt-3 text-center w-full truncate text-[#FFD700]">{leaderboardData[0].name}</div>
                     <div className="text-sm text-amber-500 font-bold">{leaderboardData[0].totalXP} XP</div>
@@ -2253,10 +2270,10 @@ export default function TeacherDashboard() {
                 {leaderboardData.length > 2 && (
                   <div className="flex flex-col items-center animate-in slide-in-from-bottom-8 duration-700 delay-200 w-1/3 max-w-[120px]">
                     <div className="relative mb-2">
-                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-[#CD7F32] bg-surface flex items-center justify-center font-bold text-xl overflow-hidden shadow-[0_0_15px_rgba(205,127,50,0.5)]">
+                      <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-[#CD7F32] bg-white flex items-center justify-center font-bold text-xl overflow-hidden shadow-[0_0_15px_rgba(205,127,50,0.5)]">
                         {leaderboardData[2].avatar ? <img src={leaderboardData[2].avatar} className="w-full h-full object-cover"/> : leaderboardData[2].name.charAt(0)}
                       </div>
-                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white text-xs font-black px-2 py-0.5 rounded-full border border-surface">#3</div>
+                      <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-[#CD7F32] text-white text-xs font-black px-2 py-0.5 rounded-full border border-white">#3</div>
                     </div>
                     <div className="text-sm font-bold mt-3 text-center w-full truncate">{leaderboardData[2].name}</div>
                     <div className="text-xs text-amber-500 font-bold">{leaderboardData[2].totalXP} XP</div>
@@ -2268,20 +2285,20 @@ export default function TeacherDashboard() {
 
             {/* List */}
             {leaderboardData.length === 0 ? (
-              <div className="text-center p-12 bg-surface border border-foreground/10 text-foreground/50">Chưa có dữ liệu xếp hạng.</div>
+              <div className="text-center p-12 bg-white rounded-xl border border-gray-100 text-slate-400 shadow-sm">Chưa có dữ liệu xếp hạng.</div>
             ) : (
-              <div className="bg-surface border border-foreground/10 overflow-hidden shadow-sm">
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
                 {leaderboardData.slice(3).map((u, idx) => (
-                  <div key={u.id} className="flex items-center p-4 border-b border-foreground/5 last:border-0 hover:bg-foreground/5 transition-colors">
-                    <div className="w-12 text-center font-bold text-foreground/50">#{u.rank}</div>
-                    <div className="w-10 h-10 rounded-full bg-foreground/10 flex items-center justify-center overflow-hidden mr-4 shrink-0 font-bold text-sm">
+                  <div key={u.id} className="flex items-center p-4 border-b border-gray-50 last:border-0 hover:bg-slate-50 transition-colors">
+                    <div className="w-12 text-center font-bold text-slate-400">#{u.rank}</div>
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden mr-4 shrink-0 font-bold text-sm">
                       {u.avatar ? <img src={u.avatar} className="w-full h-full object-cover"/> : u.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-bold truncate text-sm sm:text-base">{u.name}</div>
-                      <div className="text-xs text-foreground/50">Mục tiêu: {u.targetScore || 7.0}+</div>
+                      <div className="text-xs text-slate-400">Mục tiêu: {u.targetScore || 7.0}+</div>
                     </div>
-                    <div className="font-black text-amber-500 text-sm sm:text-base">{u.totalXP} <span className="text-xs text-foreground/50 font-normal">XP</span></div>
+                    <div className="font-black text-amber-500 text-sm sm:text-base">{u.totalXP} <span className="text-xs text-slate-400 font-normal">XP</span></div>
                   </div>
                 ))}
               </div>
@@ -2295,13 +2312,13 @@ export default function TeacherDashboard() {
       {/* ── Create / Edit Class Modal ── */}
       {showModal && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
-          <div className="bg-surface p-8 w-full max-w-md border border-foreground/10 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-md border border-gray-100 shadow-2xl animate-in zoom-in-95 duration-200">
             <h2 className="text-2xl font-bold mb-6">{editClassroom ? 'Chỉnh Sửa Lớp Học' : 'Tạo Lớp Học Mới'}</h2>
             <form onSubmit={handleCreateOrEditClass}>
               <div className="mb-4">
                 <label className="block text-sm font-bold mb-2">Tên Lớp</label>
                 <input type="text" value={newClassName} onChange={e => setNewClassName(e.target.value)}
-                  className="w-full px-4 py-3 border border-foreground/20 bg-transparent focus:outline-none focus:border-primary"
+                  className="w-full px-4 py-3 border border-gray-200 bg-white rounded-lg focus:outline-none focus:border-primary"
                   placeholder="VD: Tiếng Anh luyện thi Đại học" required autoFocus />
               </div>
               
@@ -2309,7 +2326,7 @@ export default function TeacherDashboard() {
                 <label className="block text-sm font-bold mb-2">Ngày học trong tuần</label>
                 <div className="grid grid-cols-4 gap-2">
                   {[{ id: 1, label: 'T2' }, { id: 2, label: 'T3' }, { id: 3, label: 'T4' }, { id: 4, label: 'T5' }, { id: 5, label: 'T6' }, { id: 6, label: 'T7' }, { id: 0, label: 'CN' }].map(day => (
-                    <label key={day.id} className={`flex items-center justify-center px-2 py-2 border font-bold text-sm cursor-pointer transition-colors ${scheduleDays.includes(day.id) ? 'bg-primary text-white border-primary' : 'border-foreground/20 text-foreground/70 hover:bg-foreground/5'}`}>
+                    <label key={day.id} className={`flex items-center justify-center px-2 py-2 border font-bold text-sm cursor-pointer transition-colors ${scheduleDays.includes(day.id) ? 'bg-primary text-white border-primary' : 'border-gray-200 text-slate-600 hover:bg-slate-50'}`}>
                       <input type="checkbox" className="hidden" checked={scheduleDays.includes(day.id)} onChange={(e) => {
                         if (e.target.checked) setScheduleDays([...scheduleDays, day.id]);
                         else setScheduleDays(scheduleDays.filter(d => d !== day.id));
@@ -2324,24 +2341,24 @@ export default function TeacherDashboard() {
                 <div>
                   <label className="block text-sm font-bold mb-2">Giờ Bắt Đầu</label>
                   <input type="time" value={startTime} onChange={e => setStartTime(e.target.value)}
-                    className="w-full px-4 py-3 border border-foreground/20 bg-transparent focus:outline-none focus:border-primary" />
+                    className="w-full px-4 py-3 border border-gray-200 bg-white rounded-lg focus:outline-none focus:border-primary" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold mb-2">Giờ Kết Thúc</label>
                   <input type="time" value={endTime} onChange={e => setEndTime(e.target.value)}
-                    className="w-full px-4 py-3 border border-foreground/20 bg-transparent focus:outline-none focus:border-primary" />
+                    className="w-full px-4 py-3 border border-gray-200 bg-white rounded-lg focus:outline-none focus:border-primary" />
                 </div>
               </div>
 
               <div className="mb-6">
                 <label className="block text-sm font-bold mb-2">Học phí mỗi buổi (VNĐ)</label>
                 <input type="number" value={feePerLesson} onChange={e => setFeePerLesson(e.target.value)}
-                  className="w-full px-4 py-3 border border-foreground/20 bg-transparent focus:outline-none focus:border-primary"
+                  className="w-full px-4 py-3 border border-gray-200 bg-white rounded-lg focus:outline-none focus:border-primary"
                   placeholder="VD: 100000" />
               </div>
 
               <div className="flex gap-3 justify-end">
-                <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2.5 font-bold hover:bg-foreground/5 cursor-pointer text-foreground/70">Hủy</button>
+                <button type="button" onClick={() => setShowModal(false)} className="px-5 py-2.5 font-bold hover:bg-slate-50 cursor-pointer text-slate-600">Hủy</button>
                 <button type="submit" className="px-5 py-2.5 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">{editClassroom ? 'Lưu Thay Đổi' : 'Tạo Lớp'}</button>
               </div>
             </form>
@@ -2352,31 +2369,31 @@ export default function TeacherDashboard() {
       {/* ── Quick View Exam Modal ── */}
       {selectedExamForView && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
-          <div className="bg-surface p-8 w-full max-w-4xl max-h-[90vh] flex flex-col border border-foreground/10 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-4xl max-h-[90vh] flex flex-col border border-gray-100 shadow-2xl animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-2xl font-bold">{selectedExamForView.title}</h2>
-                <p className="text-sm text-foreground/50">{selectedExamForView.totalQuestions} câu hỏi • {selectedExamForView.duration} phút</p>
+                <p className="text-sm text-slate-400">{selectedExamForView.totalQuestions} câu hỏi • {selectedExamForView.duration} phút</p>
               </div>
-              <button onClick={() => { setSelectedExamForView(null); setExamViewTab('QUESTIONS'); }} className="p-2 hover:bg-foreground/10 rounded-full cursor-pointer transition-colors text-xl">✕</button>
+              <button onClick={() => { setSelectedExamForView(null); setExamViewTab('QUESTIONS'); }} className="p-2 hover:bg-slate-100 rounded-full cursor-pointer transition-colors text-xl">✕</button>
             </div>
-              <div className="flex gap-4 border-b border-foreground/10 mb-4">
-                <button onClick={() => setExamViewTab('QUESTIONS')} className={`px-4 py-2 font-bold ${examViewTab === 'QUESTIONS' ? 'text-primary border-b-2 border-primary' : 'text-foreground/50 hover:text-foreground'}`}>Nội Dung Đề</button>
-                <button onClick={() => setExamViewTab('RESULTS')} className={`px-4 py-2 font-bold ${examViewTab === 'RESULTS' ? 'text-primary border-b-2 border-primary' : 'text-foreground/50 hover:text-foreground'}`}>Tiến Độ Nộp Bài</button>
+              <div className="flex gap-4 border-b border-gray-200 mb-4">
+                <button onClick={() => setExamViewTab('QUESTIONS')} className={`px-4 py-2 font-bold ${examViewTab === 'QUESTIONS' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-800'}`}>Nội Dung Đề</button>
+                <button onClick={() => setExamViewTab('RESULTS')} className={`px-4 py-2 font-bold ${examViewTab === 'RESULTS' ? 'text-primary border-b-2 border-primary' : 'text-slate-400 hover:text-slate-800'}`}>Tiến Độ Nộp Bài</button>
               </div>
               <div className="flex-1 overflow-y-auto space-y-4">
               
               {examViewTab === 'QUESTIONS' && (
                 !selectedExamForView.questions ? (
-                  <p className="text-center text-foreground/40 py-8">Đang tải...</p>
+                  <p className="text-center text-slate-400 py-8">Đang tải...</p>
                 ) : selectedExamForView.questions.length === 0 ? (
-                  <p className="text-center text-foreground/40 py-8">Đề thi chưa có câu hỏi</p>
+                  <p className="text-center text-slate-400 py-8">Đề thi chưa có câu hỏi</p>
                 ) : (
                 selectedExamForView.questions.map((q: any, i: number) => {
                   const isEssay = q.question.type === 'ESSAY';
                   const opts = (() => { try { return JSON.parse(q.question.options || '[]'); } catch { return []; } })();
                   return (
-                    <div key={i} className="p-5 bg-foreground/5">
+                    <div key={i} className="p-5 bg-slate-50">
                       <div className="flex items-start gap-3">
                         <span className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isEssay ? 'bg-secondary/20 text-secondary' : 'bg-primary/20 text-primary'}`}>{i + 1}</span>
                         <div className="flex-1">
@@ -2392,13 +2409,13 @@ export default function TeacherDashboard() {
                           {!isEssay && opts.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {opts.map((opt: string, idx: number) => (
-                                <p key={idx} className={`text-sm p-2 ${String.fromCharCode(65 + idx) === q.question.correctOption ? 'bg-primary/10 text-primary font-bold' : 'text-foreground/70'}`}>
+                                <p key={idx} className={`text-sm p-2 ${String.fromCharCode(65 + idx) === q.question.correctOption ? 'bg-primary/10 text-primary font-bold' : 'text-slate-600'}`}>
                                   {String.fromCharCode(65 + idx)}. {opt}
                                 </p>
                               ))}
                             </div>
                           )}
-                          {isEssay && <p className="text-sm text-foreground/40 italic">Học sinh nhập câu trả lời tự do</p>}
+                          {isEssay && <p className="text-sm text-slate-400 italic">Học sinh nhập câu trả lời tự do</p>}
                         </div>
                       </div>
                     </div>
@@ -2416,7 +2433,7 @@ export default function TeacherDashboard() {
                       targetStudents = targetStudents.filter((s: any) => selectedExamForView.assignedStudents.some((a: any) => a.id === s.id));
                     }
                     
-                    if (targetStudents.length === 0) return <p className="text-center text-foreground/40 py-8">Không có học sinh nào được giao bài.</p>;
+                    if (targetStudents.length === 0) return <p className="text-center text-slate-400 py-8">Không có học sinh nào được giao bài.</p>;
                     
                     const submittedCount = targetStudents.filter((s: any) => selectedExamForView.results?.some((r: any) => r.userId === s.id)).length;
                     
@@ -2437,15 +2454,15 @@ export default function TeacherDashboard() {
                           </div>
                         </div>
                         
-                        <div className="border border-foreground/10 overflow-hidden">
+                        <div className="border border-gray-100 overflow-hidden">
                           <table className="w-full text-left text-sm">
-                            <thead className="bg-foreground/5">
+                            <thead className="bg-slate-50">
                               <tr>
-                                <th className="p-3 font-bold border-b border-foreground/10">Học Sinh</th>
-                                <th className="p-3 font-bold border-b border-foreground/10">Điểm cao nhất</th>
-                                <th className="p-3 font-bold border-b border-foreground/10">Lượt làm</th>
-                                <th className="p-3 font-bold border-b border-foreground/10">Giờ kết thúc</th>
-                                <th className="p-3 font-bold border-b border-foreground/10">Thời gian làm</th>
+                                <th className="p-3 font-bold border-b border-gray-200">Học Sinh</th>
+                                <th className="p-3 font-bold border-b border-gray-200">Điểm cao nhất</th>
+                                <th className="p-3 font-bold border-b border-gray-200">Lượt làm</th>
+                                <th className="p-3 font-bold border-b border-gray-200">Giờ kết thúc</th>
+                                <th className="p-3 font-bold border-b border-gray-200">Thời gian làm</th>
                               </tr>
                             </thead>
                             <tbody>
@@ -2456,10 +2473,10 @@ export default function TeacherDashboard() {
                                 const latestResult = hasSubmitted ? userResults.reduce((prev: any, current: any) => (new Date(prev.createdAt) > new Date(current.createdAt)) ? prev : current) : null;
                                 
                                 return (
-                                  <tr key={s.id} className="border-b border-foreground/10 last:border-0 hover:bg-foreground/5">
+                                  <tr key={s.id} className="border-b border-gray-100 last:border-0 hover:bg-slate-50">
                                     <td className="p-3">
                                       <div className="flex items-center gap-2">
-                                        <div className="w-6 h-6 rounded-full bg-foreground/10 flex items-center justify-center text-xs font-bold overflow-hidden">
+                                        <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold overflow-hidden">
                                           {s.avatar ? <img src={s.avatar} alt="Avatar" className="w-full h-full object-cover" /> : s.name.charAt(0)}
                                         </div>
                                         {s.name}
@@ -2469,8 +2486,8 @@ export default function TeacherDashboard() {
                                       <>
                                         <td className="p-3 font-black text-primary">{bestResult.score.toFixed(1)}</td>
                                         <td className="p-3">{userResults.length} lượt</td>
-                                        <td className="p-3 text-foreground/70">{new Date(latestResult.createdAt).toLocaleString('vi-VN')}</td>
-                                        <td className="p-3 text-foreground/70">{Math.floor(latestResult.timeSpent / 60)} phút {latestResult.timeSpent % 60} giây</td>
+                                        <td className="p-3 text-slate-600">{new Date(latestResult.createdAt).toLocaleString('vi-VN')}</td>
+                                        <td className="p-3 text-slate-600">{Math.floor(latestResult.timeSpent / 60)} phút {latestResult.timeSpent % 60} giây</td>
                                       </>
                                     ) : (
                                       <td colSpan={4} className="p-3 text-rose-500 font-medium italic text-center bg-rose-500/5">Chưa làm bài</td>
@@ -2497,42 +2514,42 @@ export default function TeacherDashboard() {
       {/* ── Edit Exam Modal ── */}
       {editExam && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
-          <div className="bg-surface p-8 w-full max-w-lg border border-foreground/10 shadow-2xl">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-lg border border-gray-100 shadow-2xl">
             <h2 className="text-2xl font-bold mb-6">Chỉnh Sửa Đề Thi</h2>
             <form onSubmit={handleUpdateExam} className="space-y-4">
               <div>
                 <label className="block text-sm font-bold mb-1">Tiêu đề</label>
-                <input className="w-full p-3 border border-foreground/20 bg-transparent" value={editExam.title} onChange={e => setEditExam({ ...editExam, title: e.target.value })} />
+                <input className="w-full p-3 border border-gray-200 bg-white rounded-lg" value={editExam.title} onChange={e => setEditExam({ ...editExam, title: e.target.value })} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold mb-1">Loại</label>
-                  <select className="w-full p-3 border border-foreground/20 bg-transparent" value={editExam.examType} onChange={e => setEditExam({ ...editExam, examType: e.target.value })}>
+                  <select className="w-full p-3 border border-gray-200 bg-white rounded-lg" value={editExam.examType} onChange={e => setEditExam({ ...editExam, examType: e.target.value })}>
                     <option value="ASSIGNMENT">Bài Tập</option>
                     <option value="EXAM">Đề Thi</option>
                   </select>
                 </div>
                 <div>
                   <label className="block text-sm font-bold mb-1">Thời gian (phút)</label>
-                  <input type="number" className="w-full p-3 border border-foreground/20 bg-transparent" value={editExam.duration} onChange={e => setEditExam({ ...editExam, duration: e.target.value })} />
+                  <input type="number" className="w-full p-3 border border-gray-200 bg-white rounded-lg" value={editExam.duration} onChange={e => setEditExam({ ...editExam, duration: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold mb-1">Public lúc</label>
-                  <input type="datetime-local" className="w-full p-3 border border-foreground/20 bg-transparent" value={editExam.publishTime || ''} onChange={e => setEditExam({ ...editExam, publishTime: e.target.value })} />
+                  <input type="datetime-local" className="w-full p-3 border border-gray-200 bg-white rounded-lg" value={editExam.publishTime || ''} onChange={e => setEditExam({ ...editExam, publishTime: e.target.value })} />
                 </div>
                 <div>
                   <label className="block text-sm font-bold mb-1">Deadline</label>
-                  <input type="datetime-local" className="w-full p-3 border border-foreground/20 bg-transparent" value={editExam.deadline || ''} onChange={e => setEditExam({ ...editExam, deadline: e.target.value })} />
+                  <input type="datetime-local" className="w-full p-3 border border-gray-200 bg-white rounded-lg" value={editExam.deadline || ''} onChange={e => setEditExam({ ...editExam, deadline: e.target.value })} />
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-bold mb-1">Ghi chú</label>
-                <input type="text" className="w-full p-3 border border-foreground/20 bg-transparent" value={editExam.notes || ''} onChange={e => setEditExam({ ...editExam, notes: e.target.value })} />
+                <input type="text" className="w-full p-3 border border-gray-200 bg-white rounded-lg" value={editExam.notes || ''} onChange={e => setEditExam({ ...editExam, notes: e.target.value })} />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setEditExam(null)} className="flex-1 py-3 border border-foreground/20 font-bold hover:bg-foreground/5 cursor-pointer">Hủy</button>
+                <button type="button" onClick={() => setEditExam(null)} className="flex-1 py-3 border border-gray-200 font-bold hover:bg-slate-50 cursor-pointer rounded-lg">Hủy</button>
                 <button type="submit" className="flex-1 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">Lưu Thay Đổi</button>
               </div>
             </form>
@@ -2563,10 +2580,10 @@ export default function TeacherDashboard() {
 
       {globalLoading.isLoading && (
         <div className="fixed inset-0 bg-black/60 z-[9999] flex flex-col items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-surface p-8 shadow-2xl flex flex-col items-center space-y-6 max-w-sm w-full border border-foreground/10">
+          <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center space-y-6 max-w-sm w-full border border-gray-100">
             <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
             <p className="text-lg font-bold text-center">{globalLoading.message || 'Đang xử lý...'}</p>
-            <p className="text-sm text-foreground/50 text-center">Vui lòng chờ trong giây lát</p>
+            <p className="text-sm text-slate-400 text-center">Vui lòng chờ trong giây lát</p>
           </div>
         </div>
       )}
@@ -2576,9 +2593,9 @@ export default function TeacherDashboard() {
 
 function StatCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="bg-surface border border-foreground/10 p-6">
-      <p className="text-sm text-foreground/60 font-medium">{title}</p>
-      <p className="text-3xl font-extrabold mt-1">{value}</p>
+    <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
+      <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">{title}</p>
+      <p className="text-3xl font-extrabold text-slate-800 mt-1">{value}</p>
     </div>
   );
 }
@@ -2594,28 +2611,28 @@ function ClassCard({ c, onEdit }: { c: any; onEdit?: () => void }) {
   } catch (e) {}
 
   return (
-    <div className="bg-surface border border-foreground/10 p-5 flex justify-between items-center hover:-translate-y-1 transition-transform group relative">
+    <div className="bg-white rounded-xl border border-gray-100 p-5 flex justify-between items-center hover:shadow-md hover:-translate-y-0.5 transition-all group shadow-sm">
       <div>
         <h4 className="font-bold text-lg flex items-center gap-2">
           {c.name}
           {onEdit && (
-            <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 p-1 text-foreground/40 hover:text-primary transition-all rounded hover:bg-primary/10">
+            <button onClick={onEdit} className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-primary transition-all rounded-lg hover:bg-blue-50">
               ✎
             </button>
           )}
         </h4>
-        <p className="text-sm text-foreground/60">{c.students?.length || 0} Học sinh</p>
-        
+        <p className="text-sm text-slate-500">{c.students?.length || 0} Học sinh</p>
+
         {(daysStr || c.startTime || c.endTime) && (
-          <div className="mt-2 text-xs font-bold bg-foreground/5 text-foreground/70 px-3 py-1.5 inline-flex gap-2">
+          <div className="mt-2 text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg inline-flex gap-2">
             {daysStr && <span>📅 {daysStr}</span>}
             {c.startTime && <span>⏰ {c.startTime} {c.endTime && `- ${c.endTime}`}</span>}
           </div>
         )}
       </div>
       <div className="text-right shrink-0">
-        <p className="text-xs text-foreground/50 mb-1">Mã tham gia</p>
-        <div className="bg-primary/10 text-primary font-mono font-bold px-3 py-1 rounded text-lg tracking-widest">{c.joinCode}</div>
+        <p className="text-xs text-slate-400 mb-1">Mã tham gia</p>
+        <div className="bg-blue-50 text-primary font-mono font-bold px-3 py-1.5 rounded-lg text-base tracking-widest border border-blue-100">{c.joinCode}</div>
       </div>
     </div>
   );
@@ -2623,20 +2640,20 @@ function ClassCard({ c, onEdit }: { c: any; onEdit?: () => void }) {
 
 function ExamCard({ title, type, detail, questions, onClick, onEdit, onDelete, onDuplicate, exam }: { title: string; type: string; detail: string; questions: number; onClick?: () => void; onEdit?: () => void; onDelete?: () => void; onDuplicate?: () => void; exam?: any }) {
   return (
-    <div className="bg-surface border border-foreground/10 p-5 flex justify-between items-center hover:bg-foreground/5 transition-colors">
+    <div className="bg-white rounded-xl border border-gray-100 p-5 flex justify-between items-center hover:shadow-md hover:border-blue-100 transition-all shadow-sm">
       <div className="flex-1 cursor-pointer" onClick={onClick}>
-        <h4 className="font-bold text-lg flex items-center gap-2 flex-wrap">
+        <h4 className="font-bold text-base flex items-center gap-2 flex-wrap">
           {title}
-          {exam?.deadline && <span className="bg-rose-500/10 text-rose-500 text-xs px-2 py-0.5 rounded-full">⏰ Hạn: {new Date(exam.deadline).toLocaleDateString('vi-VN')}</span>}
-          {exam?.notes && <span className="bg-amber-500/10 text-amber-600 text-xs px-2 py-0.5 rounded-full">📌 {exam.notes}</span>}
+          {exam?.deadline && <span className="bg-rose-50 text-rose-500 text-xs px-2 py-0.5 rounded-full border border-rose-100">⏰ Hạn: {new Date(exam.deadline).toLocaleDateString('vi-VN')}</span>}
+          {exam?.notes && <span className="bg-amber-50 text-amber-600 text-xs px-2 py-0.5 rounded-full border border-amber-100">📌 {exam.notes}</span>}
         </h4>
-        <p className="text-sm text-foreground/60 mt-1">Giao cho: <span className="font-medium text-foreground">{detail}</span> • {questions} câu • {exam?.duration || 45} phút</p>
+        <p className="text-sm text-slate-500 mt-1">Giao cho: <span className="font-medium text-slate-700">{detail}</span> • {questions} câu • {exam?.duration || 45} phút</p>
       </div>
-      <div className="flex items-center gap-2 ml-4 shrink-0">
-        <button onClick={e => { e.stopPropagation(); onDuplicate?.(); }} className="px-3 py-2 text-sm font-bold bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 cursor-pointer">📋 Nhân bản</button>
-        <button onClick={onClick} className="px-3 py-2 text-sm font-bold bg-foreground/10 hover:bg-foreground/20 cursor-pointer">👁 Xem</button>
-        <button onClick={e => { e.stopPropagation(); onEdit?.(); }} className="px-3 py-2 text-sm font-bold bg-primary/10 text-primary hover:bg-primary/20 cursor-pointer">✏️ Sửa</button>
-        <button onClick={e => { e.stopPropagation(); onDelete?.(); }} className="px-3 py-2 text-sm font-bold bg-rose-500/10 text-rose-500 hover:bg-rose-500/20 cursor-pointer">🗑 Xóa</button>
+      <div className="flex items-center gap-1.5 ml-4 shrink-0 flex-wrap justify-end">
+        <button onClick={e => { e.stopPropagation(); onDuplicate?.(); }} className="px-2.5 py-1.5 text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg cursor-pointer">📋 Nhân bản</button>
+        <button onClick={onClick} className="px-2.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">👁 Xem</button>
+        <button onClick={e => { e.stopPropagation(); onEdit?.(); }} className="px-2.5 py-1.5 text-xs font-bold bg-blue-50 text-primary hover:bg-blue-100 rounded-lg cursor-pointer">✏️ Sửa</button>
+        <button onClick={e => { e.stopPropagation(); onDelete?.(); }} className="px-2.5 py-1.5 text-xs font-bold bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg cursor-pointer">🗑 Xóa</button>
       </div>
     </div>
   );

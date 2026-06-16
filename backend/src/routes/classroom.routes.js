@@ -98,4 +98,18 @@ router.put('/edit/:id', async (req, res) => {
   }
 });
 
+// Update enabled features for a classroom
+router.patch('/:id/features', async (req, res) => {
+  try {
+    const { enabledFeatures } = req.body; // array of feature keys
+    const classroom = await prisma.classroom.update({
+      where: { id: req.params.id },
+      data: { enabledFeatures: JSON.stringify(enabledFeatures || []) }
+    });
+    res.json(classroom);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 module.exports = router;

@@ -170,10 +170,11 @@ model Classroom {
   joinCode    String   @unique
   teacherId   String
   
-  scheduleDays String?  // e.g. "1,3,5" for Mon, Wed, Fri (0 = Sunday)
-  startTime    String?  // e.g. "18:00"
-  endTime      String?  // e.g. "20:00"
-  feePerLesson Int      @default(0)
+  scheduleDays    String?  // e.g. "1,3,5" for Mon, Wed, Fri (0 = Sunday)
+  startTime       String?  // e.g. "18:00"
+  endTime         String?  // e.g. "20:00"
+  feePerLesson    Int      @default(0)
+  enabledFeatures String   @default("[]") // JSON array; empty = all features enabled
   
   teacher     User     @relation("TeacherClassrooms", fields: [teacherId], references: [id], onDelete: Cascade)
   students    User[]   @relation("StudentClassrooms")

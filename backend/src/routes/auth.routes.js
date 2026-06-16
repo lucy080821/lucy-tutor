@@ -66,7 +66,7 @@ const USER_SELECT = {
   id: true, name: true, email: true, role: true, avatar: true,
   totalXP: true, streakCount: true, targetScore: true, phone: true, currentLevel: true,
   classroomsJoined: {
-    select: { id: true, name: true, joinCode: true, scheduleDays: true, startTime: true, endTime: true, feePerLesson: true }
+    select: { id: true, name: true, joinCode: true, scheduleDays: true, startTime: true, endTime: true, feePerLesson: true, enabledFeatures: true }
   },
   assignedExams: {
     select: { id: true, title: true, totalQuestions: true, duration: true, maxAttempts: true, deadline: true, notes: true, examType: true }
@@ -88,14 +88,7 @@ router.get('/me', async (req, res) => {
     }
 
     if (!user) {
-      user = await prisma.user.create({
-        data: {
-          name: 'Nguyễn Văn Học Sinh',
-          email: 'student@example.com',
-          password: 'password123',
-          role: 'STUDENT',
-        }
-      });
+      return res.status(404).json({ error: 'User not found' });
     }
     res.json(user);
   } catch (error) {

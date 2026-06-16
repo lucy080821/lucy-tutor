@@ -232,4 +232,127 @@ BẮT BUỘC TRẢ VỀ CHỈ MỘT JSON VỚI CẤU TRÚC SAU (không có markd
   }
 });
 
+router.post('/study-plan', async (req, res) => {
+  try {
+    const { goal, currentLevel, deadline, timePerDay, weakAreas, name } = req.body;
+    if (!goal || !currentLevel) return res.status(400).json({ error: 'Missing fields' });
+
+    const weeksUntilDeadline = deadline
+      ? Math.max(1, Math.ceil((new Date(deadline) - Date.now()) / (7 * 24 * 60 * 60 * 1000)))
+      : 8;
+
+    const prompt = `
+You are an expert IELTS/English tutor building a personalized study plan for a Vietnamese student.
+
+Student profile:
+- Name: ${name || 'Student'}
+- Goal: ${goal}
+- Current level: ${currentLevel}
+- Study time per day: ${timePerDay} minutes
+- Weeks until exam: ${weeksUntilDeadline}
+- Weak areas: ${weakAreas?.join(', ') || 'General English'}
+
+Create a realistic, week-by-week study plan. Respond ONLY with valid JSON:
+{
+  "summary": "One paragraph summary of the plan in Vietnamese",
+  "targetDate": "${deadline || 'N/A'}",
+  "weeklySchedule": [
+    {
+      "week": 1,
+      "focus": "Main focus topic in Vietnamese",
+      "skills": ["Reading", "Grammar"],
+      "dailyTasks": ["Task 1 in Vietnamese", "Task 2 in Vietnamese", "Task 3 in Vietnamese"]
+    }
+  ],
+  "resources": [
+    {
+      "title": "Resource name in Vietnamese",
+      "type": "Practice|Reading|Listening|Speaking|Writing|Flashcard|Grammar",
+      "priority": "High|Medium|Low"
+    }
+  ],
+  "tips": ["Tip 1 in Vietnamese", "Tip 2 in Vietnamese", "Tip 3 in Vietnamese", "Tip 4 in Vietnamese", "Tip 5 in Vietnamese"]
+}
+
+Create ${Math.min(weeksUntilDeadline, 8)} weeks. Make tasks specific, actionable, and time-bounded to ${timePerDay} minutes per day.
+Focus heavily on: ${weakAreas?.join(', ') || 'all skills'}.
+All content must be in Vietnamese.
+`;
+
+    const completion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: 'You are an English education expert. Respond only in valid JSON.' },
+        { role: 'user', content: prompt }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.6,
+      response_format: { type: 'json_object' }
+    });
+
+    const raw = completion.choices[0]?.message?.content || '{}';
+    let plan;
+    try {
+      plan = JSON.parse(raw);
+    } catch {
+      return res.status(500).json({ error: 'Failed to parse plan' });
+    }
+    res.json(plan);
+  } catch (error) {
+    console.error('Study plan error:', error);
+    res.status(500).json({ error: 'Failed to generate study plan' });
+  }
+});
+
+router.post('/speaking-feedback', async (req, res) => {
+  try {
+    const { transcript, prompt: topicPrompt, part } = req.body;
+    if (!transcript) return res.status(400).json({ error: 'Missing transcript' });
+
+    const systemPrompt = `You are an IELTS Speaking examiner. Evaluate the student's spoken response and return a JSON object with IELTS band score criteria. Respond only in valid JSON.`;
+
+    const userPrompt = `
+You are grading an IELTS Speaking response. The student was asked:
+"${topicPrompt || 'Speak freely on a given topic'}"
+
+The student said (Speech-to-Text transcript):
+"${transcript}"
+
+Evaluate using IELTS Speaking band descriptors. Return a JSON object with:
+{
+  "bandScore": <number 1-9 with .5 increments, e.g. 6.5>,
+  "fluency": "1-2 sentence evaluation of fluency and coherence with specific examples from transcript",
+  "lexical": "1-2 sentence evaluation of vocabulary range and accuracy with specific examples",
+  "grammar": "1-2 sentence evaluation of grammatical range and accuracy",
+  "pronunciation": "1-2 sentence evaluation of pronunciation clarity and intelligibility",
+  "suggestions": ["3 specific improvement suggestions tailored to this student's response"]
+}
+
+All text fields must be in Vietnamese.
+Be constructive, specific, and encouraging. Reference actual words/phrases from their transcript.
+`;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.4,
+      response_format: { type: "json_object" }
+    });
+
+    const raw = chatCompletion.choices[0]?.message?.content || '{}';
+    let feedback;
+    try {
+      feedback = JSON.parse(raw);
+    } catch {
+      feedback = { fluency: 'Không thể phân tích. Vui lòng thử lại.', suggestions: [] };
+    }
+    res.json(feedback);
+  } catch (error) {
+    console.error('Speaking feedback error:', error);
+    res.status(500).json({ error: 'Failed to generate feedback' });
+  }
+});
+
 module.exports = router;
