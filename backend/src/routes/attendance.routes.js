@@ -162,6 +162,93 @@ router.get('/report/:classroomId', async (req, res) => {
   }
 });
 
+// 3b. Báo cáo học phí tổng hợp của TẤT CẢ các lớp của 1 giáo viên (quản lý chung)
+router.get('/report/teacher/:teacherId', async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+    const { month, year } = req.query;
+
+    if (!month || !year) return res.status(400).json({ error: 'Missing month or year' });
+
+    const m = parseInt(month);
+    const y = parseInt(year);
+
+    const startDate = new Date(y, m - 1, 1);
+    const endDate = new Date(y, m, 1);
+
+    const classrooms = await prisma.classroom.findMany({
+      where: { teacherId },
+      select: {
+        id: true,
+        name: true,
+        feePerLesson: true,
+        students: { select: { id: true, name: true, email: true } }
+      }
+    });
+
+    const classroomIds = classrooms.map(c => c.id);
+
+    const attendances = classroomIds.length ? await prisma.attendance.findMany({
+      where: {
+        classroomId: { in: classroomIds },
+        date: { gte: startDate, lt: endDate }
+      }
+    }) : [];
+
+    const payments = classroomIds.length ? await prisma.tuitionPayment.findMany({
+      where: { classroomId: { in: classroomIds }, month: m, year: y }
+    }) : [];
+
+    let totalCollected = 0;
+    let totalExpected = 0;
+    const paidList = [];
+    const unpaidList = [];
+
+    for (const classroom of classrooms) {
+      const feePerLesson = classroom.feePerLesson || 0;
+      for (const student of classroom.students) {
+        const studentAttendances = attendances.filter(a => a.classroomId === classroom.id && a.userId === student.id);
+        const presentCount = studentAttendances.filter(a => a.status === 'PRESENT').length;
+        const totalAmount = presentCount * feePerLesson;
+        const payment = payments.find(p => p.classroomId === classroom.id && p.userId === student.id);
+
+        const entry = {
+          user: student,
+          classroomId: classroom.id,
+          classroomName: classroom.name,
+          presentCount,
+          totalAmount,
+          paymentStatus: payment?.status || 'UNPAID',
+          paidAt: payment?.paidAt || null
+        };
+
+        totalExpected += totalAmount;
+
+        if (entry.paymentStatus === 'PAID') {
+          totalCollected += payment?.totalAmount ?? totalAmount;
+          paidList.push(entry);
+        } else {
+          unpaidList.push(entry);
+        }
+      }
+    }
+
+    res.json({
+      month: m,
+      year: y,
+      totalClassrooms: classrooms.length,
+      totalCollected,
+      totalExpected,
+      paidCount: paidList.length,
+      unpaidCount: unpaidList.length,
+      paidList,
+      unpaidList
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // 4. Xác nhận đã đóng tiền học phí
 router.post('/pay', async (req, res) => {
   try {

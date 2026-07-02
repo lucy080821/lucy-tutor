@@ -112,4 +112,15 @@ router.patch('/:id/features', async (req, res) => {
   }
 });
 
+// Delete a classroom
+router.delete('/:id', async (req, res) => {
+  try {
+    await prisma.classroom.delete({ where: { id: req.params.id } });
+    res.json({ message: 'Đã xóa lớp học thành công' });
+  } catch (error) {
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Không tìm thấy lớp học' });
+    res.status(400).json({ error: error.message });
+  }
+});
+
 module.exports = router;

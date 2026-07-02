@@ -4,6 +4,7 @@ import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from 'recharts';
 import CalendarComponent from "@/components/calendar/CalendarComponent";
+import InstallPWAButton from "@/components/InstallPWAButton";
 import Swal from 'sweetalert2';
 import confetti from "canvas-confetti";
 
@@ -15,6 +16,7 @@ export default function StudentDashboard() {
   const [history, setHistory] = useState<any[]>([]);
   const [examResults, setExamResults] = useState<any[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
+  const [lessonClassFilter, setLessonClassFilter] = useState("");
 
   useEffect(() => {
     if (user?.classroomsJoined?.length > 0) {
@@ -558,6 +560,7 @@ export default function StudentDashboard() {
                 </div>
               </div>
             </div>
+            <InstallPWAButton />
           </div>
         )}
 
@@ -718,8 +721,18 @@ export default function StudentDashboard() {
         {/* VIEW: LESSONS */}
         {activeTab === "LESSONS" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <h1 className="text-3xl font-bold mb-6">Bài Học Của Bạn</h1>
-            {lessons.length === 0 ? (
+            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+              <h1 className="text-3xl font-bold">Bài Học Của Bạn</h1>
+              {(user?.classroomsJoined?.length || 0) > 1 && (
+                <select className="p-2.5 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" value={lessonClassFilter} onChange={e => setLessonClassFilter(e.target.value)}>
+                  <option value="">Tất cả các lớp</option>
+                  {user.classroomsJoined.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              )}
+            </div>
+            {(() => {
+              const filteredLessons = lessonClassFilter ? lessons.filter((l: any) => l.classroomId === lessonClassFilter) : lessons;
+              return filteredLessons.length === 0 ? (
               <div className="bg-white border border-gray-100 p-12 flex flex-col justify-center items-center text-center">
                 <div className="w-20 h-20 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center mb-6">
                   <span className="text-3xl">📚</span>
@@ -729,7 +742,7 @@ export default function StudentDashboard() {
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {lessons.map(lesson => {
+                {filteredLessons.map(lesson => {
                   const progress = lesson.progress?.find((p: any) => p.userId === user?.id);
                   const isCompleted = progress?.status === 'COMPLETED';
                   return (
@@ -755,7 +768,8 @@ export default function StudentDashboard() {
                   );
                 })}
               </div>
-            )}
+              );
+            })()}
           </div>
         )}
 
@@ -903,6 +917,12 @@ export default function StudentDashboard() {
                             <path d="M30 4 v10 h10" fill="none" stroke="#e11d48" strokeWidth="2" strokeLinejoin="round"/>
                             <path d="M22 20 c0 0 -2 -6 -5 -6 c-2 0 -3 2 -1 4 c2 2 4 4 6 7 c2 3 1 6 3 6 c2 0 3 -1 2 -3 c-1 -2 -3 -3 -5 -5 c-1 -2 -2 -5 -2 -5 c0 0 2 0 2 2 z" fill="none" stroke="#e11d48" strokeWidth="2"/>
                             <text x="13" y="38" fontFamily="Arial" fontSize="12" fontWeight="bold" fill="#1f2937">PDF</text>
+                          </svg>
+                       ) : (doc.fileType === '.ppt' || doc.fileType === '.pptx') ? (
+                          <svg viewBox="0 0 48 48" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 4 h22 l10 10 v30 h-32 Z" fill="#fff" stroke="#d2691e" strokeWidth="2" strokeLinejoin="round"/>
+                            <path d="M30 4 v10 h10" fill="none" stroke="#d2691e" strokeWidth="2" strokeLinejoin="round"/>
+                            <text x="11" y="38" fontFamily="Arial" fontSize="11" fontWeight="bold" fill="#1f2937">PPT</text>
                           </svg>
                        ) : (
                           <svg viewBox="0 0 48 48" width="40" height="40" xmlns="http://www.w3.org/2000/svg">

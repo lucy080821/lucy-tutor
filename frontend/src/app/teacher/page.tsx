@@ -341,6 +341,7 @@ export default function TeacherDashboard() {
 
   // ── Lesson management state ──
   const [localLessons, setLocalLessons] = useState<any[]>([]);
+  const [lessonClassFilter, setLessonClassFilter] = useState("");
   useEffect(() => {
     if (user?.id) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/teacher/${user.id}`)
@@ -514,6 +515,20 @@ export default function TeacherDashboard() {
   const [aggregatedReports, setAggregatedReports] = useState<Record<string, any>>({});
   const invoiceRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const [isExporting, setIsExporting] = useState(false);
+
+  // ── Overview tuition summary (quản lý chung) ──
+  const [overviewTuitionMonth, setOverviewTuitionMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
+  const [overviewTuitionData, setOverviewTuitionData] = useState<any>(null);
+  const [showUnpaidOnly, setShowUnpaidOnly] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== "OVERVIEW" || !user?.id || !overviewTuitionMonth) return;
+    const [year, month] = overviewTuitionMonth.split("-");
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/report/teacher/${user.id}?month=${parseInt(month)}&year=${year}`)
+      .then(res => res.json())
+      .then(setOverviewTuitionData)
+      .catch(console.error);
+  }, [activeTab, user, overviewTuitionMonth]);
 
   const fetchAttendance = async () => {
     if (!attClassroomId || !attDate) return;
@@ -774,6 +789,30 @@ export default function TeacherDashboard() {
             Swal.fire('Lỗi', 'Xóa thất bại', 'error'); 
           }
         } catch (err) { console.error(err); }
+      }
+    });
+  };
+
+  const handleDeleteClassroom = async (classroom: any) => {
+    Swal.fire({
+      title: 'Xác nhận xóa lớp',
+      html: `Bạn có chắc muốn xóa lớp <b>${classroom.name}</b> không?<br/>Toàn bộ bài học, đề thi, tài liệu, điểm danh và học phí của lớp này sẽ bị xóa vĩnh viễn.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Có, xóa lớp',
+      cancelButtonText: 'Hủy',
+      confirmButtonColor: '#e11d48'
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/classroom/${classroom.id}`, { method: 'DELETE' });
+          if (res.ok) {
+            setClassrooms(classrooms.filter((c: any) => c.id !== classroom.id));
+            Swal.fire('Đã xóa!', 'Lớp học đã được xóa thành công.', 'success');
+          } else {
+            Swal.fire('Lỗi', 'Xóa lớp thất bại', 'error');
+          }
+        } catch (err) { console.error(err); Swal.fire('Lỗi', 'Xóa lớp thất bại', 'error'); }
       }
     });
   };
@@ -1123,10 +1162,81 @@ export default function TeacherDashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {classrooms.map(c => <ClassCard key={c.id} c={c} onEdit={() => openEditModal(c)} />)}
+              {classrooms.map(c => <ClassCard key={c.id} c={c} onEdit={() => openEditModal(c)} onDelete={() => handleDeleteClassroom(c)} />)}
               <button onClick={openCreateModal} className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-blue-300 hover:text-primary/70 transition-colors cursor-pointer bg-white">
                 + Tạo Lớp Mới
               </button>
+            </div>
+
+            {/* Tuition management summary (quản lý chung) */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mt-6">
+              <div className="flex justify-between items-center flex-wrap gap-4 mb-6">
+                <h3 className="font-bold text-slate-700 text-lg">💰 Quản Lý Thu Học Phí</h3>
+                <input type="month" value={overviewTuitionMonth} onChange={e => setOverviewTuitionMonth(e.target.value)}
+                  className="p-2 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" />
+              </div>
+
+              {!overviewTuitionData ? (
+                <p className="text-slate-400 italic">Đang tải dữ liệu học phí...</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <StatCard title="Tổng Đã Thu" value={`${overviewTuitionData.totalCollected.toLocaleString()} đ`} />
+                    <StatCard title="Tổng Cần Thu" value={`${overviewTuitionData.totalExpected.toLocaleString()} đ`} />
+                    <StatCard title="Đã Đóng" value={String(overviewTuitionData.paidCount)} />
+                    <StatCard title="Chưa Đóng" value={String(overviewTuitionData.unpaidCount)} />
+                  </div>
+
+                  <div className="flex items-center gap-3 mb-4">
+                    <button onClick={() => setShowUnpaidOnly(false)} className={`px-3 py-1.5 text-sm font-bold rounded-lg cursor-pointer transition-colors ${!showUnpaidOnly ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>Tất cả</button>
+                    <button onClick={() => setShowUnpaidOnly(true)} className={`px-3 py-1.5 text-sm font-bold rounded-lg cursor-pointer transition-colors ${showUnpaidOnly ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>Chỉ chưa đóng</button>
+                  </div>
+
+                  {(() => {
+                    const rows = [...overviewTuitionData.paidList, ...overviewTuitionData.unpaidList]
+                      .filter((r: any) => !showUnpaidOnly || r.paymentStatus !== 'PAID')
+                      .sort((a: any, b: any) => (a.paymentStatus === b.paymentStatus ? 0 : a.paymentStatus === 'PAID' ? 1 : -1));
+
+                    if (rows.length === 0) return <p className="text-slate-400 italic">Không có dữ liệu học phí phù hợp.</p>;
+
+                    return (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left min-w-[700px]">
+                          <thead>
+                            <tr className="bg-slate-50 text-slate-400 text-xs uppercase tracking-widest">
+                              <th className="p-3 font-bold border-b border-gray-100">Học Sinh</th>
+                              <th className="p-3 font-bold border-b border-gray-100">Lớp</th>
+                              <th className="p-3 font-bold border-b border-gray-100 text-center">Số Buổi</th>
+                              <th className="p-3 font-bold border-b border-gray-100 text-right">Số Tiền</th>
+                              <th className="p-3 font-bold border-b border-gray-100 text-center">Trạng Thái</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rows.map((r: any, i: number) => (
+                              <tr key={`${r.classroomId}-${r.user.id}-${i}`} className="border-b border-gray-100 last:border-0 hover:bg-slate-50 transition-colors">
+                                <td className="p-3 font-medium flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+                                    {r.user.name.charAt(0)}
+                                  </div>
+                                  <div>{r.user.name}</div>
+                                </td>
+                                <td className="p-3 text-sm text-slate-500">{r.classroomName}</td>
+                                <td className="p-3 text-center">{r.presentCount}</td>
+                                <td className="p-3 text-right font-bold">{r.totalAmount.toLocaleString()} đ</td>
+                                <td className="p-3 text-center">
+                                  <span className={`px-2 py-1 text-xs font-bold rounded-full ${r.paymentStatus === 'PAID' ? 'bg-green-500/10 text-green-600' : 'bg-rose-500/10 text-rose-600'}`}>
+                                    {r.paymentStatus === 'PAID' ? 'Đã đóng' : 'Chưa đóng'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    );
+                  })()}
+                </>
+              )}
             </div>
           </div>
         )}
@@ -1139,7 +1249,7 @@ export default function TeacherDashboard() {
               <button onClick={openCreateModal} className="px-4 py-2 bg-primary text-white font-bold hover:bg-blue-700 rounded-lg cursor-pointer">+ Tạo Lớp</button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {classrooms.map(c => <ClassCard key={c.id} c={c} onEdit={() => openEditModal(c)} />)}
+              {classrooms.map(c => <ClassCard key={c.id} c={c} onEdit={() => openEditModal(c)} onDelete={() => handleDeleteClassroom(c)} />)}
             </div>
           </div>
         )}
@@ -1252,7 +1362,7 @@ export default function TeacherDashboard() {
               <form onSubmit={handleUploadDocument} className="flex flex-wrap gap-4 items-end">
                 <div className="flex-1 min-w-[200px]">
                   <label className="block text-sm font-bold mb-2">Chọn file (PDF, Word)</label>
-                  <input type="file" accept=".pdf,.doc,.docx" onChange={e => setDocFile(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" required />
+                  <input type="file" accept=".pdf,.doc,.docx,.ppt,.pptx" onChange={e => setDocFile(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" required />
                 </div>
                 <div className="flex-1 min-w-[200px]">
                   <label className="block text-sm font-bold mb-2">Tiêu đề (Tùy chọn)</label>
@@ -1309,6 +1419,12 @@ export default function TeacherDashboard() {
                             <path d="M30 4 v10 h10" fill="none" stroke="#e11d48" strokeWidth="2" strokeLinejoin="round"/>
                             <path d="M22 20 c0 0 -2 -6 -5 -6 c-2 0 -3 2 -1 4 c2 2 4 4 6 7 c2 3 1 6 3 6 c2 0 3 -1 2 -3 c-1 -2 -3 -3 -5 -5 c-1 -2 -2 -5 -2 -5 c0 0 2 0 2 2 z" fill="none" stroke="#e11d48" strokeWidth="2"/>
                             <text x="13" y="38" fontFamily="Arial" fontSize="12" fontWeight="bold" fill="#1f2937">PDF</text>
+                          </svg>
+                       ) : (doc.fileType === '.ppt' || doc.fileType === '.pptx') ? (
+                          <svg viewBox="0 0 48 48" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M8 4 h22 l10 10 v30 h-32 Z" fill="#fff" stroke="#d2691e" strokeWidth="2" strokeLinejoin="round"/>
+                            <path d="M30 4 v10 h10" fill="none" stroke="#d2691e" strokeWidth="2" strokeLinejoin="round"/>
+                            <text x="11" y="38" fontFamily="Arial" fontSize="11" fontWeight="bold" fill="#1f2937">PPT</text>
                           </svg>
                        ) : (
                           <svg viewBox="0 0 48 48" width="40" height="40" xmlns="http://www.w3.org/2000/svg">
@@ -1735,30 +1851,38 @@ export default function TeacherDashboard() {
         {/* ── LESSONS ── */}
         {activeTab === "LESSONS" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
               <h1 className="text-3xl font-bold">Ngân Hàng Bài Học</h1>
-              <button onClick={() => {
-                setCreateLessonTitle(""); setCreateLessonDesc(""); setCreateLessonClassroomId("");
-                setLessonVocabs([]); setLessonGrammars([]); setEditingLessonId(null);
-                setActiveTab('CREATE_LESSON');
-              }} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Mới</button>
+              <div className="flex items-center gap-3">
+                <select className="p-2.5 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" value={lessonClassFilter} onChange={e => setLessonClassFilter(e.target.value)}>
+                  <option value="">Tất cả các lớp</option>
+                  {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                <button onClick={() => {
+                  setCreateLessonTitle(""); setCreateLessonDesc(""); setCreateLessonClassroomId("");
+                  setLessonVocabs([]); setLessonGrammars([]); setEditingLessonId(null);
+                  setActiveTab('CREATE_LESSON');
+                }} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Mới</button>
+              </div>
             </div>
-            {localLessons.length === 0 ? (
+            {(() => {
+              const filteredLessons = lessonClassFilter ? localLessons.filter((l: any) => l.classroomId === lessonClassFilter) : localLessons;
+              return filteredLessons.length === 0 ? (
                 <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
                   <span className="text-5xl mb-4">📚</span>
-                  <h2 className="text-2xl font-bold mb-2">Chưa có bài học nào</h2>
+                  <h2 className="text-2xl font-bold mb-2">{lessonClassFilter ? 'Lớp này chưa có bài học nào' : 'Chưa có bài học nào'}</h2>
                   <p className="text-slate-400 mb-6">Bắt đầu bằng cách tạo bài học mới</p>
                   <button onClick={() => setActiveTab('CREATE_LESSON')} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Ngay</button>
                 </div>
-            ) : (
+              ) : (
                 <div className="space-y-3">
-                  {localLessons.map((lesson: any) => (
+                  {filteredLessons.map((lesson: any) => (
                     <div key={lesson.id} className="bg-white rounded-xl border border-gray-100 p-5 flex items-center justify-between hover:shadow-md transition-all shadow-sm">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 bg-blue-500/10 text-blue-600 flex items-center justify-center text-2xl">📚</div>
                         <div>
                           <h3 className="font-bold text-lg">{lesson.title}</h3>
-                          <p className="text-sm text-slate-400">{lesson.vocabularies?.length || 0} từ vựng • {lesson.grammars?.length || 0} ngữ pháp</p>
+                          <p className="text-sm text-slate-400">{lesson.classroom?.name ? `${lesson.classroom.name} • ` : ''}{lesson.vocabularies?.length || 0} từ vựng • {lesson.grammars?.length || 0} ngữ pháp</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -1774,7 +1898,8 @@ export default function TeacherDashboard() {
                     </div>
                   ))}
                 </div>
-            )}
+              );
+            })()}
           </div>
         )}
 
@@ -2600,7 +2725,7 @@ function StatCard({ title, value }: { title: string; value: string }) {
   );
 }
 
-function ClassCard({ c, onEdit }: { c: any; onEdit?: () => void }) {
+function ClassCard({ c, onEdit, onDelete }: { c: any; onEdit?: () => void; onDelete?: () => void }) {
   let daysStr = '';
   try {
     const days = c.scheduleDays ? JSON.parse(c.scheduleDays) : [];
@@ -2630,9 +2755,14 @@ function ClassCard({ c, onEdit }: { c: any; onEdit?: () => void }) {
           </div>
         )}
       </div>
-      <div className="text-right shrink-0">
+      <div className="text-right shrink-0 flex flex-col items-end gap-2">
         <p className="text-xs text-slate-400 mb-1">Mã tham gia</p>
         <div className="bg-blue-50 text-primary font-mono font-bold px-3 py-1.5 rounded-lg text-base tracking-widest border border-blue-100">{c.joinCode}</div>
+        {onDelete && (
+          <button onClick={onDelete} className="opacity-0 group-hover:opacity-100 text-xs font-bold text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2 py-1 rounded-lg transition-all cursor-pointer">
+            🗑 Xóa lớp
+          </button>
+        )}
       </div>
     </div>
   );

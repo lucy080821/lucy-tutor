@@ -12,8 +12,9 @@ const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
-    if (ext !== '.pdf' && ext !== '.doc' && ext !== '.docx') {
-      return cb(new Error('Chỉ cho phép file PDF và Word (.pdf, .doc, .docx)'));
+    const allowedExts = ['.pdf', '.doc', '.docx', '.ppt', '.pptx'];
+    if (!allowedExts.includes(ext)) {
+      return cb(new Error('Chỉ cho phép file PDF, Word và PowerPoint (.pdf, .doc, .docx, .ppt, .pptx)'));
     }
     cb(null, true);
   }

@@ -1,10 +1,21 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Link from "next/link";
+import PWARegister from "@/components/PWARegister";
 
 export const metadata: Metadata = {
   title: "Lucy Tutor | Luyện thi Tiếng Anh",
   description: "Nền tảng EdTech luyện thi Đại học môn Tiếng Anh hiệu suất cao.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Lucy Tutor",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1E3A8A",
 };
 
 export default function RootLayout({
@@ -15,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning className="antialiased min-h-screen flex flex-col bg-slate-100">
+        <PWARegister />
 
         {/* Global Header */}
         <header className="sticky top-0 z-50 bg-white shadow-sm">
