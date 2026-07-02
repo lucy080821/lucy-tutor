@@ -13,6 +13,10 @@ services:
         sync: false
       - key: GROQ_API_KEY
         sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
 
   # 2. Frontend Service (Next.js Application)
   - type: web
