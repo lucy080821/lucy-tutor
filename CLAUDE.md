@@ -112,24 +112,34 @@ Tính năng nổi bật:
 
 **File:** [frontend/src/app/teacher/page.tsx](frontend/src/app/teacher/page.tsx)
 
-Tabs chính:
-- **OVERVIEW** — Thống kê lớp, biểu đồ điểm trung bình (BarChart), và **Quản Lý Thu Học Phí**: tổng hợp học phí của TẤT CẢ lớp theo tháng (tổng đã thu, tổng cần thu, số học sinh đã đóng/chưa đóng, bảng chi tiết lọc "Tất cả" / "Chỉ chưa đóng")
-- **CLASSROOMS** — Quản lý lớp học (tạo/sửa/xóa), xem danh sách học sinh. Nút xóa lớp (`ClassCard` → `onDelete`) hiện khi hover, xác nhận qua SweetAlert2; xóa cascade toàn bộ bài học/đề thi/tài liệu/điểm danh/học phí của lớp đó
-- **EXAMS** — Tạo đề thi, giao đề, import từ Word/PDF
-- **QUESTIONS** — Ngân hàng câu hỏi
-- **LESSONS** — Tạo bài học (editor ReactQuill). Có dropdown lọc bài học theo lớp (`lessonClassFilter`) ở đầu danh sách
-- **DOCUMENTS** — Tài liệu đính kèm. Hỗ trợ định dạng PDF, Word (.doc/.docx) và **PowerPoint (.ppt/.pptx)**
-- **ATTENDANCE** — Điểm danh học sinh
-- **TUITION** — Học phí theo từng lớp (xuất hóa đơn PDF/Excel)
-- **CALENDAR** — Lịch lên lớp (FullCalendar)
-- **ANALYTICS** — Phân tích điểm yếu học sinh theo chuyên đề
+Tabs chính (điều hướng theo nhóm — xem `navGroups` trong file):
+- **OVERVIEW** (Tổng Quan) — Dashboard "sức khỏe kinh doanh" của giáo viên:
+  - 5 thẻ KPI đầu trang (`StatCard` với icon + màu nền theo `accent`): Tổng Lớp, Tổng Học Sinh, Bài Tập/Đề Thi, Câu Hỏi, **Tỷ Lệ Nộp Bài** (số học sinh đã nộp / tổng số bài đã giao, tính từ `classroom.exams[].results`)
+  - **Doanh Thu Học Phí 6 Tháng Gần Đây** (BarChart) — gọi `GET /api/attendance/report/teacher/:teacherId` 6 lần (mỗi tháng 1 lần, `Promise.all`) để dựng biểu đồ Đã Thu vs Cần Thu theo tháng, không cần API mới
+  - **Sĩ Số & Bài Tập Theo Lớp** (BarChart nhóm cột) — so sánh số học sinh và số bài tập giữa các lớp
+  - **Tình Hình Thu Học Phí** (PieChart dạng donut) — Đã thu / Còn thiếu của tháng hiện tại (`overviewTuitionMonth`), có nhãn % ở giữa vòng tròn
+  - **Điểm Trung Bình Theo Lớp** (BarChart ngang, xếp hạng) — điểm trung bình cao nhất mỗi đề của học sinh, tính bằng `studentAvgScore`/`classroomScoreStats`
+  - Không hiển thị lưới danh sách lớp học ở đây nữa (đã chuyển hẳn sang tab **CLASSES**, tránh trùng lặp)
+  - Bên dưới vẫn còn **Quản Lý Thu Học Phí** (bảng chi tiết theo tháng, lọc "Tất cả" / "Chỉ chưa đóng")
+- **CLASSES** (Lớp Học) — Quản lý lớp học (tạo/sửa/xóa), xem danh sách học sinh. Nút xóa lớp (`ClassCard` → `onDelete`) hiện khi hover, xác nhận qua SweetAlert2; xóa cascade toàn bộ bài học/đề thi/tài liệu/điểm danh/học phí của lớp đó
+- **STUDENTS** (Học Sinh) — Danh sách toàn bộ học sinh, tìm kiếm theo tên/email, hiển thị cấp bậc/XP, điểm trung bình, tiến độ so với mục tiêu
+- **ATTENDANCE** (Điểm Danh & Học Phí) — 2 view con: "Điểm Danh" (mark theo ngày) và "Báo Cáo Học Phí" (theo từng lớp, xuất hóa đơn PDF/Excel)
+- **CHEAT_CONTROL** (Kiểm Soát Gian Lận) — xem log gian lận (mất focus tab, copy/paste) theo học sinh/đề thi
+- **CALENDAR** (Thời Khóa Biểu) — Lịch lên lớp (FullCalendar)
+- **LESSONS** (Danh Sách Bài Học) — danh sách bài học đã tạo, dropdown lọc theo lớp (`lessonClassFilter`)
+- **CREATE_LESSON** (Tạo Bài Học) — soạn bài học (ReactQuill), nhập từ vựng hàng loạt qua Excel mẫu
+- **DOCUMENTS** (Kho Tài Liệu) — Tài liệu đính kèm. Hỗ trợ định dạng PDF, Word (.doc/.docx) và **PowerPoint (.ppt/.pptx)**
+- **EXAMS** (Ngân Hàng Đề Thi) — danh sách đề thi/bài tập đã tạo (`ExamCard`), nhân bản/sửa/xóa
+- **CREATE** (Tạo Đề Mới) — soạn đề thi thủ công:
+  - Mỗi câu hỏi là 1 card dạng **accordion** (thu gọn/mở rộng từng câu hoặc "Thu Gọn Tất Cả"/"Mở Rộng Tất Cả"), có thanh tiến trình "Đã soạn xong X/Y câu"
+  - **Nhập nhanh từ Excel**: nút "Tải Excel Mẫu" (cột Loại TN/TL, Câu hỏi, 4 đáp án, đáp án đúng, giải thích, điểm) và "Nhập Từ Excel" — đổ thẳng câu hỏi vào form để rà soát trước khi lưu, không cần nhập tay từng câu
+- **LEADERBOARD** (Bảng Xếp Hạng)
 
 Tính năng nổi bật:
 - Rich text editor (ReactQuill) soạn câu hỏi với toolbar bold/italic/color
-- Import đề từ file Word (mammoth) hoặc PDF (pdf-parse) qua backend
 - Xuất báo cáo Excel (xlsx-js-style) và PDF (jsPDF)
 - Xuất hóa đơn học phí qua component `TuitionInvoice`
-- Mobile: hamburger menu (`isMobileMenuOpen`)
+- Mobile: hamburger menu (`isMobileMenuOpen`); header và card của các danh sách (LESSONS, EXAMS) tự xếp dọc (`flex-col sm:flex-row`) trên màn hình hẹp thay vì ép chung 1 hàng
 
 ---
 
@@ -262,3 +272,8 @@ Cho phép học sinh cài app lên điện thoại (Add to Home Screen):
 - Avatar lưu dạng base64 string trong DB — không dùng file upload server
 - Tất cả modal/alert dùng **SweetAlert2** (`Swal.fire()`), không dùng `window.alert`/`window.confirm`
 - HTML từ ReactQuill phải được sanitize bằng `DOMPurify.sanitize()` trước khi render
+- **Backend có route `POST /api/upload/exam`** (parse Word qua `mammoth`, PDF qua `pdf-parse`, tách câu bằng regex "Câu X:") nhưng **không có giao diện nào gọi tới** — route này hiện chưa được dùng. Cách nhập đề hàng loạt đang hoạt động thật là **Excel** ở tab CREATE (xem phần `/teacher` phía trên)
+- **`react-quill-new` có bug: một ReactQuill mới mount lần đầu với `value` không rỗng, trong khi các ReactQuill khác đã tồn tại sẵn trên trang, có thể gây "Maximum update depth exceeded"** (React error #185) hoặc đồng bộ sai nội dung. Cách né trong `teacher/page.tsx`:
+  - Toàn bộ danh sách câu hỏi (tab CREATE) được mount lại một lượt bằng cách đổi `key={questionsListGeneration}` mỗi khi nạp dữ liệu hàng loạt (import Excel, nhân bản đề) — giống cách tab CREATE vốn đã mount ổn định khi chuyển tab
+  - Sau lần mount đầu tiên, việc thu gọn/mở rộng câu hỏi dùng **CSS ẩn (`hidden`) chứ không unmount/remount** (`everExpandedQuestions` theo dõi câu nào đã từng mở) — tránh mount lại ReactQuill nhiều lần
+  - Khi cần tạo object câu hỏi mới, luôn gọi `BLANK_QUESTION()` hoặc `newQuestionKey()` để có `_key` duy nhất; thiếu `_key` sẽ làm nhiều card share chung 1 React key

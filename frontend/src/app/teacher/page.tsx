@@ -8,7 +8,7 @@ import { toPng } from 'html-to-image';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { TuitionInvoice } from '@/components/tuition/TuitionInvoice';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, PieChart, Pie, Cell, LabelList } from 'recharts';
 import dynamic from 'next/dynamic';
 import DOMPurify from 'dompurify';
 import 'react-quill-new/dist/quill.snow.css';
@@ -22,7 +22,10 @@ const miniQuillModules = {
   ]
 };
 
+let questionKeySeq = 0;
+const newQuestionKey = () => `q-${Date.now()}-${questionKeySeq++}`;
 const BLANK_QUESTION = () => ({
+  _key: newQuestionKey(),
   type: "MULTIPLE_CHOICE" as "MULTIPLE_CHOICE" | "ESSAY",
   heading: "",
   content: "",
@@ -32,6 +35,14 @@ const BLANK_QUESTION = () => ({
   imageUrl: "",
   points: 1,
 });
+
+const stripHtml = (html?: string) => (html || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+
+const escapeHtml = (text: string) => text
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;");
+const textToQuillHtml = (text: string) => text ? `<p>${escapeHtml(text)}</p>` : "";
 
 export default function TeacherDashboard() {
   const [activeTab, setActiveTab] = useState("OVERVIEW");
@@ -530,6 +541,30 @@ export default function TeacherDashboard() {
       .catch(console.error);
   }, [activeTab, user, overviewTuitionMonth]);
 
+  // ── Revenue trend: last 6 months, for the OVERVIEW "business health" chart ──
+  const [revenueTrend, setRevenueTrend] = useState<any[] | null>(null);
+  useEffect(() => {
+    if (activeTab !== "OVERVIEW" || !user?.id) return;
+    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const now = new Date();
+    const months = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      return { month: d.getMonth() + 1, year: d.getFullYear() };
+    });
+    let cancelled = false;
+    Promise.all(months.map(({ month, year }) =>
+      fetch(`${API}/api/attendance/report/teacher/${user.id}?month=${month}&year=${year}`).then(res => res.json())
+    )).then(reports => {
+      if (cancelled) return;
+      setRevenueTrend(reports.map((r, i) => ({
+        name: `T${months[i].month}/${String(months[i].year).slice(2)}`,
+        DaThu: r.totalCollected || 0,
+        CanThu: r.totalExpected || 0,
+      })));
+    }).catch(console.error);
+    return () => { cancelled = true; };
+  }, [activeTab, user]);
+
   const fetchAttendance = async () => {
     if (!attClassroomId || !attDate) return;
     try {
@@ -734,6 +769,7 @@ export default function TeacherDashboard() {
           } catch (e) {}
         }
         return {
+          _key: newQuestionKey(),
           heading: q.heading || "",
           type: q.type,
           content: q.content,
@@ -746,6 +782,9 @@ export default function TeacherDashboard() {
       }) : [BLANK_QUESTION()];
 
       setCreateQuestions(qArray);
+      setExpandedQuestions(Object.fromEntries(qArray.map((q: any) => [q._key, true])));
+      markExpanded(qArray.map((q: any) => q._key));
+      setQuestionsListGeneration(g => g + 1);
       setActiveTab("CREATE");
       setExpandedNav(prev => ({ ...prev, 'EXAMS_GROUP': true }));
     } catch (e: any) {
@@ -854,8 +893,50 @@ export default function TeacherDashboard() {
   const [createQuestions, setCreateQuestions] = useState([BLANK_QUESTION()]);
   const [isCreating, setIsCreating] = useState(false);
 
-  const addQuestion = () => setCreateQuestions([...createQuestions, BLANK_QUESTION()]);
-  const removeQuestion = (i: number) => setCreateQuestions(createQuestions.filter((_, idx) => idx !== i));
+  const [expandedQuestions, setExpandedQuestions] = useState<Record<string, boolean>>(() => ({ [createQuestions[0]._key]: true }));
+  const isQuestionExpanded = (key: string) => expandedQuestions[key] !== false;
+  // Once a question card has been opened, its editors stay mounted forever and collapsing just hides
+  // them with CSS — react-quill-new can fail to sync a *freshly mounted* editor's value when other
+  // already-initialized editors exist alongside it, but toggling visibility of an already-mounted
+  // editor is safe (this is also why only the FIRST open of a card needs the section-remount below).
+  const [everExpandedQuestions, setEverExpandedQuestions] = useState<Record<string, boolean>>(() => ({ [createQuestions[0]._key]: true }));
+  const markExpanded = (keys: string[]) => setEverExpandedQuestions(prev => {
+    const next = { ...prev };
+    keys.forEach(k => { next[k] = true; });
+    return next;
+  });
+  const toggleQuestionExpanded = (key: string) => {
+    const expanding = !isQuestionExpanded(key);
+    setExpandedQuestions(prev => ({ ...prev, [key]: expanding }));
+    if (expanding) markExpanded([key]);
+  };
+  const allQuestionsExpanded = createQuestions.every(q => isQuestionExpanded(q._key));
+  const toggleAllQuestionsExpanded = () => {
+    const next = !allQuestionsExpanded;
+    setExpandedQuestions(Object.fromEntries(createQuestions.map(q => [q._key, next])));
+    if (next) markExpanded(createQuestions.map(q => q._key));
+  };
+  // react-quill-new can fail to sync a fresh editor's controlled value when it mounts alongside
+  // other already-open editors on the same tab. Bumping this key forces the whole question list to
+  // fully unmount and remount as one batch whenever content is bulk-loaded (Excel import), which
+  // mounts every editor the same reliable way the (pre-existing, working) "Nhân bản" duplicate flow does.
+  const [questionsListGeneration, setQuestionsListGeneration] = useState(0);
+
+  const addQuestion = () => {
+    const q = BLANK_QUESTION();
+    setCreateQuestions([...createQuestions, q]);
+    setExpandedQuestions(prev => ({ ...prev, [q._key]: true }));
+    markExpanded([q._key]);
+  };
+  const removeQuestion = (i: number) => {
+    const removedKey = createQuestions[i]._key;
+    setCreateQuestions(createQuestions.filter((_, idx) => idx !== i));
+    setExpandedQuestions(prev => {
+      const next = { ...prev };
+      delete next[removedKey];
+      return next;
+    });
+  };
   const updateQuestion = (i: number, patch: any) => {
     const next = [...createQuestions];
     next[i] = { ...next[i], ...patch };
@@ -867,6 +948,110 @@ export default function TeacherDashboard() {
     opts[oi] = val;
     next[qi] = { ...next[qi], options: opts };
     setCreateQuestions(next);
+  };
+
+  const handleDownloadExamQuestionTemplate = () => {
+    const headers = ["Loại (TN/TL)", "Câu hỏi *", "Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D", "Đáp án đúng", "Giải thích", "Điểm"];
+    const sampleRows = [
+      ["TN", "What is the capital of Vietnam?", "Hanoi", "Ho Chi Minh City", "Da Nang", "Hue", "A", "Hanoi là thủ đô của Việt Nam.", 1],
+      ["TL", "Complete: I ___ (go) to school every day.", "", "", "", "", "go", "Thì hiện tại đơn với chủ ngữ I (thói quen).", 1],
+    ];
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+
+    const headerStyle = {
+      font: { name: 'Calibri', bold: true, color: { rgb: "FFFFFF" }, sz: 12 },
+      fill: { fgColor: { rgb: "1E3A8A" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin", color: { auto: 1 } },
+        bottom: { style: "thin", color: { auto: 1 } },
+        left: { style: "thin", color: { auto: 1 } },
+        right: { style: "thin", color: { auto: 1 } }
+      }
+    };
+    const dataStyle = {
+      font: { name: 'Calibri', sz: 11 },
+      alignment: { vertical: "center", wrapText: true },
+      border: {
+        top: { style: "thin", color: { rgb: "EEEEEE" } },
+        bottom: { style: "thin", color: { rgb: "EEEEEE" } },
+        left: { style: "thin", color: { rgb: "EEEEEE" } },
+        right: { style: "thin", color: { rgb: "EEEEEE" } }
+      }
+    };
+
+    const range = XLSX.utils.decode_range(ws['!ref'] || "A1:I3");
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const cell_ref = XLSX.utils.encode_cell({ c: C, r: R });
+        if (!ws[cell_ref]) continue;
+        ws[cell_ref].s = R === 0 ? headerStyle : dataStyle;
+      }
+    }
+
+    ws['!cols'] = [{ wch: 12 }, { wch: 40 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 14 }, { wch: 35 }, { wch: 8 }];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Questions");
+    XLSX.writeFile(wb, "ExamQuestionsTemplate.xlsx");
+  };
+
+  const handleUploadExamQuestionsExcel = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const bstr = evt.target?.result;
+      const wb = XLSX.read(bstr, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
+      const dataRows = rows.slice(1);
+
+      const imported: ReturnType<typeof BLANK_QUESTION>[] = [];
+      let skipped = 0;
+      dataRows.forEach(row => {
+        const [loai, noidung, a, b, c, d, dapAnDung, giaiThich, diem] = row || [];
+        const content = (noidung ?? '').toString().trim();
+        if (!content) { skipped++; return; }
+
+        const type: "MULTIPLE_CHOICE" | "ESSAY" = (loai ?? '').toString().trim().toUpperCase().startsWith('TL') ? 'ESSAY' : 'MULTIPLE_CHOICE';
+        const q = BLANK_QUESTION();
+        q.type = type;
+        q.points = parseFloat(diem) || 1;
+        q.explanation = textToQuillHtml((giaiThich ?? '').toString().trim());
+        if (type === 'MULTIPLE_CHOICE') {
+          q.options = [a, b, c, d].map(v => textToQuillHtml((v ?? '').toString().trim()));
+          const letter = (dapAnDung ?? '').toString().trim().toUpperCase();
+          q.correctOption = ['A', 'B', 'C', 'D'].includes(letter) ? letter : 'A';
+        } else {
+          q.correctOption = (dapAnDung ?? '').toString().trim().toLowerCase();
+        }
+        q.content = textToQuillHtml(content);
+        imported.push(q);
+      });
+
+      if (imported.length === 0) {
+        Swal.fire('Không tìm thấy câu hỏi', 'File Excel không có dòng dữ liệu hợp lệ. Vui lòng dùng đúng file mẫu.', 'warning');
+        e.target.value = '';
+        return;
+      }
+
+      const isBlankOnly = createQuestions.length === 1 && !createQuestions[0].content.trim();
+      setCreateQuestions(isBlankOnly ? imported : [...createQuestions, ...imported]);
+      setExpandedQuestions(prev => {
+        const next = isBlankOnly ? {} : { ...prev };
+        imported.forEach((q) => { next[q._key] = true; });
+        return next;
+      });
+      markExpanded(imported.map(q => q._key));
+      // Force the whole question list to remount as one batch: mounting every editor together in a
+      // single commit is the reliable path (matching the existing "Nhân bản" duplicate-exam flow);
+      // mounting a freshly-imported, already non-empty editor on its own later is what triggers the bug.
+      setQuestionsListGeneration(g => g + 1);
+      Swal.fire('Thành công', `Đã nhập ${imported.length} câu hỏi từ Excel${skipped ? ` (bỏ qua ${skipped} dòng trống)` : ''}. Vui lòng kiểm tra lại nội dung trước khi lưu.`, 'success');
+      e.target.value = '';
+    };
+    reader.readAsBinaryString(file);
   };
 
   const [solvingAI, setSolvingAI] = useState<Record<number, boolean>>({});
@@ -1018,6 +1203,34 @@ export default function TeacherDashboard() {
 
   const allStudents = classrooms.flatMap(c => c.students || []).filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
 
+  const studentAvgScore = (s: any) => {
+    const results = s.examResults || [];
+    const uniqueResults: any[] = Object.values(results.reduce((acc: any, r: any) => {
+      if (!acc[r.examId] || r.score > acc[r.examId].score) acc[r.examId] = r;
+      return acc;
+    }, {}));
+    return uniqueResults.length > 0 ? uniqueResults.reduce((sum: number, r: any) => sum + r.score, 0) / uniqueResults.length : null;
+  };
+
+  const classroomScoreStats = classrooms
+    .map(c => {
+      const scored = (c.students || []).map(studentAvgScore).filter((v: number | null): v is number => v !== null);
+      const avg = scored.length > 0 ? scored.reduce((s: number, v: number) => s + v, 0) / scored.length : 0;
+      return { name: c.name, DiemTB: Math.round(avg * 10) / 10 };
+    })
+    .filter(c => c.DiemTB > 0);
+
+  const assignmentCompletion = classrooms.reduce((acc, c) => {
+    const studentCount = c.students?.length || 0;
+    (c.exams || []).forEach((e: any) => {
+      const submitters = new Set((e.results || []).map((r: any) => r.userId)).size;
+      acc.expected += studentCount;
+      acc.submitted += Math.min(submitters, studentCount);
+    });
+    return acc;
+  }, { expected: 0, submitted: 0 });
+  const completionRate = assignmentCompletion.expected > 0 ? Math.round((assignmentCompletion.submitted / assignmentCompletion.expected) * 100) : null;
+
   if (loading) return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden w-full">
       <div className="hidden md:flex w-64 bg-[#1e3a8a] flex-col shrink-0 h-full pt-6 px-4 gap-2">
@@ -1136,37 +1349,128 @@ export default function TeacherDashboard() {
         {activeTab === "OVERVIEW" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h1 className="text-3xl font-bold">Xin chào, {user?.name?.split(' ').slice(-1)[0] || 'Thầy/Cô'} 👋</h1>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard title="Tổng Lớp" value={String(classrooms.length)} />
-              <StatCard title="Tổng Học Sinh" value={String(allStudents.length)} />
-              <StatCard title="Bài Tập / Đề Thi" value={String(classrooms.flatMap(c => c.exams || []).length)} />
-              <StatCard title="Câu Hỏi" value={String(classrooms.flatMap(c => c.exams || []).reduce((s: number, e: any) => s + (e.totalQuestions || 0), 0))} />
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <StatCard title="Tổng Lớp" value={String(classrooms.length)} icon="🏫" accent="blue" />
+              <StatCard title="Tổng Học Sinh" value={String(allStudents.length)} icon="🧑‍🎓" accent="violet" />
+              <StatCard title="Bài Tập / Đề Thi" value={String(classrooms.flatMap(c => c.exams || []).length)} icon="📝" accent="green" />
+              <StatCard title="Câu Hỏi" value={String(classrooms.flatMap(c => c.exams || []).reduce((s: number, e: any) => s + (e.totalQuestions || 0), 0))} icon="❓" accent="amber" />
+              <StatCard title="Tỷ Lệ Nộp Bài" value={completionRate !== null ? `${completionRate}%` : '—'} icon="📊" accent="cyan" sub="Trên tổng số bài đã giao" />
             </div>
 
-            {/* Overview Chart */}
-            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mt-6 mb-6">
-              <h3 className="font-bold mb-6 text-slate-700">Thống kê Lớp học</h3>
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={classrooms.map(c => ({ name: c.name, HọcSinh: c.students?.length || 0, BàiTập: c.exams?.length || 0 }))} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.1} />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'currentColor', opacity: 0.5 }} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'currentColor', opacity: 0.5 }} allowDecimals={false} />
-                    <Tooltip cursor={{ fill: 'currentColor', opacity: 0.05 }} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
-                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '14px' }} />
-                    <Bar dataKey="HọcSinh" name="Số Học Sinh" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={32} />
-                    <Bar dataKey="BàiTập" name="Số Bài Tập" fill="#10b981" radius={[4, 4, 0, 0]} barSize={32} />
-                  </BarChart>
-                </ResponsiveContainer>
+            {/* Revenue trend — the headline "business health" chart */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mt-6">
+              <div className="mb-6">
+                <h3 className="font-bold text-slate-700">Doanh Thu Học Phí 6 Tháng Gần Đây</h3>
+                <p className="text-xs text-slate-400 mt-0.5">Tổng đã thu so với tổng cần thu mỗi tháng, trên tất cả các lớp</p>
+              </div>
+              {revenueTrend ? (
+                <div className="h-[260px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={revenueTrend} margin={{ top: 10, right: 20, left: 0, bottom: 0 }} barGap={4}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} width={56}
+                        tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(0)}tr` : String(v)} />
+                      <Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(v: any) => `${Number(v).toLocaleString()} đ`}
+                        contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontSize: '13px' }} />
+                      <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px', fontSize: '13px' }} />
+                      <Bar dataKey="CanThu" name="Cần Thu" fill="#cbd5e1" radius={[4, 4, 0, 0]} barSize={22} />
+                      <Bar dataKey="DaThu" name="Đã Thu" fill="#059669" radius={[4, 4, 0, 0]} barSize={22} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="h-[260px] flex items-center justify-center text-slate-400 text-sm italic">Đang tải dữ liệu doanh thu...</div>
+              )}
+            </div>
+
+            {/* Overview Charts */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mt-6">
+              <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="font-bold text-slate-700">Sĩ Số & Bài Tập Theo Lớp</h3>
+                    <p className="text-xs text-slate-400 mt-0.5">So sánh quy mô và khối lượng bài tập giữa các lớp</p>
+                  </div>
+                </div>
+                <div className="h-[280px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={classrooms.map(c => ({ name: c.name, HọcSinh: c.students?.length || 0, BàiTập: c.exams?.length || 0 }))} margin={{ top: 10, right: 20, left: 0, bottom: 0 }} barGap={4}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} allowDecimals={false} width={28} />
+                      <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontSize: '13px' }} />
+                      <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px', fontSize: '13px' }} />
+                      <Bar dataKey="HọcSinh" name="Số Học Sinh" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={28} />
+                      <Bar dataKey="BàiTập" name="Số Bài Tập" fill="#059669" radius={[4, 4, 0, 0]} barSize={28} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm flex flex-col">
+                <div className="mb-2">
+                  <h3 className="font-bold text-slate-700">Tình Hình Thu Học Phí</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Tháng {overviewTuitionMonth.split('-')[1]}/{overviewTuitionMonth.split('-')[0]}</p>
+                </div>
+                {overviewTuitionData ? (
+                  <>
+                    <div className="relative h-[190px] w-full shrink-0">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={[
+                              { name: 'Đã thu', value: overviewTuitionData.totalCollected },
+                              { name: 'Còn thiếu', value: Math.max(overviewTuitionData.totalExpected - overviewTuitionData.totalCollected, 0) },
+                            ]}
+                            dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={78}
+                            paddingAngle={3} stroke="#fff" strokeWidth={2}
+                          >
+                            <Cell fill="#059669" />
+                            <Cell fill="#fda4af" />
+                          </Pie>
+                          <Tooltip formatter={(v: any) => `${Number(v).toLocaleString()} đ`} contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontSize: '13px' }} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-2xl font-extrabold text-slate-800 tabular-nums">
+                          {overviewTuitionData.totalExpected > 0 ? Math.round((overviewTuitionData.totalCollected / overviewTuitionData.totalExpected) * 100) : 0}%
+                        </span>
+                        <span className="text-[11px] text-slate-400 font-semibold uppercase tracking-wide">Đã thu</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center gap-4 text-xs font-semibold mt-2">
+                      <span className="flex items-center gap-1.5 text-slate-500"><span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" /> Đã thu</span>
+                      <span className="flex items-center gap-1.5 text-slate-500"><span className="w-2.5 h-2.5 rounded-full bg-rose-300 inline-block" /> Còn thiếu</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center text-slate-400 text-sm italic">Đang tải dữ liệu học phí...</div>
+                )}
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {classrooms.map(c => <ClassCard key={c.id} c={c} onEdit={() => openEditModal(c)} onDelete={() => handleDeleteClassroom(c)} />)}
-              <button onClick={openCreateModal} className="border-2 border-dashed border-gray-200 rounded-xl p-5 flex items-center justify-center gap-2 text-slate-400 font-bold hover:border-blue-300 hover:text-primary/70 transition-colors cursor-pointer bg-white">
-                + Tạo Lớp Mới
-              </button>
-            </div>
+            {classroomScoreStats.length > 0 && (
+              <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
+                <div className="mb-6">
+                  <h3 className="font-bold text-slate-700">Điểm Trung Bình Theo Lớp</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Dựa trên điểm cao nhất mỗi đề của học sinh trong lớp</p>
+                </div>
+                <div className="h-[240px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={classroomScoreStats} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                      <XAxis type="number" domain={[0, 10]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} />
+                      <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} width={160} tick={{ fontSize: 12, fill: '#475569' }} />
+                      <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontSize: '13px' }} />
+                      <Bar dataKey="DiemTB" name="Điểm trung bình" fill="#2563eb" radius={[0, 4, 4, 0]} barSize={22}>
+                        <LabelList dataKey="DiemTB" position="right" style={{ fontSize: 12, fontWeight: 700, fill: '#1e293b' }} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
 
             {/* Tuition management summary (quản lý chung) */}
             <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mt-6">
@@ -1851,10 +2155,10 @@ export default function TeacherDashboard() {
         {/* ── LESSONS ── */}
         {activeTab === "LESSONS" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
               <h1 className="text-3xl font-bold">Ngân Hàng Bài Học</h1>
-              <div className="flex items-center gap-3">
-                <select className="p-2.5 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50" value={lessonClassFilter} onChange={e => setLessonClassFilter(e.target.value)}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <select className="p-2.5 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-full sm:w-auto" value={lessonClassFilter} onChange={e => setLessonClassFilter(e.target.value)}>
                   <option value="">Tất cả các lớp</option>
                   {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
@@ -1862,7 +2166,7 @@ export default function TeacherDashboard() {
                   setCreateLessonTitle(""); setCreateLessonDesc(""); setCreateLessonClassroomId("");
                   setLessonVocabs([]); setLessonGrammars([]); setEditingLessonId(null);
                   setActiveTab('CREATE_LESSON');
-                }} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Mới</button>
+                }} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer w-full sm:w-auto">✏️ Tạo Bài Học Mới</button>
               </div>
             </div>
             {(() => {
@@ -1877,17 +2181,17 @@ export default function TeacherDashboard() {
               ) : (
                 <div className="space-y-3">
                   {filteredLessons.map((lesson: any) => (
-                    <div key={lesson.id} className="bg-white rounded-xl border border-gray-100 p-5 flex items-center justify-between hover:shadow-md transition-all shadow-sm">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-blue-500/10 text-blue-600 flex items-center justify-center text-2xl">📚</div>
-                        <div>
-                          <h3 className="font-bold text-lg">{lesson.title}</h3>
+                    <div key={lesson.id} className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:shadow-md transition-all shadow-sm">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-12 h-12 bg-blue-500/10 text-blue-600 flex items-center justify-center text-2xl shrink-0">📚</div>
+                        <div className="min-w-0">
+                          <h3 className="font-bold text-lg break-words">{lesson.title}</h3>
                           <p className="text-sm text-slate-400">{lesson.classroom?.name ? `${lesson.classroom.name} • ` : ''}{lesson.vocabularies?.length || 0} từ vựng • {lesson.grammars?.length || 0} ngữ pháp</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => handleEditLessonSetup(lesson)} className="text-amber-500 hover:text-amber-600 font-bold text-sm px-3 py-1.5 hover:bg-amber-500/10 transition-colors cursor-pointer mr-2">✏️ Sửa</button>
-                        <button onClick={() => handleDuplicateLesson(lesson)} className="text-blue-500 hover:text-blue-600 font-bold text-sm px-3 py-1.5 hover:bg-blue-500/10 transition-colors cursor-pointer mr-2">📋 Nhân bản</button>
+                      <div className="flex items-center gap-2 flex-wrap shrink-0">
+                        <button onClick={() => handleEditLessonSetup(lesson)} className="text-amber-500 hover:text-amber-600 font-bold text-sm px-3 py-1.5 hover:bg-amber-500/10 transition-colors cursor-pointer">✏️ Sửa</button>
+                        <button onClick={() => handleDuplicateLesson(lesson)} className="text-blue-500 hover:text-blue-600 font-bold text-sm px-3 py-1.5 hover:bg-blue-500/10 transition-colors cursor-pointer">📋 Nhân bản</button>
                         <button onClick={async () => {
                           if (confirm('Bạn có chắc muốn xóa bài học này?')) {
                             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/${lesson.id}`, { method: 'DELETE' });
@@ -2014,9 +2318,9 @@ export default function TeacherDashboard() {
         {/* ── EXAMS ── */}
         {activeTab === "EXAMS" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
               <h1 className="text-3xl font-bold">Ngân Hàng Bài Tập & Đề Thi</h1>
-              <button onClick={() => setActiveTab('CREATE')} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Đề Mới</button>
+              <button onClick={() => setActiveTab('CREATE')} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer w-full sm:w-auto">✏️ Tạo Đề Mới</button>
             </div>
             {(() => {
               const dbExams = classrooms.flatMap(c => c.exams || []).filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
@@ -2174,22 +2478,45 @@ export default function TeacherDashboard() {
               </div>
 
               {/* ── SECTION 2: Câu hỏi ── */}
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <h2 className="font-bold text-lg">❓ Câu Hỏi <span className="text-slate-400 font-normal text-base">({createQuestions.length} câu)</span></h2>
-                  <button type="button" onClick={addQuestion}
-                    className="px-4 py-2 bg-primary/10 text-primary font-bold hover:bg-primary/20 cursor-pointer text-sm transition-colors">
-                    + Thêm câu hỏi
-                  </button>
+              <div className="space-y-4" key={questionsListGeneration}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="font-bold text-lg">❓ Câu Hỏi <span className="text-slate-400 font-normal text-base">({createQuestions.length} câu)</span></h2>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Đã soạn xong {createQuestions.filter(q => q.content.trim() && (q.type === 'ESSAY' || q.options.filter(o => o.trim()).length >= 2)).length}/{createQuestions.length} câu
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button type="button" onClick={handleDownloadExamQuestionTemplate}
+                      className="px-3 py-1.5 bg-green-500/10 text-green-600 font-bold text-sm cursor-pointer hover:bg-green-500/20 transition-colors">
+                      ⬇️ Tải Excel Mẫu
+                    </button>
+                    <label className="px-3 py-1.5 bg-blue-500/10 text-blue-600 font-bold text-sm cursor-pointer hover:bg-blue-500/20 transition-colors">
+                      ⬆️ Nhập Từ Excel
+                      <input type="file" accept=".xlsx, .xls" className="hidden" onChange={handleUploadExamQuestionsExcel} />
+                    </label>
+                    {createQuestions.length > 1 && (
+                      <button type="button" onClick={toggleAllQuestionsExpanded}
+                        className="px-3 py-1.5 bg-slate-100 text-slate-600 font-bold text-sm cursor-pointer hover:bg-slate-200 transition-colors">
+                        {allQuestionsExpanded ? '▲ Thu Gọn Tất Cả' : '▼ Mở Rộng Tất Cả'}
+                      </button>
+                    )}
+                    <button type="button" onClick={addQuestion}
+                      className="px-4 py-2 bg-primary/10 text-primary font-bold hover:bg-primary/20 cursor-pointer text-sm transition-colors">
+                      + Thêm câu hỏi
+                    </button>
+                  </div>
                 </div>
 
-                {createQuestions.map((q, qi) => (
-                  <div key={qi} className="bg-white rounded-xl border border-gray-100 p-6 space-y-4 relative shadow-sm">
+                {createQuestions.map((q, qi) => {
+                  const expanded = isQuestionExpanded(q._key);
+                  return (
+                  <div key={q._key} className="bg-white rounded-xl border border-gray-100 shadow-sm">
                     {/* Question header */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between gap-3 p-4 sm:p-6 cursor-pointer" onClick={() => toggleQuestionExpanded(q._key)}>
+                      <div className="flex items-center gap-3 flex-wrap min-w-0">
                         <span className="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-bold text-sm shrink-0">{qi + 1}</span>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2" onClick={e => e.stopPropagation()}>
                           <button type="button"
                             onClick={() => updateQuestion(qi, { type: 'MULTIPLE_CHOICE', correctOption: 'A' })}
                             className={`px-3 py-1.5 text-xs font-bold border-2 transition-all cursor-pointer ${q.type === 'MULTIPLE_CHOICE' ? 'border-primary bg-primary/10 text-primary' : 'border-gray-200 hover:border-gray-400'}`}>
@@ -2201,20 +2528,34 @@ export default function TeacherDashboard() {
                             ✍️ Tự Luận
                           </button>
                         </div>
-                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5 ml-4">
+                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-1.5" onClick={e => e.stopPropagation()}>
                           <label className="text-xs font-bold text-slate-400">Điểm:</label>
                           <input type="number" min="0" step="0.01" className="w-20 bg-transparent text-sm font-bold outline-none text-primary"
                             value={q.points ?? 1} onChange={e => updateQuestion(qi, { points: parseFloat(e.target.value) || 0 })} />
                         </div>
+                        {!expanded && (
+                          <span className="text-sm text-slate-400 truncate max-w-[160px] sm:max-w-xs">
+                            {stripHtml(q.content) || 'Chưa có nội dung'}
+                          </span>
+                        )}
                       </div>
-                      {createQuestions.length > 1 && (
-                        <button type="button" onClick={() => removeQuestion(qi)}
-                          className="text-rose-500 hover:text-rose-600 font-bold text-sm cursor-pointer px-2 py-1 hover:bg-rose-500/10 transition-colors">
-                          Xóa
+                      <div className="flex items-center gap-1 shrink-0" onClick={e => e.stopPropagation()}>
+                        {createQuestions.length > 1 && (
+                          <button type="button" onClick={() => removeQuestion(qi)}
+                            className="text-rose-500 hover:text-rose-600 font-bold text-sm cursor-pointer px-2 py-1 hover:bg-rose-500/10 transition-colors">
+                            Xóa
+                          </button>
+                        )}
+                        <button type="button" onClick={() => toggleQuestionExpanded(q._key)}
+                          aria-label={expanded ? 'Thu gọn câu hỏi' : 'Mở rộng câu hỏi'}
+                          className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors cursor-pointer">
+                          {expanded ? '▲' : '▼'}
                         </button>
-                      )}
+                      </div>
                     </div>
 
+                    {everExpandedQuestions[q._key] && (
+                    <div className={`px-4 sm:px-6 pb-4 sm:pb-6 space-y-4 border-t border-gray-100 pt-4 ${expanded ? '' : 'hidden'}`}>
                     {/* Question content */}
                     <div className="space-y-4">
                       <div>
@@ -2316,8 +2657,11 @@ export default function TeacherDashboard() {
                         />
                       </div>
                     </div>
+                    </div>
+                    )}
                   </div>
-                ))}
+                  );
+                })}
 
                 <button type="button" onClick={addQuestion}
                   className="w-full py-4 border-2 border-dashed border-gray-300 text-slate-400 font-bold hover:border-primary/40 hover:text-primary/60 transition-colors cursor-pointer">
@@ -2716,11 +3060,30 @@ export default function TeacherDashboard() {
   );
 }
 
-function StatCard({ title, value }: { title: string; value: string }) {
+const STAT_CARD_ACCENTS: Record<string, string> = {
+  blue: 'bg-blue-500/10 text-blue-600',
+  green: 'bg-emerald-500/10 text-emerald-600',
+  amber: 'bg-amber-500/10 text-amber-600',
+  rose: 'bg-rose-500/10 text-rose-600',
+  violet: 'bg-violet-500/10 text-violet-600',
+  cyan: 'bg-cyan-500/10 text-cyan-600',
+};
+
+function StatCard({ title, value, icon, accent, sub }: { title: string; value: string; icon?: string; accent?: 'blue' | 'green' | 'amber' | 'rose' | 'violet' | 'cyan'; sub?: string }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
-      <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">{title}</p>
-      <p className="text-3xl font-extrabold text-slate-800 mt-1">{value}</p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">{title}</p>
+          <p className="text-3xl font-extrabold text-slate-800 mt-1 tabular-nums truncate">{value}</p>
+          {sub && <p className="text-xs text-slate-400 font-medium mt-1">{sub}</p>}
+        </div>
+        {icon && (
+          <div className={`w-11 h-11 rounded-xl flex items-center justify-center text-xl shrink-0 ${STAT_CARD_ACCENTS[accent || 'blue']}`}>
+            {icon}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -2770,8 +3133,8 @@ function ClassCard({ c, onEdit, onDelete }: { c: any; onEdit?: () => void; onDel
 
 function ExamCard({ title, type, detail, questions, onClick, onEdit, onDelete, onDuplicate, exam }: { title: string; type: string; detail: string; questions: number; onClick?: () => void; onEdit?: () => void; onDelete?: () => void; onDuplicate?: () => void; exam?: any }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5 flex justify-between items-center hover:shadow-md hover:border-blue-100 transition-all shadow-sm">
-      <div className="flex-1 cursor-pointer" onClick={onClick}>
+    <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 hover:shadow-md hover:border-blue-100 transition-all shadow-sm">
+      <div className="flex-1 min-w-0 cursor-pointer" onClick={onClick}>
         <h4 className="font-bold text-base flex items-center gap-2 flex-wrap">
           {title}
           {exam?.deadline && <span className="bg-rose-50 text-rose-500 text-xs px-2 py-0.5 rounded-full border border-rose-100">⏰ Hạn: {new Date(exam.deadline).toLocaleDateString('vi-VN')}</span>}
@@ -2779,7 +3142,7 @@ function ExamCard({ title, type, detail, questions, onClick, onEdit, onDelete, o
         </h4>
         <p className="text-sm text-slate-500 mt-1">Giao cho: <span className="font-medium text-slate-700">{detail}</span> • {questions} câu • {exam?.duration || 45} phút</p>
       </div>
-      <div className="flex items-center gap-1.5 ml-4 shrink-0 flex-wrap justify-end">
+      <div className="flex items-center gap-1.5 shrink-0 flex-wrap sm:justify-end">
         <button onClick={e => { e.stopPropagation(); onDuplicate?.(); }} className="px-2.5 py-1.5 text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg cursor-pointer">📋 Nhân bản</button>
         <button onClick={onClick} className="px-2.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">👁 Xem</button>
         <button onClick={e => { e.stopPropagation(); onEdit?.(); }} className="px-2.5 py-1.5 text-xs font-bold bg-blue-50 text-primary hover:bg-blue-100 rounded-lg cursor-pointer">✏️ Sửa</button>
