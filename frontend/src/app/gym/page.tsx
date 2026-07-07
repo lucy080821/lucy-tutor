@@ -4,6 +4,32 @@ import { useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 
+const cleanString = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+function levenshteinDistance(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function getHintMask(word: string): string {
+  return word
+    .split('')
+    .map((ch, i) => (i === 0 ? ch : ch === ' ' ? ' ' : '_'))
+    .join(' ');
+}
+
 export default function GymPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
@@ -17,6 +43,13 @@ export default function GymPage() {
   // Practice state
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+
+  // Typed-answer mode state
+  const [typedAnswer, setTypedAnswer] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [usedHint, setUsedHint] = useState(false);
+  const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
+  const [computedQuality, setComputedQuality] = useState<number | null>(null);
 
   useEffect(() => {
     const uid = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
@@ -44,9 +77,18 @@ export default function GymPage() {
     setLoading(false);
   };
 
+  const resetCardState = () => {
+    setFlipped(false);
+    setTypedAnswer('');
+    setSubmitted(false);
+    setUsedHint(false);
+    setIsCorrect(null);
+    setComputedQuality(null);
+  };
+
   const handleReview = async (quality: number) => {
     if (!userId || dueVocabs.length === 0) return;
-    
+
     const progressId = dueVocabs[currentCardIndex].id;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/srs/review/${progressId}`, {
@@ -54,7 +96,7 @@ export default function GymPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quality })
       });
-      
+
       if (res.ok) {
         // Remove current card from queue or move to next
         const newQueue = [...dueVocabs];
@@ -63,12 +105,12 @@ export default function GymPage() {
           const failedCard = newQueue.splice(currentCardIndex, 1)[0];
           newQueue.push(failedCard);
           setDueVocabs(newQueue);
-          setFlipped(false);
+          resetCardState();
         } else {
           // Passed, remove from queue
           newQueue.splice(currentCardIndex, 1);
           setDueVocabs(newQueue);
-          setFlipped(false);
+          resetCardState();
           // If finished all
           if (newQueue.length === 0) {
             Swal.fire('Chúc mừng!', 'Bạn đã hoàn thành mục tiêu ôn tập hôm nay.', 'success');
@@ -81,6 +123,37 @@ export default function GymPage() {
       console.error(err);
       Swal.fire('Lỗi', 'Không thể lưu kết quả', 'error');
     }
+  };
+
+  // Type the word given its meaning; auto-grade -> SM-2 quality (5 exact, 4 exact+hint, 3 close typo, 1 wrong)
+  const submitTypedAnswer = () => {
+    if (submitted) return;
+    const vocab = dueVocabs[currentCardIndex].vocab;
+    const cleanUser = cleanString(typedAnswer);
+    const cleanCorrect = cleanString(vocab.word);
+
+    if (!cleanUser) {
+      setIsCorrect(false);
+      setComputedQuality(1);
+      setSubmitted(true);
+      return;
+    }
+
+    // Scale the "close enough" tolerance to word length so short words
+    // (e.g. "pen" vs "ten", distance 1) aren't credited as typos of each other.
+    const maxTypoDistance = cleanCorrect.length <= 4 ? 1 : 2;
+
+    if (cleanUser === cleanCorrect) {
+      setIsCorrect(true);
+      setComputedQuality(usedHint ? 4 : 5);
+    } else if (levenshteinDistance(cleanUser, cleanCorrect) <= maxTypoDistance) {
+      setIsCorrect(true);
+      setComputedQuality(3);
+    } else {
+      setIsCorrect(false);
+      setComputedQuality(1);
+    }
+    setSubmitted(true);
   };
 
   const handleSpeak = (text: string, lang: string = 'en-US') => {
@@ -222,9 +295,14 @@ export default function GymPage() {
                 <p className="text-foreground/50">Bạn đã hoàn thành toàn bộ khối lượng của hôm nay.</p>
                 <button onClick={() => setActiveTab('STATS')} className="mt-8 px-6 py-2 bg-foreground/10 font-bold rounded-xl hover:bg-foreground/20">Quay lại Thống kê</button>
               </div>
-            ) : (
+            ) : (() => {
+              const currentProgress = dueVocabs[currentCardIndex];
+              const currentVocab = currentProgress.vocab;
+              const isTypedMode = currentProgress.status !== 'LEARNING' && currentProgress.repetitions >= 2;
+
+              return (
               <div className="w-full max-w-md flex flex-col h-full py-4">
-                
+
                 {/* Progress bar */}
                 <div className="w-full mb-8">
                   <div className="flex justify-between text-xs font-bold text-foreground/50 mb-2">
@@ -236,8 +314,85 @@ export default function GymPage() {
                   </div>
                 </div>
 
+                {isTypedMode ? (
+                  <div className="w-full flex-1 min-h-[400px] flex flex-col">
+                    <div className="relative flex-1 bg-surface border-2 border-foreground/10 rounded-[2rem] p-8 flex flex-col items-center justify-center shadow-xl text-center">
+                      {currentVocab.imageUrl && (
+                        <div className="w-28 h-28 mb-6 rounded-3xl overflow-hidden shadow-md shrink-0 border border-foreground/10">
+                          <img src={currentVocab.imageUrl} className="w-full h-full object-cover" alt="vocab" />
+                        </div>
+                      )}
+                      <h3 className="text-3xl font-bold text-primary mb-6">{currentVocab.meaning}</h3>
+
+                      {!submitted ? (
+                        <>
+                          <input
+                            type="text"
+                            value={typedAnswer}
+                            onChange={(e) => setTypedAnswer(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') submitTypedAnswer(); }}
+                            placeholder="Gõ từ tiếng Anh..."
+                            autoFocus
+                            autoComplete="off"
+                            autoCorrect="off"
+                            autoCapitalize="off"
+                            spellCheck={false}
+                            className="w-full max-w-xs text-center text-xl font-bold border-2 border-foreground/10 focus:border-primary rounded-2xl px-4 py-3 outline-none transition-colors bg-background text-foreground"
+                          />
+                          {usedHint && (
+                            <p className="mt-4 font-mono text-lg tracking-widest text-foreground/50">{getHintMask(currentVocab.word)}</p>
+                          )}
+                          <div className="mt-6 flex gap-3">
+                            <button
+                              onClick={() => setUsedHint(true)}
+                              disabled={usedHint}
+                              className="px-5 py-2 bg-amber-500/10 text-amber-600 font-bold rounded-xl hover:bg-amber-500 hover:text-white transition-colors disabled:opacity-50"
+                            >
+                              💡 Gợi Ý
+                            </button>
+                            <button
+                              onClick={submitTypedAnswer}
+                              className="px-6 py-2 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity"
+                            >
+                              Kiểm Tra
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="absolute top-6 right-6 flex gap-2">
+                            <button onClick={() => handleSpeak(currentVocab.word, 'en-GB')} className="w-10 h-10 bg-primary/10 text-primary font-bold text-sm rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors">UK</button>
+                            <button onClick={() => handleSpeak(currentVocab.word, 'en-US')} className="w-10 h-10 bg-primary/10 text-primary font-bold text-sm rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors">US</button>
+                          </div>
+                          <div className={`mb-4 px-4 py-2 rounded-xl font-bold ${isCorrect ? 'bg-green-500/10 text-green-600' : 'bg-rose-500/10 text-rose-600'}`}>
+                            {isCorrect ? (computedQuality === 3 ? 'Gần đúng!' : 'Chính xác!') : 'Chưa đúng'}
+                          </div>
+                          <h3 className="text-4xl font-black text-primary mb-2">{currentVocab.word}</h3>
+                          <p className="text-foreground/50 font-medium italic text-lg">{currentVocab.pos}</p>
+                          <p className="text-foreground/70 font-mono mt-2">{currentVocab.phonetic}</p>
+                          {!isCorrect && typedAnswer && (
+                            <p className="text-foreground/50 mt-3">Bạn đã gõ: <span className="line-through">{typedAnswer}</span></p>
+                          )}
+                          {currentVocab.example && (
+                            <p className="text-foreground/70 italic text-lg mt-4 bg-primary/5 p-4 rounded-xl">&quot;{currentVocab.example}&quot;</p>
+                          )}
+                        </>
+                      )}
+                    </div>
+
+                    <div className={`mt-8 transition-opacity duration-300 ${submitted ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                      <button
+                        onClick={() => computedQuality !== null && handleReview(computedQuality)}
+                        className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-md hover:opacity-90 transition-opacity"
+                      >
+                        Tiếp Tục →
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                <>
                 {/* Flashcard */}
-                <div 
+                <div
                   className="relative w-full aspect-[3/4] perspective-1000 cursor-pointer flex-1 min-h-[400px]"
                   onClick={() => setFlipped(!flipped)}
                 >
@@ -301,9 +456,12 @@ export default function GymPage() {
                     <span className="text-[10px] opacity-70">~ 7 ngày</span>
                   </button>
                 </div>
+                </>
+                )}
 
               </div>
-            )}
+              );
+            })()}
           </div>
         )}
 
