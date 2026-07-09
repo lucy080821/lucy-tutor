@@ -3,6 +3,12 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import { cleanString, levenshteinDistance, getHintMask } from "@/lib/textGrading";
+import { logSkillProgress } from "@/lib/skillProgress";
+
+// Maps the existing SM-2 review quality scale (1/3/4/5 — see textGrading-based
+// grading below) to a plain 0-10 score, purely to feed the dashboard's 4-skill
+// radar chart with a rolling "recent listening accuracy" estimate.
+const QUALITY_TO_SCORE: Record<number, number> = { 1: 2, 3: 6.5, 4: 8, 5: 10 };
 
 interface ClipMatch {
   clipId: string;
@@ -192,6 +198,7 @@ export default function ListeningPracticePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ quality: computedQuality })
       });
+      logSkillProgress(userId, "LISTENING", QUALITY_TO_SCORE[computedQuality] ?? 2, "LISTENING_SRS");
     } catch (err) {
       console.error(err);
       Swal.fire("Lỗi", "Không thể lưu kết quả", "error");

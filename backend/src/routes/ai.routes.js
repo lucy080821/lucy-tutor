@@ -303,42 +303,154 @@ All content must be in Vietnamese.
   }
 });
 
-router.post('/speaking-feedback', async (req, res) => {
+router.post('/generate-reading-passage', async (req, res) => {
   try {
-    const { transcript, prompt: topicPrompt, part } = req.body;
-    if (!transcript) return res.status(400).json({ error: 'Missing transcript' });
+    const { topic, level, length, questionType, numQuestions } = req.body;
 
-    const systemPrompt = `You are an IELTS Speaking examiner. Evaluate the student's spoken response and return a JSON object with IELTS band score criteria. Respond only in valid JSON.`;
+    const lengthLabel = { SHORT: 'ngắn (100-150 từ)', MEDIUM: 'trung bình (200-250 từ)', LONG: 'dài (300-380 từ)' }[length] || 'trung bình (200-250 từ)';
+    const count = Math.min(15, Math.max(1, parseInt(numQuestions, 10) || 4));
 
-    const userPrompt = `
-You are grading an IELTS Speaking response. The student was asked:
-"${topicPrompt || 'Speak freely on a given topic'}"
+    const typeInstruction = {
+      MULTIPLE_CHOICE: `Tất cả ${count} câu đều thuộc "type": "MULTIPLE_CHOICE".`,
+      TRUE_FALSE: `Tất cả ${count} câu đều thuộc "type": "TRUE_FALSE".`,
+      FILL_BLANK: `Tất cả ${count} câu đều thuộc "type": "FILL_BLANK".`,
+      MIXED: `Trộn ngẫu nhiên cả 3 dạng "type" (MULTIPLE_CHOICE, TRUE_FALSE, FILL_BLANK) trong ${count} câu, mỗi dạng xuất hiện ít nhất 1 lần nếu ${count} >= 3.`
+    }[questionType] || `Tất cả ${count} câu đều thuộc "type": "MULTIPLE_CHOICE".`;
 
-The student said (Speech-to-Text transcript):
-"${transcript}"
+    const prompt = `
+Bạn là chuyên gia ra đề đọc hiểu tiếng Anh cho học viên Việt Nam.
+Viết một đoạn văn tiếng Anh có độ dài ${lengthLabel} về chủ đề: "${topic || 'một chủ đề bất kỳ thú vị, phù hợp luyện đọc hiểu'}".
+Trình độ: ${level || 'trung cấp (intermediate)'}.
 
-Evaluate using IELTS Speaking band descriptors. Return a JSON object with:
+Sau đó tạo đúng ${count} câu hỏi đọc hiểu (đọc hiểu ý chính, chi tiết, suy luận, từ vựng trong ngữ cảnh) dựa trên đoạn văn đó. ${typeInstruction}
+
+Có 3 dạng câu hỏi, mỗi câu trong mảng "questions" phải có trường "type" và đúng cấu trúc tương ứng:
+1. "type": "MULTIPLE_CHOICE" — trắc nghiệm 4 đáp án: có "options": ["A. ...", "B. ...", "C. ...", "D. ..."] và "correctIndex" (số 0-3).
+2. "type": "TRUE_FALSE" — đúng/sai: có "options": ["Đúng", "Sai"] và "correctIndex" (0 hoặc 1).
+3. "type": "FILL_BLANK" — điền từ: "question" là một câu trích/diễn giải từ đoạn văn có chỗ trống "_____" (5 dấu gạch dưới, KHÔNG bọc dấu ** quanh chỗ trống hay bất kỳ phần nào của "question") thay cho MỘT từ hoặc cụm từ ngắn (tối đa 3 từ) lấy trực tiếp từ đoạn văn; KHÔNG có "options"/"correctIndex", thay vào đó có "correctAnswer": "từ/cụm từ đúng cần điền" (nguyên văn, đúng chính tả từ đoạn văn).
+
+BẮT BUỘC TRẢ VỀ CHỈ MỘT JSON với cấu trúc sau (không có markdown code blocks bọc ngoài JSON):
 {
-  "bandScore": <number 1-9 with .5 increments, e.g. 6.5>,
-  "fluency": "1-2 sentence evaluation of fluency and coherence with specific examples from transcript",
-  "lexical": "1-2 sentence evaluation of vocabulary range and accuracy with specific examples",
-  "grammar": "1-2 sentence evaluation of grammatical range and accuracy",
-  "pronunciation": "1-2 sentence evaluation of pronunciation clarity and intelligibility",
-  "suggestions": ["3 specific improvement suggestions tailored to this student's response"]
+  "title": "Tiêu đề ngắn bằng tiếng Anh cho đoạn văn",
+  "passage": "Toàn bộ đoạn văn tiếng Anh",
+  "questions": [
+    {
+      "type": "MULTIPLE_CHOICE",
+      "question": "Câu hỏi bằng tiếng Anh",
+      "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+      "correctIndex": 0,
+      "explanation": "Giải thích kỹ bằng tiếng Việt tại sao đáp án đó đúng — trích dẫn nguyên câu trong đoạn văn làm căn cứ, và giải thích ngắn vì sao các đáp án còn lại sai (nếu là FILL_BLANK thì giải thích vì sao từ đó đúng). Bọc phần từ khóa/câu trích dẫn quan trọng nhất trong dấu **hai dấu sao** để đánh dấu cần lưu ý."
+    }
+  ]
 }
 
-All text fields must be in Vietnamese.
-Be constructive, specific, and encouraging. Reference actual words/phrases from their transcript.
+Phải có đúng ${count} câu hỏi trong mảng "questions", đúng theo phân bổ dạng đã yêu cầu ở trên.
 `;
 
     const chatCompletion = await groq.chat.completions.create({
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
+        { role: 'system', content: 'You are an English reading comprehension exercise generator. Respond only in valid JSON.' },
+        { role: 'user', content: prompt }
       ],
       model: 'llama-3.3-70b-versatile',
-      temperature: 0.4,
-      response_format: { type: "json_object" }
+      temperature: 0.7,
+      response_format: { type: 'json_object' }
+    });
+
+    const raw = chatCompletion.choices[0]?.message?.content || '{}';
+    let passage;
+    try {
+      passage = JSON.parse(raw);
+    } catch {
+      return res.status(500).json({ error: 'AI response was not valid JSON' });
+    }
+    res.json(passage);
+  } catch (error) {
+    console.error('Generate reading passage error:', error);
+    res.status(500).json({ error: 'Failed to generate reading passage' });
+  }
+});
+
+router.post('/generate-writing-prompt', async (req, res) => {
+  try {
+    const { topic, format, level } = req.body;
+    const formatLabel = { PARAGRAPH: 'một đoạn văn ngắn (80-120 từ)', EMAIL: 'một email/thư ngắn', ESSAY: 'một bài luận ngắn (150-200 từ)' }[format] || 'một đoạn văn ngắn (80-120 từ)';
+    const levelLabel = { beginner: 'cơ bản (beginner) — đề đơn giản, từ vựng thông dụng', intermediate: 'trung cấp (intermediate)', advanced: 'nâng cao (advanced) — đề có chiều sâu, đòi hỏi lập luận/từ vựng phong phú hơn' }[level] || 'trung cấp (intermediate)';
+
+    const prompt = `
+Bạn là gia sư tiếng Anh. Hãy ra một đề bài luyện viết tiếng Anh cho học viên, yêu cầu học viên viết ${formatLabel}.
+Chủ đề: "${topic || 'một chủ đề đời sống gần gũi, dễ viết'}".
+Trình độ học viên: ${levelLabel}. Độ khó và độ phức tạp của yêu cầu trong đề bài phải phù hợp với trình độ này.
+
+Trả về JSON:
+{
+  "promptEn": "Đề bài bằng tiếng Anh, mô tả rõ học viên cần viết gì, có thể kèm 2-3 gợi ý ý chính cần đề cập",
+  "promptVi": "Bản dịch tiếng Việt tương ứng của promptEn, cùng nội dung, cùng số gợi ý ý chính",
+  "format": "${format || 'PARAGRAPH'}"
+}
+`;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: 'You are an English writing exercise generator. Respond only in valid JSON.' },
+        { role: 'user', content: prompt }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.8,
+      response_format: { type: 'json_object' }
+    });
+
+    const raw = chatCompletion.choices[0]?.message?.content || '{}';
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch {
+      return res.status(500).json({ error: 'AI response was not valid JSON' });
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Generate writing prompt error:', error);
+    res.status(500).json({ error: 'Failed to generate writing prompt' });
+  }
+});
+
+router.post('/writing-feedback', async (req, res) => {
+  try {
+    const { promptEn, promptVi, submission } = req.body;
+    if (!submission || !submission.trim()) return res.status(400).json({ error: 'Thiếu bài viết' });
+
+    const prompt = `
+Bạn là một gia sư tiếng Anh thân thiện, đang góp ý chi tiết cho một bài luyện viết (không phải bài thi, không chấm điểm/band số).
+
+Đề bài (English): "${promptEn || 'Viết tự do'}"
+Đề bài (Tiếng Việt): "${promptVi || ''}"
+
+Bài viết của học viên:
+"${submission.trim()}"
+
+Hãy đưa ra nhận xét mang tính khích lệ nhưng PHÂN TÍCH THẬT KỸ, dựa trên câu chữ thực tế học viên đã viết. Với phần ngữ pháp và từ vựng, bắt buộc phải phân tích cấu trúc câu cụ thể (chủ ngữ - động từ - tân ngữ, thì gì, mệnh đề gì), không chỉ nói chung chung.
+
+Trả về JSON với cấu trúc:
+{
+  "overall": "1-2 câu nhận xét tổng quan, khích lệ",
+  "grammar": "Phân tích ngữ pháp THẬT KỸ (tối thiểu 4-6 câu): với MỖI lỗi tìm thấy, trích nguyên câu học viên viết sai, chỉ rõ đó là lỗi gì (thì, chia động từ, mạo từ, giới từ, cấu trúc câu...), giải thích TẠI SAO sai (phân tích cấu trúc ngữ pháp), và đưa ra câu đã sửa đúng. Nếu câu đúng ngữ pháp, phân tích cấu trúc câu đó để học viên hiểu vì sao đúng. Bọc phần lỗi sai và phần đã sửa trong dấu **hai dấu sao** để đánh dấu cần lưu ý.",
+  "vocabulary": "Phân tích từ vựng chi tiết (tối thiểu 3-4 câu): nhận xét về mức độ phong phú/chính xác của từ vựng đã dùng, với TỪNG từ/cụm từ tiếng Anh có thể dùng hay hơn, trích từ gốc tiếng Anh học viên dùng và đề xuất từ/cụm từ TIẾNG ANH thay thế hay hơn (KHÔNG dịch sang tiếng Việt — luôn đề xuất từ tiếng Anh khác, chỉ giải thích nghĩa bằng tiếng Việt trong ngoặc). Bọc từ gốc và từ tiếng Anh đề xuất thay thế trong dấu **hai dấu sao**.",
+  "organization": "Nhận xét về bố cục, mạch ý, sự liên kết giữa các câu/đoạn",
+  "suggestions": ["2-3 gợi ý cải thiện cụ thể, dễ áp dụng"],
+  "internalScore": "Ước tính chất lượng bài viết (số 0-10, có thể lẻ .5) dựa trên độ chính xác ngữ pháp, độ phong phú từ vựng và mạch lạc bố cục — CHỈ dùng nội bộ để theo dõi tiến độ học tập, KHÔNG được nhắc đến trong bất kỳ trường text nào ở trên"
+}
+
+Tất cả nội dung bằng tiếng Việt (trích dẫn câu/từ tiếng Anh của học viên khi cần). Các trường "overall"/"grammar"/"vocabulary"/"organization"/"suggestions" TUYỆT ĐỐI không được nhắc đến thang điểm hay điểm số — chỉ "internalScore" mới là số.
+`;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: 'You are a friendly, encouraging English writing coach who gives thorough, structural grammar analysis. Respond only in valid JSON. The only numeric score allowed anywhere is the "internalScore" field — never mention a score inside the other text fields.' },
+        { role: 'user', content: prompt }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.5,
+      response_format: { type: 'json_object' }
     });
 
     const raw = chatCompletion.choices[0]?.message?.content || '{}';
@@ -346,12 +458,12 @@ Be constructive, specific, and encouraging. Reference actual words/phrases from 
     try {
       feedback = JSON.parse(raw);
     } catch {
-      feedback = { fluency: 'Không thể phân tích. Vui lòng thử lại.', suggestions: [] };
+      feedback = { overall: 'Không thể phân tích lúc này. Vui lòng thử lại.', grammar: '', vocabulary: '', organization: '', suggestions: [] };
     }
     res.json(feedback);
   } catch (error) {
-    console.error('Speaking feedback error:', error);
-    res.status(500).json({ error: 'Failed to generate feedback' });
+    console.error('Writing feedback error:', error);
+    res.status(500).json({ error: 'Failed to generate writing feedback' });
   }
 });
 

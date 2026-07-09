@@ -42,7 +42,13 @@ model User {
 
   uploadedListeningClips  ListeningClip[] @relation("TeacherListeningClips")
   assignedListeningClips  ListeningClip[] @relation("StudentListeningClips")
-  
+
+  uploadedSpeakingTopics  SpeakingTopic[] @relation("TeacherSpeakingTopics")
+  assignedSpeakingTopics  SpeakingTopic[] @relation("StudentSpeakingTopics")
+  speakingSessions        SpeakingSession[]
+
+  skillPracticeResults    SkillPracticeResult[]
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -188,6 +194,7 @@ model Classroom {
   tuitionPayments TuitionPayment[]
   documents   Document[]
   listeningClips ListeningClip[]
+  speakingTopics SpeakingTopic[]
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -342,6 +349,60 @@ model ListeningClip {
 
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+}
+
+model SpeakingTopic {
+  id          String   @id @default(uuid())
+  title       String
+  description String?           // shown to student before starting, e.g. "Đóng vai khách đặt phòng khách sạn"
+  aiPersona   String            // system prompt describing the AI's role/persona for this conversation
+  openingLine String?           // optional fixed first line; if empty, AI generates one from aiPersona
+
+  teacherId   String
+  teacher     User       @relation("TeacherSpeakingTopics", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Exactly one of classroomId / studentId is set (enforced at the API level, not by the DB)
+  classroomId String?
+  classroom   Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  studentId   String?
+  student     User?      @relation("StudentSpeakingTopics", fields: [studentId], references: [id], onDelete: SetNull)
+
+  sessions    SpeakingSession[]
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model SpeakingSession {
+  id        String   @id @default(uuid())
+  userId    String
+  topicId   String
+  messages  String   // JSON string: [{ role: "user"|"assistant", content: string }]
+  status    String   @default("IN_PROGRESS") // "IN_PROGRESS", "COMPLETED"
+  feedback  String?  // JSON string: { overall, fluency, vocabulary, grammar, suggestions[] } — coaching tone, no score
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic     SpeakingTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// One row per completed practice attempt, used to feed the 4-skill radar chart on
+// the student dashboard. "band" (exposed over the API as "score") is always a plain
+// 0-10 estimate regardless of how the source practice tool scores itself internally —
+// writing/conversation practice compute this silently (never shown to the student
+// during practice) so the "no score, just coaching" experience there is unaffected.
+model SkillPracticeResult {
+  id        String   @id @default(uuid())
+  userId    String
+  skill     String   // "READING", "LISTENING", "SPEAKING", "WRITING"
+  band      Float    // 0-10 (internal column name; API field is "score")
+  source    String   // "READING_PRACTICE", "WRITING_PRACTICE", "SPEAKING_CONVERSATION", "LISTENING_SRS"
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 }
 
 model UserVocabProgress {

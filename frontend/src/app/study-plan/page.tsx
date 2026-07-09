@@ -339,8 +339,8 @@ export default function StudyPlanPage() {
               <Link href="/gym" className="py-3 bg-surface border border-foreground/15 text-center font-bold text-sm hover:bg-foreground/5 transition-colors flex items-center justify-center gap-2">
                 🏋️ Bắt đầu Vocab Gym
               </Link>
-              <Link href="/speaking" className="py-3 bg-surface border border-foreground/15 text-center font-bold text-sm hover:bg-foreground/5 transition-colors flex items-center justify-center gap-2">
-                🗣️ Luyện Speaking
+              <Link href="/conversation" className="py-3 bg-surface border border-foreground/15 text-center font-bold text-sm hover:bg-foreground/5 transition-colors flex items-center justify-center gap-2">
+                🗣️ Luyện Nói Cùng AI
               </Link>
               <Link href="/listening" className="py-3 bg-surface border border-foreground/15 text-center font-bold text-sm hover:bg-foreground/5 transition-colors flex items-center justify-center gap-2">
                 🎧 Luyện Listening

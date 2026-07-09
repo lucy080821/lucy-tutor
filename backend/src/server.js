@@ -35,6 +35,8 @@ const documentRoutes = require('./routes/document.routes');
 const srsRoutes = require('./routes/srs.routes');
 const leaderboardRoutes = require('./routes/leaderboard.routes');
 const listeningRoutes = require('./routes/listening.routes');
+const speakingConversationRoutes = require('./routes/speaking-conversation.routes');
+const skillProgressRoutes = require('./routes/skill-progress.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
@@ -51,6 +53,8 @@ app.use('/api/documents', documentRoutes);
 app.use('/api/srs', srsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/listening', listeningRoutes);
+app.use('/api/speaking-conversation', speakingConversationRoutes);
+app.use('/api/skill-progress', skillProgressRoutes);
 
 const PORT = process.env.PORT || 5000;
 

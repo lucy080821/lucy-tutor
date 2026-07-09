@@ -311,6 +311,125 @@ export default function TeacherDashboard() {
     } catch (err) { console.error(err); }
   };
 
+  // ── Speaking topic (Luyện Nói Cùng AI) state ──
+  const [speakingTopics, setSpeakingTopics] = useState<any[]>([]);
+  const [stTitle, setStTitle] = useState("");
+  const [stDescription, setStDescription] = useState("");
+  const [stPersona, setStPersona] = useState("");
+  const [stOpeningLine, setStOpeningLine] = useState("");
+  const [stScope, setStScope] = useState("CLASS"); // "CLASS" or "STUDENT"
+  const [stClassroomId, setStClassroomId] = useState("");
+  const [stStudentId, setStStudentId] = useState("");
+  const [isSavingTopic, setIsSavingTopic] = useState(false);
+  const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
+
+  const fetchSpeakingTopics = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/speaking-conversation/topics?teacherId=${user.id}`);
+      if (res.ok) setSpeakingTopics(await res.json());
+    } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => {
+    if (activeTab === "SPEAKING_TOPICS" && user) {
+      fetchSpeakingTopics();
+    }
+  }, [activeTab, user]);
+
+  const resetSpeakingTopicForm = () => {
+    setEditingTopicId(null);
+    setStTitle("");
+    setStDescription("");
+    setStPersona("");
+    setStOpeningLine("");
+    setStScope("CLASS");
+    setStClassroomId("");
+    setStStudentId("");
+  };
+
+  const startEditSpeakingTopic = (topic: any) => {
+    setEditingTopicId(topic.id);
+    setStTitle(topic.title);
+    setStDescription(topic.description || "");
+    setStPersona(topic.aiPersona);
+    setStOpeningLine(topic.openingLine || "");
+    if (topic.classroomId) {
+      setStScope("CLASS");
+      setStClassroomId(topic.classroomId);
+      setStStudentId("");
+    } else {
+      setStScope("STUDENT");
+      setStStudentId(topic.studentId);
+      setStClassroomId("");
+    }
+    document.getElementById('speaking-topic-form')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleSaveSpeakingTopic = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (stScope === "CLASS" && !stClassroomId) return Swal.fire('Lỗi', 'Vui lòng chọn lớp học', 'error');
+    if (stScope === "STUDENT" && !stStudentId) return Swal.fire('Lỗi', 'Vui lòng chọn học viên', 'error');
+
+    setIsSavingTopic(true);
+    try {
+      const body = {
+        title: stTitle,
+        description: stDescription,
+        aiPersona: stPersona,
+        openingLine: stOpeningLine,
+        teacherId: user.id,
+        classroomId: stScope === "CLASS" ? stClassroomId : null,
+        studentId: stScope === "STUDENT" ? stStudentId : null
+      };
+      const res = editingTopicId
+        ? await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/speaking-conversation/topics/${editingTopicId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          })
+        : await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/speaking-conversation/topics`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+          });
+
+      if (res.ok) {
+        Swal.fire('Thành công', editingTopicId ? 'Đã cập nhật chủ đề' : 'Đã tạo chủ đề hội thoại', 'success');
+        resetSpeakingTopicForm();
+        fetchSpeakingTopics();
+      } else {
+        const errData = await res.json();
+        Swal.fire('Lỗi', errData.error || 'Thao tác thất bại', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Lỗi', 'Lỗi kết nối mạng', 'error');
+    } finally {
+      setIsSavingTopic(false);
+    }
+  };
+
+  const handleDeleteSpeakingTopic = async (topicId: string) => {
+    const result = await Swal.fire({
+      title: 'Xóa chủ đề này?',
+      text: 'Học viên sẽ không thể luyện nói với chủ đề này nữa.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Xóa',
+      cancelButtonText: 'Hủy'
+    });
+    if (!result.isConfirmed) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/speaking-conversation/topics/${topicId}`, { method: 'DELETE' });
+      if (res.ok) {
+        Swal.fire('Đã xóa', '', 'success');
+        fetchSpeakingTopics();
+      }
+    } catch (err) { console.error(err); }
+  };
+
   const fetchDocuments = async () => {
     if (!user) return;
     try {
@@ -1332,6 +1451,12 @@ export default function TeacherDashboard() {
       ]
     },
     {
+      id: "SPEAKING_GROUP", label: "Luyện Nói", icon: "🗣️",
+      subItems: [
+        { id: "SPEAKING_TOPICS", label: "Chủ Đề Hội Thoại", icon: "💬" }
+      ]
+    },
+    {
       id: "EXAMS_GROUP", label: "Đề Thi", icon: "📝",
       subItems: [
         { id: "EXAMS", label: "Ngân Hàng Đề Thi", icon: "🏦" },
@@ -1432,7 +1557,7 @@ export default function TeacherDashboard() {
 
         <div className="flex flex-col gap-0.5 px-2">
           {navGroups.map((group, index) => (
-            <div key={group.id} className={`flex flex-col ${group.subItems && index > 0 ? 'mt-2 pt-2 border-t border-white/10' : ''}`}>
+            <div key={group.id} className={`flex flex-col ${index > 0 && (group.subItems || (navGroups[index - 1] as any).subItems) ? 'mt-2 pt-2 border-t border-white/10' : ''}`}>
               {group.subItems ? (
                 <>
                   <button
@@ -2001,6 +2126,105 @@ export default function TeacherDashboard() {
                     <audio src={clip.audioUrl} controls className="flex-1 h-9" />
                     <button onClick={() => startEditListeningClip(clip)} className="w-10 h-10 shrink-0 flex items-center justify-center bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors cursor-pointer" title="Sửa">✏️</button>
                     <button onClick={() => handleDeleteListeningClip(clip.id)} className="w-10 h-10 shrink-0 flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors cursor-pointer" title="Xóa">🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── SPEAKING TOPICS (Luyện Nói Cùng AI) ── */}
+        {activeTab === "SPEAKING_TOPICS" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h1 className="text-3xl font-bold mb-6">Chủ Đề Hội Thoại</h1>
+            <p className="text-sm text-slate-500 -mt-4 mb-2">
+              Tạo tình huống để học viên luyện nói tự do với AI. AI sẽ đóng vai theo mô tả bạn viết bên dưới và trò chuyện qua lại nhiều lượt — đây là luyện tập hội thoại, không phải bài thi.
+            </p>
+
+            <div id="speaking-topic-form" className="bg-white rounded-xl p-6 border border-gray-100 mb-8 shadow-sm">
+              <h2 className="text-xl font-bold mb-4">{editingTopicId ? 'Sửa chủ đề' : 'Tạo chủ đề mới'}</h2>
+              <form onSubmit={handleSaveSpeakingTopic} className="flex flex-col gap-4">
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="block text-sm font-bold mb-2">Tiêu đề</label>
+                    <input type="text" value={stTitle} onChange={e => setStTitle(e.target.value)} placeholder="VD: Đặt phòng khách sạn" className="w-full p-3 border border-gray-200 bg-white rounded-lg" required />
+                  </div>
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="block text-sm font-bold mb-2">Mô tả ngắn (hiện cho học viên)</label>
+                    <input type="text" value={stDescription} onChange={e => setStDescription(e.target.value)} placeholder="VD: Bạn gọi điện đặt phòng cho kỳ nghỉ" className="w-full p-3 border border-gray-200 bg-white rounded-lg" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-2">Vai trò/persona của AI</label>
+                  <textarea
+                    value={stPersona}
+                    onChange={e => setStPersona(e.target.value)}
+                    rows={4}
+                    placeholder="VD: Bạn là nhân viên lễ tân khách sạn, nói chuyện thân thiện, lịch sự bằng tiếng Anh. Nếu học viên nói sai ngữ pháp, hãy nhẹ nhàng diễn đạt lại đúng trong câu trả lời của bạn thay vì sửa lỗi trực tiếp."
+                    className="w-full p-3 border border-gray-200 bg-white rounded-lg"
+                    required
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Đây là hướng dẫn cho AI, không hiện cho học viên — mô tả càng cụ thể, AI phản hồi càng đúng vai.</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-2">Câu mở đầu (tùy chọn)</label>
+                  <input type="text" value={stOpeningLine} onChange={e => setStOpeningLine(e.target.value)} placeholder="Để trống để AI tự nghĩ câu mở đầu phù hợp" className="w-full p-3 border border-gray-200 bg-white rounded-lg" />
+                </div>
+
+                <div className="flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="block text-sm font-bold mb-2">Phạm vi gán</label>
+                    <select value={stScope} onChange={e => setStScope(e.target.value)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold">
+                      <option value="CLASS">Một lớp học</option>
+                      <option value="STUDENT">Một học viên cụ thể</option>
+                    </select>
+                  </div>
+                  {stScope === "CLASS" ? (
+                    <div className="flex-1 min-w-[150px]">
+                      <label className="block text-sm font-bold mb-2">Chọn Lớp Học</label>
+                      <select value={stClassroomId} onChange={e => setStClassroomId(e.target.value)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold" required>
+                        <option value="">-- Chọn lớp --</option>
+                        {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="flex-1 min-w-[150px]">
+                      <label className="block text-sm font-bold mb-2">Chọn Học Viên</label>
+                      <select value={stStudentId} onChange={e => setStStudentId(e.target.value)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold" required>
+                        <option value="">-- Chọn học viên --</option>
+                        {allStudents.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <button type="submit" disabled={isSavingTopic} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 disabled:opacity-50 min-w-[120px]">
+                    {isSavingTopic ? 'Đang lưu...' : editingTopicId ? 'Lưu thay đổi' : 'Tạo chủ đề'}
+                  </button>
+                  {editingTopicId && (
+                    <button type="button" onClick={resetSpeakingTopicForm} className="px-6 py-3 bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 min-w-[100px]">
+                      Hủy
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            <h2 className="text-xl font-bold mb-4">Danh sách chủ đề đã tạo</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {speakingTopics.length === 0 && <div className="text-slate-400 italic col-span-full">Chưa có chủ đề nào</div>}
+              {speakingTopics.map((topic: any) => (
+                <div key={topic.id} className="bg-white rounded-xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all flex flex-col justify-between group relative shadow-sm">
+                  <div>
+                    <h3 className="font-bold text-lg line-clamp-2 mb-1" title={topic.title}>{topic.title}</h3>
+                    {topic.description && <p className="text-sm text-slate-500 mb-2 line-clamp-2">{topic.description}</p>}
+                    <p className="text-xs text-slate-500 font-semibold mb-4">
+                      {topic.classroom ? `Lớp: ${topic.classroom.name}` : topic.student ? `Học viên: ${topic.student.name}` : ''}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 z-10">
+                    <button onClick={() => startEditSpeakingTopic(topic)} className="flex-1 h-10 shrink-0 flex items-center justify-center gap-1 bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors cursor-pointer text-sm font-bold" title="Sửa">✏️ Sửa</button>
+                    <button onClick={() => handleDeleteSpeakingTopic(topic.id)} className="w-10 h-10 shrink-0 flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors cursor-pointer" title="Xóa">🗑️</button>
                   </div>
                 </div>
               ))}

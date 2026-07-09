@@ -201,12 +201,19 @@ export default function StudentDashboard() {
       ]
     },
     {
+      id: "FOUR_SKILLS", label: "Huấn Luyện 4 Kỹ Năng", icon: "🎯",
+      subItems: [
+        { id: "LISTENING_LINK",    featureKey: "listening",    label: "Luyện Nghe Cùng AI",         icon: "🎧", isLink: true, href: '/listening' },
+        { id: "CONVERSATION_LINK", featureKey: "speaking_conversation", label: "Luyện Nói Cùng AI", icon: "🗨️", isLink: true, href: '/conversation' },
+        { id: "READING_LINK",      featureKey: "reading",      label: "Luyện Đọc Hiểu Cùng AI",     icon: "📰", isLink: true, href: '/reading' },
+        { id: "WRITING_LINK",      featureKey: "writing",      label: "Luyện Viết Cùng AI",         icon: "✍️", isLink: true, href: '/writing' },
+      ]
+    },
+    {
       id: "TRAINING_CENTER", label: "Trại Huấn Luyện", icon: "💪",
       subItems: [
         { id: "GYM_LINK",          featureKey: "gym",          label: "Vocab Gym — Từ vựng",       icon: "🔤", isLink: true, href: '/gym' },
         { id: "GRAMMAR_GYM_LINK",  featureKey: "grammar_gym",  label: "Grammar Gym — Ngữ pháp",    icon: "🧩", isLink: true, href: '/grammar-gym' },
-        { id: "SPEAKING_LINK",     featureKey: "speaking",     label: "Speaking Practice",          icon: "🎤", isLink: true, href: '/speaking' },
-        { id: "LISTENING_LINK",    featureKey: "listening",    label: "Listening Practice",         icon: "🎧", isLink: true, href: '/listening' },
         { id: "STUDY_PLAN_LINK",   featureKey: "study_plan",   label: "Lộ trình học (AI)",          icon: "🤖", isLink: true, href: '/study-plan' },
         { id: "PHONETICS_LINK",    featureKey: "phonetics",    label: "Bảng Âm IPA",               icon: "🔊", isLink: true, href: '/phonetics' },
       ]
@@ -219,7 +226,7 @@ export default function StudentDashboard() {
 
   // Compute union of enabled features across all joined classrooms.
   // Empty array in a classroom = all features enabled for that classroom.
-  const ALL_FEATURES = ["gym", "grammar_gym", "speaking", "listening", "study_plan", "phonetics"];
+  const ALL_FEATURES = ["gym", "grammar_gym", "reading", "writing", "speaking_conversation", "listening", "study_plan", "phonetics"];
   const enabledFeatures: Set<string> = (() => {
     if (!user?.classroomsJoined?.length) return new Set(ALL_FEATURES);
     const union = new Set<string>();
@@ -416,7 +423,7 @@ export default function StudentDashboard() {
 
         <div className="flex flex-col gap-0.5 px-2">
           {navGroups.map((group, index) => (
-            <div key={group.id} className={`flex flex-col ${group.subItems && index > 0 ? 'mt-2 pt-2 border-t border-white/10' : ''}`}>
+            <div key={group.id} className={`flex flex-col ${index > 0 && (group.subItems || (navGroups[index - 1] as any).subItems) ? 'mt-2 pt-2 border-t border-white/10' : ''}`}>
               {group.subItems ? (
                 <>
                   {/* Section label — muted, không phải nav item */}
@@ -633,7 +640,7 @@ export default function StudentDashboard() {
             </div>
 
             {/* 4 Skills Panel */}
-            <SkillsPanel history={history} user={user} />
+            <SkillsPanel user={user} />
 
             {/* Chart Section */}
             {history.length > 0 && (
@@ -1446,61 +1453,55 @@ function AssignmentCard({ title, deadline, status, teacher, score }: { title: st
   );
 }
 
-function SkillsPanel({ history, user }: { history: any[], user: any }) {
-  const readingScore = history.length > 0
-    ? (history.reduce((s, h) => s + h.score, 0) / history.length)
-    : 0;
+function SkillsPanel({ user }: { user: any }) {
+  const [progress, setProgress] = useState<Record<string, { score: number; hasData: boolean }>>({});
+
+  useEffect(() => {
+    if (!user?.id) return;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/skill-progress/${user.id}`)
+      .then(res => res.json())
+      .then(data => setProgress(data))
+      .catch(() => {});
+  }, [user?.id]);
 
   const skills = [
     {
-      key: "Reading",
+      key: "READING",
       label: "Reading",
       color: "#1e3a8a",
       bgClass: "bg-blue-50 border-blue-200",
       textClass: "text-blue-700",
-      score: readingScore,
-      total: 10,
-      href: null,
-      hasData: history.length > 0,
+      href: "/reading",
     },
     {
-      key: "Listening",
+      key: "LISTENING",
       label: "Listening",
       color: "#16a34a",
       bgClass: "bg-green-50 border-green-200",
       textClass: "text-green-700",
-      score: 0,
-      total: 10,
       href: "/listening",
-      hasData: false,
     },
     {
-      key: "Speaking",
+      key: "SPEAKING",
       label: "Speaking",
       color: "#7c3aed",
       bgClass: "bg-purple-50 border-purple-200",
       textClass: "text-purple-700",
-      score: 0,
-      total: 10,
-      href: "/speaking",
-      hasData: false,
+      href: "/conversation",
     },
     {
-      key: "Writing",
+      key: "WRITING",
       label: "Writing",
       color: "#d97706",
       bgClass: "bg-orange-50 border-orange-200",
       textClass: "text-orange-700",
-      score: 0,
-      total: 10,
-      href: null,
-      hasData: false,
+      href: "/writing",
     },
-  ];
+  ].map(s => ({ ...s, score: progress[s.key]?.score ?? 0, hasData: progress[s.key]?.hasData ?? false }));
 
   const radarData = skills.map(s => ({
     skill: s.label,
-    score: s.hasData ? parseFloat(s.score.toFixed(1)) : 0,
+    score: s.hasData ? s.score : 0,
     fullMark: 10,
   }));
 
@@ -1509,33 +1510,26 @@ function SkillsPanel({ history, user }: { history: any[], user: any }) {
       <div className="flex items-center gap-3 mb-6">
         <span className="p-2 bg-primary/10 text-primary text-lg">🎯</span>
         <h4 className="text-xl font-bold">Tiến Độ 4 Kỹ Năng</h4>
-        <span className="ml-auto text-xs text-slate-400 font-medium">IELTS Band System</span>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Skill bars */}
         <div className="space-y-5">
           {skills.map(s => {
-            const pct = s.hasData ? (s.score / s.total) * 100 : 0;
-            const bandScore = s.hasData ? (s.score / 10 * 9).toFixed(1) : "--";
+            const pct = s.hasData ? (s.score / 10) * 100 : 0;
+            const scoreLabel = s.hasData ? s.score.toFixed(1) : "--";
             return (
               <div key={s.key}>
                 <div className="flex items-center justify-between mb-2">
                   <span className={`font-bold text-sm px-3 py-1 border ${s.bgClass} ${s.textClass}`}>{s.label}</span>
                   <div className="flex items-center gap-3">
-                    {s.hasData ? (
-                      <span className="text-sm font-black text-slate-700">{s.score.toFixed(1)}<span className="text-slate-400 font-normal">/10</span></span>
-                    ) : (
-                      s.href ? (
-                        <a href={s.href} className={`text-xs font-bold px-3 py-1 border ${s.bgClass} ${s.textClass} hover:opacity-80 transition-opacity`}>
-                          Bắt đầu luyện →
-                        </a>
-                      ) : (
-                        <span className="text-xs text-slate-400 font-medium">Chưa có dữ liệu</span>
-                      )
+                    {!s.hasData && (
+                      <a href={s.href} className={`text-xs font-bold px-3 py-1 border ${s.bgClass} ${s.textClass} hover:opacity-80 transition-opacity`}>
+                        Bắt đầu luyện →
+                      </a>
                     )}
                     <span className={`text-xs font-bold px-2 py-0.5 ${s.bgClass} ${s.textClass} border`}>
-                      Band {bandScore}
+                      {scoreLabel}/10
                     </span>
                   </div>
                 </div>
@@ -1549,7 +1543,7 @@ function SkillsPanel({ history, user }: { history: any[], user: any }) {
             );
           })}
           <p className="text-xs text-slate-400 pt-2">
-            * Listening/Speaking/Writing sẽ được cập nhật khi bạn luyện tập các kỹ năng này.
+            * Điểm mỗi kỹ năng là trung bình các lần luyện tập gần nhất — luyện tập thêm để cập nhật.
           </p>
         </div>
 
