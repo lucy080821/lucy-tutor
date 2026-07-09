@@ -30,14 +30,6 @@ function highlightWords(text: string, words: string[]) {
   );
 }
 
-interface SessionLogEntry {
-  clipId: string;
-  title: string;
-  audioUrl: string;
-  fullScript: string;
-  word: string;
-}
-
 const ACCENT_OPTIONS: { value: string; label: string }[] = [
   { value: "ALL", label: "Tất cả" },
   { value: "UK", label: "🇬🇧 UK" },
@@ -67,8 +59,7 @@ export default function ListeningPracticePage() {
   const [selectedClipIndex, setSelectedClipIndex] = useState(0);
   const [accentFilter, setAccentFilter] = useState("ALL");
   const [phase, setPhase] = useState<"EXPLORE" | "TEST">("EXPLORE");
-  const [sessionLog, setSessionLog] = useState<SessionLogEntry[]>([]);
-  const [sessionComplete, setSessionComplete] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [typedAnswer, setTypedAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -106,8 +97,6 @@ export default function ListeningPracticePage() {
     if (accent === accentFilter || !userId) return;
     setAccentFilter(accent);
     setCurrentIndex(0);
-    setSessionLog([]);
-    setSessionComplete(false);
     resetCardState();
     fetchQueue(userId, accent);
   };
@@ -196,7 +185,7 @@ export default function ListeningPracticePage() {
   };
 
   const goNext = async () => {
-    if (!currentItem || !currentClip || computedQuality === null) return;
+    if (!currentItem || !currentClip || computedQuality === null || !userId) return;
     try {
       await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/srs/review/${currentItem.progressId}`, {
         method: "POST",
@@ -209,38 +198,27 @@ export default function ListeningPracticePage() {
       return;
     }
 
-    setSessionLog((prev) => [...prev, {
-      clipId: currentClip.clipId,
-      title: currentClip.title,
-      audioUrl: currentClip.audioUrl,
-      fullScript: currentClip.fullScript,
-      word: currentItem.vocab.word
-    }]);
-
     resetCardState();
-    if (currentIndex + 1 >= queue.length) {
-      setSessionComplete(true);
-    } else {
+
+    if (currentIndex + 1 < queue.length) {
       setCurrentIndex((i) => i + 1);
+      return;
     }
-  };
 
-  const startNewSession = () => {
-    setSessionComplete(false);
-    setSessionLog([]);
-    setCurrentIndex(0);
-    if (userId) fetchQueue(userId, accentFilter);
+    // Ran through the current batch — silently pull in the next batch of due words
+    // and keep going rather than interrupting with a "session complete" screen.
+    setLoadingMore(true);
+    try {
+      const accentParam = accentFilter !== "ALL" ? `?accent=${accentFilter}` : "";
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/listening/queue/${userId}${accentParam}`);
+      setQueue(res.ok ? await res.json() : []);
+      setCurrentIndex(0);
+    } catch (err) {
+      console.error(err);
+      Swal.fire("Lỗi", "Không thể tải thêm từ vựng", "error");
+    }
+    setLoadingMore(false);
   };
-
-  const groupedSessionClips = Object.values(
-    sessionLog.reduce((acc: Record<string, { clipId: string; title: string; audioUrl: string; fullScript: string; words: string[] }>, entry) => {
-      if (!acc[entry.clipId]) {
-        acc[entry.clipId] = { clipId: entry.clipId, title: entry.title, audioUrl: entry.audioUrl, fullScript: entry.fullScript, words: [] };
-      }
-      if (!acc[entry.clipId].words.includes(entry.word)) acc[entry.clipId].words.push(entry.word);
-      return acc;
-    }, {})
-  );
 
   if (loading) {
     return <div className="flex h-screen items-center justify-center font-bold text-xl text-primary animate-pulse">Đang nạp dữ liệu...</div>;
@@ -273,37 +251,17 @@ export default function ListeningPracticePage() {
           ))}
         </div>
 
-        {sessionComplete ? (
-          <div className="space-y-6">
-            <div className="text-center py-4">
-              <div className="text-6xl mb-4">🎉</div>
-              <h2 className="text-2xl font-bold mb-2">Hoàn thành phiên luyện nghe!</h2>
-              <p className="text-foreground/50">Xem lại toàn bộ transcript và nghe lại các từ vựng bạn vừa học.</p>
-            </div>
-
-            {groupedSessionClips.map((group) => (
-              <div key={group.clipId} className="bg-surface border border-foreground/10 rounded-2xl p-5 sm:p-6 text-left shadow-sm">
-                <h3 className="font-bold text-primary mb-3">{group.title}</h3>
-                <p className="text-sm text-foreground/70 leading-relaxed whitespace-pre-wrap mb-4">
-                  {highlightWords(group.fullScript, group.words)}
-                </p>
-                <audio src={group.audioUrl} controls className="w-full h-9" />
-              </div>
-            ))}
-
-            <button
-              onClick={startNewSession}
-              className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-md hover:opacity-90 transition-opacity"
-            >
-              Luyện Tiếp →
-            </button>
+        {loadingMore ? (
+          <div className="flex flex-col items-center justify-center text-center py-20">
+            <div className="text-4xl mb-4 animate-pulse">🎧</div>
+            <p className="text-foreground/50 font-bold">Đang nạp thêm từ vựng...</p>
           </div>
         ) : queue.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-20">
             <div className="text-6xl mb-4">🎧</div>
             <h2 className="text-2xl font-bold mb-2">Chưa có audio để luyện nghe</h2>
             <p className="text-foreground/50">
-              Hiện chưa có audio nào chứa từ vựng bạn cần ôn, hoặc bạn đã hoàn thành hết. Hãy quay lại sau khi giáo viên cập nhật thêm nội dung.
+              Hiện chưa có audio nào chứa từ vựng bạn cần ôn ngay bây giờ. Hãy quay lại sau khi có thêm từ đến hạn hoặc giáo viên cập nhật thêm nội dung.
             </p>
           </div>
         ) : currentItem && currentClip ? (
