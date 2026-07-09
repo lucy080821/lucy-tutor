@@ -132,7 +132,7 @@ function AuthForm() {
         {/* Bottom stats */}
         <div className="relative z-10 grid grid-cols-3 gap-4">
           {[
-            { v: "2,400+", l: "Học sinh" },
+            { v: "2,400+", l: "Học viên" },
             { v: "94%", l: "Tăng điểm" },
             { v: "15K+", l: "Câu hỏi" },
           ].map((s, i) => (
@@ -170,7 +170,7 @@ function AuthForm() {
                 onClick={() => setRole('STUDENT')}
                 className={`flex-1 py-2.5 text-sm font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${role === 'STUDENT' ? 'bg-white shadow-sm text-primary' : 'text-slate-400 hover:text-foreground'}`}
               >
-                🎓 Học Sinh
+                🎓 Học Viên
               </button>
               <button
                 type="button"

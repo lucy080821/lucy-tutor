@@ -189,32 +189,32 @@ export default function StudentDashboard() {
   };
 
   const navGroups = [
-    { id: "OVERVIEW", label: "Tổng Quan" },
-    { 
-      id: "LEARNING", label: "Học Tập", 
+    { id: "OVERVIEW", label: "Tổng Quan", icon: "📊" },
+    {
+      id: "LEARNING", label: "Học Tập", icon: "🎓",
       subItems: [
-        { id: "LESSONS", label: "Bài Học" },
-        { id: "PRACTICE", label: "Bài Tập" },
-        { id: "EXAMS", label: "Bài Kiểm Tra" },
-        { id: "ATTENDANCE", label: "Chuyên Cần" },
-        { id: "DOCUMENTS", label: "Tài Liệu" },
+        { id: "LESSONS", label: "Bài Học", icon: "📖" },
+        { id: "PRACTICE", label: "Bài Tập", icon: "📝" },
+        { id: "EXAMS", label: "Bài Kiểm Tra", icon: "🧪" },
+        { id: "ATTENDANCE", label: "Chuyên Cần", icon: "🗓️" },
+        { id: "DOCUMENTS", label: "Tài Liệu", icon: "📁" },
       ]
     },
     {
-      id: "TRAINING_CENTER", label: "Trại Huấn Luyện",
+      id: "TRAINING_CENTER", label: "Trại Huấn Luyện", icon: "💪",
       subItems: [
-        { id: "GYM_LINK",          featureKey: "gym",          label: "Vocab Gym — Từ vựng",       isLink: true, href: '/gym' },
-        { id: "GRAMMAR_GYM_LINK",  featureKey: "grammar_gym",  label: "Grammar Gym — Ngữ pháp",    isLink: true, href: '/grammar-gym' },
-        { id: "SPEAKING_LINK",     featureKey: "speaking",     label: "Speaking Practice",          isLink: true, href: '/speaking' },
-        { id: "LISTENING_LINK",    featureKey: "listening",    label: "Listening Practice",         isLink: true, href: '/listening' },
-        { id: "STUDY_PLAN_LINK",   featureKey: "study_plan",   label: "Lộ trình học (AI)",          isLink: true, href: '/study-plan' },
-        { id: "PHONETICS_LINK",    featureKey: "phonetics",    label: "Bảng Âm IPA",               isLink: true, href: '/phonetics' },
+        { id: "GYM_LINK",          featureKey: "gym",          label: "Vocab Gym — Từ vựng",       icon: "🔤", isLink: true, href: '/gym' },
+        { id: "GRAMMAR_GYM_LINK",  featureKey: "grammar_gym",  label: "Grammar Gym — Ngữ pháp",    icon: "🧩", isLink: true, href: '/grammar-gym' },
+        { id: "SPEAKING_LINK",     featureKey: "speaking",     label: "Speaking Practice",          icon: "🎤", isLink: true, href: '/speaking' },
+        { id: "LISTENING_LINK",    featureKey: "listening",    label: "Listening Practice",         icon: "🎧", isLink: true, href: '/listening' },
+        { id: "STUDY_PLAN_LINK",   featureKey: "study_plan",   label: "Lộ trình học (AI)",          icon: "🤖", isLink: true, href: '/study-plan' },
+        { id: "PHONETICS_LINK",    featureKey: "phonetics",    label: "Bảng Âm IPA",               icon: "🔊", isLink: true, href: '/phonetics' },
       ]
     },
-    { id: "CALENDAR", label: "Thời Khóa Biểu" },
-    { id: "NOTEBOOK", label: "Sổ Tay Lỗi Sai" },
-    { id: "LEADERBOARD", label: "Bảng Xếp Hạng" },
-    { id: "SETTINGS", label: "Cài Đặt" },
+    { id: "CALENDAR", label: "Thời Khóa Biểu", icon: "📅" },
+    { id: "NOTEBOOK", label: "Sổ Tay Lỗi Sai", icon: "📔" },
+    { id: "LEADERBOARD", label: "Bảng Xếp Hạng", icon: "🏆" },
+    { id: "SETTINGS", label: "Cài Đặt", icon: "⚙️" },
   ];
 
   // Compute union of enabled features across all joined classrooms.
@@ -409,36 +409,41 @@ export default function StudentDashboard() {
             </div>
           </label>
           <div className="overflow-hidden">
-            <h2 className="text-sm font-bold text-white truncate">{user?.name || 'Học sinh'}</h2>
-            <p className="text-[10px] text-white/50 font-semibold uppercase tracking-widest">Học sinh</p>
+            <h2 className="text-sm font-bold text-white truncate">{user?.name || 'Học viên'}</h2>
+            <p className="text-[10px] text-white/50 font-semibold uppercase tracking-widest">Học viên</p>
           </div>
         </div>
 
         <div className="flex flex-col gap-0.5 px-2">
-          {navGroups.map(group => (
-            <div key={group.id} className="flex flex-col">
+          {navGroups.map((group, index) => (
+            <div key={group.id} className={`flex flex-col ${group.subItems && index > 0 ? 'mt-2 pt-2 border-t border-white/10' : ''}`}>
               {group.subItems ? (
                 <>
                   {/* Section label — muted, không phải nav item */}
                   <button
                     onClick={() => toggleNavGroup(group.id)}
-                    className="flex items-center justify-between px-3 pt-5 pb-1.5 transition-colors duration-150 cursor-pointer text-left text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white/60"
+                    className="flex items-center justify-between gap-2 px-3 pb-1.5 transition-colors duration-150 cursor-pointer text-left text-[11px] font-bold uppercase tracking-widest text-white/50 hover:text-white/80"
                   >
-                    <span>{group.label}</span>
-                    <span className={`transform transition-transform ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▾</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-sm not-italic">{group.icon}</span>
+                      {group.label}
+                    </span>
+                    <span className={`transform transition-transform text-white/40 ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▾</span>
                   </button>
                   {expandedNav[group.id] && (
                     <div className="flex flex-col gap-0.5">
                       {group.subItems.filter((item: any) => !item.featureKey || enabledFeatures.has(item.featureKey)).map((item: any) => (
                         item.isLink ? (
                           <Link key={item.id} href={item.href}
-                            className="flex items-center pl-4 pr-3 py-2 text-sm font-medium transition-colors duration-150 text-white/60 hover:bg-white/10 hover:text-white rounded-lg mx-1">
-                            <span>{item.label}</span>
+                            className="flex items-center gap-2.5 pl-4 pr-3 py-2 text-sm font-medium transition-colors duration-150 text-white/60 hover:bg-white/10 hover:text-white rounded-lg mx-1">
+                            <span className="text-base shrink-0">{item.icon}</span>
+                            <span className="truncate">{item.label}</span>
                           </Link>
                         ) : (
                           <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                            className={`flex items-center pr-3 py-2 text-sm font-medium transition-colors duration-150 cursor-pointer text-left w-full rounded-lg mx-1 ${activeTab === item.id ? 'bg-white/15 text-white font-semibold border-l-[3px] border-white/80 pl-[13px]' : 'pl-4 text-white/60 hover:bg-white/10 hover:text-white'}`}>
-                            <span>{item.label}</span>
+                            className={`flex items-center gap-2.5 pr-3 py-2 text-sm transition-colors duration-150 cursor-pointer text-left w-full rounded-lg mx-1 ${activeTab === item.id ? 'bg-white text-[#1e3a8a] font-bold shadow-sm pl-4' : 'pl-4 font-medium text-white/60 hover:bg-white/10 hover:text-white'}`}>
+                            <span className="text-base shrink-0">{item.icon}</span>
+                            <span className="truncate">{item.label}</span>
                           </button>
                         )
                       ))}
@@ -448,8 +453,9 @@ export default function StudentDashboard() {
               ) : (
                 /* Top-level nav item — rõ hơn section label */
                 <button onClick={() => { setActiveTab(group.id); setIsMobileMenuOpen(false); }}
-                  className={`flex items-center pr-3 py-2.5 text-sm font-medium transition-colors duration-150 cursor-pointer text-left w-full rounded-lg mx-1 ${activeTab === group.id ? 'bg-white/15 text-white font-semibold border-l-[3px] border-white/80 pl-[9px]' : 'pl-3 text-white/70 hover:bg-white/10 hover:text-white'}`}>
-                  <span>{group.label}</span>
+                  className={`flex items-center gap-2.5 pr-3 py-2.5 text-sm transition-colors duration-150 cursor-pointer text-left w-full rounded-lg mx-1 ${activeTab === group.id ? 'bg-white text-[#1e3a8a] font-bold shadow-sm pl-3' : 'pl-3 font-medium text-white/70 hover:bg-white/10 hover:text-white'}`}>
+                  <span className="text-base shrink-0">{group.icon}</span>
+                  <span className="truncate">{group.label}</span>
                 </button>
               )}
             </div>

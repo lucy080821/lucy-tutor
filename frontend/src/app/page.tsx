@@ -3,10 +3,10 @@ import Link from "next/link";
 import { useState } from "react";
 
 const STATS = [
-  { value: "2,400+", label: "Học sinh đang học", icon: "🎓" },
+  { value: "2,400+", label: "Học viên đang học", icon: "🎓" },
   { value: "180+", label: "Giáo viên tin dùng", icon: "👨‍🏫" },
   { value: "15,000+", label: "Câu hỏi ngân hàng", icon: "📚" },
-  { value: "94%", label: "Học sinh tăng điểm", icon: "📈" },
+  { value: "94%", label: "Học viên tăng điểm", icon: "📈" },
 ];
 
 const SKILLS = [
@@ -116,7 +116,7 @@ const FEATURES = [
 const TESTIMONIALS = [
   {
     name: "Nguyễn Minh Tú",
-    role: "Học sinh lớp 12 — THPT Nguyễn Thị Minh Khai",
+    role: "Học viên lớp 12 — THPT Nguyễn Thị Minh Khai",
     text: "Sau 3 tháng luyện với Lucy Tutor, điểm Reading IELTS của mình tăng từ 5.5 lên 7.0. Phần AI giải thích lỗi sai rất chi tiết, mình hiểu tại sao sai chứ không chỉ biết đáp án đúng.",
     score: "IELTS 7.0",
     avatar: "MT",
@@ -319,7 +319,7 @@ export default function Home() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12 space-y-3">
             <span className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-primary text-xs font-bold tracking-widest uppercase rounded-full border border-blue-200">
-              Học sinh & giáo viên nói gì
+              Học viên & giáo viên nói gì
             </span>
             <h2 className="text-3xl md:text-4xl font-extrabold">Kết quả thực tế</h2>
           </div>
@@ -368,7 +368,7 @@ export default function Home() {
           <p className="text-white/70 text-lg">Không cần thẻ tín dụng. Không giới hạn thời gian dùng thử.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth?role=STUDENT" className="px-8 py-4 bg-white text-primary font-bold text-lg hover:bg-white/95 hover:-translate-y-0.5 transition-all rounded-xl shadow-lg shadow-black/20 flex items-center justify-center gap-2">
-              🎓 Học sinh đăng ký
+              🎓 Học viên đăng ký
             </Link>
             <Link href="/auth?role=TEACHER" className="px-8 py-4 bg-white/10 backdrop-blur text-white font-bold text-lg hover:bg-white/20 hover:-translate-y-0.5 transition-all rounded-xl border border-white/30 flex items-center justify-center gap-2">
               👨‍🏫 Giáo viên đăng ký
@@ -387,11 +387,11 @@ export default function Home() {
                 <span className="text-lg font-black text-white">LUCY<span className="text-white/50">TUTOR</span></span>
               </div>
               <p className="text-sm text-white/40 leading-relaxed">
-                Nền tảng luyện thi Tiếng Anh thông minh dành cho học sinh và giáo viên Việt Nam.
+                Nền tảng luyện thi Tiếng Anh thông minh dành cho học viên và giáo viên Việt Nam.
               </p>
             </div>
             <div>
-              <h4 className="text-white font-semibold mb-3 text-sm">Học sinh</h4>
+              <h4 className="text-white font-semibold mb-3 text-sm">Học viên</h4>
               <ul className="space-y-2 text-sm">
                 <li><Link href="/auth?role=STUDENT" className="hover:text-white transition-colors">Đăng ký miễn phí</Link></li>
                 <li><Link href="/exam" className="hover:text-white transition-colors">Demo bài thi</Link></li>

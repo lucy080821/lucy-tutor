@@ -266,7 +266,7 @@ export default function ExamPage() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center space-y-4">
         <p className="text-rose-500 text-xl font-bold">⚠️ {error}</p>
-        <Link href="/dashboard" className="text-primary underline">← Về trang học sinh</Link>
+        <Link href="/dashboard" className="text-primary underline">← Về trang học viên</Link>
       </div>
     </div>
   );
@@ -318,7 +318,7 @@ export default function ExamPage() {
               👀 Xem Lại Bài Làm
             </button>
             <Link href="/dashboard" className="flex-1 py-4 bg-primary text-white font-bold rounded-2xl hover:bg-primary/90 transition-colors text-center">
-              Về Trang Học Sinh
+              Về Trang Học Viên
             </Link>
           </div>
         </div>

@@ -244,7 +244,7 @@ export default function TeacherDashboard() {
     e.preventDefault();
     if (!user) return;
     if (lcScope === "CLASS" && !lcClassroomId) return Swal.fire('Lỗi', 'Vui lòng chọn lớp học', 'error');
-    if (lcScope === "STUDENT" && !lcStudentId) return Swal.fire('Lỗi', 'Vui lòng chọn học sinh', 'error');
+    if (lcScope === "STUDENT" && !lcStudentId) return Swal.fire('Lỗi', 'Vui lòng chọn học viên', 'error');
 
     setIsUploadingClip(true);
     try {
@@ -295,7 +295,7 @@ export default function TeacherDashboard() {
   const handleDeleteListeningClip = async (clipId: string) => {
     const result = await Swal.fire({
       title: 'Xóa audio này?',
-      text: 'Học sinh sẽ không thể luyện nghe với audio này nữa.',
+      text: 'Học viên sẽ không thể luyện nghe với audio này nữa.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Xóa',
@@ -462,7 +462,7 @@ export default function TeacherDashboard() {
         if (Array.isArray(data)) {
           setCheatIncidents(data.map(log => ({
             id: log.id,
-            studentName: log.user?.name || "Học sinh ẩn danh",
+            studentName: log.user?.name || "Học viên ẩn danh",
             examTitle: log.exam?.title || "Bài thi",
             className: log.exam?.classroom?.name || "Lớp chung",
             cheatCount: log.cheatCount,
@@ -1301,44 +1301,44 @@ export default function TeacherDashboard() {
   };
 
   const navGroups = [
-    { id: "OVERVIEW", label: "Tổng Quan" },
-    { 
-      id: "QUANLY", label: "Quản Lý Chung", 
+    { id: "OVERVIEW", label: "Tổng Quan", icon: "📊" },
+    {
+      id: "QUANLY", label: "Quản Lý Chung", icon: "🗂️",
       subItems: [
-        { id: "CLASSES", label: "Lớp Học" },
-        { id: "STUDENTS", label: "Học Sinh" },
-        { id: "ATTENDANCE", label: "Điểm Danh & Học Phí" },
-        { id: "CALENDAR", label: "Thời Khóa Biểu" },
-        { id: "CHEAT_CONTROL", label: "Kiểm Soát Gian Lận" }
+        { id: "CLASSES", label: "Lớp Học", icon: "🏫" },
+        { id: "STUDENTS", label: "Học Viên", icon: "🧑‍🎓" },
+        { id: "ATTENDANCE", label: "Điểm Danh & Học Phí", icon: "💳" },
+        { id: "CALENDAR", label: "Thời Khóa Biểu", icon: "📅" },
+        { id: "CHEAT_CONTROL", label: "Kiểm Soát Gian Lận", icon: "🛡️" }
       ]
     },
     {
-      id: "LESSONS_GROUP", label: "Bài Học",
+      id: "LESSONS_GROUP", label: "Bài Học", icon: "📖",
       subItems: [
-        { id: "LESSONS", label: "Danh Sách Bài Học" },
-        { id: "CREATE_LESSON", label: "Tạo Bài Học" }
+        { id: "LESSONS", label: "Danh Sách Bài Học", icon: "📋" },
+        { id: "CREATE_LESSON", label: "Tạo Bài Học", icon: "✍️" }
       ]
     },
     {
-      id: "DOCUMENTS_GROUP", label: "Tài Liệu",
+      id: "DOCUMENTS_GROUP", label: "Tài Liệu", icon: "📁",
       subItems: [
-        { id: "DOCUMENTS", label: "Kho Tài Liệu" }
+        { id: "DOCUMENTS", label: "Kho Tài Liệu", icon: "📁" }
       ]
     },
     {
-      id: "LISTENING_GROUP", label: "Luyện Nghe",
+      id: "LISTENING_GROUP", label: "Luyện Nghe", icon: "🎧",
       subItems: [
-        { id: "LISTENING_STUDIO", label: "Studio Luyện Nghe" }
+        { id: "LISTENING_STUDIO", label: "Studio Luyện Nghe", icon: "🎙️" }
       ]
     },
     {
-      id: "EXAMS_GROUP", label: "Đề Thi",
+      id: "EXAMS_GROUP", label: "Đề Thi", icon: "📝",
       subItems: [
-        { id: "EXAMS", label: "Ngân Hàng Đề Thi" },
-        { id: "CREATE", label: "Tạo Đề Mới" }
+        { id: "EXAMS", label: "Ngân Hàng Đề Thi", icon: "🏦" },
+        { id: "CREATE", label: "Tạo Đề Mới", icon: "➕" }
       ]
     },
-    { id: "LEADERBOARD", label: "Bảng Xếp Hạng" }
+    { id: "LEADERBOARD", label: "Bảng Xếp Hạng", icon: "🏆" }
   ];
 
   const allStudents = classrooms.flatMap(c => c.students || []).filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
@@ -1431,23 +1431,27 @@ export default function TeacherDashboard() {
         </div>
 
         <div className="flex flex-col gap-0.5 px-2">
-          {navGroups.map(group => (
-            <div key={group.id} className="flex flex-col">
+          {navGroups.map((group, index) => (
+            <div key={group.id} className={`flex flex-col ${group.subItems && index > 0 ? 'mt-2 pt-2 border-t border-white/10' : ''}`}>
               {group.subItems ? (
                 <>
                   <button
                     onClick={() => toggleNavGroup(group.id)}
-                    className="flex items-center justify-between px-3 pt-5 pb-1.5 transition-colors duration-150 cursor-pointer text-left text-[10px] font-bold uppercase tracking-widest text-white/40 hover:text-white/60"
+                    className="flex items-center justify-between gap-2 px-3 pb-1.5 transition-colors duration-150 cursor-pointer text-left text-[11px] font-bold uppercase tracking-widest text-white/50 hover:text-white/80"
                   >
-                    <span>{group.label}</span>
-                    <span className={`transform transition-transform ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▾</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="text-sm not-italic">{group.icon}</span>
+                      {group.label}
+                    </span>
+                    <span className={`transform transition-transform text-white/40 ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▾</span>
                   </button>
                   {expandedNav[group.id] && (
                     <div className="flex flex-col gap-0.5">
                       {group.subItems.map(item => (
                         <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                          className={`flex items-center pr-3 py-2 text-sm font-medium transition-colors duration-150 cursor-pointer text-left w-full rounded-lg mx-1 ${activeTab === item.id ? 'bg-white/15 text-white font-semibold border-l-[3px] border-white/80 pl-[13px]' : 'pl-4 text-white/60 hover:bg-white/10 hover:text-white'}`}>
-                          <span>{item.label}</span>
+                          className={`flex items-center gap-2.5 pr-3 py-2 text-sm transition-colors duration-150 cursor-pointer text-left w-full rounded-lg mx-1 ${activeTab === item.id ? 'bg-white text-[#1e3a8a] font-bold shadow-sm pl-4' : 'pl-4 font-medium text-white/60 hover:bg-white/10 hover:text-white'}`}>
+                          <span className="text-base shrink-0">{item.icon}</span>
+                          <span className="truncate">{item.label}</span>
                         </button>
                       ))}
                     </div>
@@ -1455,8 +1459,9 @@ export default function TeacherDashboard() {
                 </>
               ) : (
                 <button onClick={() => { setActiveTab(group.id); setIsMobileMenuOpen(false); }}
-                  className={`flex items-center pr-3 py-2.5 text-sm font-medium transition-colors duration-150 cursor-pointer text-left w-full rounded-lg mx-1 ${activeTab === group.id ? 'bg-white/15 text-white font-semibold border-l-[3px] border-white/80 pl-[9px]' : 'pl-3 text-white/70 hover:bg-white/10 hover:text-white'}`}>
-                  <span>{group.label}</span>
+                  className={`flex items-center gap-2.5 pr-3 py-2.5 text-sm transition-colors duration-150 cursor-pointer text-left w-full rounded-lg mx-1 ${activeTab === group.id ? 'bg-white text-[#1e3a8a] font-bold shadow-sm pl-3' : 'pl-3 font-medium text-white/70 hover:bg-white/10 hover:text-white'}`}>
+                  <span className="text-base shrink-0">{group.icon}</span>
+                  <span className="truncate">{group.label}</span>
                 </button>
               )}
             </div>
@@ -1491,7 +1496,7 @@ export default function TeacherDashboard() {
             <h1 className="text-3xl font-bold">Xin chào, {user?.name?.split(' ').slice(-1)[0] || 'Thầy/Cô'} 👋</h1>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <StatCard title="Tổng Lớp" value={String(classrooms.length)} icon="🏫" accent="blue" />
-              <StatCard title="Tổng Học Sinh" value={String(allStudents.length)} icon="🧑‍🎓" accent="violet" />
+              <StatCard title="Tổng Học Viên" value={String(allStudents.length)} icon="🧑‍🎓" accent="violet" />
               <StatCard title="Bài Tập / Đề Thi" value={String(classrooms.flatMap(c => c.exams || []).length)} icon="📝" accent="green" />
               <StatCard title="Câu Hỏi" value={String(classrooms.flatMap(c => c.exams || []).reduce((s: number, e: any) => s + (e.totalQuestions || 0), 0))} icon="❓" accent="amber" />
               <StatCard title="Tỷ Lệ Nộp Bài" value={completionRate !== null ? `${completionRate}%` : '—'} icon="📊" accent="cyan" sub="Trên tổng số bài đã giao" />
@@ -1541,7 +1546,7 @@ export default function TeacherDashboard() {
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#94a3b8' }} allowDecimals={false} width={28} />
                       <Tooltip cursor={{ fill: '#f1f5f9' }} contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontSize: '13px' }} />
                       <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px', fontSize: '13px' }} />
-                      <Bar dataKey="HọcSinh" name="Số Học Sinh" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={28} />
+                      <Bar dataKey="HọcSinh" name="Số Học Viên" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={28} />
                       <Bar dataKey="BàiTập" name="Số Bài Tập" fill="#059669" radius={[4, 4, 0, 0]} barSize={28} />
                     </BarChart>
                   </ResponsiveContainer>
@@ -1594,7 +1599,7 @@ export default function TeacherDashboard() {
               <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mb-6">
                 <div className="mb-6">
                   <h3 className="font-bold text-slate-700">Điểm Trung Bình Theo Lớp</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Dựa trên điểm cao nhất mỗi đề của học sinh trong lớp</p>
+                  <p className="text-xs text-slate-400 mt-0.5">Dựa trên điểm cao nhất mỗi đề của học viên trong lớp</p>
                 </div>
                 <div className="h-[240px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -1648,7 +1653,7 @@ export default function TeacherDashboard() {
                         <table className="w-full text-left min-w-[700px]">
                           <thead>
                             <tr className="bg-slate-50 text-slate-400 text-xs uppercase tracking-widest">
-                              <th className="p-3 font-bold border-b border-gray-100">Học Sinh</th>
+                              <th className="p-3 font-bold border-b border-gray-100">Học Viên</th>
                               <th className="p-3 font-bold border-b border-gray-100">Lớp</th>
                               <th className="p-3 font-bold border-b border-gray-100 text-center">Số Buổi</th>
                               <th className="p-3 font-bold border-b border-gray-100 text-right">Số Tiền</th>
@@ -1702,7 +1707,7 @@ export default function TeacherDashboard() {
         {activeTab === "STUDENTS" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center flex-wrap gap-4">
-              <h1 className="text-3xl font-bold">Danh Sách Học Sinh</h1>
+              <h1 className="text-3xl font-bold">Danh Sách Học Viên</h1>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
                 <input 
@@ -1719,8 +1724,8 @@ export default function TeacherDashboard() {
                 s.name.toLowerCase().includes(searchStudentQuery.toLowerCase()) || 
                 s.email.toLowerCase().includes(searchStudentQuery.toLowerCase())
               );
-              if (allStudents.length === 0) return <p className="text-slate-400">Chưa có học sinh nào tham gia lớp.</p>;
-              if (filteredStudents.length === 0) return <p className="text-slate-400">Không tìm thấy học sinh phù hợp.</p>;
+              if (allStudents.length === 0) return <p className="text-slate-400">Chưa có học viên nào tham gia lớp.</p>;
+              if (filteredStudents.length === 0) return <p className="text-slate-400">Không tìm thấy học viên phù hợp.</p>;
               
               const getTier = (xp: number) => {
                 const level = Math.floor((1 + Math.sqrt(1 + 4 * xp / 50)) / 2);
@@ -1737,7 +1742,7 @@ export default function TeacherDashboard() {
                     <table className="w-full text-left min-w-[800px]">
                       <thead>
                         <tr className="bg-slate-50 text-slate-400 text-xs uppercase tracking-widest">
-                        <th className="p-4 font-bold border-b border-gray-100">Học Sinh</th>
+                        <th className="p-4 font-bold border-b border-gray-100">Học Viên</th>
                         <th className="p-4 font-bold border-b border-gray-100">Cấp Bậc</th>
                         <th className="p-4 font-bold border-b border-gray-100 text-center">Điểm XP</th>
                         <th className="p-4 font-bold border-b border-gray-100">Lớp</th>
@@ -1940,7 +1945,7 @@ export default function TeacherDashboard() {
                     <label className="block text-sm font-bold mb-2">Phạm vi gán</label>
                     <select value={lcScope} onChange={e => setLcScope(e.target.value)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold">
                       <option value="CLASS">Một lớp học</option>
-                      <option value="STUDENT">Một học sinh cụ thể</option>
+                      <option value="STUDENT">Một học viên cụ thể</option>
                     </select>
                   </div>
                   {lcScope === "CLASS" ? (
@@ -1953,9 +1958,9 @@ export default function TeacherDashboard() {
                     </div>
                   ) : (
                     <div className="flex-1 min-w-[150px]">
-                      <label className="block text-sm font-bold mb-2">Chọn Học Sinh</label>
+                      <label className="block text-sm font-bold mb-2">Chọn Học Viên</label>
                       <select value={lcStudentId} onChange={e => setLcStudentId(e.target.value)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold" required>
-                        <option value="">-- Chọn học sinh --</option>
+                        <option value="">-- Chọn học viên --</option>
                         {allStudents.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
                       </select>
                     </div>
@@ -1986,7 +1991,7 @@ export default function TeacherDashboard() {
                     <h3 className="font-bold text-lg line-clamp-2 mb-1 pr-16" title={clip.title}>{clip.title}</h3>
                     <p className="text-xs text-slate-400 mb-1">{new Date(clip.createdAt).toLocaleDateString('vi-VN')} • {ACCENT_LABELS[clip.accent] || clip.accent}</p>
                     <p className="text-xs text-slate-500 font-semibold mb-4">
-                      {clip.classroom ? `Lớp: ${clip.classroom.name}` : clip.student ? `Học sinh: ${clip.student.name}` : ''}
+                      {clip.classroom ? `Lớp: ${clip.classroom.name}` : clip.student ? `Học viên: ${clip.student.name}` : ''}
                     </p>
                     {clip.status === 'FAILED' && clip.errorMessage && (
                       <p className="text-xs text-red-500 italic mb-4">{clip.errorMessage}</p>
@@ -2066,7 +2071,7 @@ export default function TeacherDashboard() {
                           <table className="w-full text-left text-sm">
                             <thead className="bg-slate-50">
                               <tr>
-                                <th className="p-3 font-bold border-b border-gray-200">Học Sinh</th>
+                                <th className="p-3 font-bold border-b border-gray-200">Học Viên</th>
                                 <th className="p-3 font-bold border-b border-gray-200 text-center">Trạng Thái</th>
                                 <th className="p-3 font-bold border-b border-gray-200">Ghi chú</th>
                               </tr>
@@ -2147,7 +2152,7 @@ export default function TeacherDashboard() {
                         </div>
                       </>
                     ) : (
-                      <p className="text-center text-slate-400 py-8">Lớp chưa có học sinh nào.</p>
+                      <p className="text-center text-slate-400 py-8">Lớp chưa có học viên nào.</p>
                     )}
                   </div>
                 )}
@@ -2179,7 +2184,7 @@ export default function TeacherDashboard() {
                         <table className="w-full text-left">
                           <thead className="bg-slate-50">
                             <tr>
-                              <th className="p-4 font-bold border-b border-gray-200">Học Sinh</th>
+                              <th className="p-4 font-bold border-b border-gray-200">Học Viên</th>
                               <th className="p-4 font-bold border-b border-gray-200">Số Buổi Học</th>
                               <th className="p-4 font-bold border-b border-gray-200 text-right">Tổng Học Phí</th>
                               <th className="p-4 font-bold border-b border-gray-200 text-center">Trạng Thái</th>
@@ -2286,7 +2291,7 @@ export default function TeacherDashboard() {
                 </div>
                 <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm">
                   <div className="text-2xl font-black text-amber-500">{uniqueStudents}</div>
-                  <div className="text-sm text-slate-500 mt-1 font-medium">Học sinh vi phạm</div>
+                  <div className="text-sm text-slate-500 mt-1 font-medium">Học viên vi phạm</div>
                 </div>
               </div>
 
@@ -2294,7 +2299,7 @@ export default function TeacherDashboard() {
               <div className="flex gap-3 items-center">
                 <input
                   type="text"
-                  placeholder="Tìm theo tên hoặc email học sinh..."
+                  placeholder="Tìm theo tên hoặc email học viên..."
                   value={cheatSearch}
                   onChange={e => setCheatSearch(e.target.value)}
                   className="flex-1 border border-gray-200 bg-white rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-primary/50"
@@ -2333,7 +2338,7 @@ export default function TeacherDashboard() {
                       <thead>
                         <tr className="border-b-2 border-gray-200 text-left text-xs text-slate-400 uppercase tracking-wider bg-slate-50">
                           <th className="px-5 py-3 font-bold">Thời gian</th>
-                          <th className="px-5 py-3 font-bold">Học sinh</th>
+                          <th className="px-5 py-3 font-bold">Học viên</th>
                           <th className="px-5 py-3 font-bold">Lớp học</th>
                           <th className="px-5 py-3 font-bold">Bài kiểm tra</th>
                           <th className="px-5 py-3 font-bold text-center">Vi phạm</th>
@@ -2678,7 +2683,7 @@ export default function TeacherDashboard() {
                 {/* Student picker */}
                 {createAssignMode === 'STUDENT' && createClassroomId && (
                   <div className="p-4 border border-gray-100">
-                    <label className="block text-sm font-bold mb-2">Chọn học sinh</label>
+                    <label className="block text-sm font-bold mb-2">Chọn học viên</label>
                     <div className="space-y-1 max-h-36 overflow-y-auto">
                       {classrooms.find(c => c.id === createClassroomId)?.students?.map((s: any) => (
                         <label key={s.id} className="flex items-center gap-2 p-2 hover:bg-slate-50 cursor-pointer">
@@ -2878,7 +2883,7 @@ export default function TeacherDashboard() {
                     {q.type === 'ESSAY' && (
                       <div className="space-y-3 p-4 bg-secondary/5 border border-secondary/20">
                         <p className="text-xs font-bold text-secondary/90">✍️ Nhập Đáp án chính xác (Để hệ thống tự động chấm)</p>
-                        <p className="text-[11px] text-secondary/70">Hệ thống sẽ cộng điểm nếu học sinh nhập trùng khớp với đáp án này. Vui lòng nhập ngắn gọn (VD: book, apple). Nếu để trống, giáo viên sẽ phải chấm thủ công cho câu này.</p>
+                        <p className="text-[11px] text-secondary/70">Hệ thống sẽ cộng điểm nếu học viên nhập trùng khớp với đáp án này. Vui lòng nhập ngắn gọn (VD: book, apple). Nếu để trống, giáo viên sẽ phải chấm thủ công cho câu này.</p>
                         <textarea rows={2} className="w-full p-3 border border-secondary/30 bg-white/50 resize-none focus:border-secondary outline-none transition-colors text-sm"
                           placeholder="VD: book, apple, can... (nhập ngắn gọn, hệ thống sẽ so sánh chính xác)"
                           value={!q.correctOption || q.correctOption === 'A' ? '' : q.correctOption} onChange={e => updateQuestion(qi, { correctOption: e.target.value.toLowerCase() })} />
@@ -3131,7 +3136,7 @@ export default function TeacherDashboard() {
                               ))}
                             </div>
                           )}
-                          {isEssay && <p className="text-sm text-slate-400 italic">Học sinh nhập câu trả lời tự do</p>}
+                          {isEssay && <p className="text-sm text-slate-400 italic">Học viên nhập câu trả lời tự do</p>}
                         </div>
                       </div>
                     </div>
@@ -3149,7 +3154,7 @@ export default function TeacherDashboard() {
                       targetStudents = targetStudents.filter((s: any) => selectedExamForView.assignedStudents.some((a: any) => a.id === s.id));
                     }
                     
-                    if (targetStudents.length === 0) return <p className="text-center text-slate-400 py-8">Không có học sinh nào được giao bài.</p>;
+                    if (targetStudents.length === 0) return <p className="text-center text-slate-400 py-8">Không có học viên nào được giao bài.</p>;
                     
                     const submittedCount = targetStudents.filter((s: any) => selectedExamForView.results?.some((r: any) => r.userId === s.id)).length;
                     
@@ -3174,7 +3179,7 @@ export default function TeacherDashboard() {
                           <table className="w-full text-left text-sm">
                             <thead className="bg-slate-50">
                               <tr>
-                                <th className="p-3 font-bold border-b border-gray-200">Học Sinh</th>
+                                <th className="p-3 font-bold border-b border-gray-200">Học Viên</th>
                                 <th className="p-3 font-bold border-b border-gray-200">Điểm cao nhất</th>
                                 <th className="p-3 font-bold border-b border-gray-200">Lượt làm</th>
                                 <th className="p-3 font-bold border-b border-gray-200">Giờ kết thúc</th>
@@ -3356,7 +3361,7 @@ function ClassCard({ c, onEdit, onDelete }: { c: any; onEdit?: () => void; onDel
             </button>
           )}
         </h4>
-        <p className="text-sm text-slate-500">{c.students?.length || 0} Học sinh</p>
+        <p className="text-sm text-slate-500">{c.students?.length || 0} Học viên</p>
 
         {(daysStr || c.startTime || c.endTime) && (
           <div className="mt-2 text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg inline-flex gap-2">
