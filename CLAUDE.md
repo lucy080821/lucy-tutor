@@ -129,6 +129,7 @@ Tabs chính (điều hướng theo nhóm — xem `navGroups` trong file):
 - **LESSONS** (Danh Sách Bài Học) — danh sách bài học đã tạo, dropdown lọc theo lớp (`lessonClassFilter`)
 - **CREATE_LESSON** (Tạo Bài Học) — soạn bài học (ReactQuill), nhập từ vựng hàng loạt qua Excel mẫu
 - **DOCUMENTS** (Kho Tài Liệu) — Tài liệu đính kèm. Hỗ trợ định dạng PDF, Word (.doc/.docx) và **PowerPoint (.ppt/.pptx)**
+- **LISTENING_STUDIO** (Studio Luyện Nghe) — giáo viên upload audio (.mp3/.m4a/.wav) đã tạo sẵn bằng AI TTS bên ngoài + script chính xác 100% (không gọi TTS trong app). Form: tiêu đề, script, file audio, **phạm vi gán** (1 lớp học hoặc 1 học sinh cụ thể — bắt buộc chọn đúng 1 trong 2). Danh sách audio hiện trạng thái Đang xử lý/Sẵn sàng/Lỗi (`ListeningClip.status`)
 - **EXAMS** (Ngân Hàng Đề Thi) — danh sách đề thi/bài tập đã tạo (`ExamCard`), nhân bản/sửa/xóa
 - **CREATE** (Tạo Đề Mới) — soạn đề thi thủ công:
   - Mỗi câu hỏi là 1 card dạng **accordion** (thu gọn/mở rộng từng câu hoặc "Thu Gọn Tất Cả"/"Mở Rộng Tất Cả"), có thanh tiến trình "Đã soạn xong X/Y câu"
@@ -177,6 +178,25 @@ Module luyện tập ngữ pháp theo chuyên đề, tích hợp SRS (Spaced Rep
   - Sai hẳn hoặc bỏ trống → quality 1
 
   Điều kiện kết hợp `status` + `repetitions` (thay vì chỉ `status`) để tránh việc một từ vừa đúng lần đầu (đã nhảy sang `REVIEWING` ngay do SM-2) đã bị ép gõ ngay khi chưa kịp quen mặt chữ.
+
+---
+
+### `/listening` — Luyện Nghe (tra từ vựng theo audio, kiểu YouGlish)
+
+**File:** [frontend/src/app/listening/page.tsx](frontend/src/app/listening/page.tsx)
+
+Không còn là trang demo tĩnh (3 bài IELTS hardcode) — đã thay hoàn toàn bằng tính năng nghe từ vựng theo ngữ cảnh thật:
+
+- Lấy `dueVocabs` từ SRS (giống `/gym`), ghép với các audio clip giáo viên đã upload có chứa từ đó (`GET /api/listening/queue/:userId`), xếp thành hàng đợi tối đa **10 từ/phiên**. Từ nào chưa có audio khớp thì bị bỏ qua khỏi hàng đợi (không hiện trống)
+- Mỗi từ đi qua **2 giai đoạn** (`phase` state, không cho nhảy cóc):
+  1. **Xem & Nghe Từ Trong Câu (EXPLORE)** — hiện nguyên câu chứa từ mục tiêu (không che), từ mục tiêu được bôi đậm/gạch chân và có thể bấm vào để nghe lại; audio tự seek + phát **nguyên câu** (không phải chỉ 1 từ đơn lẻ) rồi tự dừng cuối câu. Có thể chuyển đổi giữa nhiều "Ví dụ" (clip) nếu từ khớp nhiều audio khác nhau
+  2. **Kiểm Tra (TEST)** — bấm "Bắt Đầu Kiểm Tra" để chuyển sang; câu vẫn hiện nhưng từ mục tiêu bị che thành gạch chân trống, học sinh gõ lại từ đã nghe (dictation) — tái dùng nguyên bộ chấm điểm ở [frontend/src/lib/textGrading.ts](frontend/src/lib/textGrading.ts) (`cleanString`, `levenshteinDistance`, `getHintMask`, cũng dùng chung với `/gym` và `/grammar-gym`)
+  3. Sau khi nộp: hiện đáp án đúng/sai, câu đã test (từ mục tiêu bôi đậm), **và toàn bộ transcript gốc của audio** (từ mục tiêu highlight bằng `highlightWords`, khớp không phân biệt hoa/thường qua word-boundary regex) kèm nút "▶ Nghe Toàn Bộ" phát lại **cả file audio từ đầu** (không chỉ câu vừa test) — dùng `playingFullRef` để bỏ qua auto-pause-cuối-câu khi đang phát toàn bộ
+- Kết quả (quality 1/3/4/5) gọi thẳng `POST /api/srs/review/:progressId` — luyện nghe và ôn từ vựng dùng chung 1 hệ thống SRS, không tách tracking riêng
+- **Màn hình tổng kết cuối phiên**: mỗi lần hoàn thành 1 từ, `goNext` ghi lại `{clipId, title, audioUrl, fullScript, word}` vào `sessionLog`. Khi hết hàng đợi (`currentIndex + 1 >= queue.length`), thay vì refetch ngay, hiện màn hình tổng kết — gom `sessionLog` theo `clipId` (`groupedSessionClips`), mỗi clip hiện **toàn bộ transcript với TẤT CẢ từ vựng đã học trong phiên được bôi đậm** (không chỉ 1 từ) kèm `<audio controls>` để nghe lại từ đầu. Nút "Luyện Tiếp" (`startNewSession`) mới thật sự refetch hàng đợi mới
+- **Bộ lọc giọng đọc (accent)**: mỗi `ListeningClip` có field `accent` ("UK"/"US"/"AUS") do giáo viên chọn lúc upload. Học sinh lọc hàng đợi theo giọng qua thanh chọn (Tất cả/UK/US/AUS) ở đầu trang `/listening`, truyền `?accent=` cho `GET /api/listening/queue/:userId` (và `GET /api/listening/search`); đổi giọng sẽ refetch lại hàng đợi từ đầu (và reset `sessionLog`)
+
+**Backend:** [backend/src/routes/listening.routes.js](backend/src/routes/listening.routes.js) — khi giáo viên upload, chạy nền (fire-and-forget, không chặn response) Groq Whisper (`whisper-large-v3`, `timestamp_granularities: ['word']`) lấy timestamp từng từ trong audio, lưu vào `ListeningClip.alignment` (JSON string). Transcript hiển thị cho học sinh luôn là script gốc giáo viên nhập (không phải text Whisper tự nhận dạng) — Whisper chỉ dùng để lấy mốc thời gian, tránh lỗi nghe nhầm của ASR lọt vào phụ đề. `matchClipsForWord` (trong file này) neo từ khớp được vào vị trí của nó trong mảng `alignment`, rồi dùng số lượng token của câu (từ `findSentenceMatch` trên script gốc) để suy ra khoảng `start`/`end` của **cả câu** — không chỉ mốc thời gian của riêng từ đó.
 
 ---
 
@@ -271,6 +291,10 @@ Cho phép học sinh cài app lên điện thoại (Add to Home Screen):
 | `GET /api/attendance/report/teacher/:teacherId` | Báo cáo học phí tổng hợp TẤT CẢ lớp của giáo viên theo tháng (tổng đã thu, tổng cần thu, danh sách đã đóng/chưa đóng) — dùng cho tab OVERVIEW |
 | `GET /api/analytics/...` | Thống kê học tập |
 | `POST /api/ai/...` | AI feedback (Groq) |
+| `POST /api/listening/upload` | Giáo viên upload audio + script (multipart, field `audio`), lưu Supabase Storage bucket `documents` dưới `listening/`, chạy nền Groq Whisper lấy timestamp từng từ |
+| `GET /api/listening?teacherId=` | Danh sách audio đã upload của giáo viên (kèm trạng thái xử lý) |
+| `GET /api/listening/queue/:userId` | Hàng đợi luyện nghe: SRS due-vocab ghép với audio clip khớp, tối đa 10 từ/phiên |
+| `GET /api/listening/search?userId=&word=` | Tra tự do 1 từ bất kỳ ra các audio clip khớp (không giới hạn theo SRS) |
 
 **ORM:** Prisma 6 · **DB:** PostgreSQL (prod) / SQLite (dev)
 

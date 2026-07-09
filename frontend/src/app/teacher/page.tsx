@@ -177,6 +177,140 @@ export default function TeacherDashboard() {
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [searchDocQuery, setSearchDocQuery] = useState("");
 
+  // ── Listening clip (Studio Luyện Nghe) state ──
+  const [listeningClips, setListeningClips] = useState<any[]>([]);
+  const [lcTitle, setLcTitle] = useState("");
+  const [lcScript, setLcScript] = useState("");
+  const [lcAudioFile, setLcAudioFile] = useState<File | null>(null);
+  const [lcScope, setLcScope] = useState("CLASS"); // "CLASS" or "STUDENT"
+  const [lcClassroomId, setLcClassroomId] = useState("");
+  const [lcStudentId, setLcStudentId] = useState("");
+  const [lcAccent, setLcAccent] = useState("US"); // "UK", "US", "AUS"
+  const [isUploadingClip, setIsUploadingClip] = useState(false);
+  const [editingClipId, setEditingClipId] = useState<string | null>(null);
+
+  const ACCENT_LABELS: Record<string, string> = { UK: "🇬🇧 Anh-Anh (UK)", US: "🇺🇸 Anh-Mỹ (US)", AUS: "🇦🇺 Anh-Úc (AUS)" };
+
+  const fetchListeningClips = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/listening?teacherId=${user.id}`);
+      if (res.ok) setListeningClips(await res.json());
+    } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => {
+    if (activeTab === "LISTENING_STUDIO" && user) {
+      fetchListeningClips();
+    }
+  }, [activeTab, user]);
+
+  // Poll while any clip is still being aligned in the background, so the status badge
+  // (Đang xử lý → Sẵn sàng/Lỗi) updates without the teacher needing to switch tabs/refresh.
+  useEffect(() => {
+    if (activeTab !== "LISTENING_STUDIO" || !listeningClips.some(c => c.status === 'PROCESSING')) return;
+    const interval = setInterval(fetchListeningClips, 4000);
+    return () => clearInterval(interval);
+  }, [activeTab, listeningClips]);
+
+  const resetListeningClipForm = () => {
+    setEditingClipId(null);
+    setLcTitle("");
+    setLcScript("");
+    setLcAudioFile(null);
+    setLcScope("CLASS");
+    setLcClassroomId("");
+    setLcStudentId("");
+    setLcAccent("US");
+  };
+
+  const startEditListeningClip = (clip: any) => {
+    setEditingClipId(clip.id);
+    setLcTitle(clip.title);
+    setLcAccent(clip.accent);
+    if (clip.classroomId) {
+      setLcScope("CLASS");
+      setLcClassroomId(clip.classroomId);
+      setLcStudentId("");
+    } else {
+      setLcScope("STUDENT");
+      setLcStudentId(clip.studentId);
+      setLcClassroomId("");
+    }
+    document.getElementById('listening-clip-form')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleUploadListeningClip = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    if (lcScope === "CLASS" && !lcClassroomId) return Swal.fire('Lỗi', 'Vui lòng chọn lớp học', 'error');
+    if (lcScope === "STUDENT" && !lcStudentId) return Swal.fire('Lỗi', 'Vui lòng chọn học sinh', 'error');
+
+    setIsUploadingClip(true);
+    try {
+      let res: Response;
+      if (editingClipId) {
+        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/listening/${editingClipId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: lcTitle,
+            accent: lcAccent,
+            classroomId: lcScope === "CLASS" ? lcClassroomId : null,
+            studentId: lcScope === "STUDENT" ? lcStudentId : null
+          })
+        });
+      } else {
+        if (!lcAudioFile) { setIsUploadingClip(false); return; }
+        const formData = new FormData();
+        formData.append('audio', lcAudioFile);
+        formData.append('title', lcTitle);
+        formData.append('script', lcScript);
+        formData.append('teacherId', user.id);
+        formData.append('accent', lcAccent);
+        if (lcScope === "CLASS") formData.append('classroomId', lcClassroomId);
+        if (lcScope === "STUDENT") formData.append('studentId', lcStudentId);
+        res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/listening/upload`, {
+          method: 'POST',
+          body: formData
+        });
+      }
+
+      if (res.ok) {
+        Swal.fire('Thành công', editingClipId ? 'Đã cập nhật thông tin audio' : 'Đã tải audio lên, đang xử lý căn chỉnh âm thanh...', 'success');
+        resetListeningClipForm();
+        fetchListeningClips();
+      } else {
+        const errData = await res.json();
+        Swal.fire('Lỗi', errData.error || 'Thao tác thất bại', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Lỗi', 'Lỗi kết nối mạng', 'error');
+    } finally {
+      setIsUploadingClip(false);
+    }
+  };
+
+  const handleDeleteListeningClip = async (clipId: string) => {
+    const result = await Swal.fire({
+      title: 'Xóa audio này?',
+      text: 'Học sinh sẽ không thể luyện nghe với audio này nữa.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Xóa',
+      cancelButtonText: 'Hủy'
+    });
+    if (!result.isConfirmed) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/listening/${clipId}`, { method: 'DELETE' });
+      if (res.ok) {
+        Swal.fire('Đã xóa', '', 'success');
+        fetchListeningClips();
+      }
+    } catch (err) { console.error(err); }
+  };
+
   const fetchDocuments = async () => {
     if (!user) return;
     try {
@@ -1192,6 +1326,12 @@ export default function TeacherDashboard() {
       ]
     },
     {
+      id: "LISTENING_GROUP", label: "Luyện Nghe",
+      subItems: [
+        { id: "LISTENING_STUDIO", label: "Studio Luyện Nghe" }
+      ]
+    },
+    {
       id: "EXAMS_GROUP", label: "Đề Thi",
       subItems: [
         { id: "EXAMS", label: "Ngân Hàng Đề Thi" },
@@ -1749,6 +1889,113 @@ export default function TeacherDashboard() {
                   <div className="flex gap-2 z-10">
                     <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" download={doc.title} className="flex-1 py-2 text-center bg-primary/10 text-primary text-sm font-bold hover:bg-primary hover:text-white transition-colors cursor-pointer block">Tải xuống</a>
                     <button onClick={() => handleDeleteDocument(doc.id)} className="w-10 h-10 flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors cursor-pointer z-10 relative" title="Xóa">🗑️</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── LISTENING STUDIO ── */}
+        {activeTab === "LISTENING_STUDIO" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h1 className="text-3xl font-bold mb-6">Studio Luyện Nghe</h1>
+            <div id="listening-clip-form" className="bg-white rounded-xl p-6 border border-gray-100 mb-8 shadow-sm">
+              <h2 className="text-xl font-bold mb-4">{editingClipId ? 'Sửa thông tin audio' : 'Tải audio lên'}</h2>
+              <form onSubmit={handleUploadListeningClip} className="flex flex-col gap-4">
+                <div className="flex flex-wrap gap-4">
+                  <div className="flex-1 min-w-[200px]">
+                    <label className="block text-sm font-bold mb-2">Tiêu đề</label>
+                    <input type="text" value={lcTitle} onChange={e => setLcTitle(e.target.value)} placeholder="VD: Hội thoại đặt phòng khách sạn" className="w-full p-3 border border-gray-200 bg-white rounded-lg" required />
+                  </div>
+                  {!editingClipId && (
+                    <div className="flex-1 min-w-[200px]">
+                      <label className="block text-sm font-bold mb-2">File audio (.mp3, .m4a, .wav)</label>
+                      <input type="file" accept=".mp3,.m4a,.wav" onChange={e => setLcAudioFile(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20" required />
+                    </div>
+                  )}
+                </div>
+
+                {!editingClipId && (
+                  <div>
+                    <label className="block text-sm font-bold mb-2">Script (chính xác 100% với nội dung audio)</label>
+                    <textarea value={lcScript} onChange={e => setLcScript(e.target.value)} rows={4} placeholder="Dán nguyên văn script đã dùng để tạo audio..." className="w-full p-3 border border-gray-200 bg-white rounded-lg" required />
+                  </div>
+                )}
+
+                {editingClipId && (
+                  <p className="text-xs text-slate-400 italic">Không thể sửa file audio/script sau khi đã tải lên (vì đã gắn với timestamp căn chỉnh) — cần xóa và upload lại nếu muốn đổi nội dung.</p>
+                )}
+
+                <div className="flex flex-wrap gap-4 items-end">
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="block text-sm font-bold mb-2">Giọng đọc</label>
+                    <select value={lcAccent} onChange={e => setLcAccent(e.target.value)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold">
+                      <option value="UK">{ACCENT_LABELS.UK}</option>
+                      <option value="US">{ACCENT_LABELS.US}</option>
+                      <option value="AUS">{ACCENT_LABELS.AUS}</option>
+                    </select>
+                  </div>
+                  <div className="flex-1 min-w-[150px]">
+                    <label className="block text-sm font-bold mb-2">Phạm vi gán</label>
+                    <select value={lcScope} onChange={e => setLcScope(e.target.value)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold">
+                      <option value="CLASS">Một lớp học</option>
+                      <option value="STUDENT">Một học sinh cụ thể</option>
+                    </select>
+                  </div>
+                  {lcScope === "CLASS" ? (
+                    <div className="flex-1 min-w-[150px]">
+                      <label className="block text-sm font-bold mb-2">Chọn Lớp Học</label>
+                      <select value={lcClassroomId} onChange={e => setLcClassroomId(e.target.value)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold" required>
+                        <option value="">-- Chọn lớp --</option>
+                        {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="flex-1 min-w-[150px]">
+                      <label className="block text-sm font-bold mb-2">Chọn Học Sinh</label>
+                      <select value={lcStudentId} onChange={e => setLcStudentId(e.target.value)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold" required>
+                        <option value="">-- Chọn học sinh --</option>
+                        {allStudents.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                      </select>
+                    </div>
+                  )}
+                  <button type="submit" disabled={isUploadingClip} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 disabled:opacity-50 min-w-[120px]">
+                    {isUploadingClip ? 'Đang lưu...' : editingClipId ? 'Lưu thay đổi' : 'Upload'}
+                  </button>
+                  {editingClipId && (
+                    <button type="button" onClick={resetListeningClipForm} className="px-6 py-3 bg-gray-100 text-gray-600 font-bold hover:bg-gray-200 min-w-[100px]">
+                      Hủy
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            <h2 className="text-xl font-bold mb-4">Danh sách audio đã tải</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {listeningClips.length === 0 && <div className="text-slate-400 italic col-span-full">Chưa có audio nào</div>}
+              {listeningClips.map((clip: any) => (
+                <div key={clip.id} className="bg-white rounded-xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all flex flex-col justify-between group relative shadow-sm">
+                  <div className="absolute top-3 right-3">
+                    <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${clip.status === 'READY' ? 'bg-green-500/10 text-green-600' : clip.status === 'FAILED' ? 'bg-red-500/10 text-red-600' : 'bg-amber-500/10 text-amber-600'}`}>
+                      {clip.status === 'READY' ? 'Sẵn sàng' : clip.status === 'FAILED' ? 'Lỗi' : 'Đang xử lý'}
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg line-clamp-2 mb-1 pr-16" title={clip.title}>{clip.title}</h3>
+                    <p className="text-xs text-slate-400 mb-1">{new Date(clip.createdAt).toLocaleDateString('vi-VN')} • {ACCENT_LABELS[clip.accent] || clip.accent}</p>
+                    <p className="text-xs text-slate-500 font-semibold mb-4">
+                      {clip.classroom ? `Lớp: ${clip.classroom.name}` : clip.student ? `Học sinh: ${clip.student.name}` : ''}
+                    </p>
+                    {clip.status === 'FAILED' && clip.errorMessage && (
+                      <p className="text-xs text-red-500 italic mb-4">{clip.errorMessage}</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 z-10">
+                    <audio src={clip.audioUrl} controls className="flex-1 h-9" />
+                    <button onClick={() => startEditListeningClip(clip)} className="w-10 h-10 shrink-0 flex items-center justify-center bg-blue-500/10 text-blue-500 hover:bg-blue-500 hover:text-white transition-colors cursor-pointer" title="Sửa">✏️</button>
+                    <button onClick={() => handleDeleteListeningClip(clip.id)} className="w-10 h-10 shrink-0 flex items-center justify-center bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-colors cursor-pointer" title="Xóa">🗑️</button>
                   </div>
                 </div>
               ))}

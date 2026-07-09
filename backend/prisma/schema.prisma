@@ -35,10 +35,13 @@ model User {
   uploadedLessons   Lesson[]    @relation("TeacherLessons")
   lessonProgress    LessonProgress[]
   uploadedDocuments Document[]  @relation("TeacherDocuments")
-  
+
   attendances       Attendance[]
   tuitionPayments   TuitionPayment[]
   vocabProgress     UserVocabProgress[]
+
+  uploadedListeningClips  ListeningClip[] @relation("TeacherListeningClips")
+  assignedListeningClips  ListeningClip[] @relation("StudentListeningClips")
   
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
@@ -184,7 +187,8 @@ model Classroom {
   attendances Attendance[]
   tuitionPayments TuitionPayment[]
   documents   Document[]
-  
+  listeningClips ListeningClip[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -316,6 +320,30 @@ model Document {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
+model ListeningClip {
+  id            String   @id @default(uuid())
+  title         String
+  script        String   // exact TTS script, always shown to students as-is
+  audioUrl      String
+  accent        String   @default("US") // "UK", "US", "AUS" — set by teacher at upload time, used to filter practice clips
+  status        String   @default("PROCESSING") // "PROCESSING", "READY", "FAILED"
+  alignment     String?  // JSON string: [{ "word": "...", "start": 0.0, "end": 0.0 }] from Whisper word timestamps
+  errorMessage  String?
+
+  teacherId     String
+  teacher       User       @relation("TeacherListeningClips", fields: [teacherId], references: [id], onDelete: Cascade)
+
+  // Exactly one of classroomId / studentId is set (enforced at the API level, not by the DB)
+  classroomId   String?
+  classroom     Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+
+  studentId     String?
+  student       User?      @relation("StudentListeningClips", fields: [studentId], references: [id], onDelete: SetNull)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
 model UserVocabProgress {
   id              String   @id @default(uuid())
   userId          String

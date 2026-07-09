@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
 import confetti from "canvas-confetti";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
+import { cleanString } from '@/lib/textGrading';
 
 export default function GrammarGymPage() {
   const router = useRouter();
@@ -98,8 +99,6 @@ export default function GrammarGymPage() {
     }
     setGenerating(false);
   };
-
-  const cleanString = (str: string) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const checkAnswer = () => {
     const q = questions[currentQIndex];

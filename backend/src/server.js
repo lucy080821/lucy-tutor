@@ -34,6 +34,7 @@ const attendanceRoutes = require('./routes/attendance.routes');
 const documentRoutes = require('./routes/document.routes');
 const srsRoutes = require('./routes/srs.routes');
 const leaderboardRoutes = require('./routes/leaderboard.routes');
+const listeningRoutes = require('./routes/listening.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
@@ -49,6 +50,7 @@ app.use('/api/attendance', attendanceRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/srs', srsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/listening', listeningRoutes);
 
 const PORT = process.env.PORT || 5000;
 
