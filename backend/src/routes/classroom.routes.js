@@ -61,7 +61,7 @@ router.get('/teacher/:teacherId', async (req, res) => {
         exams: {
           select: {
             id: true, title: true, totalQuestions: true, duration: true, maxAttempts: true,
-            deadline: true, examType: true, notes: true, createdAt: true,
+            deadline: true, examType: true, notes: true, createdAt: true, classroomId: true,
             results: {
               select: {
                 id: true, score: true, userId: true, createdAt: true, timeSpent: true,

@@ -4,6 +4,12 @@ import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
 import { cleanString, levenshteinDistance, getHintMask } from "@/lib/textGrading";
 import { logSkillProgress } from "@/lib/skillProgress";
+import { isReadingAnswerCorrect, FILL_TYPES, type ReadingQuestion } from "@/lib/readingGrading";
+import { CEFR_LEVELS, PRACTICE_PURPOSES, CefrLevel, PracticePurpose, formatPracticedAt } from "@/lib/skillPractice";
+import { SkillReportPDF, SkillReportRubricItem } from "@/components/reports/SkillReportPDF";
+import { exportNodeToPDF } from "@/lib/pdfExport";
+
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
 // Maps the existing SM-2 review quality scale (1/3/4/5 — see textGrading-based
 // grading below) to a plain 0-10 score, purely to feed the dashboard's 4-skill
@@ -76,6 +82,121 @@ export default function ListeningPracticePage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playingFullRef = useRef(false);
 
+  // ── Đề Luyện Nghe (exam-style listening practice) ──
+  const [pageMode, setPageMode] = useState<"VOCAB" | "EXAM" | "HISTORY">("VOCAB");
+  const [userName, setUserName] = useState("Học viên");
+  const [examClips, setExamClips] = useState<{ id: string; title: string; audioUrl: string; accent: string }[]>([]);
+  const [examClipId, setExamClipId] = useState("");
+  const [examLevel, setExamLevel] = useState<CefrLevel>("B1");
+  const [examPurpose, setExamPurpose] = useState<PracticePurpose>("GENERAL");
+  const [examNumQuestions, setExamNumQuestions] = useState(5);
+  const [generatingExam, setGeneratingExam] = useState(false);
+  const [examData, setExamData] = useState<{ clip: any; questions: ReadingQuestion[] } | null>(null);
+  const [examAnswers, setExamAnswers] = useState<Record<number, number | string>>({});
+  const [examSubmitted, setExamSubmitted] = useState(false);
+  const [examPracticedAt, setExamPracticedAt] = useState<string | null>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
+  const [examHistory, setExamHistory] = useState<any[]>([]);
+  const [viewingExamHistoryItem, setViewingExamHistoryItem] = useState<any | null>(null);
+  const examPdfRef = useRef<HTMLDivElement>(null);
+  const examHistoryPdfRef = useRef<HTMLDivElement>(null);
+
+  const fetchExamClips = async (uid: string) => {
+    try {
+      const res = await fetch(`${API}/api/listening/exam/clips/${uid}`);
+      setExamClips(await res.json());
+    } catch {
+      setExamClips([]);
+    }
+  };
+
+  const fetchExamHistory = async (uid: string) => {
+    try {
+      const res = await fetch(`${API}/api/listening/exam/attempts/${uid}`);
+      const data = await res.json();
+      setExamHistory(Array.isArray(data) ? data : []);
+    } catch {
+      setExamHistory([]);
+    }
+  };
+
+  const generateExam = async () => {
+    if (!examClipId || !userId) {
+      Swal.fire("Chưa chọn audio", "Vui lòng chọn 1 audio để tạo đề luyện nghe.", "warning");
+      return;
+    }
+    setGeneratingExam(true);
+    setExamData(null);
+    setExamAnswers({});
+    setExamSubmitted(false);
+    try {
+      const res = await fetch(`${API}/api/listening/exam/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId, clipId: examClipId, level: examLevel, purpose: examPurpose, numQuestions: examNumQuestions })
+      });
+      if (!res.ok) throw new Error();
+      setExamData(await res.json());
+    } catch {
+      Swal.fire("Lỗi", "Không thể tạo đề luyện nghe lúc này. Vui lòng thử lại.", "error");
+    } finally {
+      setGeneratingExam(false);
+    }
+  };
+
+  const selectExamAnswer = (qi: number, value: number | string) => {
+    if (examSubmitted) return;
+    setExamAnswers((prev) => ({ ...prev, [qi]: value }));
+  };
+
+  const submitExam = async () => {
+    if (!examData) return;
+    const unanswered = examData.questions.some((q, i) => {
+      const a = examAnswers[i];
+      return a === undefined || (typeof a === "string" && !a.trim());
+    });
+    if (unanswered) {
+      Swal.fire("Chưa xong", "Vui lòng trả lời hết các câu hỏi trước khi nộp.", "warning");
+      return;
+    }
+    setExamSubmitted(true);
+    const now = new Date().toISOString();
+    setExamPracticedAt(now);
+
+    const correctCount = examData.questions.reduce((s, q, i) => s + (isReadingAnswerCorrect(q, examAnswers[i]) ? 1 : 0), 0);
+    const score = (correctCount / examData.questions.length) * 10;
+    logSkillProgress(userId, "LISTENING", score, "LISTENING_EXAM");
+
+    if (userId) {
+      try {
+        await fetch(`${API}/api/listening/exam/attempts`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId, clipId: examData.clip.id, title: examData.clip.title, level: examLevel, purpose: examPurpose, questions: examData.questions, answers: examAnswers, score })
+        });
+        fetchExamHistory(userId);
+      } catch {}
+    }
+  };
+
+  const downloadExamPdf = async (node: HTMLDivElement | null) => {
+    if (!node) return;
+    setExportingPdf(true);
+    try {
+      await exportNodeToPDF(node, `bao-cao-luyen-nghe-${Date.now()}.pdf`);
+    } catch {
+      Swal.fire("Lỗi", "Không thể xuất PDF lúc này.", "error");
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
+  const buildExamRubric = (questions: ReadingQuestion[], answers: Record<number, number | string>): SkillReportRubricItem[] =>
+    questions.map((q, i) => ({
+      label: `Câu ${i + 1}`,
+      note: `${isReadingAnswerCorrect(q, answers[i]) ? "✅ Đúng" : "❌ Sai"} — ${q.explanation}`
+    }));
+
   useEffect(() => {
     const uid = localStorage.getItem("userId") || sessionStorage.getItem("userId");
     if (!uid) {
@@ -83,6 +204,9 @@ export default function ListeningPracticePage() {
       return;
     }
     setUserId(uid);
+    fetch(`${API}/api/auth/me?userId=${uid}`).then(r => r.json()).then(u => setUserName(u.name || "Học viên")).catch(() => {});
+    fetchExamClips(uid);
+    fetchExamHistory(uid);
     fetchQueue(uid, accentFilter);
   }, [router]);
 
@@ -239,8 +363,24 @@ export default function ListeningPracticePage() {
         </button>
         <span className="text-foreground/20 hidden sm:inline">/</span>
         <h1 className="font-bold text-primary text-sm sm:text-base">🎧 Studio Luyện Nghe</h1>
+        <div className="flex bg-foreground/5 p-1 rounded-xl ml-auto">
+          {[
+            { key: "VOCAB", label: "🔤 Tra Từ Vựng" },
+            { key: "EXAM", label: "🎧 Đề Luyện Nghe" },
+            { key: "HISTORY", label: `📜 Lịch Sử (${examHistory.length})` }
+          ].map(v => (
+            <button
+              key={v.key}
+              onClick={() => { setPageMode(v.key as any); setViewingExamHistoryItem(null); }}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${pageMode === v.key ? "bg-primary text-white shadow-sm" : "text-foreground/50 hover:text-foreground"}`}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {pageMode === "VOCAB" && (
       <div className="max-w-2xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
         <div className="flex justify-center gap-2 mb-6 flex-wrap">
           {ACCENT_OPTIONS.map((opt) => (
@@ -440,6 +580,243 @@ export default function ListeningPracticePage() {
           </div>
         ) : null}
       </div>
+      )}
+
+      {pageMode === "EXAM" && (
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-6">
+          {!examData ? (
+            <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-5 shadow-sm">
+              <h2 className="font-bold text-foreground flex items-center gap-2">
+                <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-base">🎧</span>
+                Tạo Đề Luyện Nghe
+              </h2>
+              {examClips.length === 0 ? (
+                <p className="text-sm text-foreground/50">Chưa có audio nào khả dụng để tạo đề. Hãy đợi giáo viên giao thêm audio luyện nghe cho bạn.</p>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">Chọn audio</label>
+                    <select value={examClipId} onChange={(e) => setExamClipId(e.target.value)} className="w-full p-3 border border-foreground/15 bg-background rounded-xl font-semibold">
+                      <option value="">-- Chọn audio --</option>
+                      {examClips.map((c) => <option key={c.id} value={c.id}>{c.title} ({c.accent})</option>)}
+                    </select>
+                  </div>
+                  <div className="flex flex-wrap gap-4">
+                    <div className="min-w-[150px]">
+                      <label className="block text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">Cấp độ (CEFR)</label>
+                      <select value={examLevel} onChange={(e) => setExamLevel(e.target.value as CefrLevel)} className="w-full p-3 border border-foreground/15 bg-background rounded-xl font-semibold">
+                        {CEFR_LEVELS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
+                      </select>
+                    </div>
+                    <div className="min-w-[190px]">
+                      <label className="block text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">Mục đích luyện tập</label>
+                      <select value={examPurpose} onChange={(e) => setExamPurpose(e.target.value as PracticePurpose)} className="w-full p-3 border border-foreground/15 bg-background rounded-xl font-semibold">
+                        {PRACTICE_PURPOSES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                      </select>
+                    </div>
+                    <div className="min-w-[130px]">
+                      <label className="block text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">Số câu hỏi</label>
+                      <input type="number" min={3} max={10} value={examNumQuestions} onChange={(e) => setExamNumQuestions(Number(e.target.value) || 5)} className="w-full p-3 border border-foreground/15 bg-background rounded-xl font-semibold" />
+                    </div>
+                  </div>
+                  <button
+                    onClick={generateExam}
+                    disabled={generatingExam}
+                    className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+                  >
+                    {generatingExam ? (
+                      <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang tạo đề...</>
+                    ) : (
+                      <>🎧 Tạo Đề Luyện Nghe</>
+                    )}
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-5 shadow-sm">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <h2 className="text-xl font-bold text-foreground">{examData.clip.title}</h2>
+                <button onClick={() => setExamData(null)} className="text-xs font-bold text-foreground/40 hover:text-primary transition-colors">↺ Tạo đề khác</button>
+              </div>
+              <audio controls src={examData.clip.audioUrl} className="w-full" />
+
+              <div className="space-y-4">
+                {examData.questions.map((q, qi) => (
+                  <div key={qi} className="bg-background/50 border border-foreground/5 rounded-xl p-4">
+                    <div className="flex items-start gap-3 mb-3">
+                      <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{qi + 1}</span>
+                      <p className="font-semibold flex-1">{q.question}</p>
+                    </div>
+                    {FILL_TYPES.includes(q.type) ? (
+                      <div className="pl-9">
+                        <input
+                          type="text"
+                          value={(examAnswers[qi] as string) || ""}
+                          onChange={(e) => selectExamAnswer(qi, e.target.value)}
+                          disabled={examSubmitted}
+                          placeholder="Gõ từ/cụm từ cần điền..."
+                          className={`w-full p-3 border rounded-xl text-sm transition-colors ${
+                            examSubmitted
+                              ? isReadingAnswerCorrect(q, examAnswers[qi]) ? "border-green-400 bg-green-50 text-green-800" : "border-red-400 bg-red-50 text-red-800"
+                              : "border-foreground/15 bg-surface focus:border-primary/50 focus:ring-2 focus:ring-primary/10 outline-none"
+                          }`}
+                        />
+                        {examSubmitted && !isReadingAnswerCorrect(q, examAnswers[qi]) && (
+                          <p className="text-xs text-green-700 mt-1.5">Đáp án đúng: <strong>{q.correctAnswer}</strong></p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2 pl-9">
+                        {(q.options || []).map((opt, oi) => {
+                          const isSelected = examAnswers[qi] === oi;
+                          const isCorrectOpt = oi === q.correctIndex;
+                          let stateClass = "border-foreground/15 bg-surface hover:border-primary/40";
+                          if (examSubmitted) {
+                            if (isCorrectOpt) stateClass = "border-green-400 bg-green-50 text-green-800";
+                            else if (isSelected) stateClass = "border-red-400 bg-red-50 text-red-800";
+                          } else if (isSelected) {
+                            stateClass = "border-primary bg-primary/5";
+                          }
+                          return (
+                            <button key={oi} onClick={() => selectExamAnswer(qi, oi)} disabled={examSubmitted} className={`w-full text-left p-3 border rounded-xl text-sm transition-colors ${stateClass}`}>
+                              {opt}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {examSubmitted && (
+                      <p className="text-xs text-foreground/60 mt-3 ml-9 bg-foreground/5 p-2.5 rounded-lg leading-relaxed">💡 {q.explanation}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {!examSubmitted ? (
+                <button onClick={submitExam} className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity shadow-sm">Nộp bài</button>
+              ) : (
+                <div className="space-y-4">
+                  <div className="bg-primary/5 border border-primary/15 rounded-2xl p-5 flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                      <p className="text-lg font-bold text-primary">
+                        Kết quả: {examData.questions.reduce((s, q, i) => s + (isReadingAnswerCorrect(q, examAnswers[i]) ? 1 : 0), 0)}/{examData.questions.length} câu đúng
+                      </p>
+                      {examPracticedAt && <p className="text-xs text-foreground/40 mt-1">🕓 {formatPracticedAt(examPracticedAt)}</p>}
+                    </div>
+                    <button
+                      onClick={() => downloadExamPdf(examPdfRef.current)}
+                      disabled={exportingPdf}
+                      className="text-xs font-bold px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    >
+                      🖨️ {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                    </button>
+                  </div>
+
+                  <div style={{ position: "fixed", top: 0, left: "-9999px", zIndex: -1 }}>
+                    <SkillReportPDF
+                      ref={examPdfRef}
+                      skillLabel="Luyện Nghe (Listening)"
+                      skillIcon="🎧"
+                      studentName={userName}
+                      practicedAt={examPracticedAt || new Date()}
+                      level={examLevel}
+                      purpose={examPurpose}
+                      score={(examData.questions.reduce((s, q, i) => s + (isReadingAnswerCorrect(q, examAnswers[i]) ? 1 : 0), 0) / examData.questions.length) * 10}
+                      contextTitle={examData.clip.title}
+                      overallComment={`Học viên trả lời đúng ${examData.questions.reduce((s, q, i) => s + (isReadingAnswerCorrect(q, examAnswers[i]) ? 1 : 0), 0)}/${examData.questions.length} câu hỏi luyện nghe.`}
+                      rubric={buildExamRubric(examData.questions, examAnswers)}
+                      suggestions={[]}
+                      transcriptTitle="Chi Tiết Từng Câu"
+                      transcriptBody=""
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {pageMode === "HISTORY" && !viewingExamHistoryItem && (
+        <div className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-3">
+          <h1 className="text-2xl font-black">📜 Lịch Sử Luyện Nghe</h1>
+          {examHistory.length === 0 ? (
+            <p className="text-foreground/50 text-sm">Bạn chưa làm đề luyện nghe nào. Đề sau khi nộp sẽ tự động lưu tại đây.</p>
+          ) : (
+            examHistory.map((h) => {
+              const qs: ReadingQuestion[] = JSON.parse(h.questions);
+              const ans: Record<number, number | string> = JSON.parse(h.answers);
+              const correct = qs.reduce((s, q, i) => s + (isReadingAnswerCorrect(q, ans[i]) ? 1 : 0), 0);
+              return (
+                <button
+                  key={h.id}
+                  onClick={() => setViewingExamHistoryItem(h)}
+                  className="w-full text-left bg-surface border border-foreground/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-foreground/80 line-clamp-1">{h.title}</p>
+                    <p className="text-xs text-foreground/50 mt-1">🕓 {formatPracticedAt(h.practicedAt)} · {h.level} · {h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</p>
+                  </div>
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-primary/10 text-primary shrink-0">{correct}/{qs.length}</span>
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {pageMode === "HISTORY" && viewingExamHistoryItem && (() => {
+        const qs: ReadingQuestion[] = JSON.parse(viewingExamHistoryItem.questions);
+        const ans: Record<number, number | string> = JSON.parse(viewingExamHistoryItem.answers);
+        const correct = qs.reduce((s, q, i) => s + (isReadingAnswerCorrect(q, ans[i]) ? 1 : 0), 0);
+        return (
+          <div className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-4">
+            <button onClick={() => setViewingExamHistoryItem(null)} className="text-xs font-bold text-foreground/40 hover:text-primary transition-colors">← Quay lại danh sách</button>
+            <h2 className="text-xl font-bold text-foreground">{viewingExamHistoryItem.title}</h2>
+            <div className="bg-primary/5 border border-primary/15 rounded-2xl p-5 flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <p className="text-lg font-bold text-primary">Kết quả: {correct}/{qs.length} câu đúng</p>
+                <p className="text-xs text-foreground/40 mt-1">🕓 {formatPracticedAt(viewingExamHistoryItem.practicedAt)}</p>
+              </div>
+              <button
+                onClick={() => downloadExamPdf(examHistoryPdfRef.current)}
+                disabled={exportingPdf}
+                className="text-xs font-bold px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
+              >
+                🖨️ {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+              </button>
+            </div>
+            <div className="space-y-3">
+              {qs.map((q, i) => (
+                <div key={i} className="bg-foreground/[0.03] border border-foreground/10 rounded-xl p-4">
+                  <p className="text-sm font-semibold">{i + 1}. {q.question}</p>
+                  <p className="text-xs text-foreground/60 mt-2">{isReadingAnswerCorrect(q, ans[i]) ? "✅ Đúng" : "❌ Sai"} — {q.explanation}</p>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ position: "fixed", top: 0, left: "-9999px", zIndex: -1 }}>
+              <SkillReportPDF
+                ref={examHistoryPdfRef}
+                skillLabel="Luyện Nghe (Listening)"
+                skillIcon="🎧"
+                studentName={userName}
+                practicedAt={viewingExamHistoryItem.practicedAt}
+                level={viewingExamHistoryItem.level}
+                purpose={viewingExamHistoryItem.purpose}
+                score={(correct / qs.length) * 10}
+                contextTitle={viewingExamHistoryItem.title}
+                overallComment={`Học viên trả lời đúng ${correct}/${qs.length} câu hỏi luyện nghe.`}
+                rubric={buildExamRubric(qs, ans)}
+                suggestions={[]}
+                transcriptTitle="Chi Tiết Từng Câu"
+                transcriptBody=""
+              />
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

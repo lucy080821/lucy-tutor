@@ -36,6 +36,7 @@ const removeVietnameseAccents = (str) =>
 const cleanString = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
 const ALLOWED_ACCENTS = ['UK', 'US', 'AUS'];
+const ALLOWED_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1'];
 
 // Find the first sentence in the original (teacher-authored) script containing the target
 // word, and which token within that sentence it is — used to blank the word for dictation
@@ -152,7 +153,7 @@ async function processAlignment(clipId, audioUrl) {
 // 1. Teacher uploads an audio file + exact script, scoped to a classroom or an individual student
 router.post('/upload', upload.single('audio'), async (req, res) => {
   try {
-    const { title, script, teacherId, classroomId, studentId, accent } = req.body;
+    const { title, script, teacherId, classroomId, studentId, accent, level } = req.body;
 
     if (!req.file) return res.status(400).json({ error: 'Thiếu file audio' });
     if (!supabase) return res.status(500).json({ error: 'Supabase credentials not configured in backend' });
@@ -160,6 +161,7 @@ router.post('/upload', upload.single('audio'), async (req, res) => {
     if (!classroomId && !studentId) return res.status(400).json({ error: 'Phải chọn lớp học hoặc học sinh cụ thể' });
     if (classroomId && studentId) return res.status(400).json({ error: 'Chỉ được chọn 1 trong 2: lớp học hoặc học sinh' });
     if (!ALLOWED_ACCENTS.includes(accent)) return res.status(400).json({ error: 'Giọng đọc không hợp lệ. Chọn UK, US hoặc AUS' });
+    if (!ALLOWED_LEVELS.includes(level)) return res.status(400).json({ error: 'Cấp độ không hợp lệ. Chọn A1, A2, B1, B2 hoặc C1' });
 
     const file = req.file;
     const sanitizedName = removeVietnameseAccents(file.originalname).replace(/[^a-zA-Z0-9.-]/g, '_');
@@ -181,6 +183,7 @@ router.post('/upload', upload.single('audio'), async (req, res) => {
         script,
         audioUrl: publicUrlData.publicUrl,
         accent,
+        level,
         status: 'PROCESSING',
         teacherId,
         classroomId: classroomId || null,
@@ -224,12 +227,13 @@ router.get('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, accent, classroomId, studentId } = req.body;
+    const { title, accent, level, classroomId, studentId } = req.body;
 
     const clip = await prisma.listeningClip.findUnique({ where: { id } });
     if (!clip) return res.status(404).json({ error: 'Not found' });
 
     if (accent && !ALLOWED_ACCENTS.includes(accent)) return res.status(400).json({ error: 'Giọng đọc không hợp lệ. Chọn UK, US hoặc AUS' });
+    if (level && !ALLOWED_LEVELS.includes(level)) return res.status(400).json({ error: 'Cấp độ không hợp lệ. Chọn A1, A2, B1, B2 hoặc C1' });
     if (!classroomId && !studentId) return res.status(400).json({ error: 'Phải chọn lớp học hoặc học sinh cụ thể' });
     if (classroomId && studentId) return res.status(400).json({ error: 'Chỉ được chọn 1 trong 2: lớp học hoặc học sinh' });
 
@@ -238,6 +242,7 @@ router.patch('/:id', async (req, res) => {
       data: {
         title: title || clip.title,
         accent: accent || clip.accent,
+        level: level || clip.level,
         classroomId: classroomId || null,
         studentId: studentId || null
       }
@@ -317,6 +322,130 @@ router.get('/queue/:userId', async (req, res) => {
     }
 
     res.json(queue);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ---- Đề Luyện Nghe (exam-style listening practice) ----
+// Reuses each student's already-uploaded/assigned READY clips as source material — no new
+// TTS/audio generation — and asks the AI to write exam-style questions purely from the
+// teacher's exact script text (never from a fresh transcription), consistent with how the
+// SRS dictation feature above always displays the teacher's script, not Whisper's.
+
+const LISTENING_LEVEL_LABELS = {
+  A1: 'A1 - mới bắt đầu', A2: 'A2 - sơ cấp', B1: 'B1 - trung cấp', B2: 'B2 - trung cao cấp', C1: 'C1 - cao cấp'
+};
+
+// Clips accessible to the student, for them to pick as the basis of a listening exam
+router.get('/exam/clips/:userId', async (req, res) => {
+  try {
+    const clips = await findAccessibleReadyClips(req.params.userId);
+    if (clips === null) return res.status(404).json({ error: 'User not found' });
+    res.json(clips.map((c) => ({ id: c.id, title: c.title, audioUrl: c.audioUrl, accent: c.accent })));
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/exam/generate', async (req, res) => {
+  try {
+    const { userId, clipId, level, purpose, numQuestions } = req.body;
+    if (!userId || !clipId) return res.status(400).json({ error: 'Thiếu userId hoặc clipId' });
+
+    const clips = await findAccessibleReadyClips(userId);
+    if (clips === null) return res.status(404).json({ error: 'User not found' });
+    const clip = clips.find((c) => c.id === clipId);
+    if (!clip) return res.status(404).json({ error: 'Không tìm thấy hoặc không có quyền truy cập audio này' });
+
+    const count = Math.min(10, Math.max(3, parseInt(numQuestions, 10) || 5));
+    const levelLabel = LISTENING_LEVEL_LABELS[level] || LISTENING_LEVEL_LABELS.B1;
+    const purposeLabel = purpose === 'IELTS'
+      ? 'Đây là bài luyện nghe theo định hướng thi IELTS Listening — câu hỏi theo phong cách điền từ/trắc nghiệm như đề thi thật.'
+      : 'Đây là bài luyện nghe giao tiếp/đời sống — câu hỏi tự nhiên, kiểm tra khả năng nghe hiểu thực tế.';
+
+    const prompt = `
+Bạn là chuyên gia ra đề luyện nghe tiếng Anh. Dưới đây là script CHÍNH XÁC (nguyên văn) của một đoạn audio:
+"${clip.script}"
+
+Trình độ học viên: ${levelLabel}. ${purposeLabel}
+
+Hãy tạo đúng ${count} câu hỏi kiểm tra khả năng nghe hiểu dựa HOÀN TOÀN trên nội dung script trên (giả định học viên đã nghe audio, không đọc script), trộn 2 dạng:
+1. "type": "MULTIPLE_CHOICE" — có "options": ["A. ...","B. ...","C. ...","D. ..."] và "correctIndex" (0-3)
+2. "type": "FILL_BLANK" — "question" là một câu trích nguyên văn từ script có chỗ trống "_____" (5 dấu gạch dưới) thay 1 từ/cụm từ ngắn (tối đa 3 từ) lấy NGUYÊN VĂN từ script, có "correctAnswer": "từ/cụm từ đúng"
+
+BẮT BUỘC TRẢ VỀ CHỈ MỘT JSON với cấu trúc sau (không có markdown code blocks bọc ngoài JSON):
+{
+  "questions": [
+    {
+      "type": "MULTIPLE_CHOICE",
+      "question": "Câu hỏi bằng tiếng Anh",
+      "options": ["A. ...", "B. ...", "C. ...", "D. ..."],
+      "correctIndex": 0,
+      "explanation": "Giải thích bằng tiếng Việt, trích câu trong script làm căn cứ"
+    }
+  ]
+}
+Phải có đúng ${count} câu hỏi.
+`;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: 'You are a listening exam question generator. Respond only in valid JSON.' },
+        { role: 'user', content: prompt }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.6,
+      response_format: { type: 'json_object' }
+    });
+
+    const raw = chatCompletion.choices[0]?.message?.content || '{}';
+    let result;
+    try {
+      result = JSON.parse(raw);
+    } catch {
+      return res.status(500).json({ error: 'AI response was not valid JSON' });
+    }
+    res.json({ clip: { id: clip.id, title: clip.title, audioUrl: clip.audioUrl, accent: clip.accent, script: clip.script }, questions: result.questions || [] });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.post('/exam/attempts', async (req, res) => {
+  try {
+    const { userId, clipId, title, level, purpose, questions, answers, score } = req.body;
+    if (!userId || !questions) return res.status(400).json({ error: 'Thiếu dữ liệu bài luyện nghe' });
+
+    const attempt = await prisma.listeningExamAttempt.create({
+      data: {
+        userId,
+        clipId: clipId || null,
+        title: title || 'Đề Luyện Nghe',
+        level: level || 'B1',
+        purpose: purpose || 'GENERAL',
+        questions: JSON.stringify(questions),
+        answers: JSON.stringify(answers || {}),
+        score: parseFloat(score) || 0
+      }
+    });
+    res.json(attempt);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/exam/attempts/:userId', async (req, res) => {
+  try {
+    const attempts = await prisma.listeningExamAttempt.findMany({
+      where: { userId: req.params.userId },
+      orderBy: { practicedAt: 'desc' }
+    });
+    res.json(attempts);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: err.message });

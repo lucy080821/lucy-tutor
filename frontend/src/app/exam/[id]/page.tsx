@@ -478,7 +478,7 @@ export default function ExamPage() {
                       <span className={`inline-flex w-8 h-8 rounded-full items-center justify-center font-bold text-sm mr-3 shrink-0 ${iconClass}`}>
                         {iconText}
                       </span>
-                      <div className="flex-1 min-w-0 break-words quill-content [&>p]:m-0" dangerouslySetInnerHTML={{ __html: opt }}></div>
+                      <div className="flex-1 min-w-0 break-words quill-content [&>p]:m-0" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(opt) }}></div>
                     </button>
                   );
                 })

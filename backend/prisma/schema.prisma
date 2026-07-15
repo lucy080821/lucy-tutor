@@ -21,111 +21,116 @@ model User {
   streakCount  Int      @default(0)
   lastActive   DateTime @default(now())
   totalXP      Int      @default(0)
-  
-  examResults       ExamResult[]
-  cheatLogs         CheatLog[]
-  mistakeBank       MistakeBank[]
-  notebooks         MistakeNotebook[]
-  
-  classroomsOwned   Classroom[] @relation("TeacherClassrooms")
-  classroomsJoined  Classroom[] @relation("StudentClassrooms")
-  uploadedExams     Exam[]      @relation("TeacherExams")
-  assignedExams     Exam[]      @relation("AssignedExams")
-  
-  uploadedLessons   Lesson[]    @relation("TeacherLessons")
+
+  examResults ExamResult[]
+  cheatLogs   CheatLog[]
+  mistakeBank MistakeBank[]
+  notebooks   MistakeNotebook[]
+
+  classroomsOwned  Classroom[] @relation("TeacherClassrooms")
+  classroomsJoined Classroom[] @relation("StudentClassrooms")
+  uploadedExams    Exam[]      @relation("TeacherExams")
+  assignedExams    Exam[]      @relation("AssignedExams")
+
+  uploadedLessons   Lesson[]         @relation("TeacherLessons")
   lessonProgress    LessonProgress[]
-  uploadedDocuments Document[]  @relation("TeacherDocuments")
+  uploadedDocuments Document[]       @relation("TeacherDocuments")
 
-  attendances       Attendance[]
-  tuitionPayments   TuitionPayment[]
-  vocabProgress     UserVocabProgress[]
+  attendances     Attendance[]
+  tuitionPayments TuitionPayment[]
+  vocabProgress   UserVocabProgress[]
 
-  uploadedListeningClips  ListeningClip[] @relation("TeacherListeningClips")
-  assignedListeningClips  ListeningClip[] @relation("StudentListeningClips")
+  uploadedListeningClips ListeningClip[] @relation("TeacherListeningClips")
+  assignedListeningClips ListeningClip[] @relation("StudentListeningClips")
 
-  uploadedSpeakingTopics  SpeakingTopic[] @relation("TeacherSpeakingTopics")
-  assignedSpeakingTopics  SpeakingTopic[] @relation("StudentSpeakingTopics")
-  speakingSessions        SpeakingSession[]
+  uploadedSpeakingTopics SpeakingTopic[]   @relation("TeacherSpeakingTopics")
+  assignedSpeakingTopics SpeakingTopic[]   @relation("StudentSpeakingTopics")
+  speakingSessions       SpeakingSession[]
 
-  skillPracticeResults    SkillPracticeResult[]
+  skillPracticeResults SkillPracticeResult[]
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  writingSubmissions    WritingSubmission[]
+  savedWritingPrompts   SavedWritingPrompt[]
+  readingAttempts       ReadingAttempt[]
+  listeningExamAttempts ListeningExamAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Question {
-  id            String   @id @default(uuid())
+  id            String  @id @default(uuid())
   heading       String?
   content       String
   type          String
   difficulty    String
-  options       String   // stored as JSON string
+  options       String // stored as JSON string
   correctOption String
   explanation   String?
   imageUrl      String?
-  points        Float    @default(1.0)
-  
-  mistakeBank   MistakeBank[]
-  exams         ExamQuestion[]
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  points        Float   @default(1.0)
+
+  mistakeBank MistakeBank[]
+  exams       ExamQuestion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Exam {
-  id            String   @id @default(uuid())
-  title         String
-  duration      Int      // in minutes
+  id             String @id @default(uuid())
+  title          String
+  duration       Int // in minutes
   totalQuestions Int
-  
-  examType      String   @default("REGULAR") // "REGULAR" or "PLACEMENT"
-  grade         Int?     // e.g., 6, 7, 8, 9, 10, 11, 12
-  publishTime   DateTime?
-  deadline      DateTime?
-  notes         String?
-  maxAttempts   Int      @default(1)
-  
-  classroomId   String?
-  classroom     Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
-  
-  uploadedById  String?
-  uploadedBy    User?      @relation("TeacherExams", fields: [uploadedById], references: [id], onDelete: SetNull)
-  
-  assignedStudents User[]  @relation("AssignedExams")
-  
-  questions     ExamQuestion[]
-  results       ExamResult[]
-  cheatLogs     CheatLog[]
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+
+  examType    String    @default("REGULAR") // "REGULAR" or "PLACEMENT"
+  grade       Int? // e.g., 6, 7, 8, 9, 10, 11, 12
+  publishTime DateTime?
+  deadline    DateTime?
+  notes       String?
+  maxAttempts Int       @default(1)
+
+  classroomId String?
+  classroom   Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+
+  uploadedById String?
+  uploadedBy   User?   @relation("TeacherExams", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  assignedStudents User[] @relation("AssignedExams")
+
+  questions ExamQuestion[]
+  results   ExamResult[]
+  cheatLogs CheatLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ExamQuestion {
-  examId      String
-  questionId  String
-  order       Int
-  
-  exam        Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
-  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  examId     String
+  questionId String
+  order      Int
+
+  exam     Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@id([examId, questionId])
 }
 
 model ExamResult {
-  id             String   @id @default(uuid())
-  userId         String
-  examId         String
-  selectedAnswers String   // stored as JSON string
-  score          Float
-  timeSpent      Int      // in seconds
-  gradingDetails String?  // stored as JSON string (AI feedback)
-  cheatLogs      String?  // stored as JSON string (Array of objects containing cheat details like {time: number})
-  
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exam           Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
-  
-  createdAt      DateTime @default(now())
+  id              String  @id @default(uuid())
+  userId          String
+  examId          String
+  selectedAnswers String // stored as JSON string
+  score           Float
+  timeSpent       Int // in seconds
+  gradingDetails  String? // stored as JSON string (AI feedback)
+  cheatLogs       String? // stored as JSON string (Array of objects containing cheat details like {time: number})
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 }
 
 model CheatLog {
@@ -136,9 +141,9 @@ model CheatLog {
   isAutoSubmitted Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
-  
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exam            Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exam Exam @relation(fields: [examId], references: [id], onDelete: Cascade)
 
   @@unique([userId, examId])
 }
@@ -148,60 +153,60 @@ model MistakeBank {
   questionId       String
   wrongAnswerCount Int      @default(1)
   nextReviewDate   DateTime @default(now())
-  
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question         Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
   @@id([userId, questionId])
 }
 
 model MistakeNotebook {
-  id            String   @id @default(uuid())
+  id            String @id @default(uuid())
   userId        String
-  topic         String   // e.g., "Câu điều kiện (Conditional Sentences)"
-  category      String   @default("GRAMMAR") // "GRAMMAR", "VOCABULARY", or "READING"
-  theoryContent String   // Comprehensive explanation generated by AI
-  mistakeCount  Int      @default(1)
-  correctCount  Int      @default(0)
-  status        String   @default("NEEDS_WORK") // "NEEDS_WORK" or "RESOLVED"
-  
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+  topic         String // e.g., "Câu điều kiện (Conditional Sentences)"
+  category      String @default("GRAMMAR") // "GRAMMAR", "VOCABULARY", or "READING"
+  theoryContent String // Comprehensive explanation generated by AI
+  mistakeCount  Int    @default(1)
+  correctCount  Int    @default(0)
+  status        String @default("NEEDS_WORK") // "NEEDS_WORK" or "RESOLVED"
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([userId, topic])
 }
 
 model Classroom {
-  id          String   @id @default(uuid())
-  name        String
-  joinCode    String   @unique
-  teacherId   String
-  
-  scheduleDays    String?  // e.g. "1,3,5" for Mon, Wed, Fri (0 = Sunday)
-  startTime       String?  // e.g. "18:00"
-  endTime         String?  // e.g. "20:00"
-  feePerLesson    Int      @default(0)
-  enabledFeatures String   @default("[]") // JSON array; empty = all features enabled
-  
-  teacher     User     @relation("TeacherClassrooms", fields: [teacherId], references: [id], onDelete: Cascade)
-  students    User[]   @relation("StudentClassrooms")
-  exams       Exam[]
-  classSessions ClassSession[]
-  lessons     Lesson[]
-  attendances Attendance[]
-  tuitionPayments TuitionPayment[]
-  documents   Document[]
-  listeningClips ListeningClip[]
-  speakingTopics SpeakingTopic[]
+  id        String @id @default(uuid())
+  name      String
+  joinCode  String @unique
+  teacherId String
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  scheduleDays    String? // e.g. "1,3,5" for Mon, Wed, Fri (0 = Sunday)
+  startTime       String? // e.g. "18:00"
+  endTime         String? // e.g. "20:00"
+  feePerLesson    Int     @default(0)
+  enabledFeatures String  @default("[]") // JSON array; empty = all features enabled
+
+  teacher         User             @relation("TeacherClassrooms", fields: [teacherId], references: [id], onDelete: Cascade)
+  students        User[]           @relation("StudentClassrooms")
+  exams           Exam[]
+  classSessions   ClassSession[]
+  lessons         Lesson[]
+  attendances     Attendance[]
+  tuitionPayments TuitionPayment[]
+  documents       Document[]
+  listeningClips  ListeningClip[]
+  speakingTopics  SpeakingTopic[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ClassSession {
-  id             String    @id @default(uuid())
+  id             String   @id @default(uuid())
   classroomId    String
   title          String?
   startTime      DateTime
@@ -209,70 +214,70 @@ model ClassSession {
   recurrenceRule String?
   location       String?
 
-  classroom      Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
 
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Lesson {
-  id            String   @id @default(uuid())
-  title         String
-  description   String?
-  
-  uploadedById  String?
-  uploadedBy    User?      @relation("TeacherLessons", fields: [uploadedById], references: [id], onDelete: SetNull)
-  
-  classroomId   String?
-  classroom     Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
-  
-  publishTime   DateTime?
-  deadline      DateTime?
-  
-  vocabularies  VocabItem[]
-  grammars      GrammarItem[]
-  progress      LessonProgress[]
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String  @id @default(uuid())
+  title       String
+  description String?
+
+  uploadedById String?
+  uploadedBy   User?   @relation("TeacherLessons", fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  classroomId String?
+  classroom   Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+
+  publishTime DateTime?
+  deadline    DateTime?
+
+  vocabularies VocabItem[]
+  grammars     GrammarItem[]
+  progress     LessonProgress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model VocabItem {
-  id            String   @id @default(uuid())
-  lessonId      String
-  word          String
-  pos           String?
-  phonetic      String?
-  meaning       String
-  example       String?
-  imageUrl      String?
-  
-  lesson        Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  progress      UserVocabProgress[]
+  id       String  @id @default(uuid())
+  lessonId String
+  word     String
+  pos      String?
+  phonetic String?
+  meaning  String
+  example  String?
+  imageUrl String?
+
+  lesson   Lesson              @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  progress UserVocabProgress[]
 }
 
 model GrammarItem {
-  id            String   @id @default(uuid())
-  lessonId      String
-  title         String
-  structure     String?
-  explanation   String
-  
-  lesson        Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  id          String  @id @default(uuid())
+  lessonId    String
+  title       String
+  structure   String?
+  explanation String
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
 }
 
 model LessonProgress {
-  id            String   @id @default(uuid())
-  userId        String
-  lessonId      String
-  status        String   @default("UNREAD") // "UNREAD", "IN_PROGRESS", "COMPLETED"
-  
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson        Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
+  id       String @id @default(uuid())
+  userId   String
+  lessonId String
+  status   String @default("UNREAD") // "UNREAD", "IN_PROGRESS", "COMPLETED"
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@unique([userId, lessonId])
 }
 
@@ -281,85 +286,87 @@ model Attendance {
   classroomId String
   userId      String
   date        DateTime
-  status      String   // "PRESENT", "EXCUSED", "UNEXCUSED"
+  status      String // "PRESENT", "EXCUSED", "UNEXCUSED"
   notes       String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([classroomId, userId, date])
 }
 
 model TuitionPayment {
-  id            String   @id @default(uuid())
-  classroomId   String
-  userId        String
-  month         Int      
-  year          Int      
-  totalAmount   Int      
-  status        String   @default("PAID") // "PAID", "UNPAID"
-  paidAt        DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  
-  classroom     Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id          String    @id @default(uuid())
+  classroomId String
+  userId      String
+  month       Int
+  year        Int
+  totalAmount Int
+  status      String    @default("PAID") // "PAID", "UNPAID"
+  paidAt      DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  classroom Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([classroomId, userId, month, year])
 }
 
 model Document {
-  id            String   @id @default(uuid())
-  title         String
-  fileUrl       String
-  fileType      String
-  size          Int
-  visibility    String   @default("PUBLIC") // "PUBLIC", "CLASS", "PRIVATE"
-  
-  classroomId   String?
-  classroom     Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
-  
-  uploadedById  String
-  uploadedBy    User     @relation("TeacherDocuments", fields: [uploadedById], references: [id], onDelete: Cascade)
-  
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-}
-model ListeningClip {
-  id            String   @id @default(uuid())
-  title         String
-  script        String   // exact TTS script, always shown to students as-is
-  audioUrl      String
-  accent        String   @default("US") // "UK", "US", "AUS" — set by teacher at upload time, used to filter practice clips
-  status        String   @default("PROCESSING") // "PROCESSING", "READY", "FAILED"
-  alignment     String?  // JSON string: [{ "word": "...", "start": 0.0, "end": 0.0 }] from Whisper word timestamps
-  errorMessage  String?
+  id         String @id @default(uuid())
+  title      String
+  fileUrl    String
+  fileType   String
+  size       Int
+  visibility String @default("PUBLIC") // "PUBLIC", "CLASS", "PRIVATE"
 
-  teacherId     String
-  teacher       User       @relation("TeacherListeningClips", fields: [teacherId], references: [id], onDelete: Cascade)
+  classroomId String?
+  classroom   Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+
+  uploadedById String
+  uploadedBy   User   @relation("TeacherDocuments", fields: [uploadedById], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model ListeningClip {
+  id           String  @id @default(uuid())
+  title        String
+  script       String // exact TTS script, always shown to students as-is
+  audioUrl     String
+  accent       String  @default("US") // "UK", "US", "AUS" — set by teacher at upload time, used to filter practice clips
+  level        String  @default("B1") // CEFR: "A1".."C1" — set by teacher at upload time
+  status       String  @default("PROCESSING") // "PROCESSING", "READY", "FAILED"
+  alignment    String? // JSON string: [{ "word": "...", "start": 0.0, "end": 0.0 }] from Whisper word timestamps
+  errorMessage String?
+
+  teacherId String
+  teacher   User   @relation("TeacherListeningClips", fields: [teacherId], references: [id], onDelete: Cascade)
 
   // Exactly one of classroomId / studentId is set (enforced at the API level, not by the DB)
-  classroomId   String?
-  classroom     Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  classroomId String?
+  classroom   Classroom? @relation(fields: [classroomId], references: [id], onDelete: SetNull)
 
-  studentId     String?
-  student       User?      @relation("StudentListeningClips", fields: [studentId], references: [id], onDelete: SetNull)
+  studentId String?
+  student   User?   @relation("StudentListeningClips", fields: [studentId], references: [id], onDelete: SetNull)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model SpeakingTopic {
-  id          String   @id @default(uuid())
+  id          String  @id @default(uuid())
   title       String
-  description String?           // shown to student before starting, e.g. "Đóng vai khách đặt phòng khách sạn"
-  aiPersona   String            // system prompt describing the AI's role/persona for this conversation
-  openingLine String?           // optional fixed first line; if empty, AI generates one from aiPersona
+  description String? // shown to student before starting, e.g. "Đóng vai khách đặt phòng khách sạn"
+  aiPersona   String // system prompt describing the AI's role/persona for this conversation
+  openingLine String? // optional fixed first line; if empty, AI generates one from aiPersona
 
-  teacherId   String
-  teacher     User       @relation("TeacherSpeakingTopics", fields: [teacherId], references: [id], onDelete: Cascade)
+  teacherId String
+  teacher   User   @relation("TeacherSpeakingTopics", fields: [teacherId], references: [id], onDelete: Cascade)
 
   // Exactly one of classroomId / studentId is set (enforced at the API level, not by the DB)
   classroomId String?
@@ -367,25 +374,93 @@ model SpeakingTopic {
   studentId   String?
   student     User?      @relation("StudentSpeakingTopics", fields: [studentId], references: [id], onDelete: SetNull)
 
-  sessions    SpeakingSession[]
-
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-}
-
-model SpeakingSession {
-  id        String   @id @default(uuid())
-  userId    String
-  topicId   String
-  messages  String   // JSON string: [{ role: "user"|"assistant", content: string }]
-  status    String   @default("IN_PROGRESS") // "IN_PROGRESS", "COMPLETED"
-  feedback  String?  // JSON string: { overall, fluency, vocabulary, grammar, suggestions[] } — coaching tone, no score
-
-  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  topic     SpeakingTopic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  sessions SpeakingSession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model SpeakingSession {
+  id          String   @id @default(uuid())
+  userId      String
+  topicId     String? // null when the student self-created an ad-hoc context (not from the teacher's topic bank)
+  contextText String? // student's own free-text context/scenario, used when topicId is null
+  level       String? // CEFR level chosen for this session: "A1".."C1"
+  purpose     String? // "IELTS" or "GENERAL" (giao tiếp)
+  messages    String // JSON string: [{ role: "user"|"assistant", content: string }]
+  status      String   @default("IN_PROGRESS") // "IN_PROGRESS", "COMPLETED"
+  feedback    String? // JSON string: { overall, fluency, vocabulary, grammar, clarity, suggestions[] } — coaching tone, no score
+  practicedAt DateTime @default(now()) // when the session was completed/evaluated, shown on the exported PDF
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  topic SpeakingTopic? @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WritingSubmission {
+  id          String   @id @default(uuid())
+  userId      String
+  prompt      String // the writing prompt/topic text shown to the student
+  format      String   @default("ESSAY") // "PARAGRAPH", "EMAIL", "ESSAY"
+  level       String   @default("B1") // CEFR: "A1".."C1"
+  purpose     String   @default("GENERAL") // "IELTS" or "GENERAL" (giao tiếp)
+  essay       String // student's submitted text
+  feedback    String? // JSON string: { overall, grammar, vocabulary, organization, clarity, suggestions[] }
+  practicedAt DateTime @default(now()) // when the student submitted for grading, shown on the exported PDF
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model SavedWritingPrompt {
+  id      String @id @default(uuid())
+  userId  String
+  prompt  String
+  format  String @default("ESSAY")
+  level   String @default("B1")
+  purpose String @default("GENERAL")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model ReadingAttempt {
+  id          String   @id @default(uuid())
+  userId      String
+  topic       String?
+  passage     String // the reading passage text
+  level       String   @default("B1")
+  purpose     String   @default("GENERAL")
+  questions   String // JSON string: array of { type, prompt, options?, correctAnswer, explanation }
+  answers     String // JSON string: student's answers keyed by question index
+  score       Float // 0-10 auto-graded score
+  analysis    String? // JSON string: AI per-question / per-question-type analysis, added after "Đánh giá"
+  practicedAt DateTime @default(now()) // when the attempt was submitted, shown on the exported PDF
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model ListeningExamAttempt {
+  id          String   @id @default(uuid())
+  userId      String
+  clipId      String? // ListeningClip the exam was generated from, if any
+  title       String   @default("Đề Luyện Nghe")
+  level       String   @default("B1")
+  purpose     String   @default("GENERAL")
+  questions   String // JSON string: array of { type, prompt, options?, correctAnswer, explanation }
+  answers     String // JSON string
+  score       Float
+  practicedAt DateTime @default(now()) // shown on the exported PDF
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 }
 
 // One row per completed practice attempt, used to feed the 4-skill radar chart on
@@ -394,34 +469,34 @@ model SpeakingSession {
 // writing/conversation practice compute this silently (never shown to the student
 // during practice) so the "no score, just coaching" experience there is unaffected.
 model SkillPracticeResult {
-  id        String   @id @default(uuid())
-  userId    String
-  skill     String   // "READING", "LISTENING", "SPEAKING", "WRITING"
-  band      Float    // 0-10 (internal column name; API field is "score")
-  source    String   // "READING_PRACTICE", "WRITING_PRACTICE", "SPEAKING_CONVERSATION", "LISTENING_SRS"
+  id     String @id @default(uuid())
+  userId String
+  skill  String // "READING", "LISTENING", "SPEAKING", "WRITING"
+  band   Float // 0-10 (internal column name; API field is "score")
+  source String // "READING_PRACTICE", "WRITING_PRACTICE", "SPEAKING_CONVERSATION", "LISTENING_SRS", "LISTENING_EXAM"
 
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 }
 
 model UserVocabProgress {
-  id              String   @id @default(uuid())
-  userId          String
-  vocabId         String
-  
-  status          String   @default("LEARNING") 
-  repetitions     Int      @default(0)
-  interval        Int      @default(0)
-  easeFactor      Float    @default(2.5)
-  nextReviewDate  DateTime @default(now())
-  lastReviewedAt  DateTime?
+  id      String @id @default(uuid())
+  userId  String
+  vocabId String
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  status         String    @default("LEARNING")
+  repetitions    Int       @default(0)
+  interval       Int       @default(0)
+  easeFactor     Float     @default(2.5)
+  nextReviewDate DateTime  @default(now())
+  lastReviewedAt DateTime?
 
-  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  vocab           VocabItem @relation(fields: [vocabId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vocab VocabItem @relation(fields: [vocabId], references: [id], onDelete: Cascade)
 
   @@unique([userId, vocabId])
 }

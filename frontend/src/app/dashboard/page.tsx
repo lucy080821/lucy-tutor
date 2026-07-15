@@ -17,6 +17,7 @@ export default function StudentDashboard() {
   const [examResults, setExamResults] = useState<any[]>([]);
   const [lessons, setLessons] = useState<any[]>([]);
   const [lessonClassFilter, setLessonClassFilter] = useState("");
+  const [skillProgress, setSkillProgress] = useState<Record<string, { score: number; hasData: boolean }>>({});
 
   useEffect(() => {
     if (user?.classroomsJoined?.length > 0) {
@@ -180,6 +181,21 @@ export default function StudentDashboard() {
     localStorage.setItem('lucy_previous_xp', currentXP.toString());
   }, [user?.totalXP]);
 
+  // ── OVERVIEW real-time refresh: re-poll profile, exam history & skill progress every 30s while viewing this tab, and instantly when the browser tab regains focus ──
+  useEffect(() => {
+    if (activeTab !== "OVERVIEW" || !user?.id) return;
+    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    const refresh = () => {
+      fetch(`${API}/api/auth/me?userId=${user.id}`).then(r => r.json()).then(setUser).catch(console.error);
+      fetch(`${API}/api/analytics/history/${user.id}`).then(r => r.json()).then(data => setHistory(data || [])).catch(console.error);
+      fetch(`${API}/api/skill-progress/${user.id}`).then(r => r.json()).then(setSkillProgress).catch(() => {});
+    };
+    const interval = setInterval(refresh, 30000);
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
+  }, [activeTab, user?.id]);
+
   const [expandedNav, setExpandedNav] = useState<Record<string, boolean>>({
     'LEARNING': true,
   });
@@ -333,7 +349,75 @@ export default function StudentDashboard() {
     if (attempts > 0 && attempts < maxAttempts && maxScore < 7) return true;
     return false;
   });
-  
+
+  // ── Auto-generated learning insights (rule-based, computed from live profile/history/skill data) ──
+  const studentInsights: StudentInsight[] = (() => {
+    const items: StudentInsight[] = [];
+    const numAvgScore = parseFloat(avgScore);
+
+    if (totalExams === 0) {
+      items.push({ level: 'info', icon: '🚀', title: 'Bắt đầu hành trình học tập', message: 'Bạn chưa hoàn thành bài kiểm tra nào. Hãy làm thử một bài trong mục Bài Tập/Đề Thi để hệ thống bắt đầu phân tích và đưa ra gợi ý phù hợp với bạn.' });
+    } else {
+      if (percentToTarget < 50) {
+        items.push({ level: 'warning', icon: '🎯', title: 'Còn cách xa mục tiêu', message: `Điểm trung bình hiện tại (${avgScore}) mới đạt ${percentToTarget}% mục tiêu ${user?.targetScore}+. Hãy ôn lại Sổ Tay Lỗi Sai và làm thêm bài luyện tập để rút ngắn khoảng cách.` });
+      } else if (numAvgScore >= (user?.targetScore || 999)) {
+        items.push({ level: 'success', icon: '🎉', title: 'Đã đạt mục tiêu điểm số!', message: `Điểm trung bình ${avgScore} đã đạt/vượt mục tiêu ${user?.targetScore}+. Hãy đặt mục tiêu cao hơn trong Cài Đặt để tiếp tục bứt phá!` });
+      } else if (percentToTarget >= 85) {
+        items.push({ level: 'success', icon: '🔥', title: 'Sắp chạm mục tiêu', message: `Bạn đã đạt ${percentToTarget}% mục tiêu ${user?.targetScore}+ điểm — chỉ cần cố thêm chút nữa!` });
+      }
+
+      const sortedHistory = [...history].sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      if (sortedHistory.length >= 4) {
+        const recent = sortedHistory.slice(-3);
+        const prior = sortedHistory.slice(-6, -3);
+        if (prior.length > 0) {
+          const recentAvg = recent.reduce((s: number, h: any) => s + h.score, 0) / recent.length;
+          const priorAvg = prior.reduce((s: number, h: any) => s + h.score, 0) / prior.length;
+          const diff = Math.round((recentAvg - priorAvg) * 10) / 10;
+          if (diff >= 1) {
+            items.push({ level: 'success', icon: '📈', title: 'Tiến bộ rõ rệt', message: `Điểm trung bình 3 bài gần nhất tăng ${diff} điểm so với trước đó — bạn đang tiến bộ rất tốt, tiếp tục duy trì nhé!` });
+          } else if (diff <= -1) {
+            items.push({ level: 'warning', icon: '📉', title: 'Điểm số đang chững lại', message: `Điểm trung bình 3 bài gần nhất giảm ${Math.abs(diff)} điểm so với trước. Xem lại Sổ Tay Lỗi Sai để tìm nguyên nhân và điều chỉnh cách ôn tập.` });
+          }
+        }
+      }
+    }
+
+    const skillList = ['READING', 'LISTENING', 'SPEAKING', 'WRITING'].map(key => ({
+      key, label: key.charAt(0) + key.slice(1).toLowerCase(),
+      score: skillProgress[key]?.score ?? 0, hasData: skillProgress[key]?.hasData ?? false
+    }));
+    const skillsWithData = skillList.filter(s => s.hasData);
+    if (skillsWithData.length > 0) {
+      const weakest = [...skillsWithData].sort((a, b) => a.score - b.score)[0];
+      if (weakest.score < 6) {
+        items.push({ level: 'warning', icon: '🧩', title: `Kỹ năng ${weakest.label} cần cải thiện`, message: `Kỹ năng ${weakest.label} hiện chỉ đạt ${weakest.score.toFixed(1)}/10 — thấp nhất trong 4 kỹ năng của bạn. Dành thêm thời gian luyện tập tại mục Huấn Luyện 4 Kỹ Năng để cải thiện.` });
+      }
+    }
+    const untrained = skillList.find(s => !s.hasData);
+    if (untrained && skillsWithData.length > 0) {
+      items.push({ level: 'info', icon: '🌱', title: `Chưa luyện tập kỹ năng ${untrained.label}`, message: `Bạn chưa có dữ liệu luyện tập ${untrained.label}. Thử ngay để có bức tranh đầy đủ về năng lực 4 kỹ năng của mình.` });
+    }
+
+    if (user?.notebooks?.length > 0) {
+      const topMistake = [...user.notebooks].sort((a: any, b: any) => b.mistakeCount - a.mistakeCount)[0];
+      if (topMistake.mistakeCount >= 3) {
+        items.push({ level: 'warning', icon: '📔', title: 'Lỗ hổng kiến thức cần khắc phục', message: `Bạn sai nhiều nhất ở chuyên đề "${topMistake.topic}" (${topMistake.mistakeCount} lần). Ôn lại chuyên đề này trong Sổ Tay Lỗi Sai để tránh lặp lại lỗi cũ.` });
+      }
+    }
+
+    if ((user?.streakCount || 0) >= 7) {
+      items.push({ level: 'success', icon: '🔥', title: 'Chuỗi học tập ấn tượng', message: `Bạn đã duy trì streak ${user.streakCount} ngày học liên tục — đừng bỏ lỡ hôm nay để giữ vững thành tích này!` });
+    }
+
+    if (needsActionExams.length >= 3) {
+      items.push({ level: 'critical', icon: '⚠️', title: 'Nhiều bài đang chờ xử lý', message: `Bạn có ${needsActionExams.length} bài tập/đề thi chưa làm hoặc chưa đạt điểm yêu cầu. Ưu tiên xử lý sớm để không bị dồn bài gần hạn nộp.` });
+    }
+
+    const severityOrder: Record<StudentInsight['level'], number> = { critical: 0, warning: 1, success: 2, info: 3 };
+    return items.sort((a, b) => severityOrder[a.level] - severityOrder[b.level]).slice(0, 6);
+  })();
+
   const groupedHistory = history.reduce((acc, curr) => {
     const d = new Date(curr.createdAt);
     let key = '';
@@ -637,6 +721,26 @@ export default function StudentDashboard() {
                 <p className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-widest">Tổng XP Tích Lũy</p>
                 <p className="text-4xl font-black text-amber-500">{totalXP} <span className="text-lg text-slate-400 font-medium">XP</span></p>
               </div>
+            </div>
+
+            {/* Learning insights — auto-generated recommendations from live profile/history/skill data */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm">
+              <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <h3 className="font-bold text-slate-700 text-lg">💡 Nhận Định & Gợi Ý Học Tập</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Tự động phân tích từ điểm số, kỹ năng và lỗi sai của bạn để biết cần cải thiện gì</p>
+                </div>
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Tự động cập nhật mỗi 30 giây
+                </span>
+              </div>
+              {studentInsights.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {studentInsights.map((insight, i) => <InsightCard key={i} insight={insight} />)}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 italic">Chưa đủ dữ liệu để đưa ra gợi ý. Hãy làm thêm bài tập và luyện tập các kỹ năng để hệ thống phân tích chính xác hơn.</p>
+              )}
             </div>
 
             {/* 4 Skills Panel */}
@@ -1448,6 +1552,34 @@ function AssignmentCard({ title, deadline, status, teacher, score }: { title: st
             Làm Bài
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+type StudentInsight = { level: 'critical' | 'warning' | 'success' | 'info'; icon: string; title: string; message: string };
+
+function InsightCard({ insight }: { insight: StudentInsight }) {
+  const styles: Record<StudentInsight['level'], string> = {
+    critical: 'border-rose-200 bg-rose-50/60',
+    warning: 'border-amber-200 bg-amber-50/60',
+    success: 'border-emerald-200 bg-emerald-50/60',
+    info: 'border-blue-200 bg-blue-50/60',
+  };
+  const titleColor: Record<StudentInsight['level'], string> = {
+    critical: 'text-rose-700',
+    warning: 'text-amber-700',
+    success: 'text-emerald-700',
+    info: 'text-blue-700',
+  };
+  return (
+    <div className={`p-4 rounded-xl border ${styles[insight.level]} h-full`}>
+      <div className="flex items-start gap-3">
+        <span className="text-xl shrink-0">{insight.icon}</span>
+        <div className="min-w-0">
+          <h4 className={`font-bold text-sm mb-1 ${titleColor[insight.level]}`}>{insight.title}</h4>
+          <p className="text-sm text-slate-600 leading-relaxed">{insight.message}</p>
+        </div>
       </div>
     </div>
   );

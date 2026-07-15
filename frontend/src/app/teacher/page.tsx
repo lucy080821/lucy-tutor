@@ -11,6 +11,7 @@ import { TuitionInvoice } from '@/components/tuition/TuitionInvoice';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, PieChart, Pie, Cell, LabelList } from 'recharts';
 import dynamic from 'next/dynamic';
 import DOMPurify from 'dompurify';
+import { CEFR_LEVELS, CefrLevel } from '@/lib/skillPractice';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -186,6 +187,7 @@ export default function TeacherDashboard() {
   const [lcClassroomId, setLcClassroomId] = useState("");
   const [lcStudentId, setLcStudentId] = useState("");
   const [lcAccent, setLcAccent] = useState("US"); // "UK", "US", "AUS"
+  const [lcLevel, setLcLevel] = useState<CefrLevel>("B1");
   const [isUploadingClip, setIsUploadingClip] = useState(false);
   const [editingClipId, setEditingClipId] = useState<string | null>(null);
 
@@ -222,12 +224,14 @@ export default function TeacherDashboard() {
     setLcClassroomId("");
     setLcStudentId("");
     setLcAccent("US");
+    setLcLevel("B1");
   };
 
   const startEditListeningClip = (clip: any) => {
     setEditingClipId(clip.id);
     setLcTitle(clip.title);
     setLcAccent(clip.accent);
+    setLcLevel(clip.level || "B1");
     if (clip.classroomId) {
       setLcScope("CLASS");
       setLcClassroomId(clip.classroomId);
@@ -256,6 +260,7 @@ export default function TeacherDashboard() {
           body: JSON.stringify({
             title: lcTitle,
             accent: lcAccent,
+            level: lcLevel,
             classroomId: lcScope === "CLASS" ? lcClassroomId : null,
             studentId: lcScope === "STUDENT" ? lcStudentId : null
           })
@@ -268,6 +273,7 @@ export default function TeacherDashboard() {
         formData.append('script', lcScript);
         formData.append('teacherId', user.id);
         formData.append('accent', lcAccent);
+        formData.append('level', lcLevel);
         if (lcScope === "CLASS") formData.append('classroomId', lcClassroomId);
         if (lcScope === "STUDENT") formData.append('studentId', lcStudentId);
         res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/listening/upload`, {
@@ -606,6 +612,8 @@ export default function TeacherDashboard() {
   // ── Lesson management state ──
   const [localLessons, setLocalLessons] = useState<any[]>([]);
   const [lessonClassFilter, setLessonClassFilter] = useState("");
+  const [lessonSearchQuery, setLessonSearchQuery] = useState('');
+  const [lessonSortOrder, setLessonSortOrder] = useState<'NEWEST' | 'OLDEST'>('NEWEST');
   useEffect(() => {
     if (user?.id) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/teacher/${user.id}`)
@@ -785,6 +793,24 @@ export default function TeacherDashboard() {
   const [overviewTuitionData, setOverviewTuitionData] = useState<any>(null);
   const [showUnpaidOnly, setShowUnpaidOnly] = useState(false);
 
+  // ── OVERVIEW real-time refresh: re-poll classrooms/tuition/revenue every 30s while the tab is open, and instantly when the browser tab regains focus ──
+  const [overviewRefreshTick, setOverviewRefreshTick] = useState(0);
+  useEffect(() => {
+    if (activeTab !== "OVERVIEW" || !user?.id) return;
+    const interval = setInterval(() => {
+      fetchTeacherData();
+      setOverviewRefreshTick(t => t + 1);
+    }, 30000);
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') {
+        fetchTeacherData();
+        setOverviewRefreshTick(t => t + 1);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
+  }, [activeTab, user]);
+
   useEffect(() => {
     if (activeTab !== "OVERVIEW" || !user?.id || !overviewTuitionMonth) return;
     const [year, month] = overviewTuitionMonth.split("-");
@@ -792,7 +818,7 @@ export default function TeacherDashboard() {
       .then(res => res.json())
       .then(setOverviewTuitionData)
       .catch(console.error);
-  }, [activeTab, user, overviewTuitionMonth]);
+  }, [activeTab, user, overviewTuitionMonth, overviewRefreshTick]);
 
   // ── Revenue trend: last 6 months, for the OVERVIEW "business health" chart ──
   const [revenueTrend, setRevenueTrend] = useState<any[] | null>(null);
@@ -816,7 +842,7 @@ export default function TeacherDashboard() {
       })));
     }).catch(console.error);
     return () => { cancelled = true; };
-  }, [activeTab, user]);
+  }, [activeTab, user, overviewRefreshTick]);
 
   const fetchAttendance = async () => {
     if (!attClassroomId || !attDate) return;
@@ -1052,6 +1078,9 @@ export default function TeacherDashboard() {
   const [selectedExamForView, setSelectedExamForView] = useState<any>(null);
   const [editExam, setEditExam] = useState<any>(null);
   const [examViewTab, setExamViewTab] = useState<'QUESTIONS' | 'RESULTS'>('QUESTIONS');
+  const [examSearchQuery, setExamSearchQuery] = useState('');
+  const [examClassFilter, setExamClassFilter] = useState('ALL');
+  const [examSortOrder, setExamSortOrder] = useState<'NEWEST' | 'OLDEST'>('NEWEST');
 
   useEffect(() => {
     if (selectedExamForView && !selectedExamForView.questions) {
@@ -1496,6 +1525,94 @@ export default function TeacherDashboard() {
   }, { expected: 0, submitted: 0 });
   const completionRate = assignmentCompletion.expected > 0 ? Math.round((assignmentCompletion.submitted / assignmentCompletion.expected) * 100) : null;
 
+  // ── Business metrics derived from revenue trend & tuition report (for OVERVIEW KPIs + insights) ──
+  const revenueThisMonth = revenueTrend && revenueTrend.length > 0 ? revenueTrend[revenueTrend.length - 1] : null;
+  const revenuePrevMonth = revenueTrend && revenueTrend.length > 1 ? revenueTrend[revenueTrend.length - 2] : null;
+  const revenueMoMPct = (revenueThisMonth && revenuePrevMonth && revenuePrevMonth.DaThu > 0)
+    ? Math.round(((revenueThisMonth.DaThu - revenuePrevMonth.DaThu) / revenuePrevMonth.DaThu) * 1000) / 10
+    : null;
+  const tuitionCollectionRate = (overviewTuitionData && overviewTuitionData.totalExpected > 0)
+    ? Math.round((overviewTuitionData.totalCollected / overviewTuitionData.totalExpected) * 100)
+    : null;
+  const avgSystemScore = classroomScoreStats.length > 0
+    ? Math.round((classroomScoreStats.reduce((s, c) => s + c.DiemTB, 0) / classroomScoreStats.length) * 10) / 10
+    : null;
+
+  // ── Auto-generated business insights (rule-based, computed from live dashboard data) ──
+  const businessInsights: BusinessInsight[] = (() => {
+    const items: BusinessInsight[] = [];
+
+    if (revenueMoMPct !== null) {
+      if (revenueMoMPct <= -15) {
+        items.push({ level: 'critical', icon: '📉', title: 'Doanh thu sụt giảm mạnh', message: `Doanh thu tháng này giảm ${Math.abs(revenueMoMPct)}% so với tháng trước. Rà soát học viên nghỉ học hoặc chậm đóng học phí để có hướng xử lý kịp thời.` });
+      } else if (revenueMoMPct >= 15) {
+        items.push({ level: 'success', icon: '📈', title: 'Doanh thu tăng trưởng tốt', message: `Doanh thu tháng này tăng ${revenueMoMPct}% so với tháng trước. Duy trì chất lượng giảng dạy để giữ đà tăng trưởng này.` });
+      }
+    }
+
+    if (tuitionCollectionRate !== null && overviewTuitionData) {
+      if (tuitionCollectionRate < 70) {
+        items.push({ level: 'warning', icon: '💰', title: 'Thu học phí còn chậm', message: `Mới thu được ${tuitionCollectionRate}% học phí tháng ${overviewTuitionMonth.split('-')[1]} (còn ${overviewTuitionData.unpaidCount} học viên chưa đóng). Nên gửi nhắc nhở sớm qua Zalo/tin nhắn.` });
+      } else if (tuitionCollectionRate >= 95) {
+        items.push({ level: 'success', icon: '💰', title: 'Thu học phí tốt', message: `Đã thu ${tuitionCollectionRate}% học phí tháng này — dòng tiền ổn định.` });
+      }
+    }
+
+    if (completionRate !== null) {
+      if (completionRate < 50) {
+        items.push({ level: 'critical', icon: '⚠️', title: 'Tỷ lệ nộp bài rất thấp', message: `Chỉ ${completionRate}% bài tập/đề thi được nộp. Học viên có thể đang quá tải hoặc thiếu động lực — cân nhắc nhắc nhở qua nhóm lớp hoặc rút ngắn thời hạn.` });
+      } else if (completionRate < 75) {
+        items.push({ level: 'warning', icon: '📋', title: 'Tỷ lệ nộp bài chưa cao', message: `Tỷ lệ nộp bài hiện ở mức ${completionRate}%. Gửi nhắc nhở trước hạn nộp có thể giúp cải thiện con số này.` });
+      } else if (completionRate >= 90) {
+        items.push({ level: 'success', icon: '✅', title: 'Học viên rất tích cực', message: `${completionRate}% bài tập được nộp đúng hạn — mức độ tương tác của học viên đang rất tốt.` });
+      }
+    }
+
+    if (classroomScoreStats.length > 0) {
+      const sorted = [...classroomScoreStats].sort((a, b) => a.DiemTB - b.DiemTB);
+      const lowest = sorted[0];
+      const highest = sorted[sorted.length - 1];
+      if (lowest.DiemTB < 5) {
+        items.push({ level: 'warning', icon: '📊', title: 'Lớp cần hỗ trợ thêm', message: `Lớp "${lowest.name}" có điểm trung bình ${lowest.DiemTB}/10 — thấp nhất hệ thống. Cân nhắc tổ chức thêm buổi ôn tập hoặc phụ đạo.` });
+      }
+      if (highest.DiemTB >= 8 && sorted.length > 1) {
+        items.push({ level: 'success', icon: '🏆', title: 'Lớp dẫn đầu chất lượng', message: `Lớp "${highest.name}" đạt điểm trung bình ${highest.DiemTB}/10 — cao nhất hệ thống. Có thể tham khảo phương pháp giảng dạy để nhân rộng.` });
+      }
+    }
+
+    if (overviewTuitionData?.unpaidList?.length > 0) {
+      const unpaidByClass: Record<string, number> = {};
+      overviewTuitionData.unpaidList.forEach((r: any) => { unpaidByClass[r.classroomName] = (unpaidByClass[r.classroomName] || 0) + 1; });
+      let worstClass: { name: string; unpaid: number; total: number } | null = null;
+      Object.entries(unpaidByClass).forEach(([name, unpaid]) => {
+        const total = classrooms.find(c => c.name === name)?.students?.length || 0;
+        if (total >= 2 && unpaid / total > 0.5 && (!worstClass || unpaid / total > worstClass.unpaid / worstClass.total)) {
+          worstClass = { name, unpaid, total };
+        }
+      });
+      if (worstClass) {
+        const wc = worstClass as { name: string; unpaid: number; total: number };
+        items.push({ level: 'warning', icon: '🏫', title: 'Một lớp đang chậm đóng học phí', message: `Lớp "${wc.name}" có ${wc.unpaid}/${wc.total} học viên chưa đóng học phí tháng này (${Math.round((wc.unpaid / wc.total) * 100)}%).` });
+      }
+    }
+
+    const smallClass = classrooms.find(c => (c.students?.length || 0) > 0 && (c.students?.length || 0) < 3);
+    if (smallClass) {
+      items.push({ level: 'info', icon: '🌱', title: 'Cơ hội tuyển sinh', message: `Lớp "${smallClass.name}" hiện chỉ có ${smallClass.students?.length} học viên. Đẩy mạnh marketing hoặc gộp lớp có thể giúp tối ưu chi phí vận hành.` });
+    }
+
+    const atRiskStudents = allStudents.filter((s: any) => {
+      const avg = studentAvgScore(s);
+      return avg !== null && s.targetScore && avg < s.targetScore - 1.5;
+    });
+    if (atRiskStudents.length > 0) {
+      items.push({ level: 'warning', icon: '🎯', title: 'Học viên dưới mục tiêu điểm số', message: `Có ${atRiskStudents.length} học viên đang học dưới mục tiêu điểm số hơn 1.5 điểm. Gợi ý giao thêm bài luyện tập cá nhân qua Sổ Tay Lỗi Sai.` });
+    }
+
+    const severityOrder: Record<BusinessInsight['level'], number> = { critical: 0, warning: 1, success: 2, info: 3 };
+    return items.sort((a, b) => severityOrder[a.level] - severityOrder[b.level]).slice(0, 6);
+  })();
+
   if (loading) return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden w-full">
       <div className="hidden md:flex w-64 bg-[#1e3a8a] flex-col shrink-0 h-full pt-6 px-4 gap-2">
@@ -1619,12 +1736,34 @@ export default function TeacherDashboard() {
         {activeTab === "OVERVIEW" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <h1 className="text-3xl font-bold">Xin chào, {user?.name?.split(' ').slice(-1)[0] || 'Thầy/Cô'} 👋</h1>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-              <StatCard title="Tổng Lớp" value={String(classrooms.length)} icon="🏫" accent="blue" />
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
               <StatCard title="Tổng Học Viên" value={String(allStudents.length)} icon="🧑‍🎓" accent="violet" />
-              <StatCard title="Bài Tập / Đề Thi" value={String(classrooms.flatMap(c => c.exams || []).length)} icon="📝" accent="green" />
-              <StatCard title="Câu Hỏi" value={String(classrooms.flatMap(c => c.exams || []).reduce((s: number, e: any) => s + (e.totalQuestions || 0), 0))} icon="❓" accent="amber" />
+              <StatCard title="Tổng Lớp Đang Dạy" value={String(classrooms.length)} icon="🏫" accent="blue" />
+              <StatCard title="Doanh Thu Tháng Này" value={revenueThisMonth ? `${(revenueThisMonth.DaThu / 1000000).toFixed(1)}tr` : '—'} icon="💵" accent="green"
+                delta={revenueMoMPct !== null ? { value: `${Math.abs(revenueMoMPct)}%`, positive: revenueMoMPct >= 0 } : undefined} />
+              <StatCard title="Tỷ Lệ Thu Học Phí" value={tuitionCollectionRate !== null ? `${tuitionCollectionRate}%` : '—'} icon="💰" accent="amber" sub="Trong tháng hiện tại" />
               <StatCard title="Tỷ Lệ Nộp Bài" value={completionRate !== null ? `${completionRate}%` : '—'} icon="📊" accent="cyan" sub="Trên tổng số bài đã giao" />
+              <StatCard title="Điểm TB Học Viên" value={avgSystemScore !== null ? `${avgSystemScore}/10` : '—'} icon="🎯" accent="rose" sub="Trung bình các lớp" />
+            </div>
+
+            {/* Business insights — auto-generated recommendations from live dashboard data */}
+            <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mt-6">
+              <div className="mb-4 flex items-start justify-between gap-3 flex-wrap">
+                <div>
+                  <h3 className="font-bold text-slate-700 text-lg">💡 Insights & Khuyến Nghị Kinh Doanh</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Tự động phân tích từ dữ liệu lớp học, học phí và kết quả học tập</p>
+                </div>
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-100 shrink-0">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Tự động cập nhật mỗi 30 giây
+                </span>
+              </div>
+              {businessInsights.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                  {businessInsights.map((insight, i) => <InsightCard key={i} insight={insight} />)}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 italic">Chưa đủ dữ liệu để đưa ra khuyến nghị. Hãy giao thêm bài tập và cập nhật điểm danh/học phí để hệ thống phân tích chính xác hơn.</p>
+              )}
             </div>
 
             {/* Revenue trend — the headline "business health" chart */}
@@ -2067,6 +2206,12 @@ export default function TeacherDashboard() {
                     </select>
                   </div>
                   <div className="flex-1 min-w-[150px]">
+                    <label className="block text-sm font-bold mb-2">Cấp độ (CEFR)</label>
+                    <select value={lcLevel} onChange={e => setLcLevel(e.target.value as CefrLevel)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold" required>
+                      {CEFR_LEVELS.map(l => <option key={l.value} value={l.value}>{l.label}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex-1 min-w-[150px]">
                     <label className="block text-sm font-bold mb-2">Phạm vi gán</label>
                     <select value={lcScope} onChange={e => setLcScope(e.target.value)} className="w-full p-3 border border-gray-200 bg-white rounded-lg font-bold">
                       <option value="CLASS">Một lớp học</option>
@@ -2115,6 +2260,7 @@ export default function TeacherDashboard() {
                   <div>
                     <h3 className="font-bold text-lg line-clamp-2 mb-1 pr-16" title={clip.title}>{clip.title}</h3>
                     <p className="text-xs text-slate-400 mb-1">{new Date(clip.createdAt).toLocaleDateString('vi-VN')} • {ACCENT_LABELS[clip.accent] || clip.accent}</p>
+                    <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary mb-2">Cấp độ: {clip.level || 'B1'}</span>
                     <p className="text-xs text-slate-500 font-semibold mb-4">
                       {clip.classroom ? `Lớp: ${clip.classroom.name}` : clip.student ? `Học viên: ${clip.student.name}` : ''}
                     </p>
@@ -2633,47 +2779,85 @@ export default function TeacherDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
               <h1 className="text-3xl font-bold">Ngân Hàng Bài Học</h1>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <select className="p-2.5 border border-gray-200 bg-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 w-full sm:w-auto" value={lessonClassFilter} onChange={e => setLessonClassFilter(e.target.value)}>
-                  <option value="">Tất cả các lớp</option>
-                  {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <button onClick={() => {
-                  setCreateLessonTitle(""); setCreateLessonDesc(""); setCreateLessonClassroomId("");
-                  setLessonVocabs([]); setLessonGrammars([]); setEditingLessonId(null);
-                  setActiveTab('CREATE_LESSON');
-                }} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer w-full sm:w-auto">✏️ Tạo Bài Học Mới</button>
-              </div>
+              <button onClick={() => {
+                setCreateLessonTitle(""); setCreateLessonDesc(""); setCreateLessonClassroomId("");
+                setLessonVocabs([]); setLessonGrammars([]); setEditingLessonId(null);
+                setActiveTab('CREATE_LESSON');
+              }} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer w-full sm:w-auto">✏️ Tạo Bài Học Mới</button>
             </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                <input
+                  type="text"
+                  value={lessonSearchQuery}
+                  onChange={e => setLessonSearchQuery(e.target.value)}
+                  placeholder="Tìm kiếm theo tên bài học..."
+                  className="w-full pl-9 pr-3 py-2.5 border border-gray-200 bg-white focus:border-primary outline-none transition-colors rounded-lg text-sm"
+                />
+              </div>
+              <select className="px-3 py-2.5 border border-gray-200 bg-white rounded-lg text-sm font-medium sm:w-56" value={lessonClassFilter} onChange={e => setLessonClassFilter(e.target.value)}>
+                <option value="">🏫 Tất cả các lớp</option>
+                {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <select
+                value={lessonSortOrder}
+                onChange={e => setLessonSortOrder(e.target.value as 'NEWEST' | 'OLDEST')}
+                className="px-3 py-2.5 border border-gray-200 bg-white rounded-lg text-sm font-medium sm:w-56"
+              >
+                <option value="NEWEST">🕓 Mới tải lên trước</option>
+                <option value="OLDEST">🕓 Cũ tải lên trước</option>
+              </select>
+            </div>
+
             {(() => {
-              const filteredLessons = lessonClassFilter ? localLessons.filter((l: any) => l.classroomId === lessonClassFilter) : localLessons;
-              return filteredLessons.length === 0 ? (
+              const q = lessonSearchQuery.trim().toLowerCase();
+              const filteredLessons = localLessons
+                .filter((l: any) => !lessonClassFilter || l.classroomId === lessonClassFilter)
+                .filter((l: any) => !q || (l.title || '').toLowerCase().includes(q))
+                .sort((a: any, b: any) => {
+                  const diff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+                  return lessonSortOrder === 'NEWEST' ? diff : -diff;
+                });
+              if (localLessons.length === 0) return (
                 <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
                   <span className="text-5xl mb-4">📚</span>
-                  <h2 className="text-2xl font-bold mb-2">{lessonClassFilter ? 'Lớp này chưa có bài học nào' : 'Chưa có bài học nào'}</h2>
+                  <h2 className="text-2xl font-bold mb-2">Chưa có bài học nào</h2>
                   <p className="text-slate-400 mb-6">Bắt đầu bằng cách tạo bài học mới</p>
                   <button onClick={() => setActiveTab('CREATE_LESSON')} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Ngay</button>
                 </div>
-              ) : (
-                <div className="space-y-3">
+              );
+              if (filteredLessons.length === 0) return (
+                <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
+                  <span className="text-5xl mb-4">🔍</span>
+                  <h2 className="text-xl font-bold mb-2">Không tìm thấy bài học phù hợp</h2>
+                  <p className="text-slate-400">Thử đổi từ khóa tìm kiếm hoặc bộ lọc lớp học</p>
+                </div>
+              );
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {filteredLessons.map((lesson: any) => (
-                    <div key={lesson.id} className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 hover:shadow-md transition-all shadow-sm">
-                      <div className="flex items-center gap-4 min-w-0">
-                        <div className="w-12 h-12 bg-blue-500/10 text-blue-600 flex items-center justify-center text-2xl shrink-0">📚</div>
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-lg break-words">{lesson.title}</h3>
-                          <p className="text-sm text-slate-400">{lesson.classroom?.name ? `${lesson.classroom.name} • ` : ''}{lesson.vocabularies?.length || 0} từ vựng • {lesson.grammars?.length || 0} ngữ pháp</p>
+                    <div key={lesson.id} className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col gap-3 hover:shadow-md hover:border-blue-100 transition-all shadow-sm h-full">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-3 mb-2">
+                          <div className="w-10 h-10 bg-blue-500/10 text-blue-600 flex items-center justify-center text-xl rounded-lg shrink-0">📚</div>
+                          <span className="inline-flex items-center gap-1 text-xs font-bold bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100 truncate max-w-full" title={lesson.classroom?.name || 'N/A'}>
+                            🏫 {lesson.classroom?.name || 'N/A'}
+                          </span>
                         </div>
+                        <h3 className="font-bold text-base leading-snug line-clamp-2" title={lesson.title}>{lesson.title}</h3>
+                        <p className="text-sm text-slate-500 mt-2">{lesson.vocabularies?.length || 0} từ vựng • {lesson.grammars?.length || 0} ngữ pháp</p>
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap shrink-0">
-                        <button onClick={() => handleEditLessonSetup(lesson)} className="text-amber-500 hover:text-amber-600 font-bold text-sm px-3 py-1.5 hover:bg-amber-500/10 transition-colors cursor-pointer">✏️ Sửa</button>
-                        <button onClick={() => handleDuplicateLesson(lesson)} className="text-blue-500 hover:text-blue-600 font-bold text-sm px-3 py-1.5 hover:bg-blue-500/10 transition-colors cursor-pointer">📋 Nhân bản</button>
+                      <div className="flex items-center gap-1.5 flex-wrap pt-3 border-t border-gray-100">
+                        <button onClick={() => handleEditLessonSetup(lesson)} className="flex-1 px-2.5 py-1.5 text-xs font-bold bg-blue-50 text-primary hover:bg-blue-100 rounded-lg cursor-pointer">✏️ Sửa</button>
+                        <button onClick={() => handleDuplicateLesson(lesson)} className="px-2.5 py-1.5 text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg cursor-pointer" title="Nhân bản">📋</button>
                         <button onClick={async () => {
                           if (confirm('Bạn có chắc muốn xóa bài học này?')) {
                             const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/${lesson.id}`, { method: 'DELETE' });
                             if (res.ok) setLocalLessons(localLessons.filter(l => l.id !== lesson.id));
                           }
-                        }} className="text-rose-500 hover:text-rose-600 font-bold text-sm px-3 py-1.5 hover:bg-rose-500/10 transition-colors cursor-pointer">🗑 Xóa</button>
+                        }} className="px-2.5 py-1.5 text-xs font-bold bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg cursor-pointer" title="Xóa">🗑</button>
                       </div>
                     </div>
                   ))}
@@ -2798,12 +2982,53 @@ export default function TeacherDashboard() {
               <h1 className="text-3xl font-bold">Ngân Hàng Bài Tập & Đề Thi</h1>
               <button onClick={() => setActiveTab('CREATE')} className="px-4 py-2 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer w-full sm:w-auto">✏️ Tạo Đề Mới</button>
             </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                <input
+                  type="text"
+                  value={examSearchQuery}
+                  onChange={e => setExamSearchQuery(e.target.value)}
+                  placeholder="Tìm kiếm theo tên đề thi..."
+                  className="w-full pl-9 pr-3 py-2.5 border border-gray-200 bg-white focus:border-primary outline-none transition-colors rounded-lg text-sm"
+                />
+              </div>
+              <select
+                value={examClassFilter}
+                onChange={e => setExamClassFilter(e.target.value)}
+                className="px-3 py-2.5 border border-gray-200 bg-white rounded-lg text-sm font-medium sm:w-56"
+              >
+                <option value="ALL">🏫 Tất cả lớp</option>
+                {classrooms.map((c: any) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <select
+                value={examSortOrder}
+                onChange={e => setExamSortOrder(e.target.value as 'NEWEST' | 'OLDEST')}
+                className="px-3 py-2.5 border border-gray-200 bg-white rounded-lg text-sm font-medium sm:w-56"
+              >
+                <option value="NEWEST">🕓 Mới tải lên trước</option>
+                <option value="OLDEST">🕓 Cũ tải lên trước</option>
+              </select>
+            </div>
+
             {(() => {
               const dbExams = classrooms.flatMap(c => c.exams || []).filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
               const allExamsRaw = [...dbExams, ...localExams];
               const allExams = allExamsRaw.filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
-              const assignments = allExams.filter(e => e.examType === 'ASSIGNMENT' || e.examType === 'REGULAR');
-              const tests = allExams.filter(e => e.examType === 'EXAM' || e.examType === 'PLACEMENT');
+              const q = examSearchQuery.trim().toLowerCase();
+              const filteredExams = allExams.filter(e =>
+                (examClassFilter === 'ALL' || e.classroomId === examClassFilter) &&
+                (!q || (e.title || '').toLowerCase().includes(q))
+              );
+              const sortByDate = (list: any[]) => [...list].sort((a, b) => {
+                const diff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+                return examSortOrder === 'NEWEST' ? diff : -diff;
+              });
+              const assignments = sortByDate(filteredExams.filter(e => e.examType === 'ASSIGNMENT' || e.examType === 'REGULAR'));
+              const tests = sortByDate(filteredExams.filter(e => e.examType === 'EXAM' || e.examType === 'PLACEMENT'));
               if (allExams.length === 0) return (
                 <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
                   <span className="text-5xl mb-4">📄</span>
@@ -2812,12 +3037,19 @@ export default function TeacherDashboard() {
                   <button onClick={() => setActiveTab('CREATE')} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Đề Ngay</button>
                 </div>
               );
+              if (filteredExams.length === 0) return (
+                <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
+                  <span className="text-5xl mb-4">🔍</span>
+                  <h2 className="text-xl font-bold mb-2">Không tìm thấy đề thi phù hợp</h2>
+                  <p className="text-slate-400">Thử đổi từ khóa tìm kiếm hoặc bộ lọc lớp học</p>
+                </div>
+              );
               return (
                 <div className="space-y-8">
                   {assignments.length > 0 && (
                     <div>
                       <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><span className="text-blue-500">📘</span> Bài Tập Về Nhà</h2>
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                         {assignments.map((exam: any) => (
                           <ExamCard key={exam.id} exam={exam} title={exam.title} type="Bài tập"
                             detail={classrooms.find((c: any) => c.id === exam.classroomId)?.name || 'N/A'}
@@ -2833,7 +3065,7 @@ export default function TeacherDashboard() {
                   {tests.length > 0 && (
                     <div>
                       <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><span className="text-rose-500">🏆</span> Đề Thi Thử / Đánh Giá</h2>
-                      <div className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                         {tests.map((exam: any) => (
                           <ExamCard key={exam.id} exam={exam} title={exam.title} type="Đề thi"
                             detail={classrooms.find((c: any) => c.id === exam.classroomId)?.name || 'N/A'}
@@ -3318,7 +3550,7 @@ export default function TeacherDashboard() {
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h2 className="text-2xl font-bold">{selectedExamForView.title}</h2>
-                <p className="text-sm text-slate-400">{selectedExamForView.totalQuestions} câu hỏi • {selectedExamForView.duration} phút</p>
+                <p className="text-sm text-slate-400">{selectedExamForView.totalQuestions} câu hỏi • {selectedExamForView.duration} phút • 🔁 Tối đa {selectedExamForView.maxAttempts || 1} lần làm</p>
               </div>
               <button onClick={() => { setSelectedExamForView(null); setExamViewTab('QUESTIONS'); }} className="p-2 hover:bg-slate-100 rounded-full cursor-pointer transition-colors text-xl">✕</button>
             </div>
@@ -3346,17 +3578,17 @@ export default function TeacherDashboard() {
                             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${isEssay ? 'bg-secondary/10 text-secondary' : 'bg-primary/10 text-primary'}`}>{isEssay ? '✍️ Tự luận' : '🔘 Trắc nghiệm'}</span>
                           </div>
                           {q.question.heading && (
-                            <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/20 text-amber-700/80 font-bold whitespace-pre-wrap">
-                              {q.question.heading}
+                            <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/20 text-amber-700/80 font-bold quill-content [&>p]:m-0" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(q.question.heading) }}>
                             </div>
                           )}
                           <div className="mb-3 quill-content" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(q.question.content) }}></div>
                           {!isEssay && opts.length > 0 && (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                               {opts.map((opt: string, idx: number) => (
-                                <p key={idx} className={`text-sm p-2 ${String.fromCharCode(65 + idx) === q.question.correctOption ? 'bg-primary/10 text-primary font-bold' : 'text-slate-600'}`}>
-                                  {String.fromCharCode(65 + idx)}. {opt}
-                                </p>
+                                <div key={idx} className={`text-sm p-2 flex gap-1.5 ${String.fromCharCode(65 + idx) === q.question.correctOption ? 'bg-primary/10 text-primary font-bold' : 'text-slate-600'}`}>
+                                  <span className="shrink-0">{String.fromCharCode(65 + idx)}.</span>
+                                  <span className="quill-content [&>p]:m-0" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(opt) }}></span>
+                                </div>
                               ))}
                             </div>
                           )}
@@ -3545,13 +3777,18 @@ const STAT_CARD_ACCENTS: Record<string, string> = {
   cyan: 'bg-cyan-500/10 text-cyan-600',
 };
 
-function StatCard({ title, value, icon, accent, sub }: { title: string; value: string; icon?: string; accent?: 'blue' | 'green' | 'amber' | 'rose' | 'violet' | 'cyan'; sub?: string }) {
+function StatCard({ title, value, icon, accent, sub, delta }: { title: string; value: string; icon?: string; accent?: 'blue' | 'green' | 'amber' | 'rose' | 'violet' | 'cyan'; sub?: string; delta?: { value: string; positive: boolean } }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-1">{title}</p>
           <p className="text-3xl font-extrabold text-slate-800 mt-1 tabular-nums truncate">{value}</p>
+          {delta && (
+            <p className={`text-xs font-bold mt-1.5 inline-flex items-center gap-1 ${delta.positive ? 'text-emerald-600' : 'text-rose-500'}`}>
+              {delta.positive ? '▲' : '▼'} {delta.value} <span className="text-slate-400 font-medium">so với tháng trước</span>
+            </p>
+          )}
           {sub && <p className="text-xs text-slate-400 font-medium mt-1">{sub}</p>}
         </div>
         {icon && (
@@ -3559,6 +3796,34 @@ function StatCard({ title, value, icon, accent, sub }: { title: string; value: s
             {icon}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+type BusinessInsight = { level: 'critical' | 'warning' | 'success' | 'info'; icon: string; title: string; message: string };
+
+function InsightCard({ insight }: { insight: BusinessInsight }) {
+  const styles: Record<BusinessInsight['level'], string> = {
+    critical: 'border-rose-200 bg-rose-50/60',
+    warning: 'border-amber-200 bg-amber-50/60',
+    success: 'border-emerald-200 bg-emerald-50/60',
+    info: 'border-blue-200 bg-blue-50/60',
+  };
+  const titleColor: Record<BusinessInsight['level'], string> = {
+    critical: 'text-rose-700',
+    warning: 'text-amber-700',
+    success: 'text-emerald-700',
+    info: 'text-blue-700',
+  };
+  return (
+    <div className={`p-4 rounded-xl border ${styles[insight.level]} h-full`}>
+      <div className="flex items-start gap-3">
+        <span className="text-xl shrink-0">{insight.icon}</span>
+        <div className="min-w-0">
+          <h4 className={`font-bold text-sm mb-1 ${titleColor[insight.level]}`}>{insight.title}</h4>
+          <p className="text-sm text-slate-600 leading-relaxed">{insight.message}</p>
+        </div>
       </div>
     </div>
   );
@@ -3609,20 +3874,28 @@ function ClassCard({ c, onEdit, onDelete }: { c: any; onEdit?: () => void; onDel
 
 function ExamCard({ title, type, detail, questions, onClick, onEdit, onDelete, onDuplicate, exam }: { title: string; type: string; detail: string; questions: number; onClick?: () => void; onEdit?: () => void; onDelete?: () => void; onDuplicate?: () => void; exam?: any }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 hover:shadow-md hover:border-blue-100 transition-all shadow-sm">
+    <div className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col gap-3 hover:shadow-md hover:border-blue-100 transition-all shadow-sm h-full">
       <div className="flex-1 min-w-0 cursor-pointer" onClick={onClick}>
-        <h4 className="font-bold text-base flex items-center gap-2 flex-wrap">
-          {title}
-          {exam?.deadline && <span className="bg-rose-50 text-rose-500 text-xs px-2 py-0.5 rounded-full border border-rose-100">⏰ Hạn: {new Date(exam.deadline).toLocaleDateString('vi-VN')}</span>}
-          {exam?.notes && <span className="bg-amber-50 text-amber-600 text-xs px-2 py-0.5 rounded-full border border-amber-100">📌 {exam.notes}</span>}
-        </h4>
-        <p className="text-sm text-slate-500 mt-1">Giao cho: <span className="font-medium text-slate-700">{detail}</span> • {questions} câu • {exam?.duration || 45} phút</p>
+        <div className="flex items-center gap-2 flex-wrap mb-2">
+          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${type === 'Đề thi' ? 'bg-rose-50 text-rose-500' : 'bg-blue-50 text-blue-600'}`}>
+            {type === 'Đề thi' ? '🏆' : '📘'} {type}
+          </span>
+          {exam?.deadline && <span className="bg-rose-50 text-rose-500 text-xs px-2 py-0.5 rounded-full border border-rose-100">⏰ {new Date(exam.deadline).toLocaleDateString('vi-VN')}</span>}
+        </div>
+        <h4 className="font-bold text-base leading-snug line-clamp-2" title={title}>{title}</h4>
+        <div className="mt-2">
+          <span className="inline-flex items-center gap-1 text-xs font-bold bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100 truncate max-w-full" title={detail}>
+            🏫 {detail}
+          </span>
+        </div>
+        {exam?.notes && <p className="text-xs text-amber-600 mt-1 line-clamp-1">📌 {exam.notes}</p>}
+        <p className="text-sm text-slate-500 mt-2">{questions} câu • {exam?.duration || 45} phút • 🔁 Tối đa {exam?.maxAttempts || 1} lần làm</p>
       </div>
-      <div className="flex items-center gap-1.5 shrink-0 flex-wrap sm:justify-end">
-        <button onClick={e => { e.stopPropagation(); onDuplicate?.(); }} className="px-2.5 py-1.5 text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg cursor-pointer">📋 Nhân bản</button>
-        <button onClick={onClick} className="px-2.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">👁 Xem</button>
-        <button onClick={e => { e.stopPropagation(); onEdit?.(); }} className="px-2.5 py-1.5 text-xs font-bold bg-blue-50 text-primary hover:bg-blue-100 rounded-lg cursor-pointer">✏️ Sửa</button>
-        <button onClick={e => { e.stopPropagation(); onDelete?.(); }} className="px-2.5 py-1.5 text-xs font-bold bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg cursor-pointer">🗑 Xóa</button>
+      <div className="flex items-center gap-1.5 flex-wrap pt-3 border-t border-gray-100">
+        <button onClick={onClick} className="flex-1 px-2.5 py-1.5 text-xs font-bold bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer">👁 Xem</button>
+        <button onClick={e => { e.stopPropagation(); onEdit?.(); }} className="flex-1 px-2.5 py-1.5 text-xs font-bold bg-blue-50 text-primary hover:bg-blue-100 rounded-lg cursor-pointer">✏️ Sửa</button>
+        <button onClick={e => { e.stopPropagation(); onDuplicate?.(); }} className="px-2.5 py-1.5 text-xs font-bold bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg cursor-pointer" title="Nhân bản">📋</button>
+        <button onClick={e => { e.stopPropagation(); onDelete?.(); }} className="px-2.5 py-1.5 text-xs font-bold bg-rose-50 text-rose-500 hover:bg-rose-100 rounded-lg cursor-pointer" title="Xóa">🗑</button>
       </div>
     </div>
   );
