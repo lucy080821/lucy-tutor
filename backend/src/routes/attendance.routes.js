@@ -50,9 +50,12 @@ router.post('/mark', async (req, res) => {
     targetDate.setHours(0, 0, 0, 0);
 
     const results = [];
-    
-    // Upsert each record
+
+    // Upsert each record — skip entries with no status yet (student not marked in this
+    // save), since `status` is a required column and one bad record would otherwise abort
+    // the whole batch and report failure even for students that were marked correctly.
     for (const record of records) {
+      if (!record.status) continue;
       const attendance = await prisma.attendance.upsert({
         where: {
           classroomId_userId_date: {
