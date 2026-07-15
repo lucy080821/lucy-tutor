@@ -8,6 +8,8 @@ import { isReadingAnswerCorrect, FILL_TYPES, type ReadingQuestion } from "@/lib/
 import { CEFR_LEVELS, PRACTICE_PURPOSES, CefrLevel, PracticePurpose, formatPracticedAt } from "@/lib/skillPractice";
 import { SkillReportPDF, SkillReportRubricItem } from "@/components/reports/SkillReportPDF";
 import { exportNodeToPDF } from "@/lib/pdfExport";
+import { usePagination } from "@/lib/usePagination";
+import Pagination from "@/components/Pagination";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -97,6 +99,7 @@ export default function ListeningPracticePage() {
   const [examPracticedAt, setExamPracticedAt] = useState<string | null>(null);
   const [exportingPdf, setExportingPdf] = useState(false);
   const [examHistory, setExamHistory] = useState<any[]>([]);
+  const examHistoryPagination = usePagination(examHistory, 10);
   const [viewingExamHistoryItem, setViewingExamHistoryItem] = useState<any | null>(null);
   const examPdfRef = useRef<HTMLDivElement>(null);
   const examHistoryPdfRef = useRef<HTMLDivElement>(null);
@@ -744,24 +747,27 @@ export default function ListeningPracticePage() {
           {examHistory.length === 0 ? (
             <p className="text-foreground/50 text-sm">Bạn chưa làm đề luyện nghe nào. Đề sau khi nộp sẽ tự động lưu tại đây.</p>
           ) : (
-            examHistory.map((h) => {
-              const qs: ReadingQuestion[] = JSON.parse(h.questions);
-              const ans: Record<number, number | string> = JSON.parse(h.answers);
-              const correct = qs.reduce((s, q, i) => s + (isReadingAnswerCorrect(q, ans[i]) ? 1 : 0), 0);
-              return (
-                <button
-                  key={h.id}
-                  onClick={() => setViewingExamHistoryItem(h)}
-                  className="w-full text-left bg-surface border border-foreground/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-foreground/80 line-clamp-1">{h.title}</p>
-                    <p className="text-xs text-foreground/50 mt-1">🕓 {formatPracticedAt(h.practicedAt)} · {h.level} · {h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</p>
-                  </div>
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-primary/10 text-primary shrink-0">{correct}/{qs.length}</span>
-                </button>
-              );
-            })
+            <>
+              {examHistoryPagination.pageItems.map((h) => {
+                const qs: ReadingQuestion[] = JSON.parse(h.questions);
+                const ans: Record<number, number | string> = JSON.parse(h.answers);
+                const correct = qs.reduce((s, q, i) => s + (isReadingAnswerCorrect(q, ans[i]) ? 1 : 0), 0);
+                return (
+                  <button
+                    key={h.id}
+                    onClick={() => setViewingExamHistoryItem(h)}
+                    className="w-full text-left bg-surface border border-foreground/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between gap-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-foreground/80 line-clamp-1">{h.title}</p>
+                      <p className="text-xs text-foreground/50 mt-1">🕓 {formatPracticedAt(h.practicedAt)} · {h.level} · {h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</p>
+                    </div>
+                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-primary/10 text-primary shrink-0">{correct}/{qs.length}</span>
+                  </button>
+                );
+              })}
+              <Pagination page={examHistoryPagination.page} totalPages={examHistoryPagination.totalPages} totalItems={examHistoryPagination.totalItems} pageSize={10} onPageChange={examHistoryPagination.setPage} />
+            </>
           )}
         </div>
       )}

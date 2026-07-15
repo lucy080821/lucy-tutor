@@ -7,6 +7,8 @@ import { logSkillProgress } from "@/lib/skillProgress";
 import { CEFR_LEVELS, PRACTICE_PURPOSES, CefrLevel, PracticePurpose, formatPracticedAt } from "@/lib/skillPractice";
 import { SkillReportPDF, SkillReportRubricItem } from "@/components/reports/SkillReportPDF";
 import { exportNodeToPDF } from "@/lib/pdfExport";
+import { usePagination } from "@/lib/usePagination";
+import Pagination from "@/components/Pagination";
 
 interface Topic {
   id: string;
@@ -75,6 +77,7 @@ export default function ConversationPracticePage() {
   const [exportingPdf, setExportingPdf] = useState(false);
 
   const [history, setHistory] = useState<any[]>([]);
+  const historyPagination = usePagination(history, 10);
   const [viewingHistoryItem, setViewingHistoryItem] = useState<any | null>(null);
 
   const recognitionRef = useRef<any>(null);
@@ -418,16 +421,19 @@ export default function ConversationPracticePage() {
             {history.length === 0 ? (
               <p className="text-foreground/50 text-sm">Bạn chưa hoàn thành buổi luyện nói nào. Buổi luyện tập sau khi kết thúc sẽ tự động lưu tại đây.</p>
             ) : (
-              history.map((h) => (
-                <button
-                  key={h.id}
-                  onClick={() => setViewingHistoryItem(h)}
-                  className="w-full text-left bg-surface border border-foreground/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all"
-                >
-                  <p className="text-sm font-bold text-foreground/80 line-clamp-1">{h.topic?.title || h.contextText}</p>
-                  <p className="text-xs text-foreground/50 mt-1">🕓 {formatPracticedAt(h.practicedAt)} {h.level ? `· ${h.level}` : ""} {h.purpose ? `· ${h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}` : ""}</p>
-                </button>
-              ))
+              <>
+                {historyPagination.pageItems.map((h) => (
+                  <button
+                    key={h.id}
+                    onClick={() => setViewingHistoryItem(h)}
+                    className="w-full text-left bg-surface border border-foreground/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all"
+                  >
+                    <p className="text-sm font-bold text-foreground/80 line-clamp-1">{h.topic?.title || h.contextText}</p>
+                    <p className="text-xs text-foreground/50 mt-1">🕓 {formatPracticedAt(h.practicedAt)} {h.level ? `· ${h.level}` : ""} {h.purpose ? `· ${h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}` : ""}</p>
+                  </button>
+                ))}
+                <Pagination page={historyPagination.page} totalPages={historyPagination.totalPages} totalItems={historyPagination.totalItems} pageSize={10} onPageChange={historyPagination.setPage} />
+              </>
             )}
           </div>
         )}

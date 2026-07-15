@@ -7,6 +7,8 @@ import CalendarComponent from "@/components/calendar/CalendarComponent";
 import InstallPWAButton from "@/components/InstallPWAButton";
 import Swal from 'sweetalert2';
 import confetti from "canvas-confetti";
+import { usePagination } from "@/lib/usePagination";
+import Pagination from "@/components/Pagination";
 
 export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState("OVERVIEW");
@@ -349,6 +351,26 @@ export default function StudentDashboard() {
     if (attempts > 0 && attempts < maxAttempts && maxScore < 7) return true;
     return false;
   });
+
+  // ── List pagination: filter over the full source list first, then paginate the result ──
+  const LIST_PAGE_SIZE = 12;
+  const filteredLessons = lessonClassFilter ? lessons.filter((l: any) => l.classroomId === lessonClassFilter) : lessons;
+  const lessonsPagination = usePagination(filteredLessons, LIST_PAGE_SIZE, lessonClassFilter);
+
+  const practiceAssignments = user?.assignedExams?.filter((e: any) => e.examType === 'ASSIGNMENT' || e.examType === 'REGULAR') || [];
+  const practicePagination = usePagination(practiceAssignments, LIST_PAGE_SIZE);
+
+  const examTests = user?.assignedExams?.filter((e: any) => e.examType === 'EXAM' || e.examType === 'PLACEMENT') || [];
+  const examsPagination = usePagination(examTests, LIST_PAGE_SIZE);
+
+  const filteredDocuments = documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase()));
+  const documentsPagination = usePagination(filteredDocuments, LIST_PAGE_SIZE, searchDocQuery);
+
+  const notebooksSorted = [...(user?.notebooks || [])];
+  const notebooksPagination = usePagination(notebooksSorted, LIST_PAGE_SIZE);
+
+  const leaderboardRest = leaderboardData.slice(3);
+  const leaderboardPagination = usePagination(leaderboardRest, 15, leaderboardFilter);
 
   // ── Auto-generated learning insights (rule-based, computed from live profile/history/skill data) ──
   const studentInsights: StudentInsight[] = (() => {
@@ -848,7 +870,6 @@ export default function StudentDashboard() {
               )}
             </div>
             {(() => {
-              const filteredLessons = lessonClassFilter ? lessons.filter((l: any) => l.classroomId === lessonClassFilter) : lessons;
               return filteredLessons.length === 0 ? (
               <div className="bg-white border border-gray-100 p-12 flex flex-col justify-center items-center text-center">
                 <div className="w-20 h-20 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center mb-6">
@@ -858,8 +879,9 @@ export default function StudentDashboard() {
                 <p className="text-slate-400 max-w-md">Hiện tại lớp của bạn chưa có bài học mới.</p>
               </div>
             ) : (
+              <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredLessons.map(lesson => {
+                {lessonsPagination.pageItems.map(lesson => {
                   const progress = lesson.progress?.find((p: any) => p.userId === user?.id);
                   const isCompleted = progress?.status === 'COMPLETED';
                   return (
@@ -885,6 +907,8 @@ export default function StudentDashboard() {
                   );
                 })}
               </div>
+              <Pagination page={lessonsPagination.page} totalPages={lessonsPagination.totalPages} totalItems={lessonsPagination.totalItems} pageSize={LIST_PAGE_SIZE} onPageChange={lessonsPagination.setPage} />
+              </div>
               );
             })()}
           </div>
@@ -896,8 +920,7 @@ export default function StudentDashboard() {
             <h1 className="text-3xl font-bold mb-6">Bài Tập Về Nhà</h1>
             
             {(() => {
-              const assignments = user?.assignedExams?.filter((e: any) => e.examType === 'ASSIGNMENT' || e.examType === 'REGULAR') || [];
-              if (assignments.length === 0) return (
+              if (practiceAssignments.length === 0) return (
                 <div className="bg-white border border-gray-100 p-12 flex flex-col justify-center items-center text-center">
                   <div className="w-20 h-20 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center mb-6">
                     <span className="text-3xl">📝</span>
@@ -906,10 +929,10 @@ export default function StudentDashboard() {
                   <p className="text-slate-400 max-w-md">Hiện tại bạn chưa được giao bài tập về nhà. Hãy quay lại sau nhé!</p>
                 </div>
               );
-              
+
               return (
                 <div className="space-y-4">
-                  {assignments.map((e: any) => (
+                  {practicePagination.pageItems.map((e: any) => (
                     <div key={e.id} className="bg-white rounded-xl border border-gray-100 p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-blue-200 hover:shadow-md transition-all shadow-sm">
                       <div className="flex items-center gap-4 w-full">
                         <div className="w-12 h-12 shrink-0 bg-primary/10 text-primary flex items-center justify-center text-2xl">
@@ -938,6 +961,7 @@ export default function StudentDashboard() {
                       })()}
                     </div>
                   ))}
+                  <Pagination page={practicePagination.page} totalPages={practicePagination.totalPages} totalItems={practicePagination.totalItems} pageSize={LIST_PAGE_SIZE} onPageChange={practicePagination.setPage} />
                 </div>
               );
             })()}
@@ -950,8 +974,7 @@ export default function StudentDashboard() {
             <h1 className="text-3xl font-bold mb-6">Bài Kiểm Tra (Exams)</h1>
             
             {(() => {
-              const tests = user?.assignedExams?.filter((e: any) => e.examType === 'EXAM' || e.examType === 'PLACEMENT') || [];
-              if (tests.length === 0) return (
+              if (examTests.length === 0) return (
                 <div className="bg-white border border-gray-100 p-12 flex flex-col justify-center items-center text-center">
                   <div className="w-20 h-20 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mb-6">
                     <span className="text-3xl">⏰</span>
@@ -960,10 +983,10 @@ export default function StudentDashboard() {
                   <p className="text-slate-400 max-w-md">Chưa có bài thi nào sắp diễn ra hoặc đã hoàn thành. Chăm chỉ luyện tập chờ kỳ thi tiếp theo nhé!</p>
                 </div>
               );
-              
+
               return (
                 <div className="space-y-4">
-                  {tests.map((e: any) => (
+                  {examsPagination.pageItems.map((e: any) => (
                     <div key={e.id} className="bg-white rounded-xl border border-gray-100 p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:border-rose-200 hover:shadow-md transition-all shadow-sm">
                       <div className="flex items-center gap-4 w-full">
                         <div className="w-12 h-12 shrink-0 bg-rose-500/10 text-rose-500 flex items-center justify-center text-2xl">
@@ -998,6 +1021,7 @@ export default function StudentDashboard() {
                       })()}
                     </div>
                   ))}
+                  <Pagination page={examsPagination.page} totalPages={examsPagination.totalPages} totalItems={examsPagination.totalItems} pageSize={LIST_PAGE_SIZE} onPageChange={examsPagination.setPage} />
                 </div>
               );
             })()}
@@ -1018,8 +1042,8 @@ export default function StudentDashboard() {
                />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).length === 0 && <div className="text-slate-400 italic col-span-full">Không tìm thấy tài liệu phù hợp</div>}
-              {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).map((doc: any) => (
+              {filteredDocuments.length === 0 && <div className="text-slate-400 italic col-span-full">Không tìm thấy tài liệu phù hợp</div>}
+              {documentsPagination.pageItems.map((doc: any) => (
                 <div key={doc.id} className="bg-white rounded-xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden shadow-sm">
                   <div className="absolute top-0 right-0 p-3 flex gap-2">
                      <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${doc.visibility === 'PUBLIC' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'}`}>
@@ -1063,6 +1087,7 @@ export default function StudentDashboard() {
                 </div>
               ))}
             </div>
+            <Pagination page={documentsPagination.page} totalPages={documentsPagination.totalPages} totalItems={documentsPagination.totalItems} pageSize={LIST_PAGE_SIZE} onPageChange={documentsPagination.setPage} />
           </div>
         )}
 
@@ -1164,7 +1189,7 @@ export default function StudentDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {user.notebooks.map((nb: any) => (
+                  {notebooksPagination.pageItems.map((nb: any) => (
                     <div key={nb.id} className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:border-amber-200 hover:shadow-md transition-all flex flex-col h-full">
                       <div className="flex justify-between items-start mb-2">
                         <h3 className="font-bold text-lg text-amber-600 line-clamp-2 pr-4">{nb.topic}</h3>
@@ -1185,6 +1210,7 @@ export default function StudentDashboard() {
                     </div>
                   ))}
                 </div>
+                <Pagination page={notebooksPagination.page} totalPages={notebooksPagination.totalPages} totalItems={notebooksPagination.totalItems} pageSize={LIST_PAGE_SIZE} onPageChange={notebooksPagination.setPage} />
               </div>
             ) : (
               <div className="bg-white border border-gray-100 p-12 flex flex-col justify-center items-center text-center">
@@ -1278,7 +1304,7 @@ export default function StudentDashboard() {
               <div className="text-center p-12 bg-white border border-gray-100 text-slate-400">Chưa có dữ liệu xếp hạng.</div>
             ) : (
               <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-                {leaderboardData.slice(3).map((u, idx) => (
+                {leaderboardPagination.pageItems.map((u, idx) => (
                   <div key={u.id} className={`flex items-center p-4 border-b border-gray-50 last:border-0 hover:bg-slate-50 transition-colors ${u.id === user?.id ? 'bg-primary/5 border-l-4 border-l-primary' : ''}`}>
                     <div className="w-12 text-center font-bold text-slate-400">#{u.rank}</div>
                     <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden mr-4 shrink-0 font-bold text-sm">
@@ -1291,9 +1317,12 @@ export default function StudentDashboard() {
                     <div className="font-black text-amber-500 text-sm sm:text-base">{u.totalXP} <span className="text-xs text-slate-400 font-normal">XP</span></div>
                   </div>
                 ))}
+                <div className="p-4 border-t border-gray-100">
+                  <Pagination page={leaderboardPagination.page} totalPages={leaderboardPagination.totalPages} totalItems={leaderboardPagination.totalItems} pageSize={15} onPageChange={leaderboardPagination.setPage} />
+                </div>
               </div>
             )}
-            
+
             {/* Current User Fixed Bottom Bar */}
             {leaderboardCurrentUser && (
               <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-3xl bg-white/90 backdrop-blur-xl border-2 border-primary/50 shadow-[0_10px_40px_-10px_rgba(79,70,229,0.5)] p-4 flex items-center z-50 animate-in slide-in-from-bottom-10">

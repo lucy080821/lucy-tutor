@@ -9,6 +9,8 @@ import { logSkillProgress } from "@/lib/skillProgress";
 import { CEFR_LEVELS, PRACTICE_PURPOSES, CefrLevel, PracticePurpose, formatPracticedAt } from "@/lib/skillPractice";
 import { SkillReportPDF, SkillReportRubricItem } from "@/components/reports/SkillReportPDF";
 import { exportNodeToPDF } from "@/lib/pdfExport";
+import { usePagination } from "@/lib/usePagination";
+import Pagination from "@/components/Pagination";
 
 interface Feedback {
   overall: string;
@@ -73,6 +75,8 @@ export default function WritingPracticePage() {
 
   const [savedPrompts, setSavedPrompts] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
+  const savedPromptsPagination = usePagination(savedPrompts, 10);
+  const historyPagination = usePagination(history, 10);
   const [viewingHistoryItem, setViewingHistoryItem] = useState<any | null>(null);
 
   const pdfRef = useRef<HTMLDivElement>(null);
@@ -479,24 +483,27 @@ export default function WritingPracticePage() {
             {savedPrompts.length === 0 ? (
               <p className="text-foreground/50 text-sm">Chưa có đề nào được lưu. Khi luyện tập, bấm "Lưu đề để luyện lại sau" để thêm vào đây.</p>
             ) : (
-              savedPrompts.map((sp) => {
-                const { promptEn: en } = parsePromptPair(sp.prompt);
-                return (
-                  <div key={sp.id} className="bg-surface border border-foreground/10 rounded-xl p-4 flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm text-foreground/80 line-clamp-2">{en}</p>
-                      <div className="flex gap-1.5 mt-2">
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{sp.level}</span>
-                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-secondary/10 text-secondary">{sp.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</span>
+              <>
+                {savedPromptsPagination.pageItems.map((sp) => {
+                  const { promptEn: en } = parsePromptPair(sp.prompt);
+                  return (
+                    <div key={sp.id} className="bg-surface border border-foreground/10 rounded-xl p-4 flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-foreground/80 line-clamp-2">{en}</p>
+                        <div className="flex gap-1.5 mt-2">
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{sp.level}</span>
+                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-secondary/10 text-secondary">{sp.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1.5 shrink-0">
+                        <button onClick={() => loadSavedPrompt(sp)} className="text-xs font-bold px-3 py-1.5 bg-primary text-white rounded-lg hover:opacity-90 transition-opacity">Luyện ngay</button>
+                        <button onClick={() => deleteSavedPrompt(sp.id)} className="text-xs font-bold px-3 py-1.5 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500/20 transition-colors">Xóa</button>
                       </div>
                     </div>
-                    <div className="flex flex-col gap-1.5 shrink-0">
-                      <button onClick={() => loadSavedPrompt(sp)} className="text-xs font-bold px-3 py-1.5 bg-primary text-white rounded-lg hover:opacity-90 transition-opacity">Luyện ngay</button>
-                      <button onClick={() => deleteSavedPrompt(sp.id)} className="text-xs font-bold px-3 py-1.5 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500/20 transition-colors">Xóa</button>
-                    </div>
-                  </div>
-                );
-              })
+                  );
+                })}
+                <Pagination page={savedPromptsPagination.page} totalPages={savedPromptsPagination.totalPages} totalItems={savedPromptsPagination.totalItems} pageSize={10} onPageChange={savedPromptsPagination.setPage} />
+              </>
             )}
           </div>
         )}
@@ -507,19 +514,22 @@ export default function WritingPracticePage() {
             {history.length === 0 ? (
               <p className="text-foreground/50 text-sm">Bạn chưa nộp bài viết nào. Bài viết sau khi nhận nhận xét sẽ tự động lưu tại đây.</p>
             ) : (
-              history.map((h) => {
-                const { promptEn: en } = parsePromptPair(h.prompt);
-                return (
-                  <button
-                    key={h.id}
-                    onClick={() => setViewingHistoryItem(h)}
-                    className="w-full text-left bg-surface border border-foreground/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all"
-                  >
-                    <p className="text-sm font-bold text-foreground/80 line-clamp-1">{en}</p>
-                    <p className="text-xs text-foreground/50 mt-1">🕓 {formatPracticedAt(h.practicedAt)} · {h.level} · {h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</p>
-                  </button>
-                );
-              })
+              <>
+                {historyPagination.pageItems.map((h) => {
+                  const { promptEn: en } = parsePromptPair(h.prompt);
+                  return (
+                    <button
+                      key={h.id}
+                      onClick={() => setViewingHistoryItem(h)}
+                      className="w-full text-left bg-surface border border-foreground/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all"
+                    >
+                      <p className="text-sm font-bold text-foreground/80 line-clamp-1">{en}</p>
+                      <p className="text-xs text-foreground/50 mt-1">🕓 {formatPracticedAt(h.practicedAt)} · {h.level} · {h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</p>
+                    </button>
+                  );
+                })}
+                <Pagination page={historyPagination.page} totalPages={historyPagination.totalPages} totalItems={historyPagination.totalItems} pageSize={10} onPageChange={historyPagination.setPage} />
+              </>
             )}
           </div>
         )}

@@ -12,6 +12,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGri
 import dynamic from 'next/dynamic';
 import DOMPurify from 'dompurify';
 import { CEFR_LEVELS, CefrLevel } from '@/lib/skillPractice';
+import { usePagination } from '@/lib/usePagination';
+import Pagination from '@/components/Pagination';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -1525,6 +1527,75 @@ export default function TeacherDashboard() {
   }, { expected: 0, submitted: 0 });
   const completionRate = assignmentCompletion.expected > 0 ? Math.round((assignmentCompletion.submitted / assignmentCompletion.expected) * 100) : null;
 
+  // ── EXAMS tab: filter over the full list, then paginate the filtered result (not the raw list) ──
+  const examDbList = classrooms.flatMap(c => c.exams || []).filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
+  const allExamsRaw = [...examDbList, ...localExams];
+  const allExams = allExamsRaw.filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
+  const examSearchLower = examSearchQuery.trim().toLowerCase();
+  const filteredExams = allExams.filter(e =>
+    (examClassFilter === 'ALL' || e.classroomId === examClassFilter) &&
+    (!examSearchLower || (e.title || '').toLowerCase().includes(examSearchLower))
+  );
+  const sortExamsByDate = (list: any[]) => [...list].sort((a, b) => {
+    const diff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+    return examSortOrder === 'NEWEST' ? diff : -diff;
+  });
+  const examAssignments = sortExamsByDate(filteredExams.filter(e => e.examType === 'ASSIGNMENT' || e.examType === 'REGULAR'));
+  const examTests = sortExamsByDate(filteredExams.filter(e => e.examType === 'EXAM' || e.examType === 'PLACEMENT'));
+  const LIST_PAGE_SIZE = 12;
+  const examAssignmentsPagination = usePagination(examAssignments, LIST_PAGE_SIZE, `${examSearchQuery}|${examClassFilter}|${examSortOrder}`);
+  const examTestsPagination = usePagination(examTests, LIST_PAGE_SIZE, `${examSearchQuery}|${examClassFilter}|${examSortOrder}`);
+
+  // ── LESSONS tab: same filter-then-paginate pattern ──
+  const lessonSearchLower = lessonSearchQuery.trim().toLowerCase();
+  const filteredLessons = localLessons
+    .filter((l: any) => !lessonClassFilter || l.classroomId === lessonClassFilter)
+    .filter((l: any) => !lessonSearchLower || (l.title || '').toLowerCase().includes(lessonSearchLower))
+    .sort((a: any, b: any) => {
+      const diff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      return lessonSortOrder === 'NEWEST' ? diff : -diff;
+    });
+  const lessonsPagination = usePagination(filteredLessons, LIST_PAGE_SIZE, `${lessonSearchQuery}|${lessonClassFilter}|${lessonSortOrder}`);
+
+  // ── STUDENTS tab: filter over the full roster, then paginate ──
+  const filteredStudents = allStudents.filter((s: any) =>
+    s.name.toLowerCase().includes(searchStudentQuery.toLowerCase()) ||
+    s.email.toLowerCase().includes(searchStudentQuery.toLowerCase())
+  );
+  const TABLE_PAGE_SIZE = 15;
+  const studentsPagination = usePagination(filteredStudents, TABLE_PAGE_SIZE, searchStudentQuery);
+
+  // ── DOCUMENTS tab: filter over the full list, then paginate ──
+  const filteredDocuments = documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase()));
+  const documentsPagination = usePagination(filteredDocuments, LIST_PAGE_SIZE, searchDocQuery);
+
+  // ── LISTENING_STUDIO / SPEAKING_TOPICS tabs: no search box, just paginate the raw list ──
+  const listeningClipsPagination = usePagination(listeningClips, LIST_PAGE_SIZE);
+  const speakingTopicsPagination = usePagination(speakingTopics, LIST_PAGE_SIZE);
+
+  // ── CHEAT_CONTROL tab: filter over the full incident list, then paginate ──
+  const cheatFiltered = cheatIncidents.filter(i => {
+    const matchSearch = !cheatSearch || i.studentName.toLowerCase().includes(cheatSearch.toLowerCase()) || i.studentEmail.toLowerCase().includes(cheatSearch.toLowerCase());
+    const matchClass = cheatClassFilter === "ALL" || i.className === cheatClassFilter;
+    return matchSearch && matchClass;
+  });
+  const cheatPagination = usePagination(cheatFiltered, TABLE_PAGE_SIZE, `${cheatSearch}|${cheatClassFilter}`);
+
+  // ── OVERVIEW tab's "Quản Lý Thu Học Phí" table ──
+  const tuitionRows = overviewTuitionData
+    ? [...overviewTuitionData.paidList, ...overviewTuitionData.unpaidList]
+        .filter((r: any) => !showUnpaidOnly || r.paymentStatus !== 'PAID')
+        .sort((a: any, b: any) => (a.paymentStatus === b.paymentStatus ? 0 : a.paymentStatus === 'PAID' ? 1 : -1))
+    : [];
+  const tuitionRowsPagination = usePagination(tuitionRows, TABLE_PAGE_SIZE, showUnpaidOnly);
+
+  // ── ATTENDANCE > REPORT tab's per-classroom tuition table ──
+  const attReportPagination = usePagination(attReport?.report || [], TABLE_PAGE_SIZE, attClassroomId + attMonth);
+
+  // ── LEADERBOARD tab: paginate the list below the top-3 podium ──
+  const leaderboardRest = leaderboardData.slice(3);
+  const leaderboardPagination = usePagination(leaderboardRest, TABLE_PAGE_SIZE, leaderboardFilter);
+
   // ── Business metrics derived from revenue trend & tuition report (for OVERVIEW KPIs + insights) ──
   const revenueThisMonth = revenueTrend && revenueTrend.length > 0 ? revenueTrend[revenueTrend.length - 1] : null;
   const revenuePrevMonth = revenueTrend && revenueTrend.length > 1 ? revenueTrend[revenueTrend.length - 2] : null;
@@ -1906,11 +1977,7 @@ export default function TeacherDashboard() {
                   </div>
 
                   {(() => {
-                    const rows = [...overviewTuitionData.paidList, ...overviewTuitionData.unpaidList]
-                      .filter((r: any) => !showUnpaidOnly || r.paymentStatus !== 'PAID')
-                      .sort((a: any, b: any) => (a.paymentStatus === b.paymentStatus ? 0 : a.paymentStatus === 'PAID' ? 1 : -1));
-
-                    if (rows.length === 0) return <p className="text-slate-400 italic">Không có dữ liệu học phí phù hợp.</p>;
+                    if (tuitionRows.length === 0) return <p className="text-slate-400 italic">Không có dữ liệu học phí phù hợp.</p>;
 
                     return (
                       <div className="overflow-x-auto">
@@ -1925,7 +1992,7 @@ export default function TeacherDashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {rows.map((r: any, i: number) => (
+                            {tuitionRowsPagination.pageItems.map((r: any, i: number) => (
                               <tr key={`${r.classroomId}-${r.user.id}-${i}`} className="border-b border-gray-100 last:border-0 hover:bg-slate-50 transition-colors">
                                 <td className="p-3 font-medium flex items-center gap-3">
                                   <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
@@ -1945,6 +2012,9 @@ export default function TeacherDashboard() {
                             ))}
                           </tbody>
                         </table>
+                        <div className="pt-4">
+                          <Pagination page={tuitionRowsPagination.page} totalPages={tuitionRowsPagination.totalPages} totalItems={tuitionRowsPagination.totalItems} pageSize={TABLE_PAGE_SIZE} onPageChange={tuitionRowsPagination.setPage} />
+                        </div>
                       </div>
                     );
                   })()}
@@ -1984,13 +2054,9 @@ export default function TeacherDashboard() {
               </div>
             </div>
             {(() => {
-              const filteredStudents = allStudents.filter((s: any) => 
-                s.name.toLowerCase().includes(searchStudentQuery.toLowerCase()) || 
-                s.email.toLowerCase().includes(searchStudentQuery.toLowerCase())
-              );
               if (allStudents.length === 0) return <p className="text-slate-400">Chưa có học viên nào tham gia lớp.</p>;
               if (filteredStudents.length === 0) return <p className="text-slate-400">Không tìm thấy học viên phù hợp.</p>;
-              
+
               const getTier = (xp: number) => {
                 const level = Math.floor((1 + Math.sqrt(1 + 4 * xp / 50)) / 2);
                 if (level >= 20) return { name: `Cấp ${level} - 💎 Huyền Thoại`, color: 'text-cyan-600 bg-cyan-500/10 border border-cyan-500/20' };
@@ -2016,7 +2082,7 @@ export default function TeacherDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredStudents.map((s: any) => {
+                      {studentsPagination.pageItems.map((s: any) => {
                         const studentResults = s.examResults || [];
                         const uniqueResults: any[] = Object.values(studentResults.reduce((acc: any, r: any) => {
                           if (!acc[r.examId] || r.score > acc[r.examId].score) acc[r.examId] = r;
@@ -2059,6 +2125,9 @@ export default function TeacherDashboard() {
                       })}
                     </tbody>
                   </table>
+                </div>
+                <div className="p-4 border-t border-gray-100">
+                  <Pagination page={studentsPagination.page} totalPages={studentsPagination.totalPages} totalItems={studentsPagination.totalItems} pageSize={TABLE_PAGE_SIZE} onPageChange={studentsPagination.setPage} />
                 </div>
               </div>
               );
@@ -2116,8 +2185,8 @@ export default function TeacherDashboard() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).length === 0 && <div className="text-slate-400 italic col-span-full">Không tìm thấy tài liệu phù hợp</div>}
-              {documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase())).map((doc: any) => (
+              {filteredDocuments.length === 0 && <div className="text-slate-400 italic col-span-full">Không tìm thấy tài liệu phù hợp</div>}
+              {documentsPagination.pageItems.map((doc: any) => (
                 <div key={doc.id} className="bg-white rounded-xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all flex flex-col justify-between group relative overflow-hidden shadow-sm">
                   <div className="absolute top-0 right-0 p-3 flex gap-2 z-10">
                      <button onClick={() => handleUpdateDocumentVisibility(doc)} className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase hover:opacity-80 cursor-pointer transition-opacity ${doc.visibility === 'PUBLIC' ? 'bg-green-500/10 text-green-500' : doc.visibility === 'CLASS' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`} title="Nhấn để đổi trạng thái">
@@ -2162,6 +2231,7 @@ export default function TeacherDashboard() {
                 </div>
               ))}
             </div>
+            <Pagination page={documentsPagination.page} totalPages={documentsPagination.totalPages} totalItems={documentsPagination.totalItems} pageSize={LIST_PAGE_SIZE} onPageChange={documentsPagination.setPage} />
           </div>
         )}
 
@@ -2250,7 +2320,7 @@ export default function TeacherDashboard() {
             <h2 className="text-xl font-bold mb-4">Danh sách audio đã tải</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {listeningClips.length === 0 && <div className="text-slate-400 italic col-span-full">Chưa có audio nào</div>}
-              {listeningClips.map((clip: any) => (
+              {listeningClipsPagination.pageItems.map((clip: any) => (
                 <div key={clip.id} className="bg-white rounded-xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all flex flex-col justify-between group relative shadow-sm">
                   <div className="absolute top-3 right-3">
                     <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${clip.status === 'READY' ? 'bg-green-500/10 text-green-600' : clip.status === 'FAILED' ? 'bg-red-500/10 text-red-600' : 'bg-amber-500/10 text-amber-600'}`}>
@@ -2276,6 +2346,7 @@ export default function TeacherDashboard() {
                 </div>
               ))}
             </div>
+            <Pagination page={listeningClipsPagination.page} totalPages={listeningClipsPagination.totalPages} totalItems={listeningClipsPagination.totalItems} pageSize={LIST_PAGE_SIZE} onPageChange={listeningClipsPagination.setPage} />
           </div>
         )}
 
@@ -2359,7 +2430,7 @@ export default function TeacherDashboard() {
             <h2 className="text-xl font-bold mb-4">Danh sách chủ đề đã tạo</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {speakingTopics.length === 0 && <div className="text-slate-400 italic col-span-full">Chưa có chủ đề nào</div>}
-              {speakingTopics.map((topic: any) => (
+              {speakingTopicsPagination.pageItems.map((topic: any) => (
                 <div key={topic.id} className="bg-white rounded-xl p-6 border border-gray-100 hover:border-blue-200 hover:shadow-md transition-all flex flex-col justify-between group relative shadow-sm">
                   <div>
                     <h3 className="font-bold text-lg line-clamp-2 mb-1" title={topic.title}>{topic.title}</h3>
@@ -2375,6 +2446,7 @@ export default function TeacherDashboard() {
                 </div>
               ))}
             </div>
+            <Pagination page={speakingTopicsPagination.page} totalPages={speakingTopicsPagination.totalPages} totalItems={speakingTopicsPagination.totalItems} pageSize={LIST_PAGE_SIZE} onPageChange={speakingTopicsPagination.setPage} />
           </div>
         )}
 
@@ -2562,7 +2634,7 @@ export default function TeacherDashboard() {
                             </tr>
                           </thead>
                           <tbody>
-                            {attReport.report?.map((sr: any) => (
+                            {attReportPagination.pageItems.map((sr: any) => (
                               <tr key={sr.user.id} className="border-b border-gray-100 last:border-0 hover:bg-slate-50">
                                 <td className="p-4 font-medium">{sr.user.name}</td>
                                 <td className="p-4">{sr.presentCount} buổi</td>
@@ -2597,6 +2669,9 @@ export default function TeacherDashboard() {
                             ))}
                           </tbody>
                         </table>
+                        <div className="pt-4">
+                          <Pagination page={attReportPagination.page} totalPages={attReportPagination.totalPages} totalItems={attReportPagination.totalItems} pageSize={TABLE_PAGE_SIZE} onPageChange={attReportPagination.setPage} />
+                        </div>
                       </div>
                     ) : (
                       <p className="text-center text-slate-400 py-8">Đang tải báo cáo...</p>
@@ -2625,11 +2700,7 @@ export default function TeacherDashboard() {
         {/* ── CHEAT_CONTROL ── */}
         {activeTab === "CHEAT_CONTROL" && (() => {
           const allClasses = Array.from(new Set(cheatIncidents.map(i => i.className))).sort();
-          const filtered = cheatIncidents.filter(i => {
-            const matchSearch = !cheatSearch || i.studentName.toLowerCase().includes(cheatSearch.toLowerCase()) || i.studentEmail.toLowerCase().includes(cheatSearch.toLowerCase());
-            const matchClass = cheatClassFilter === "ALL" || i.className === cheatClassFilter;
-            return matchSearch && matchClass;
-          });
+          const filtered = cheatFiltered;
           const totalViolations = cheatIncidents.reduce((s, i) => s + i.cheatCount, 0);
           const autoSubmittedCount = cheatIncidents.filter(i => i.autoSubmitted).length;
           const uniqueStudents = new Set(cheatIncidents.map(i => i.studentEmail || i.studentName)).size;
@@ -2637,9 +2708,12 @@ export default function TeacherDashboard() {
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {/* Header */}
               <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold text-rose-600 flex items-center gap-2">
-                  ⚠️ Kiểm Soát Gian Lận
-                </h1>
+                <div>
+                  <h1 className="text-3xl font-bold text-rose-600 flex items-center gap-2">
+                    ⚠️ Kiểm Soát Gian Lận
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">Tự động cập nhật mỗi 30 giây</p>
+                </div>
                 <button
                   onClick={() => user && fetchCheatLogs(user.id)}
                   className="flex items-center gap-2 text-sm px-4 py-2 border border-gray-200 bg-white rounded-lg hover:bg-slate-50 transition-colors font-medium"
@@ -2716,7 +2790,7 @@ export default function TeacherDashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-foreground/5">
-                        {filtered.map((incident: any) => {
+                        {cheatPagination.pageItems.map((incident: any) => {
                           const severity = incident.cheatCount >= 3 ? "high" : incident.cheatCount === 2 ? "mid" : "low";
                           return (
                             <tr key={incident.id} className={`hover:bg-slate-50 transition-colors ${severity === "high" ? "bg-rose-50/50" : ""}`}>
@@ -2763,9 +2837,8 @@ export default function TeacherDashboard() {
                         })}
                       </tbody>
                     </table>
-                    <div className="px-5 py-3 border-t border-gray-100 text-xs text-slate-400 flex justify-between items-center bg-slate-50">
-                      <span>Hiển thị {filtered.length}/{cheatIncidents.length} vi phạm</span>
-                      <span>Tự động cập nhật mỗi 30 giây</span>
+                    <div className="px-5 py-3 border-t border-gray-100 bg-slate-50">
+                      <Pagination page={cheatPagination.page} totalPages={cheatPagination.totalPages} totalItems={cheatPagination.totalItems} pageSize={TABLE_PAGE_SIZE} onPageChange={cheatPagination.setPage} />
                     </div>
                   </div>
                 )}
@@ -2811,33 +2884,23 @@ export default function TeacherDashboard() {
               </select>
             </div>
 
-            {(() => {
-              const q = lessonSearchQuery.trim().toLowerCase();
-              const filteredLessons = localLessons
-                .filter((l: any) => !lessonClassFilter || l.classroomId === lessonClassFilter)
-                .filter((l: any) => !q || (l.title || '').toLowerCase().includes(q))
-                .sort((a: any, b: any) => {
-                  const diff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-                  return lessonSortOrder === 'NEWEST' ? diff : -diff;
-                });
-              if (localLessons.length === 0) return (
-                <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
-                  <span className="text-5xl mb-4">📚</span>
-                  <h2 className="text-2xl font-bold mb-2">Chưa có bài học nào</h2>
-                  <p className="text-slate-400 mb-6">Bắt đầu bằng cách tạo bài học mới</p>
-                  <button onClick={() => setActiveTab('CREATE_LESSON')} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Ngay</button>
-                </div>
-              );
-              if (filteredLessons.length === 0) return (
-                <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
-                  <span className="text-5xl mb-4">🔍</span>
-                  <h2 className="text-xl font-bold mb-2">Không tìm thấy bài học phù hợp</h2>
-                  <p className="text-slate-400">Thử đổi từ khóa tìm kiếm hoặc bộ lọc lớp học</p>
-                </div>
-              );
-              return (
+            {localLessons.length === 0 ? (
+              <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
+                <span className="text-5xl mb-4">📚</span>
+                <h2 className="text-2xl font-bold mb-2">Chưa có bài học nào</h2>
+                <p className="text-slate-400 mb-6">Bắt đầu bằng cách tạo bài học mới</p>
+                <button onClick={() => setActiveTab('CREATE_LESSON')} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Bài Học Ngay</button>
+              </div>
+            ) : filteredLessons.length === 0 ? (
+              <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
+                <span className="text-5xl mb-4">🔍</span>
+                <h2 className="text-xl font-bold mb-2">Không tìm thấy bài học phù hợp</h2>
+                <p className="text-slate-400">Thử đổi từ khóa tìm kiếm hoặc bộ lọc lớp học</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                  {filteredLessons.map((lesson: any) => (
+                  {lessonsPagination.pageItems.map((lesson: any) => (
                     <div key={lesson.id} className="bg-white rounded-xl border border-gray-100 p-5 flex flex-col gap-3 hover:shadow-md hover:border-blue-100 transition-all shadow-sm h-full">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
@@ -2862,8 +2925,9 @@ export default function TeacherDashboard() {
                     </div>
                   ))}
                 </div>
-              );
-            })()}
+                <Pagination page={lessonsPagination.page} totalPages={lessonsPagination.totalPages} totalItems={lessonsPagination.totalItems} pageSize={LIST_PAGE_SIZE} onPageChange={lessonsPagination.setPage} />
+              </div>
+            )}
           </div>
         )}
 
@@ -3014,73 +3078,57 @@ export default function TeacherDashboard() {
               </select>
             </div>
 
-            {(() => {
-              const dbExams = classrooms.flatMap(c => c.exams || []).filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
-              const allExamsRaw = [...dbExams, ...localExams];
-              const allExams = allExamsRaw.filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
-              const q = examSearchQuery.trim().toLowerCase();
-              const filteredExams = allExams.filter(e =>
-                (examClassFilter === 'ALL' || e.classroomId === examClassFilter) &&
-                (!q || (e.title || '').toLowerCase().includes(q))
-              );
-              const sortByDate = (list: any[]) => [...list].sort((a, b) => {
-                const diff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-                return examSortOrder === 'NEWEST' ? diff : -diff;
-              });
-              const assignments = sortByDate(filteredExams.filter(e => e.examType === 'ASSIGNMENT' || e.examType === 'REGULAR'));
-              const tests = sortByDate(filteredExams.filter(e => e.examType === 'EXAM' || e.examType === 'PLACEMENT'));
-              if (allExams.length === 0) return (
-                <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
-                  <span className="text-5xl mb-4">📄</span>
-                  <h2 className="text-2xl font-bold mb-2">Chưa có đề thi nào</h2>
-                  <p className="text-slate-400 mb-6">Bắt đầu bằng cách tạo đề thủ công</p>
-                  <button onClick={() => setActiveTab('CREATE')} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Đề Ngay</button>
-                </div>
-              );
-              if (filteredExams.length === 0) return (
-                <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
-                  <span className="text-5xl mb-4">🔍</span>
-                  <h2 className="text-xl font-bold mb-2">Không tìm thấy đề thi phù hợp</h2>
-                  <p className="text-slate-400">Thử đổi từ khóa tìm kiếm hoặc bộ lọc lớp học</p>
-                </div>
-              );
-              return (
-                <div className="space-y-8">
-                  {assignments.length > 0 && (
-                    <div>
-                      <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><span className="text-blue-500">📘</span> Bài Tập Về Nhà</h2>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {assignments.map((exam: any) => (
-                          <ExamCard key={exam.id} exam={exam} title={exam.title} type="Bài tập"
-                            detail={classrooms.find((c: any) => c.id === exam.classroomId)?.name || 'N/A'}
-                            questions={exam.totalQuestions}
-                            onClick={() => { setSelectedExamForView(exam); setExamViewTab('QUESTIONS'); }}
-                            onEdit={() => setEditExam({ ...exam, publishTime: exam.publishTime ? new Date(exam.publishTime).toISOString().slice(0, 16) : '', deadline: exam.deadline ? new Date(exam.deadline).toISOString().slice(0, 16) : '' })}
-                            onDelete={() => handleDeleteExam(exam.id)}
-                            onDuplicate={() => handleDuplicateExam(exam)} />
-                        ))}
-                      </div>
+            {allExams.length === 0 ? (
+              <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
+                <span className="text-5xl mb-4">📄</span>
+                <h2 className="text-2xl font-bold mb-2">Chưa có đề thi nào</h2>
+                <p className="text-slate-400 mb-6">Bắt đầu bằng cách tạo đề thủ công</p>
+                <button onClick={() => setActiveTab('CREATE')} className="px-6 py-3 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer">✏️ Tạo Đề Ngay</button>
+              </div>
+            ) : filteredExams.length === 0 ? (
+              <div className="bg-white rounded-xl border border-gray-100 p-12 flex flex-col items-center text-center shadow-sm">
+                <span className="text-5xl mb-4">🔍</span>
+                <h2 className="text-xl font-bold mb-2">Không tìm thấy đề thi phù hợp</h2>
+                <p className="text-slate-400">Thử đổi từ khóa tìm kiếm hoặc bộ lọc lớp học</p>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {examAssignments.length > 0 && (
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-bold flex items-center gap-2"><span className="text-blue-500">📘</span> Bài Tập Về Nhà</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {examAssignmentsPagination.pageItems.map((exam: any) => (
+                        <ExamCard key={exam.id} exam={exam} title={exam.title} type="Bài tập"
+                          detail={classrooms.find((c: any) => c.id === exam.classroomId)?.name || 'N/A'}
+                          questions={exam.totalQuestions}
+                          onClick={() => { setSelectedExamForView(exam); setExamViewTab('QUESTIONS'); }}
+                          onEdit={() => setEditExam({ ...exam, publishTime: exam.publishTime ? new Date(exam.publishTime).toISOString().slice(0, 16) : '', deadline: exam.deadline ? new Date(exam.deadline).toISOString().slice(0, 16) : '' })}
+                          onDelete={() => handleDeleteExam(exam.id)}
+                          onDuplicate={() => handleDuplicateExam(exam)} />
+                      ))}
                     </div>
-                  )}
-                  {tests.length > 0 && (
-                    <div>
-                      <h2 className="text-xl font-bold mb-4 flex items-center gap-2"><span className="text-rose-500">🏆</span> Đề Thi Thử / Đánh Giá</h2>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {tests.map((exam: any) => (
-                          <ExamCard key={exam.id} exam={exam} title={exam.title} type="Đề thi"
-                            detail={classrooms.find((c: any) => c.id === exam.classroomId)?.name || 'N/A'}
-                            questions={exam.totalQuestions}
-                            onClick={() => { setSelectedExamForView(exam); setExamViewTab('QUESTIONS'); }}
-                            onEdit={() => setEditExam({ ...exam, publishTime: exam.publishTime ? new Date(exam.publishTime).toISOString().slice(0, 16) : '', deadline: exam.deadline ? new Date(exam.deadline).toISOString().slice(0, 16) : '' })}
-                            onDelete={() => handleDeleteExam(exam.id)}
-                            onDuplicate={() => handleDuplicateExam(exam)} />
-                        ))}
-                      </div>
+                    <Pagination page={examAssignmentsPagination.page} totalPages={examAssignmentsPagination.totalPages} totalItems={examAssignmentsPagination.totalItems} pageSize={LIST_PAGE_SIZE} onPageChange={examAssignmentsPagination.setPage} />
+                  </div>
+                )}
+                {examTests.length > 0 && (
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-bold flex items-center gap-2"><span className="text-rose-500">🏆</span> Đề Thi Thử / Đánh Giá</h2>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {examTestsPagination.pageItems.map((exam: any) => (
+                        <ExamCard key={exam.id} exam={exam} title={exam.title} type="Đề thi"
+                          detail={classrooms.find((c: any) => c.id === exam.classroomId)?.name || 'N/A'}
+                          questions={exam.totalQuestions}
+                          onClick={() => { setSelectedExamForView(exam); setExamViewTab('QUESTIONS'); }}
+                          onEdit={() => setEditExam({ ...exam, publishTime: exam.publishTime ? new Date(exam.publishTime).toISOString().slice(0, 16) : '', deadline: exam.deadline ? new Date(exam.deadline).toISOString().slice(0, 16) : '' })}
+                          onDelete={() => handleDeleteExam(exam.id)}
+                          onDuplicate={() => handleDuplicateExam(exam)} />
+                      ))}
                     </div>
-                  )}
-                </div>
-              );
-            })()}
+                    <Pagination page={examTestsPagination.page} totalPages={examTestsPagination.totalPages} totalItems={examTestsPagination.totalItems} pageSize={LIST_PAGE_SIZE} onPageChange={examTestsPagination.setPage} />
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -3465,7 +3513,7 @@ export default function TeacherDashboard() {
               <div className="text-center p-12 bg-white rounded-xl border border-gray-100 text-slate-400 shadow-sm">Chưa có dữ liệu xếp hạng.</div>
             ) : (
               <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
-                {leaderboardData.slice(3).map((u, idx) => (
+                {leaderboardPagination.pageItems.map((u, idx) => (
                   <div key={u.id} className="flex items-center p-4 border-b border-gray-50 last:border-0 hover:bg-slate-50 transition-colors">
                     <div className="w-12 text-center font-bold text-slate-400">#{u.rank}</div>
                     <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden mr-4 shrink-0 font-bold text-sm">
@@ -3478,9 +3526,12 @@ export default function TeacherDashboard() {
                     <div className="font-black text-amber-500 text-sm sm:text-base">{u.totalXP} <span className="text-xs text-slate-400 font-normal">XP</span></div>
                   </div>
                 ))}
+                <div className="p-4 border-t border-gray-100">
+                  <Pagination page={leaderboardPagination.page} totalPages={leaderboardPagination.totalPages} totalItems={leaderboardPagination.totalItems} pageSize={TABLE_PAGE_SIZE} onPageChange={leaderboardPagination.setPage} />
+                </div>
               </div>
             )}
-            
+
           </div>
         )}
 

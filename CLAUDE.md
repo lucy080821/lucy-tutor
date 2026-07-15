@@ -310,6 +310,11 @@ Cho phép học sinh cài app lên điện thoại (Add to Home Screen):
 | `TuitionInvoice` | [frontend/src/components/tuition/TuitionInvoice.tsx](frontend/src/components/tuition/TuitionInvoice.tsx) | Template hóa đơn học phí xuất PDF |
 | `PWARegister` | [frontend/src/components/PWARegister.tsx](frontend/src/components/PWARegister.tsx) | Đăng ký service worker (`/sw.js`), mount trong `layout.tsx`, chỉ chạy ở production |
 | `InstallPWAButton` | [frontend/src/components/InstallPWAButton.tsx](frontend/src/components/InstallPWAButton.tsx) | Nút "Cài Đặt Ứng Dụng" dùng sự kiện `beforeinstallprompt`; hiện hướng dẫn thủ công trên iOS |
+| `Pagination` | [frontend/src/components/Pagination.tsx](frontend/src/components/Pagination.tsx) | Thanh phân trang dùng chung (nút Trước/Sau + số trang + "Hiển thị X-Y / Z"), style bằng token `text-foreground`/`bg-foreground` nên dùng được cả ở trang học sinh (dark-mode-aware) lẫn trang giáo viên |
+
+**Phân trang danh sách:** mọi danh sách dài (Ngân Hàng Đề Thi/Bài Học, Học Viên, Kho Tài Liệu, Kiểm Soát Gian Lận, Studio Luyện Nghe, Chủ Đề Hội Thoại, Báo Cáo Học Phí, Bảng Xếp Hạng ở cả 2 dashboard, và lịch sử luyện tập Reading/Writing/Speaking/Listening) dùng chung hook [frontend/src/lib/usePagination.ts](frontend/src/lib/usePagination.ts) (`usePagination(items, pageSize, resetKey?)`). Nguyên tắc bắt buộc: **luôn filter/search trên toàn bộ danh sách gốc trước, rồi mới đưa kết quả đã lọc vào `usePagination`** — không bao giờ filter sau khi đã cắt trang, để tìm kiếm/lọc luôn khớp trên cả danh sách chứ không chỉ trang hiện tại. `resetKey` (thường là chuỗi ghép các giá trị search/filter) khiến trang tự nhảy về 1 khi điều kiện lọc đổi, tránh đứng ở trang cũ trống dữ liệu.
+
+⚠️ Vì `usePagination` gọi hook React (`useState`/`useEffect`), nó **phải được gọi ở top-level của component**, không được gọi bên trong một hàm IIFE `(() => {...})()` lồng trong JSX (vi phạm rules of hooks). Cách làm trong `teacher/page.tsx` và `dashboard/page.tsx`: tính toán mảng đã lọc (`filteredExams`, `filteredStudents`,...) và gọi `usePagination` ngay ở thân component (cạnh các biến dẫn xuất khác), rồi bên trong JSX/IIFE chỉ tham chiếu `.pageItems` để render.
 
 ---
 
