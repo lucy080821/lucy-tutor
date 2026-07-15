@@ -183,6 +183,8 @@ Module luyện tập ngữ pháp theo chuyên đề, tích hợp SRS (Spaced Rep
 
   Điều kiện kết hợp `status` + `repetitions` (thay vì chỉ `status`) để tránh việc một từ vừa đúng lần đầu (đã nhảy sang `REVIEWING` ngay do SM-2) đã bị ép gõ ngay khi chưa kịp quen mặt chữ.
 
+- **Thanh tiến độ khi ôn tập**: `sessionTotal` chốt lại tổng số thẻ ngay khi vào tab Ôn Tập, thanh tiến độ tính `% = (sessionTotal - dueVocabs.length) / sessionTotal` (thẻ trả lời sai bị đẩy xuống cuối hàng đợi để ôn lại nên không tính là đã hoàn thành). Dòng chữ hiển thị "Thẻ X/Y · Còn lại N thẻ" để học sinh biết cả vị trí hiện tại lẫn số thẻ còn lại.
+
 ---
 
 ### Hạ tầng dùng chung cho 4 kỹ năng (Reading/Writing/Speaking/Listening)

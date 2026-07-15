@@ -18,6 +18,7 @@ export default function GymPage() {
   // Practice state
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const [sessionTotal, setSessionTotal] = useState(0);
 
   // Typed-answer mode state
   const [typedAnswer, setTypedAnswer] = useState('');
@@ -35,6 +36,14 @@ export default function GymPage() {
     setUserId(uid);
     fetchData(uid);
   }, [router]);
+
+  // Capture the queue size at the moment the student enters a practice session, so the
+  // progress bar can track completion against a fixed total instead of the shrinking queue.
+  useEffect(() => {
+    if (activeTab === 'PRACTICE') {
+      setSessionTotal(dueVocabs.length);
+    }
+  }, [activeTab]);
 
   const fetchData = async (uid: string) => {
     setLoading(true);
@@ -282,10 +291,13 @@ export default function GymPage() {
                 <div className="w-full mb-8">
                   <div className="flex justify-between text-xs font-bold text-foreground/50 mb-2">
                     <span>Tiến độ</span>
-                    <span>Còn lại {dueVocabs.length} thẻ</span>
+                    <span>Thẻ {Math.min(sessionTotal - dueVocabs.length + 1, sessionTotal)}/{sessionTotal} · Còn lại {dueVocabs.length} thẻ</span>
                   </div>
                   <div className="h-2 w-full bg-foreground/10 rounded-full overflow-hidden">
-                    <div className="h-full bg-primary transition-all duration-300" style={{ width: '10%' }} /> {/* Just a visual indicator */}
+                    <div
+                      className="h-full bg-primary transition-all duration-300"
+                      style={{ width: `${sessionTotal > 0 ? Math.max(0, Math.min(100, ((sessionTotal - dueVocabs.length) / sessionTotal) * 100)) : 0}%` }}
+                    />
                   </div>
                 </div>
 
