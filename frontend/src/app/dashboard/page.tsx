@@ -9,6 +9,7 @@ import Swal from 'sweetalert2';
 import confetti from "canvas-confetti";
 import { usePagination } from "@/lib/usePagination";
 import Pagination from "@/components/Pagination";
+import { compressImageToBase64 } from "@/lib/imageCompress";
 
 export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState("OVERVIEW");
@@ -36,27 +37,26 @@ export default function StudentDashboard() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     if (file.size > 100 * 1024 * 1024) return Swal.fire('Lỗi', 'Ảnh quá lớn. Vui lòng chọn ảnh dưới 100MB', 'error');
-    
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64 = e.target?.result as string;
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/auth/avatar/${user.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ avatar: base64 })
-        });
-        if (res.ok) {
-          const updatedUser = await res.json();
-          setUser(updatedUser);
-        } else {
-          Swal.fire('Lỗi', 'Lỗi tải ảnh', 'error');
-        }
-      } catch (err) {
-        console.error('Lỗi tải ảnh:', err);
+
+    try {
+      // Downscaled + re-compressed client-side — a raw phone photo stored as-is would get
+      // re-transferred in full on every page that renders this avatar, even as a tiny icon.
+      const base64 = await compressImageToBase64(file);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/auth/avatar/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatar: base64 })
+      });
+      if (res.ok) {
+        const updatedUser = await res.json();
+        setUser(updatedUser);
+      } else {
+        Swal.fire('Lỗi', 'Lỗi tải ảnh', 'error');
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Lỗi tải ảnh:', err);
+      Swal.fire('Lỗi', 'Không thể xử lý ảnh này', 'error');
+    }
   };
 
   const handleJoinClass = async (e: React.FormEvent) => {

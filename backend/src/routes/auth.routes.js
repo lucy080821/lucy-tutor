@@ -21,10 +21,16 @@ router.post('/signup', async (req, res) => {
 
 router.post('/signin', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || user.password !== password) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+    // One account is locked to the role it registered with — a student picking "Giáo Viên"
+    // (or vice versa) on the login toggle must not be let in under the wrong role.
+    if (role && user.role !== role) {
+      const actualLabel = user.role === 'TEACHER' ? 'Giáo Viên' : 'Học Viên';
+      return res.status(403).json({ error: `Tài khoản này đã đăng ký với vai trò ${actualLabel}. Vui lòng chọn đúng vai trò để đăng nhập.` });
     }
     res.json(user);
   } catch (error) {

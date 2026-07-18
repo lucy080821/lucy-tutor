@@ -56,7 +56,7 @@ function AuthForm() {
     try {
       const endpoint = isLogin ? '/api/auth/signin' : '/api/auth/signup';
       const body = isLogin
-        ? { email, password }
+        ? { email, password, role }
         : { name, email, password, role };
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${endpoint}`, {
@@ -77,7 +77,9 @@ function AuthForm() {
         sessionStorage.setItem('userId', data.id);
       }
 
-      if (role === 'TEACHER') {
+      // Redirect based on the account's actual stored role (server response), not the locally
+      // selected toggle — keeps this consistent with the session-restore effect above.
+      if (data.role === 'TEACHER') {
         window.location.href = '/teacher';
       } else {
         window.location.href = '/dashboard';

@@ -84,7 +84,8 @@ Hiển thị 6 feature card: Mục tiêu & Lộ trình, Sổ Tay Lỗi Sai, Cấ
 - Query param `?role=STUDENT|TEACHER` chọn vai trò mặc định
 - Form toggle giữa **đăng nhập** và **đăng ký**
 - "Nhớ tôi" lưu `userId` vào `localStorage` (mặc định bật), ngược lại dùng `sessionStorage`
-- Sau đăng nhập: TEACHER → `/teacher`, STUDENT → `/dashboard`
+- Sau đăng nhập: TEACHER → `/teacher`, STUDENT → `/dashboard` — điều hướng dựa theo `role` **thật sự trả về từ server** (`data.role`), không phải toggle vai trò người dùng tự chọn trên UI
+- **1 tài khoản bị khoá cứng vào 1 role**: `POST /api/auth/signin` gửi kèm `role` đang chọn trên toggle; backend so khớp với `role` đã lưu trong DB, trả về `403` nếu chọn sai vai trò (vd tài khoản học sinh chọn nhầm "Giáo Viên") — tránh việc 1 email đăng nhập lẫn lộn được cả 2 dashboard. Muốn có cả 2 vai trò phải tạo 2 tài khoản (2 email) riêng, `signup` đã chặn trùng email qua `@unique`
 
 ---
 
@@ -103,7 +104,7 @@ Tabs chính:
 - **CALENDAR** — Lịch học (FullCalendar)
 
 Tính năng nổi bật:
-- Upload avatar (base64, tối đa 100MB)
+- Upload avatar (base64) — ảnh được resize + nén JPEG (tối đa 256px, q=0.85) **client-side qua Canvas** trước khi lưu (xem `compressImageToBase64` trong phần Lưu ý kỹ thuật); giới hạn 100MB chỉ áp dụng cho file gốc trước khi nén
 - Tham gia lớp bằng mã join code
 - Hiển thị confetti khi đạt mốc XP
 - Nút **"Cài Đặt Ứng Dụng"** (`InstallPWAButton`) ở header — cài app lên điện thoại qua PWA (`beforeinstallprompt` trên Android/Desktop, hướng dẫn thủ công cho iOS Safari)
@@ -127,7 +128,10 @@ Tabs chính (điều hướng theo nhóm — xem `navGroups` trong file):
   - Bên dưới vẫn còn **Quản Lý Thu Học Phí** (bảng chi tiết theo tháng, lọc "Tất cả" / "Chỉ chưa đóng")
 - **CLASSES** (Lớp Học) — Quản lý lớp học (tạo/sửa/xóa), xem danh sách học sinh. Nút xóa lớp (`ClassCard` → `onDelete`) hiện khi hover, xác nhận qua SweetAlert2; xóa cascade toàn bộ bài học/đề thi/tài liệu/điểm danh/học phí của lớp đó
 - **STUDENTS** (Học Sinh) — Danh sách toàn bộ học sinh, tìm kiếm theo tên/email, hiển thị cấp bậc/XP, điểm trung bình, tiến độ so với mục tiêu
-- **ATTENDANCE** (Điểm Danh & Học Phí) — 2 view con: "Điểm Danh" (mark theo ngày) và "Báo Cáo Học Phí" (theo từng lớp, xuất hóa đơn PDF/Excel). `POST /api/attendance/mark` nhận cả mảng học viên trong lớp nhưng **bỏ qua các học viên chưa được điểm danh** (`status` null) khi lưu — tránh việc 1 học viên chưa điểm danh làm hỏng lưu của cả lớp (do cột `status` là bắt buộc)
+- **ATTENDANCE** (Điểm Danh & Học Phí) — 2 view con:
+  - **Điểm Danh** — lưới điểm danh trực quan dạng bảng: hàng = toàn bộ học viên (mặc định **tất cả các lớp**, dropdown "Chọn Lớp Học" lọc về 1 lớp cụ thể, `attClassroomId` rỗng = tất cả), cột = **từng ngày trong tháng** đang chọn (`input type="month"`, state `attMonth`) kèm thứ trong tuần (dùng chung map `{0:'CN',1:'T2',...,6:'T7'}` với Calendar). Mỗi ô là nút tick: bấm để chuyển Có mặt (xanh) ↔ Vắng (đỏ), cập nhật lạc quan (optimistic) vào state `attMonthRecords` ngay khi bấm nên cột **"Tổng Buổi" cập nhật real-time**, không cần chờ phản hồi server (rollback + báo lỗi qua SweetAlert2 nếu lưu thất bại). Dữ liệu cả tháng nạp 1 lần qua `GET /api/attendance/month/teacher/:teacherId`, mỗi lần tick chỉ gửi 1 bản ghi tới `POST /api/attendance/mark` (không đổi API này). Cột tên học viên dùng `sticky` khi cuộn ngang; danh sách học viên phân trang bằng `usePagination`. Trạng thái điểm danh giờ chỉ còn nhị phân `PRESENT`/`UNEXCUSED` (bỏ hẳn 2 nút "Vắng có phép"/"Vắng không phép" cũ — trước đây 2 giá trị này ghi sai chuỗi `_ABSENCE` không khớp với backend nên chưa từng được báo cáo học phí tính đúng)
+  - **Báo Cáo Học Phí** — theo từng lớp (bắt buộc chọn 1 lớp cụ thể), xuất hóa đơn PDF/Excel. Nút "Xác nhận đã nộp" cập nhật badge/trạng thái **real-time** bằng cách patch thẳng vào state `attReport` ngay khi API `POST /api/attendance/pay` trả về thành công, không đợi refetch toàn bộ báo cáo
+  - `POST /api/attendance/mark` nhận cả mảng bản ghi (1 hoặc nhiều học viên) nhưng **bỏ qua các bản ghi không có `status`** khi lưu — tránh việc 1 học viên chưa được gửi trạng thái làm hỏng lưu của cả batch (do cột `status` là bắt buộc)
 - **CHEAT_CONTROL** (Kiểm Soát Gian Lận) — xem log gian lận (mất focus tab, copy/paste) theo học sinh/đề thi
 - **CALENDAR** (Thời Khóa Biểu) — Lịch lên lớp (FullCalendar)
 - **LESSONS** (Danh Sách Bài Học) — danh sách bài học đã tạo, dropdown lọc theo lớp (`lessonClassFilter`)
@@ -201,12 +205,12 @@ Module luyện tập ngữ pháp theo chuyên đề, tích hợp SRS (Spaced Rep
 
 Không còn là trang demo tĩnh (3 bài IELTS hardcode) — đã thay hoàn toàn bằng tính năng nghe từ vựng theo ngữ cảnh thật:
 
-- Lấy `dueVocabs` từ SRS (giống `/gym`), ghép với các audio clip giáo viên đã upload có chứa từ đó (`GET /api/listening/queue/:userId`), xếp thành hàng đợi tối đa **10 từ/phiên**. Từ nào chưa có audio khớp thì bị bỏ qua khỏi hàng đợi (không hiện trống)
+- Ghép **toàn bộ từ vựng trong deck SRS của học viên** (không chỉ từ đến hạn — soonest-due được ưu tiên nhưng không bắt buộc, khác `/gym`) với các audio clip giáo viên đã upload có chứa từ đó (`GET /api/listening/queue/:userId`), xếp thành hàng đợi tối đa **10 mục/lần nạp**. Audio nào giáo viên đã gán cho học viên/lớp nhưng không khớp từ nào trong deck của học viên đó vẫn được đưa vào hàng đợi dưới dạng mục **"🎧 Nghe tự do"** (tự chọn 1 từ hợp lý trong script, không có `progressId`, không tính vào lịch ôn SRS) — đảm bảo **mọi audio đã gán luôn truy cập được bất kỳ lúc nào**, không phụ thuộc lịch ôn tập SRS vốn khác nhau theo từng học viên (trước đây cùng 1 audio có thể hiện với học viên này nhưng biến mất với học viên khác)
 - Mỗi từ đi qua **2 giai đoạn** (`phase` state, không cho nhảy cóc):
   1. **Xem & Nghe Từ Trong Câu (EXPLORE)** — hiện nguyên câu chứa từ mục tiêu (không che), từ mục tiêu được bôi đậm/gạch chân và có thể bấm vào để nghe lại; audio tự seek + phát **nguyên câu** (không phải chỉ 1 từ đơn lẻ) rồi tự dừng cuối câu. Có thể chuyển đổi giữa nhiều "Ví dụ" (clip) nếu từ khớp nhiều audio khác nhau
   2. **Kiểm Tra (TEST)** — bấm "Bắt Đầu Kiểm Tra" để chuyển sang; câu vẫn hiện nhưng từ mục tiêu bị che thành gạch chân trống, học sinh gõ lại từ đã nghe (dictation) — tái dùng nguyên bộ chấm điểm ở [frontend/src/lib/textGrading.ts](frontend/src/lib/textGrading.ts) (`cleanString`, `levenshteinDistance`, `getHintMask`, cũng dùng chung với `/gym` và `/grammar-gym`)
   3. Sau khi nộp: hiện đáp án đúng/sai, câu đã test (từ mục tiêu bôi đậm), **và toàn bộ transcript gốc của audio** (từ mục tiêu highlight bằng `highlightWords`, khớp không phân biệt hoa/thường qua word-boundary regex) kèm nút "▶ Nghe Toàn Bộ" phát lại **cả file audio từ đầu** (không chỉ câu vừa test) — dùng `playingFullRef` để bỏ qua auto-pause-cuối-câu khi đang phát toàn bộ
-- Kết quả (quality 1/3/4/5) gọi thẳng `POST /api/srs/review/:progressId` — luyện nghe và ôn từ vựng dùng chung 1 hệ thống SRS, không tách tracking riêng
+- Kết quả (quality 1/3/4/5) gọi thẳng `POST /api/srs/review/:progressId` — luyện nghe và ôn từ vựng dùng chung 1 hệ thống SRS, không tách tracking riêng. Với mục "Nghe tự do" (không có `progressId` thật) thì bỏ qua bước gọi SRS, chỉ log qua `skill-progress` (`source: "LISTENING_FREE"`)
 - **Không chia phiên (session)**: hàng đợi vẫn nạp tối đa 10 từ/lần (`BATCH_SIZE` ở backend), nhưng khi học sinh học hết batch hiện tại, `goNext` tự động gọi lại `GET /api/listening/queue/:userId` và nạp tiếp ngay tại chỗ (hiện spinner ngắn `loadingMore`, không có màn hình "hoàn thành phiên" chặn lại) — học sinh luôn ở trong màn luyện nghe và có thể học liên tục không giới hạn số từ/lượt truy cập. Chỉ khi API trả về mảng rỗng (hết từ đến hạn) mới hiện màn "Chưa có audio để luyện nghe"
 - **Bộ lọc giọng đọc (accent)**: mỗi `ListeningClip` có field `accent` ("UK"/"US"/"AUS") do giáo viên chọn lúc upload. Học sinh lọc hàng đợi theo giọng qua thanh chọn (Tất cả/UK/US/AUS) ở đầu trang `/listening`, truyền `?accent=` cho `GET /api/listening/queue/:userId` (và `GET /api/listening/search`); đổi giọng sẽ refetch lại hàng đợi từ đầu (và reset `sessionLog`)
 - Mỗi `ListeningClip` còn có field `level` (CEFR "A1".."C1", bắt buộc chọn khi giáo viên upload/sửa ở Studio Luyện Nghe) — validate ở backend qua `ALLOWED_LEVELS` trong `listening.routes.js`, dùng làm giá trị mặc định hợp lý khi học viên tạo Đề Luyện Nghe từ clip đó
@@ -347,11 +351,12 @@ Cho phép học sinh cài app lên điện thoại (Add to Home Screen):
 | `GET /api/documents` | Danh sách tài liệu (`?classroomId=`, `?teacherId=`). Upload chấp nhận `.pdf`, `.doc`, `.docx`, `.ppt`, `.pptx` |
 | `GET /api/attendance/report/:classroomId` | Báo cáo học phí theo tháng của 1 lớp |
 | `GET /api/attendance/report/teacher/:teacherId` | Báo cáo học phí tổng hợp TẤT CẢ lớp của giáo viên theo tháng (tổng đã thu, tổng cần thu, danh sách đã đóng/chưa đóng) — dùng cho tab OVERVIEW |
+| `GET /api/attendance/month/teacher/:teacherId` | Điểm danh thô (`classroomId, userId, date, status`) cả tháng của TẤT CẢ lớp một giáo viên — dùng để dựng lưới điểm danh trực quan ở tab ATTENDANCE > Điểm Danh |
 | `GET /api/analytics/...` | Thống kê học tập |
 | `POST /api/ai/...` | AI feedback (Groq) |
 | `POST /api/listening/upload` | Giáo viên upload audio + script (multipart, field `audio`), lưu Supabase Storage bucket `documents` dưới `listening/`, chạy nền Groq Whisper lấy timestamp từng từ |
 | `GET /api/listening?teacherId=` | Danh sách audio đã upload của giáo viên (kèm trạng thái xử lý) |
-| `GET /api/listening/queue/:userId` | Hàng đợi luyện nghe: SRS due-vocab ghép với audio clip khớp, tối đa 10 từ/phiên |
+| `GET /api/listening/queue/:userId` | Hàng đợi luyện nghe: toàn bộ deck SRS ghép với audio clip khớp (không chỉ từ đến hạn) + audio đã gán nhưng không khớp từ nào (mục "Nghe tự do"), tối đa 10 mục/lần nạp |
 | `GET /api/listening/search?userId=&word=` | Tra tự do 1 từ bất kỳ ra các audio clip khớp (không giới hạn theo SRS) |
 | `GET /api/listening/exam/clips/:userId` | Danh sách audio khả dụng để học viên tạo Đề Luyện Nghe |
 | `POST /api/listening/exam/generate` | Sinh câu hỏi luyện nghe (trắc nghiệm/điền từ) từ script gốc của 1 clip, theo `level`/`purpose` |
@@ -372,7 +377,8 @@ Cho phép học sinh cài app lên điện thoại (Add to Home Screen):
 
 - **Next.js 16 có breaking changes** so với v13/14 — đọc `frontend/AGENTS.md` trước khi sửa cấu hình Next
 - `ReactQuill` dùng dynamic import (`ssr: false`) vì không tương thích SSR
-- Avatar lưu dạng base64 string trong DB — không dùng file upload server
+- Avatar lưu dạng base64 string trong DB — không dùng file upload server. **Luôn nén qua [frontend/src/lib/imageCompress.ts](frontend/src/lib/imageCompress.ts) (`compressImageToBase64`, Canvas resize tối đa 256px + JPEG q=0.85) trước khi lưu** — ảnh gốc chưa nén (phone photo) có thể vài–chục MB, từng khiến 1 avatar phình payload của mọi API trả về kèm avatar lên hàng chục MB. Backend **không có** thư viện xử lý ảnh (sharp/ImageMagick) nên không thể tự nén lại ảnh cũ — phải nén ở client lúc upload
+- Khi viết `include`/`select` lồng nhau trả về `user` (vd kết quả bài thi, điểm danh...), **không bao giờ lồng `avatar` vào quan hệ có thể lặp nhiều dòng cho cùng 1 user** (vd `exam.results[].user.avatar`) — mỗi dòng lặp lại sẽ nhân bản nguyên chuỗi base64, từng khiến `GET /api/classroom/teacher/:teacherId` phình từ vài KB thực tế lên 15MB chỉ với 10 user. Nếu cần avatar để hiển thị, lấy từ danh sách `students`/`user` ở cấp cao nhất đã có sẵn, đừng lấy lại qua quan hệ lồng sâu
 - Tất cả modal/alert dùng **SweetAlert2** (`Swal.fire()`), không dùng `window.alert`/`window.confirm`
 - HTML từ ReactQuill phải được sanitize bằng `DOMPurify.sanitize()` trước khi render
 - **Backend có route `POST /api/upload/exam`** (parse Word qua `mammoth`, PDF qua `pdf-parse`, tách câu bằng regex "Câu X:") nhưng **không có giao diện nào gọi tới** — route này hiện chưa được dùng. Cách nhập đề hàng loạt đang hoạt động thật là **Excel** ở tab CREATE (xem phần `/teacher` phía trên)

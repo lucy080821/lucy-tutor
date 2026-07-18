@@ -36,6 +36,39 @@ router.get('/class/:classroomId', async (req, res) => {
   }
 });
 
+// 1b. Điểm danh cả tháng của TẤT CẢ các lớp một giáo viên đang dạy — dùng cho lưới điểm danh
+// trực quan (mỗi hàng 1 học viên, mỗi cột 1 ngày trong tháng) thay vì chỉ xem từng ngày.
+router.get('/month/teacher/:teacherId', async (req, res) => {
+  try {
+    const { teacherId } = req.params;
+    const { month, year } = req.query;
+
+    if (!month || !year) return res.status(400).json({ error: 'Missing month or year' });
+
+    const m = parseInt(month);
+    const y = parseInt(year);
+    const startDate = new Date(y, m - 1, 1);
+    const endDate = new Date(y, m, 1);
+
+    const classroomIds = (await prisma.classroom.findMany({
+      where: { teacherId },
+      select: { id: true }
+    })).map(c => c.id);
+
+    const attendances = classroomIds.length ? await prisma.attendance.findMany({
+      where: {
+        classroomId: { in: classroomIds },
+        date: { gte: startDate, lt: endDate }
+      },
+      select: { classroomId: true, userId: true, date: true, status: true }
+    }) : [];
+
+    res.json(attendances);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // 2. Điểm danh (hoặc cập nhật điểm danh)
 router.post('/mark', async (req, res) => {
   try {

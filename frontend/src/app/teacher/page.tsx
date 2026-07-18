@@ -14,6 +14,7 @@ import DOMPurify from 'dompurify';
 import { CEFR_LEVELS, CefrLevel } from '@/lib/skillPractice';
 import { usePagination } from '@/lib/usePagination';
 import Pagination from '@/components/Pagination';
+import { compressImageToBase64 } from '@/lib/imageCompress';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -67,27 +68,26 @@ export default function TeacherDashboard() {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     if (file.size > 100 * 1024 * 1024) return Swal.fire('Lỗi', 'Ảnh quá lớn. Vui lòng chọn ảnh dưới 100MB', 'error');
-    
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const base64 = e.target?.result as string;
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/auth/avatar/${user.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ avatar: base64 })
-        });
-        if (res.ok) {
-          const updatedUser = await res.json();
-          setUser(updatedUser);
-        } else {
-          Swal.fire('Lỗi', 'Lỗi tải ảnh', 'error');
-        }
-      } catch (err) {
-        console.error('Lỗi tải ảnh:', err);
+
+    try {
+      // Downscaled + re-compressed client-side — a raw phone photo stored as-is would get
+      // re-transferred in full on every page that renders this avatar, even as a tiny icon.
+      const base64 = await compressImageToBase64(file);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/auth/avatar/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatar: base64 })
+      });
+      if (res.ok) {
+        const updatedUser = await res.json();
+        setUser(updatedUser);
+      } else {
+        Swal.fire('Lỗi', 'Lỗi tải ảnh', 'error');
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Lỗi tải ảnh:', err);
+      Swal.fire('Lỗi', 'Không thể xử lý ảnh này', 'error');
+    }
   };
 
   useEffect(() => {
@@ -780,11 +780,12 @@ export default function TeacherDashboard() {
   };
 
   // ── ATTENDANCE & TUITION state ──
-  const [attClassroomId, setAttClassroomId] = useState("");
+  const [attClassroomId, setAttClassroomId] = useState(""); // "" = tất cả các lớp
   const [attView, setAttView] = useState("MARK"); // "MARK" or "REPORT"
-  const [attDate, setAttDate] = useState(new Date().toISOString().split("T")[0]);
   const [attMonth, setAttMonth] = useState(`${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`);
-  const [attRecords, setAttRecords] = useState<any[]>([]); // { userId, status, notes, user }
+  const [attMonthRecords, setAttMonthRecords] = useState<{ classroomId: string; userId: string; date: string; status: string }[]>([]);
+  const [attMonthLoading, setAttMonthLoading] = useState(false);
+  const [attSavingCell, setAttSavingCell] = useState<string | null>(null);
   const [attReport, setAttReport] = useState<any>(null);
   const [aggregatedReports, setAggregatedReports] = useState<Record<string, any>>({});
   const invoiceRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
@@ -847,27 +848,14 @@ export default function TeacherDashboard() {
   }, [activeTab, user, overviewRefreshTick]);
 
   const fetchAttendance = async () => {
-    if (!attClassroomId || !attDate) return;
+    if (!attMonth || !user?.id) return;
+    setAttMonthLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/class/${attClassroomId}?date=${attDate}`);
-      if (res.ok) {
-        const data = await res.json();
-        // Initialize records for all students in class
-        const crm = classrooms.find(c => c.id === attClassroomId);
-        if (crm?.students) {
-          const records = crm.students.map((s: any) => {
-            const existing = data.find((d: any) => d.userId === s.id);
-            return {
-              userId: s.id,
-              user: s,
-              status: existing ? existing.status : null,
-              notes: existing ? existing.notes : ''
-            };
-          });
-          setAttRecords(records);
-        }
-      }
+      const [year, month] = attMonth.split("-");
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/month/teacher/${user.id}?month=${parseInt(month)}&year=${year}`);
+      if (res.ok) setAttMonthRecords(await res.json());
     } catch (err) { console.error(err); }
+    setAttMonthLoading(false);
   };
 
   const fetchAttReport = async () => {
@@ -952,31 +940,44 @@ export default function TeacherDashboard() {
   useEffect(() => {
     if (activeTab === "ATTENDANCE") {
       if (attView === "MARK") fetchAttendance();
-      if (attView === "REPORT") fetchAttReport();
+      if (attView === "REPORT" && attClassroomId) fetchAttReport();
     }
-  }, [attClassroomId, attDate, attMonth, attView, activeTab]);
+  }, [attClassroomId, attMonth, attView, activeTab, user]);
 
-  const handleSaveAttendance = async (recordsToSave = attRecords, showToast = true) => {
-    if (!attClassroomId || !attDate) return;
+  // Toggle a single (lớp, học viên, ngày) cell between "Có mặt" and "Vắng không phép". Updates
+  // attMonthRecords optimistically first so the running total column reflects it instantly,
+  // then persists via the existing single-day /mark endpoint (sending just this one record),
+  // rolling back on failure.
+  const toggleAttendanceCell = async (classroomId: string, userId: string, day: number) => {
+    const [year, month] = attMonth.split("-");
+    const dateStr = `${year}-${month}-${String(day).padStart(2, '0')}`;
+    const cellKey = `${classroomId}|${userId}|${day}`;
+    const existing = attMonthRecords.find(r => r.classroomId === classroomId && r.userId === userId && new Date(r.date).getDate() === day);
+    const nextStatus = existing?.status === 'PRESENT' ? 'UNEXCUSED' : 'PRESENT';
+
+    setAttMonthRecords(prev => [
+      ...prev.filter(r => !(r.classroomId === classroomId && r.userId === userId && new Date(r.date).getDate() === day)),
+      { classroomId, userId, date: dateStr, status: nextStatus }
+    ]);
+    setAttSavingCell(cellKey);
+
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/mark`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ classroomId: attClassroomId, date: attDate, records: recordsToSave })
+        body: JSON.stringify({ classroomId, date: dateStr, records: [{ userId, status: nextStatus }] })
       });
-      if (res.ok && showToast) {
-        Swal.fire({
-          title: 'Đã lưu điểm danh',
-          icon: 'success',
-          toast: true,
-          position: 'top-end',
-          showConfirmButton: false,
-          timer: 1500
-        });
-      } else if (!res.ok) {
-        Swal.fire('Lỗi', 'Lưu thất bại', 'error');
-      }
-    } catch (err) { console.error(err); }
+      if (!res.ok) throw new Error();
+    } catch (err) {
+      console.error(err);
+      setAttMonthRecords(prev => {
+        const others = prev.filter(r => !(r.classroomId === classroomId && r.userId === userId && new Date(r.date).getDate() === day));
+        return existing ? [...others, existing] : others;
+      });
+      Swal.fire('Lỗi', 'Không thể lưu điểm danh, vui lòng thử lại', 'error');
+    } finally {
+      setAttSavingCell(null);
+    }
   };
 
   const handlePayTuition = async (userId: string, totalAmount: number) => {
@@ -989,7 +990,16 @@ export default function TeacherDashboard() {
         body: JSON.stringify({ classroomId: attClassroomId, userId, month, year, totalAmount })
       });
       if (res.ok) {
+        const { payment } = await res.json();
         Swal.fire('Thành công', 'Đã xác nhận thanh toán!', 'success');
+        // Patch the row locally so the badge/button flip immediately instead of waiting on
+        // fetchAttReport()'s network round-trip (which re-hits every classroom).
+        setAttReport((prev: any) => prev ? {
+          ...prev,
+          report: prev.report.map((sr: any) => sr.user.id === userId
+            ? { ...sr, paymentStatus: 'PAID', paidAt: payment?.paidAt || new Date().toISOString(), paymentId: payment?.id || sr.paymentId }
+            : sr)
+        } : prev);
         fetchAttReport();
       } else {
         Swal.fire('Lỗi', 'Thất bại', 'error');
@@ -1591,6 +1601,21 @@ export default function TeacherDashboard() {
 
   // ── ATTENDANCE > REPORT tab's per-classroom tuition table ──
   const attReportPagination = usePagination(attReport?.report || [], TABLE_PAGE_SIZE, attClassroomId + attMonth);
+
+  // ── ATTENDANCE > MARK tab: full roster (optionally filtered by classroom) laid out as a monthly grid ──
+  const attRoster = classrooms
+    .filter((c: any) => !attClassroomId || c.id === attClassroomId)
+    .flatMap((c: any) => (c.students || []).map((s: any) => ({ classroomId: c.id, classroomName: c.name, student: s })));
+  const attRosterPagination = usePagination(attRoster, TABLE_PAGE_SIZE, attClassroomId + attMonth);
+  const [attYear, attMonthNum] = attMonth.split('-').map(Number);
+  const attDaysInMonth = attMonth ? new Date(attYear, attMonthNum, 0).getDate() : 30;
+  const attWeekdayLabel: Record<number, string> = { 0: 'CN', 1: 'T2', 2: 'T3', 3: 'T4', 4: 'T5', 5: 'T6', 6: 'T7' };
+  const attStatusMap = new Map<string, string>();
+  attMonthRecords.forEach((r) => {
+    attStatusMap.set(`${r.classroomId}|${r.userId}|${new Date(r.date).getDate()}`, r.status);
+  });
+  const attTodayNow = new Date();
+  const attTodayDay = (attTodayNow.getFullYear() === attYear && attTodayNow.getMonth() + 1 === attMonthNum) ? attTodayNow.getDate() : null;
 
   // ── LEADERBOARD tab: paginate the list below the top-3 podium ──
   const leaderboardRest = leaderboardData.slice(3);
@@ -2462,7 +2487,7 @@ export default function TeacherDashboard() {
                   className="w-full p-3 border border-gray-200 bg-white rounded-lg"
                   value={attClassroomId} onChange={e => setAttClassroomId(e.target.value)}
                 >
-                  <option value="">-- Chọn lớp --</option>
+                  <option value="">-- Tất cả các lớp --</option>
                   {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
@@ -2482,124 +2507,104 @@ export default function TeacherDashboard() {
               </div>
             </div>
 
-            {attClassroomId ? (
-              <>
+            <>
                 {attView === 'MARK' && (
                   <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                       <div className="flex items-center gap-4">
-                        <h2 className="text-xl font-bold">Điểm danh ngày</h2>
-                        <input 
-                          type="date" 
-                          value={attDate} 
-                          onChange={e => setAttDate(e.target.value)} 
+                        <h2 className="text-xl font-bold">Điểm danh tháng</h2>
+                        <input
+                          type="month"
+                          value={attMonth}
+                          onChange={e => setAttMonth(e.target.value)}
                           className="p-2 border border-gray-200 bg-white rounded-lg font-medium"
                         />
                       </div>
-                      <button 
-                        onClick={() => {
-                          const next = attRecords.map(r => ({ ...r, status: r.status || 'PRESENT' }));
-                          setAttRecords(next);
-                          handleSaveAttendance(next);
-                        }}
-                        className="px-4 py-2 bg-green-500/10 text-green-600 font-bold text-sm hover:bg-green-500/20 transition-colors shrink-0"
-                      >
-                        ✓ Đánh dấu tất cả có mặt (những người chưa ĐD)
-                      </button>
+                      <div className="flex items-center gap-4 text-xs text-slate-500 font-medium flex-wrap">
+                        <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-green-500 inline-block" /> Có mặt</span>
+                        <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded bg-rose-400 inline-block" /> Vắng</span>
+                        <span className="flex items-center gap-1.5"><span className="w-4 h-4 rounded border-2 border-gray-200 inline-block" /> Chưa điểm danh</span>
+                      </div>
                     </div>
-                    {attRecords.length > 0 ? (
+                    {attMonthLoading ? (
+                      <p className="text-center text-slate-400 py-8">Đang tải điểm danh...</p>
+                    ) : attRoster.length > 0 ? (
                       <>
-                        <div className="border border-gray-100 rounded-xl overflow-hidden mb-6">
-                          <table className="w-full text-left text-sm">
+                        <div className="border border-gray-100 rounded-xl overflow-x-auto mb-4">
+                          <table className="text-left text-sm border-collapse">
                             <thead className="bg-slate-50">
                               <tr>
-                                <th className="p-3 font-bold border-b border-gray-200">Học Viên</th>
-                                <th className="p-3 font-bold border-b border-gray-200 text-center">Trạng Thái</th>
-                                <th className="p-3 font-bold border-b border-gray-200">Ghi chú</th>
+                                <th className="p-3 font-bold border-b border-r border-gray-200 sticky left-0 bg-slate-50 z-10 min-w-[180px]">Học Viên</th>
+                                {Array.from({ length: attDaysInMonth }, (_, i) => i + 1).map(day => {
+                                  const weekday = new Date(attYear, attMonthNum - 1, day).getDay();
+                                  const isToday = day === attTodayDay;
+                                  return (
+                                    <th key={day} className={`p-1.5 font-bold border-b border-gray-200 text-center w-9 ${isToday ? 'bg-primary/10 text-primary' : ''}`}>
+                                      <div>{day}</div>
+                                      <div className="text-[10px] font-normal text-slate-400">{attWeekdayLabel[weekday]}</div>
+                                    </th>
+                                  );
+                                })}
+                                <th className="p-3 font-bold border-b border-l border-gray-200 text-center min-w-[90px]">Tổng Buổi</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {attRecords.map((rec, i) => (
-                                <tr key={rec.userId} className="border-b border-gray-100 last:border-0 hover:bg-slate-50 transition-colors">
-                                  <td className="p-3">
-                                    <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
-                                        {rec.user?.avatar ? <img src={rec.user.avatar} className="w-full h-full object-cover" /> : rec.user?.name?.charAt(0)}
+                              {attRosterPagination.pageItems.map((row: any) => {
+                                const totalPresent = Array.from({ length: attDaysInMonth }, (_, i) => i + 1)
+                                  .filter(day => attStatusMap.get(`${row.classroomId}|${row.student.id}|${day}`) === 'PRESENT').length;
+                                return (
+                                  <tr key={`${row.classroomId}_${row.student.id}`} className="border-b border-gray-100 last:border-0 hover:bg-slate-50 transition-colors">
+                                    <td className="p-3 border-r border-gray-100 sticky left-0 bg-white z-10">
+                                      <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+                                          {row.student?.avatar ? <img src={row.student.avatar} className="w-full h-full object-cover" /> : row.student?.name?.charAt(0)}
+                                        </div>
+                                        <div className="flex flex-col">
+                                          <span className="font-semibold whitespace-nowrap">{row.student?.name}</span>
+                                          {!attClassroomId && <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{row.classroomName}</span>}
+                                        </div>
                                       </div>
-                                      <div className="flex flex-col">
-                                        <span className="font-semibold whitespace-nowrap">{rec.user?.name}</span>
-                                        {!rec.status ? (
-                                          <span className="text-[10px] text-rose-500 font-bold uppercase tracking-wider">Chưa điểm danh</span>
-                                        ) : (
-                                          <span className="text-[10px] text-green-500 font-bold uppercase tracking-wider">✓ Đã lưu</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="p-3">
-                                    <div className="flex items-center justify-center gap-1 sm:gap-2 flex-wrap">
-                                      <button 
-                                        onClick={() => {
-                                          const next = [...attRecords];
-                                          next[i].status = 'PRESENT';
-                                          setAttRecords(next);
-                                          handleSaveAttendance(next, false);
-                                        }}
-                                        className={`px-3 py-1.5 font-bold text-xs transition-colors ${rec.status === 'PRESENT' ? 'bg-green-500 text-white shadow-md shadow-green-500/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
-                                      >
-                                        Có mặt
-                                      </button>
-                                      <button 
-                                        onClick={() => {
-                                          const next = [...attRecords];
-                                          next[i].status = 'EXCUSED_ABSENCE';
-                                          setAttRecords(next);
-                                          handleSaveAttendance(next, false);
-                                        }}
-                                        className={`px-3 py-1.5 font-bold text-xs transition-colors ${rec.status === 'EXCUSED_ABSENCE' ? 'bg-amber-500 text-white shadow-md shadow-amber-500/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
-                                      >
-                                        Vắng (Có phép)
-                                      </button>
-                                      <button 
-                                        onClick={() => {
-                                          const next = [...attRecords];
-                                          next[i].status = 'UNEXCUSED_ABSENCE';
-                                          setAttRecords(next);
-                                          handleSaveAttendance(next, false);
-                                        }}
-                                        className={`px-3 py-1.5 font-bold text-xs transition-colors ${rec.status === 'UNEXCUSED_ABSENCE' ? 'bg-rose-500 text-white shadow-md shadow-rose-500/20' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`}
-                                      >
-                                        Vắng (Không phép)
-                                      </button>
-                                    </div>
-                                  </td>
-                                  <td className="p-3 w-1/3 sm:w-1/4">
-                                    <input 
-                                      type="text" 
-                                      placeholder="Ghi chú..." 
-                                      value={rec.notes} 
-                                      onChange={e => {
-                                        const next = [...attRecords];
-                                        next[i].notes = e.target.value;
-                                        setAttRecords(next);
-                                      }}
-                                      onBlur={() => handleSaveAttendance(attRecords, false)}
-                                      className="w-full px-3 py-1.5 bg-transparent border border-gray-100 focus:border-primary outline-none text-sm transition-colors"
-                                    />
-                                  </td>
-                                </tr>
-                              ))}
+                                    </td>
+                                    {Array.from({ length: attDaysInMonth }, (_, i) => i + 1).map(day => {
+                                      const status = attStatusMap.get(`${row.classroomId}|${row.student.id}|${day}`);
+                                      const cellKey = `${row.classroomId}|${row.student.id}|${day}`;
+                                      const isSaving = attSavingCell === cellKey;
+                                      const isToday = day === attTodayDay;
+                                      return (
+                                        <td key={day} className={`p-1 text-center ${isToday ? 'bg-primary/5' : ''}`}>
+                                          <button
+                                            onClick={() => toggleAttendanceCell(row.classroomId, row.student.id, day)}
+                                            disabled={isSaving}
+                                            className={`w-7 h-7 rounded-md flex items-center justify-center mx-auto font-bold text-xs transition-colors disabled:opacity-50 ${
+                                              status === 'PRESENT'
+                                                ? 'bg-green-500 text-white shadow-sm shadow-green-500/30'
+                                                : status
+                                                ? 'bg-rose-400 text-white'
+                                                : 'border-2 border-gray-200 text-transparent hover:border-primary/40'
+                                            }`}
+                                            title={status === 'PRESENT' ? 'Có mặt — bấm để đổi thành vắng' : status ? 'Vắng — bấm để xoá' : 'Bấm để điểm danh có mặt'}
+                                          >
+                                            {isSaving ? '…' : status === 'PRESENT' ? '✓' : status ? '✕' : '✓'}
+                                          </button>
+                                        </td>
+                                      );
+                                    })}
+                                    <td className="p-3 border-l border-gray-100 text-center font-black text-primary">{totalPresent} buổi</td>
+                                  </tr>
+                                );
+                              })}
                             </tbody>
                           </table>
                         </div>
+                        <Pagination page={attRosterPagination.page} totalPages={attRosterPagination.totalPages} totalItems={attRosterPagination.totalItems} pageSize={TABLE_PAGE_SIZE} onPageChange={attRosterPagination.setPage} />
                       </>
                     ) : (
-                      <p className="text-center text-slate-400 py-8">Lớp chưa có học viên nào.</p>
+                      <p className="text-center text-slate-400 py-8">{attClassroomId ? 'Lớp chưa có học viên nào.' : 'Chưa có lớp học hoặc học viên nào.'}</p>
                     )}
                   </div>
                 )}
 
-                {attView === 'REPORT' && (
+                {attView === 'REPORT' && (attClassroomId ? (
                   <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
                       <div className="flex items-center gap-4">
@@ -2640,7 +2645,7 @@ export default function TeacherDashboard() {
                                 <td className="p-4">{sr.presentCount} buổi</td>
                                 <td className="p-4 font-black text-primary text-right">{sr.totalAmount.toLocaleString()} VNĐ</td>
                                 <td className="p-4 text-center">
-                                  {sr.isPaid ? (
+                                  {sr.paymentStatus === 'PAID' ? (
                                     <span className="text-xs bg-green-500/10 text-green-600 font-bold px-3 py-1 rounded-full">Đã nộp ({new Date(sr.paidAt).toLocaleDateString('vi-VN')})</span>
                                   ) : (
                                     <span className="text-xs bg-rose-500/10 text-rose-600 font-bold px-3 py-1 rounded-full">Chưa nộp</span>
@@ -2648,14 +2653,14 @@ export default function TeacherDashboard() {
                                 </td>
                                 <td className="p-4 text-center">
                                   <div className="flex items-center justify-center gap-2">
-                                    <button 
+                                    <button
                                       onClick={() => exportSinglePDF(sr.user.id, sr.user.name)}
                                       disabled={isExporting}
                                       className="text-xs bg-slate-100 text-slate-600 font-bold px-3 py-1.5 hover:bg-slate-200 transition-colors flex items-center gap-1"
                                     >
                                       📄 Xuất PDF
                                     </button>
-                                    {!sr.isPaid && sr.totalAmount > 0 && (
+                                    {sr.paymentStatus !== 'PAID' && sr.totalAmount > 0 && (
                                       <button 
                                         onClick={() => handlePayTuition(sr.user.id, sr.totalAmount)}
                                         className="text-xs bg-primary text-white font-bold px-3 py-1.5 hover:bg-primary/90"
@@ -2677,13 +2682,12 @@ export default function TeacherDashboard() {
                       <p className="text-center text-slate-400 py-8">Đang tải báo cáo...</p>
                     )}
                   </div>
-                )}
-              </>
-            ) : (
-              <div className="text-center text-slate-400 py-12 bg-slate-50 border-2 border-dashed border-gray-200">
-                Vui lòng chọn lớp học để xem điểm danh
-              </div>
-            )}
+                ) : (
+                  <div className="text-center text-slate-400 py-12 bg-slate-50 border-2 border-dashed border-gray-200">
+                    Vui lòng chọn 1 lớp học cụ thể để xem báo cáo học phí
+                  </div>
+                ))}
+            </>
           </div>
         )}
 

@@ -55,18 +55,20 @@ router.get('/teacher/:teacherId', async (req, res) => {
         students: {
           select: {
             id: true, name: true, email: true, avatar: true, totalXP: true, targetScore: true,
-            examResults: { select: { id: true, score: true, examId: true, createdAt: true } }
+            // Only examId+score are ever read (average-score calculations) — the student's
+            // own avatar is already carried once at this level, so no need to duplicate it.
+            examResults: { select: { score: true, examId: true } }
           }
         },
         exams: {
           select: {
             id: true, title: true, totalQuestions: true, duration: true, maxAttempts: true,
             deadline: true, examType: true, notes: true, createdAt: true, classroomId: true,
+            // No nested `user` here — it was re-embedding each student's full base64 avatar
+            // once per exam result (unused by the frontend, which reads student avatars from
+            // the `students` list above), ballooning this endpoint's payload by tens of MB.
             results: {
-              select: {
-                id: true, score: true, userId: true, createdAt: true, timeSpent: true,
-                user: { select: { id: true, name: true, avatar: true } }
-              }
+              select: { score: true, userId: true, createdAt: true, timeSpent: true }
             }
           }
         }
