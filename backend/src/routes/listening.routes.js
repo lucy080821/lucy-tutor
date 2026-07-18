@@ -35,6 +35,14 @@ const removeVietnameseAccents = (str) =>
 
 const cleanString = (str) => str.toLowerCase().replace(/[^a-z0-9]/g, '');
 
+// Words too common/short to be a useful "target word" for the free-listen fallback below.
+const COMMON_STOPWORDS = new Set([
+  'the', 'a', 'an', 'is', 'are', 'was', 'were', 'to', 'of', 'in', 'on', 'at', 'and', 'or',
+  'but', 'it', 'this', 'that', 'these', 'those', 'i', 'you', 'he', 'she', 'we', 'they',
+  'my', 'your', 'his', 'her', 'its', 'our', 'their', 'be', 'am', 'do', 'does', 'did',
+  'for', 'with', 'as', 'so', 'if', 'not', 'no', 'will', 'can', 'just'
+]);
+
 const ALLOWED_ACCENTS = ['UK', 'US', 'AUS'];
 const ALLOWED_LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1'];
 
@@ -96,6 +104,31 @@ function matchClipsForWord(clips, word, accent) {
     });
   }
   return matches;
+}
+
+// For a clip that doesn't match any word the student is currently studying, pick any word
+// from its own script that does align with the audio, so the clip can still be offered as a
+// free-listen dictation item instead of staying invisible. Content words (longer, non-filler)
+// are tried first per sentence, but every token is eventually tried so a clip is only skipped
+// if literally nothing in its script lines up with its own Whisper alignment.
+function pickFreeListeningMatch(clip, accent) {
+  if (accent && clip.accent !== accent) return null;
+
+  const sentences = clip.script.split(/(?<=[.!?])\s+/).filter((s) => s.trim());
+  for (const sentence of sentences) {
+    const tokens = sentence.split(/\s+/);
+    const ordered = [...new Set(tokens)].sort((a, b) => {
+      const aGood = cleanString(a).length >= 4 && !COMMON_STOPWORDS.has(cleanString(a));
+      const bGood = cleanString(b).length >= 4 && !COMMON_STOPWORDS.has(cleanString(b));
+      return aGood === bGood ? 0 : aGood ? -1 : 1;
+    });
+    for (const token of ordered) {
+      if (!cleanString(token)) continue;
+      const matches = matchClipsForWord([clip], token, accent);
+      if (matches.length > 0) return matches;
+    }
+  }
+  return null;
 }
 
 async function findAccessibleReadyClips(userId) {
@@ -290,19 +323,23 @@ router.get('/search', async (req, res) => {
   }
 });
 
-// 4. Practice queue: student's SRS-due vocab words paired with matching audio clips.
-// Words with zero matching clips are dropped rather than shown empty.
+// 4. Practice queue: student's vocab words paired with matching audio clips, plus any
+// assigned clip that doesn't match a word the student is studying yet (as a free-listen
+// item). Visibility is intentionally NOT gated by SRS due date — a clip the teacher assigned
+// stays reachable at any time instead of only appearing on the day its matching word happens
+// to come due (which used to make the same assigned clip show for one student and not
+// another purely from personal review-timing differences).
 router.get('/queue/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const { accent } = req.query;
-    const now = new Date();
 
-    // Cap the candidate pool generously (not to the final batch size) — most due words
-    // won't have a matching clip yet, so capping at the batch size here would starve the
-    // queue even when plenty of later-due words do have matching audio.
-    const dueProgress = await prisma.userVocabProgress.findMany({
-      where: { userId, nextReviewDate: { lte: now } },
+    // Cap the candidate pool generously (not to the final batch size) — most studied words
+    // won't have a matching clip, so capping at the batch size here would starve the queue
+    // even when plenty of other words do have matching audio. Soonest-due first so words
+    // actually due for review are still prioritized when there's more than enough audio.
+    const deckProgress = await prisma.userVocabProgress.findMany({
+      where: { userId },
       include: { vocab: true },
       orderBy: { nextReviewDate: 'asc' },
       take: 200
@@ -313,11 +350,28 @@ router.get('/queue/:userId', async (req, res) => {
 
     const BATCH_SIZE = 10;
     const queue = [];
-    for (const progress of dueProgress) {
+    const matchedClipIds = new Set();
+    for (const progress of deckProgress) {
       if (queue.length >= BATCH_SIZE) break;
       const clipMatches = matchClipsForWord(clips, progress.vocab.word, accent);
       if (clipMatches.length > 0) {
-        queue.push({ progressId: progress.id, vocab: progress.vocab, clips: clipMatches });
+        queue.push({ progressId: progress.id, vocab: progress.vocab, clips: clipMatches, free: false });
+        clipMatches.forEach((m) => matchedClipIds.add(m.clipId));
+      }
+    }
+
+    for (const clip of clips) {
+      if (queue.length >= BATCH_SIZE) break;
+      if (matchedClipIds.has(clip.id)) continue;
+      const freeMatches = pickFreeListeningMatch(clip, accent);
+      if (freeMatches) {
+        queue.push({
+          progressId: null,
+          vocab: { id: null, word: freeMatches[0].tokens[freeMatches[0].targetTokenIndex], meaning: clip.title, phonetic: '' },
+          clips: freeMatches,
+          free: true
+        });
+        matchedClipIds.add(clip.id);
       }
     }
 

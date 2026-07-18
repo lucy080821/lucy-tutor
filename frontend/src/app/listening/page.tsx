@@ -52,15 +52,16 @@ const ACCENT_OPTIONS: { value: string; label: string }[] = [
 ];
 
 interface QueueItem {
-  progressId: string;
+  progressId: string | null;
   vocab: {
-    id: string;
+    id: string | null;
     word: string;
     meaning: string;
     pos?: string;
     phonetic?: string;
   };
   clips: ClipMatch[];
+  free?: boolean;
 }
 
 export default function ListeningPracticePage() {
@@ -320,12 +321,19 @@ export default function ListeningPracticePage() {
   const goNext = async () => {
     if (!currentItem || !currentClip || computedQuality === null || !userId) return;
     try {
-      await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/srs/review/${currentItem.progressId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ quality: computedQuality })
-      });
-      logSkillProgress(userId, "LISTENING", QUALITY_TO_SCORE[computedQuality] ?? 2, "LISTENING_SRS");
+      // Free-listen items (audio the SRS deck doesn't have a matching due word for) have no
+      // progressId to update — just log them for the dashboard's skill chart, same as the
+      // Đề Luyện Nghe exam mode does for its own non-SRS attempts.
+      if (currentItem.progressId) {
+        await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/srs/review/${currentItem.progressId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ quality: computedQuality })
+        });
+        logSkillProgress(userId, "LISTENING", QUALITY_TO_SCORE[computedQuality] ?? 2, "LISTENING_SRS");
+      } else {
+        logSkillProgress(userId, "LISTENING", QUALITY_TO_SCORE[computedQuality] ?? 2, "LISTENING_FREE");
+      }
     } catch (err) {
       console.error(err);
       Swal.fire("Lỗi", "Không thể lưu kết quả", "error");
@@ -411,7 +419,7 @@ export default function ListeningPracticePage() {
             <div className="text-6xl mb-4">🎧</div>
             <h2 className="text-2xl font-bold mb-2">Chưa có audio để luyện nghe</h2>
             <p className="text-foreground/50">
-              Hiện chưa có audio nào chứa từ vựng bạn cần ôn ngay bây giờ. Hãy quay lại sau khi có thêm từ đến hạn hoặc giáo viên cập nhật thêm nội dung.
+              Giáo viên chưa gán audio nào cho bạn hoặc lớp của bạn. Hãy quay lại sau khi giáo viên cập nhật thêm nội dung ở Studio Luyện Nghe.
             </p>
           </div>
         ) : currentItem && currentClip ? (
@@ -433,6 +441,11 @@ export default function ListeningPracticePage() {
               <p className="text-xs sm:text-sm font-bold text-foreground/40 uppercase tracking-widest mb-1">
                 {phase === "EXPLORE" ? "Xem & Nghe Từ Trong Câu" : "Nghe Và Điền Từ"}
               </p>
+              {currentItem.free && (
+                <span className="inline-block mb-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 text-[10px] font-bold uppercase tracking-wide">
+                  🎧 Nghe tự do
+                </span>
+              )}
               <h2 className="text-2xl sm:text-3xl font-bold text-primary mb-1 break-words">{currentItem.vocab.meaning}</h2>
               {currentItem.vocab.phonetic && <p className="text-foreground/50 font-mono">{currentItem.vocab.phonetic}</p>}
               {currentItem.clips.length === 1 && (
