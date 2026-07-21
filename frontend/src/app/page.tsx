@@ -2,13 +2,6 @@
 import Link from "next/link";
 import { useState } from "react";
 
-const STATS = [
-  { value: "2,400+", label: "Học viên đang học", icon: "🎓" },
-  { value: "180+", label: "Giáo viên tin dùng", icon: "👨‍🏫" },
-  { value: "15,000+", label: "Câu hỏi ngân hàng", icon: "📚" },
-  { value: "94%", label: "Học viên tăng điểm", icon: "📈" },
-];
-
 const SKILLS = [
   {
     key: "reading",
@@ -106,38 +99,13 @@ const STEPS = [
 
 const FEATURES = [
   { icon: "🤖", title: "AI Phân Tích Điểm Yếu", desc: "Tự động nhận diện lỗi sai theo từng chủ điểm ngữ pháp, từ vựng, gợi ý bài luyện tập phù hợp.", color: "bg-violet-100 text-violet-600" },
-  { icon: "🗂️", title: "Ngân Hàng Câu Hỏi 15K+", desc: "Đề thi THPT, IELTS, TOEIC được phân loại theo chuẩn Cambridge. Giáo viên import từ Word/PDF chỉ 1 click.", color: "bg-blue-100 text-blue-600" },
-  { icon: "📈", title: "Biểu Đồ Tiến Độ 4 Kỹ Năng", desc: "Dashboard riêng cho từng kỹ năng Reading, Listening, Speaking, Writing với IELTS band tracker.", color: "bg-emerald-100 text-emerald-600" },
-  { icon: "🔁", title: "SRS Vocabulary", desc: "Thuật toán SM-2 lên lịch ôn từ vựng khoa học — nhớ lâu hơn với ít thời gian học hơn.", color: "bg-amber-100 text-amber-600" },
+  { icon: "🗣️", title: "Luyện Phát Âm Cùng AI", desc: "Ghi âm giọng nói, AI so khớp với từ mẫu và chỉ ra lỗi phát âm thường gặp của người Việt.", color: "bg-pink-100 text-pink-600" },
+  { icon: "🏁", title: "Đề Thi Thử THPT Quốc Gia", desc: "AI tự sinh đề đúng cấu trúc đề thi thật (ngữ âm, ngữ pháp, đọc hiểu...), làm có tính giờ và chấm điểm tự động.", color: "bg-indigo-100 text-indigo-600" },
+  { icon: "📈", title: "Biểu Đồ Tiến Độ 4 Kỹ Năng", desc: "Dashboard riêng cho từng kỹ năng Reading, Listening, Speaking, Writing với biểu đồ theo dõi theo thời gian.", color: "bg-emerald-100 text-emerald-600" },
+  { icon: "🔁", title: "SRS Vocabulary", desc: "Thuật toán SM-2 lên lịch ôn từ vựng khoa học — tự thêm từ của riêng bạn hoặc ôn từ giáo viên giao.", color: "bg-amber-100 text-amber-600" },
+  { icon: "🗂️", title: "Ngân Hàng Câu Hỏi", desc: "Đề thi THPT, IELTS, TOEIC được phân loại rõ ràng. Giáo viên import từ Word/PDF chỉ 1 click.", color: "bg-blue-100 text-blue-600" },
   { icon: "🏆", title: "Gamification & Streak", desc: "Tích XP, giữ streak học mỗi ngày, leo bảng xếp hạng lớp học — tạo động lực học tập bền vững.", color: "bg-rose-100 text-rose-600" },
   { icon: "👨‍🏫", title: "Dashboard Giáo Viên Pro", desc: "Quản lý lớp học, điểm danh, học phí, giao đề thi — tất cả trên một nền tảng, không cần bảng tính Excel.", color: "bg-cyan-100 text-cyan-600" },
-];
-
-const TESTIMONIALS = [
-  {
-    name: "Nguyễn Minh Tú",
-    role: "Học viên lớp 12 — THPT Nguyễn Thị Minh Khai",
-    text: "Sau 3 tháng luyện với Lucy Tutor, điểm Reading IELTS của mình tăng từ 5.5 lên 7.0. Phần AI giải thích lỗi sai rất chi tiết, mình hiểu tại sao sai chứ không chỉ biết đáp án đúng.",
-    score: "IELTS 7.0",
-    avatar: "MT",
-    avatarColor: "from-blue-400 to-blue-600",
-  },
-  {
-    name: "Trần Thị Lan Anh",
-    role: "Giáo viên Tiếng Anh — 8 năm kinh nghiệm",
-    text: "Tính năng import đề từ Word giúp tôi tiết kiệm 3-4 tiếng mỗi tuần. Phụ huynh cũng rất hài lòng vì có thể xem báo cáo tiến độ con trực tiếp trên app.",
-    score: "Giáo viên",
-    avatar: "LA",
-    avatarColor: "from-purple-400 to-purple-600",
-  },
-  {
-    name: "Lê Hoàng Nam",
-    role: "Sinh viên năm 1 — Đại học Ngoại Thương",
-    text: "Mình ôn TOEIC 650+ chỉ trong 6 tuần nhờ study plan của Lucy Tutor. Bộ từ vựng SRS đặc biệt hiệu quả — ôn đúng từ mình hay quên vào đúng thời điểm.",
-    score: "TOEIC 710",
-    avatar: "HN",
-    avatarColor: "from-emerald-400 to-emerald-600",
-  },
 ];
 
 export default function Home() {
@@ -160,7 +128,7 @@ export default function Home() {
           {/* Badge */}
           <span className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-primary text-sm font-semibold tracking-wide border border-blue-200 rounded-full">
             <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-            NỀN TẢNG LUYỆN THI TIẾNG ANH #1 VIỆT NAM
+            NỀN TẢNG LUYỆN THI TIẾNG ANH TOÀN DIỆN
           </span>
 
           {/* Headline */}
@@ -199,17 +167,15 @@ export default function Home() {
               Tôi là Giáo Viên
             </Link>
           </div>
-        </div>
 
-        {/* Stats bar */}
-        <div className="relative max-w-3xl mx-auto mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
-          {STATS.map((s) => (
-            <div key={s.label} className="bg-white rounded-2xl px-5 py-5 text-center shadow-md shadow-slate-200 border border-gray-100 hover:-translate-y-0.5 transition-transform">
-              <div className="text-2xl mb-1">{s.icon}</div>
-              <div className="text-2xl md:text-3xl font-extrabold text-primary">{s.value}</div>
-              <div className="text-xs text-slate-400 mt-1">{s.label}</div>
-            </div>
-          ))}
+          {/* Trial callout — replaces vanity stats with an honest, concrete offer */}
+          <div className="inline-flex flex-wrap items-center justify-center gap-2 pt-2 text-sm text-slate-500">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 font-semibold rounded-full border border-emerald-200">
+              🎁 Dùng thử miễn phí 3 ngày
+            </span>
+            <span>·</span>
+            <span>Không cần thẻ tín dụng</span>
+          </div>
         </div>
       </section>
 
@@ -302,55 +268,12 @@ export default function Home() {
             </span>
             <h2 className="text-3xl md:text-4xl font-extrabold">Mọi thứ bạn cần để bứt phá</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {FEATURES.map((f, i) => (
               <div key={i} className="group bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all cursor-default">
                 <div className={`w-12 h-12 rounded-xl ${f.color} flex items-center justify-center text-2xl mb-4`}>{f.icon}</div>
                 <h3 className="font-bold mb-2">{f.title}</h3>
                 <p className="text-slate-500 text-sm leading-relaxed">{f.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Testimonials ── */}
-      <section className="py-20 px-6">
-        <div className="max-w-5xl mx-auto">
-          <div className="text-center mb-12 space-y-3">
-            <span className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-primary text-xs font-bold tracking-widest uppercase rounded-full border border-blue-200">
-              Học viên & giáo viên nói gì
-            </span>
-            <h2 className="text-3xl md:text-4xl font-extrabold">Kết quả thực tế</h2>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t, i) => (
-              <div key={i} className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all flex flex-col gap-4">
-                {/* Stars */}
-                <div className="flex items-center gap-1">
-                  {[1,2,3,4,5].map(n => (
-                    <svg key={n} className="w-4 h-4 text-amber-400 fill-current" viewBox="0 0 20 20">
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                {/* Quote */}
-                <p className="text-slate-500 text-sm leading-relaxed flex-1">"{t.text}"</p>
-                {/* Author */}
-                <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-9 h-9 rounded-full bg-gradient-to-br ${t.avatarColor} flex items-center justify-center text-white text-xs font-bold shrink-0`}>
-                      {t.avatar}
-                    </div>
-                    <div>
-                      <div className="font-bold text-sm">{t.name}</div>
-                      <div className="text-slate-400 text-xs">{t.role}</div>
-                    </div>
-                  </div>
-                  <span className="px-3 py-1 bg-blue-50 text-primary text-xs font-bold rounded-full border border-blue-200 shrink-0">
-                    {t.score}
-                  </span>
-                </div>
               </div>
             ))}
           </div>
@@ -364,8 +287,8 @@ export default function Home() {
           <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
         </div>
         <div className="relative max-w-3xl mx-auto text-center space-y-6">
-          <h2 className="text-3xl md:text-4xl font-extrabold">Bắt đầu học miễn phí ngay hôm nay</h2>
-          <p className="text-white/70 text-lg">Không cần thẻ tín dụng. Không giới hạn thời gian dùng thử.</p>
+          <h2 className="text-3xl md:text-4xl font-extrabold">Bắt đầu học ngay hôm nay</h2>
+          <p className="text-white/70 text-lg">Không cần thẻ tín dụng. Dùng thử miễn phí 3 ngày.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/auth?role=STUDENT" className="px-8 py-4 bg-white text-primary font-bold text-lg hover:bg-white/95 hover:-translate-y-0.5 transition-all rounded-xl shadow-lg shadow-black/20 flex items-center justify-center gap-2">
               🎓 Học viên đăng ký

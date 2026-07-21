@@ -219,14 +219,14 @@ function Flashcard({ vocab, onSpeak, onFlip, isLearned }: { vocab: any, onSpeak:
           <div className="absolute top-4 right-4 flex gap-2">
             <button 
               onClick={(e) => { e.stopPropagation(); onSpeak('en-GB'); }}
-              className="w-8 h-8 bg-primary/10 text-primary font-bold text-xs rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
+              className="w-9 h-9 bg-primary/10 text-primary font-bold text-xs rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
               title="Phát âm giọng Anh (UK)"
             >
               UK
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); onSpeak('en-US'); }}
-              className="w-8 h-8 bg-primary/10 text-primary font-bold text-xs rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
+              className="w-9 h-9 bg-primary/10 text-primary font-bold text-xs rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
               title="Phát âm giọng Mỹ (US)"
             >
               US

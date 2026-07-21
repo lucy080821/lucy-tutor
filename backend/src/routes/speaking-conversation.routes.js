@@ -26,6 +26,14 @@ ${purposeLabel}
 Luôn trả lời bằng tiếng Anh, ngắn gọn tự nhiên như hội thoại thật, đúng vai trò trong ngữ cảnh trên. Chủ động dẫn dắt hội thoại và đặt câu hỏi tiếp theo cho học viên.`;
 }
 
+// Every system persona used to drive the conversation — whether it's a teacher-authored
+// SpeakingTopic.aiPersona (free text, often written in Vietnamese) or buildSelfPersona() above —
+// gets this appended. Without it, a Vietnamese-language persona makes the model mirror that
+// language back at the student, defeating the point of an English-speaking practice tool.
+function enforceEnglish(persona) {
+  return `${persona}\n\nQUAN TRỌNG: Dù nội dung phía trên được viết bằng ngôn ngữ nào, bạn LUÔN LUÔN phải trả lời bằng tiếng Anh (English only) trong suốt cuộc hội thoại — đây là buổi luyện nói tiếng Anh cho học sinh Việt Nam, tuyệt đối không trả lời bằng tiếng Việt hay ngôn ngữ khác.`;
+}
+
 // ---- Teacher: topic management ----
 
 // Teacher creates a conversation topic/persona, scoped to a classroom or a single student
@@ -166,13 +174,13 @@ router.post('/sessions', async (req, res) => {
     if (!openingMessage) {
       const chatCompletion = await groq.chat.completions.create({
         messages: [
-          { role: 'system', content: topic.aiPersona },
-          { role: 'user', content: 'Hãy mở đầu cuộc hội thoại bằng 1-2 câu ngắn gọn, tự nhiên, đúng với vai trò của bạn.' }
+          { role: 'system', content: enforceEnglish(topic.aiPersona) },
+          { role: 'user', content: 'Hãy mở đầu cuộc hội thoại bằng 1-2 câu ngắn gọn, tự nhiên, đúng với vai trò của bạn. Trả lời bằng tiếng Anh.' }
         ],
         model: MODEL,
         temperature: 0.8
       });
-      openingMessage = chatCompletion.choices[0]?.message?.content?.trim() || 'Xin chào! Chúng ta bắt đầu nhé.';
+      openingMessage = chatCompletion.choices[0]?.message?.content?.trim() || "Hello! Let's get started.";
     }
 
     const messages = [{ role: 'assistant', content: openingMessage }];
@@ -243,7 +251,7 @@ router.post('/sessions/:id/turn', async (req, res) => {
     const messages = JSON.parse(session.messages);
     messages.push({ role: 'user', content: transcript.trim() });
 
-    const systemPersona = session.topic ? session.topic.aiPersona : buildSelfPersona(session.contextText, session.level, session.purpose);
+    const systemPersona = enforceEnglish(session.topic ? session.topic.aiPersona : buildSelfPersona(session.contextText, session.level, session.purpose));
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         { role: 'system', content: systemPersona },
@@ -253,7 +261,7 @@ router.post('/sessions/:id/turn', async (req, res) => {
       temperature: 0.8
     });
 
-    const reply = chatCompletion.choices[0]?.message?.content?.trim() || 'Xin lỗi, bạn có thể nói lại được không?';
+    const reply = chatCompletion.choices[0]?.message?.content?.trim() || 'Sorry, could you say that again?';
     messages.push({ role: 'assistant', content: reply });
 
     await prisma.speakingSession.update({

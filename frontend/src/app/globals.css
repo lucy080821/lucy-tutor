@@ -91,6 +91,11 @@ button {
   max-width: 100%;
   height: auto;
 }
+.quill-content table {
+  max-width: 100%;
+  display: block;
+  overflow-x: auto;
+}
 .quill-content strong { font-weight: bold; }
 .quill-content em { font-style: italic; }
 .quill-content u { text-decoration: underline; }

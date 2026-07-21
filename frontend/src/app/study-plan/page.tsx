@@ -132,11 +132,11 @@ export default function StudyPlanPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-surface border-b border-foreground/10 px-6 py-4 flex items-center gap-4">
+      <div className="bg-surface border-b border-foreground/10 px-4 sm:px-6 py-4 flex flex-wrap items-center gap-3 sm:gap-4">
         <Link href="/dashboard" className="text-foreground/50 hover:text-foreground transition-colors text-sm font-medium">
           ← Dashboard
         </Link>
-        <span className="text-foreground/20">/</span>
+        <span className="text-foreground/20 hidden sm:inline">/</span>
         <h1 className="font-bold">Study Plan</h1>
         <span className="ml-auto px-3 py-1 bg-primary/10 text-primary text-xs font-bold border border-primary/20">AI Powered</span>
       </div>

@@ -28,11 +28,11 @@ export default function Pagination({ page, totalPages, onPageChange, totalItems,
       <p className="text-xs text-foreground/40 font-medium">
         Hiển thị {startItem}-{endItem} / {totalItems}
       </p>
-      <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-foreground/5 text-foreground/50 hover:bg-foreground/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="px-3 py-2 text-xs font-bold rounded-lg bg-foreground/5 text-foreground/50 hover:bg-foreground/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
         >
           ← Trước
         </button>
@@ -43,7 +43,7 @@ export default function Pagination({ page, totalPages, onPageChange, totalItems,
             <button
               key={p}
               onClick={() => onPageChange(p)}
-              className={`w-8 h-8 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+              className={`w-9 h-9 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
                 p === page ? "bg-primary text-white" : "bg-foreground/5 text-foreground/50 hover:bg-foreground/10"
               }`}
             >
@@ -54,7 +54,7 @@ export default function Pagination({ page, totalPages, onPageChange, totalItems,
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-foreground/5 text-foreground/50 hover:bg-foreground/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="px-3 py-2 text-xs font-bold rounded-lg bg-foreground/5 text-foreground/50 hover:bg-foreground/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
         >
           Sau →
         </button>

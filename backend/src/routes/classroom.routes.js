@@ -35,9 +35,11 @@ router.post('/join', async (req, res) => {
     const classroom = await prisma.classroom.findUnique({ where: { joinCode } });
     if (!classroom) return res.status(404).json({ error: 'Mã lớp không hợp lệ' });
     
+    // Joining a classroom hands tuition tracking over to that classroom's own attendance-based
+    // billing — a free-standing student's trial/monthly lock (if any) no longer applies.
     const user = await prisma.user.update({
       where: { id: userId },
-      data: { classroomsJoined: { connect: { id: classroom.id } } }
+      data: { classroomsJoined: { connect: { id: classroom.id } }, accessExpiresAt: null }
     });
     
     res.json({ message: 'Joined classroom successfully', classroom });

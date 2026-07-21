@@ -6,7 +6,9 @@ import Link from "next/link";
 const FEATURE_BULLETS = [
   { icon: "🤖", text: "AI phân tích điểm yếu tức thì" },
   { icon: "📊", text: "Theo dõi tiến độ 4 kỹ năng IELTS" },
-  { icon: "🔁", text: "SRS — nhớ từ vựng lâu hơn gấp 3x" },
+  { icon: "🗣️", text: "Luyện phát âm cùng AI, có góp ý sửa lỗi" },
+  { icon: "🏁", text: "Đề thi thử THPT Quốc Gia do AI tự sinh" },
+  { icon: "🔁", text: "SRS — tự thêm từ vựng, nhớ lâu hơn" },
   { icon: "🏆", text: "Gamification & bảng xếp hạng lớp" },
 ];
 
@@ -21,10 +23,21 @@ function AuthForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [classCode, setClassCode] = useState('');
+  const [signupClassCode, setSignupClassCode] = useState('');
+  const [managerTeacherId, setManagerTeacherId] = useState('');
+  const [teachers, setTeachers] = useState<{ id: string; name: string }[]>([]);
   const [error, setError] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Only needed for the "free-standing student" signup picker below — cheap enough to fetch upfront.
+  useEffect(() => {
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/teachers`)
+      .then(res => res.ok ? res.json() : [])
+      .then(setTeachers)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     const userId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
@@ -57,7 +70,7 @@ function AuthForm() {
       const endpoint = isLogin ? '/api/auth/signin' : '/api/auth/signup';
       const body = isLogin
         ? { email, password, role }
-        : { name, email, password, role };
+        : { name, email, password, role, classCode: signupClassCode || undefined, managerTeacherId: signupClassCode ? undefined : (managerTeacherId || undefined) };
 
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${endpoint}`, {
         method: 'POST',
@@ -131,18 +144,12 @@ function AuthForm() {
           </ul>
         </div>
 
-        {/* Bottom stats */}
-        <div className="relative z-10 grid grid-cols-3 gap-4">
-          {[
-            { v: "2,400+", l: "Học viên" },
-            { v: "94%", l: "Tăng điểm" },
-            { v: "15K+", l: "Câu hỏi" },
-          ].map((s, i) => (
-            <div key={i} className="bg-white/10 rounded-2xl p-3 text-center backdrop-blur">
-              <div className="text-xl font-extrabold text-white">{s.v}</div>
-              <div className="text-white/55 text-xs mt-0.5">{s.l}</div>
-            </div>
-          ))}
+        {/* Trial callout — an honest, concrete offer instead of vanity metrics */}
+        <div className="relative z-10 bg-white/10 rounded-2xl p-4 backdrop-blur flex items-center gap-3">
+          <span className="text-2xl shrink-0">🎁</span>
+          <p className="text-white/85 text-sm font-medium leading-snug">
+            Học tự do được <span className="font-bold text-white">dùng thử miễn phí 3 ngày</span> — không cần thẻ tín dụng.
+          </p>
         </div>
       </div>
 
@@ -229,7 +236,7 @@ function AuthForm() {
                     className="w-full pl-10 pr-11 py-3 border border-gray-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-xl transition-all"
                     placeholder="••••••••"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-500 cursor-pointer">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1/2 -translate-y-1/2 p-2.5 rounded-lg text-slate-400 hover:text-slate-500 hover:bg-slate-50 cursor-pointer">
                     {showPassword ? (
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
@@ -257,6 +264,30 @@ function AuthForm() {
                       placeholder="Nhập mã giáo viên cấp..."
                     />
                   </div>
+                </div>
+              )}
+
+              {!isLogin && role === 'STUDENT' && (
+                <div>
+                  <label className="block text-sm font-semibold mb-1.5 text-secondary/80">Mã Lớp Học — Tuỳ chọn (nếu giáo viên đã cấp mã)</label>
+                  <input
+                    type="text" value={signupClassCode} onChange={e => setSignupClassCode(e.target.value)}
+                    className="w-full px-4 py-3 border border-secondary/20 bg-secondary/5 focus:bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/10 rounded-xl transition-all"
+                    placeholder="Bỏ trống nếu bạn học tự do, chưa có lớp"
+                  />
+                  {!signupClassCode.trim() && (
+                    <div className="mt-3">
+                      <label className="block text-sm font-semibold mb-1.5 text-slate-700">Chọn Giáo Viên Phụ Trách</label>
+                      <select
+                        value={managerTeacherId} onChange={e => setManagerTeacherId(e.target.value)} required
+                        className="w-full px-4 py-3 border border-gray-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-xl transition-all"
+                      >
+                        <option value="">-- Chọn giáo viên --</option>
+                        {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                      </select>
+                      <p className="text-xs text-slate-400 mt-1.5">Học tự do được dùng thử miễn phí 3 ngày. Giáo viên phụ trách sẽ kích hoạt lại mỗi tháng sau khi bạn đóng học phí.</p>
+                    </div>
+                  )}
                 </div>
               )}
 

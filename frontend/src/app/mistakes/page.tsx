@@ -1,12 +1,12 @@
 export default function MistakeBank() {
   return (
-    <div className="p-8 max-w-5xl mx-auto w-full space-y-8">
-      <div className="flex justify-between items-end mb-8">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto w-full space-y-8">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-8">
         <div>
-          <h1 className="text-4xl font-bold mb-2">Sổ Tay Câu Sai</h1>
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2">Sổ Tay Câu Sai</h1>
           <p className="text-foreground/70">Những câu bạn đã làm sai cần được ôn tập lại bằng thuật toán lặp lại ngắt quãng.</p>
         </div>
-        <button className="px-6 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 shadow-lg shadow-primary/30 transition-all">
+        <button className="px-6 py-3 rounded-xl bg-primary text-white font-bold hover:bg-primary/90 shadow-lg shadow-primary/30 transition-all shrink-0">
           Ôn Tập Ngay (15 câu)
         </button>
       </div>
@@ -21,8 +21,8 @@ export default function MistakeBank() {
 
       <div className="space-y-4">
         {/* Sample Mistake Item */}
-        <div className="glass p-6 rounded-2xl flex gap-6">
-          <div className="flex flex-col items-center justify-center p-4 bg-red-500/10 rounded-xl text-red-500 min-w-[100px]">
+        <div className="glass p-6 rounded-2xl flex flex-col sm:flex-row gap-4 sm:gap-6">
+          <div className="flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-0 p-4 bg-red-500/10 rounded-xl text-red-500 sm:min-w-[100px]">
             <span className="text-3xl font-black">3</span>
             <span className="text-xs font-bold uppercase mt-1">Lần sai</span>
           </div>
@@ -34,7 +34,7 @@ export default function MistakeBank() {
             </div>
             <p className="font-medium text-lg mb-4">If I _____ you, I would study harder.</p>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <span className="text-sm text-foreground/50 block mb-1">Bạn đã chọn:</span>
                 <span className="font-medium text-red-500 line-through">B. was</span>
@@ -53,8 +53,8 @@ export default function MistakeBank() {
         </div>
         
         {/* Sample Mistake Item 2 */}
-        <div className="glass p-6 rounded-2xl flex gap-6">
-          <div className="flex flex-col items-center justify-center p-4 bg-red-500/10 rounded-xl text-red-500 min-w-[100px]">
+        <div className="glass p-6 rounded-2xl flex flex-col sm:flex-row gap-4 sm:gap-6">
+          <div className="flex flex-row sm:flex-col items-center justify-center gap-2 sm:gap-0 p-4 bg-red-500/10 rounded-xl text-red-500 sm:min-w-[100px]">
             <span className="text-3xl font-black">1</span>
             <span className="text-xs font-bold uppercase mt-1">Lần sai</span>
           </div>
@@ -66,7 +66,7 @@ export default function MistakeBank() {
             </div>
             <p className="font-medium text-lg mb-4">When he realized his mistake, he tried to _____ it up.</p>
             
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <span className="text-sm text-foreground/50 block mb-1">Bạn đã chọn:</span>
                 <span className="font-medium text-red-500 line-through">C. hide</span>

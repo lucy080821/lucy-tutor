@@ -167,18 +167,18 @@ export default function GrammarGymPage() {
     <div className="min-h-screen bg-background flex flex-col items-center">
       {/* Header */}
       <div className="w-full bg-surface border-b border-foreground/10 p-4 sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+        <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-4">
             <button onClick={() => router.push('/dashboard')} className="p-2 hover:bg-foreground/5 rounded-full transition-colors">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
               </svg>
             </button>
-            <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center gap-2">
               🏋️ Grammar Gym
             </h1>
           </div>
-          
+
           <div className="flex bg-foreground/5 p-1 rounded-xl">
             <button 
               onClick={() => setActiveTab('STATS')}

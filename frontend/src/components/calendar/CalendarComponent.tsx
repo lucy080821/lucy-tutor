@@ -10,7 +10,18 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
   const [events, setEvents] = useState<any[]>([]);
   const [showSessionModal, setShowSessionModal] = useState(false);
   const [editSession, setEditSession] = useState<any>(null);
-  
+
+  // The default timeGridWeek view + 6-button desktop toolbar are unreadable on a phone (7 columns
+  // squeeze under ~50px each) — switch to a single-day view and a minimal toolbar below 768px.
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
   // For dragging/creating
   const [sessionForm, setSessionForm] = useState({
     title: "",
@@ -221,13 +232,18 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
     <div className="bg-surface rounded-3xl p-4 md:p-8 h-full flex flex-col relative border border-foreground/10 shadow-sm animate-in fade-in zoom-in duration-500">
       <div className="flex-1 w-full overflow-y-auto">
         <FullCalendar
+          key={isMobile ? 'mobile' : 'desktop'}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          headerToolbar={{
+          headerToolbar={isMobile ? {
+            left: 'prev,next',
+            center: 'title',
+            right: 'today'
+          } : {
             left: 'prev,next today',
             center: 'title',
             right: 'dayGridMonth,timeGridWeek,timeGridDay'
           }}
-          initialView="timeGridWeek"
+          initialView={isMobile ? 'timeGridDay' : 'timeGridWeek'}
           editable={role === 'TEACHER'}
           selectable={role === 'TEACHER'}
           selectMirror={true}
@@ -265,7 +281,7 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
                   </select>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-bold mb-1">Bắt đầu</label>
                   <input required type="datetime-local" className="w-full p-2 border border-foreground/20 rounded-lg bg-transparent"

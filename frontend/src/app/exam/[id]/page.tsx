@@ -274,7 +274,7 @@ export default function ExamPage() {
   if (!isTabFocused && !submitted && !isReviewMode && !loading && !error) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-black/95 p-6 z-[9999] fixed inset-0">
-        <div className="text-center space-y-6 max-w-lg w-full bg-surface/10 p-10 rounded-3xl border border-rose-500/30 backdrop-blur-md">
+        <div className="text-center space-y-6 max-w-lg w-full bg-surface/10 p-6 sm:p-10 rounded-3xl border border-rose-500/30 backdrop-blur-md">
           <div className="w-20 h-20 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mx-auto text-4xl mb-2 animate-pulse">⚠️</div>
           <h2 className="text-rose-500 text-2xl font-black uppercase tracking-widest">Cảnh báo gian lận ({cheatCount}/2)</h2>
           <p className="text-white/80 text-lg leading-relaxed">
@@ -313,7 +313,7 @@ export default function ExamPage() {
             </div>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <button onClick={() => setIsReviewMode(true)} className="flex-1 py-4 bg-foreground/10 text-foreground font-bold rounded-2xl hover:bg-foreground/20 transition-colors">
               👀 Xem Lại Bài Làm
             </button>
@@ -414,7 +414,7 @@ export default function ExamPage() {
             
             {question?.imageUrl && (
               <div className="mb-6">
-                <img src={question.imageUrl} alt="Question" className="max-h-64 rounded-xl border border-foreground/10" />
+                <img src={question.imageUrl} alt="Question" className="max-h-64 max-w-full object-contain rounded-xl border border-foreground/10" />
               </div>
             )}
 
@@ -532,7 +532,7 @@ export default function ExamPage() {
 
         {/* Navigator Panel */}
         <aside className="w-full lg:w-64 shrink-0">
-          <div className="bg-surface border border-foreground/10 rounded-3xl p-6 sticky top-24">
+          <div className="bg-surface border border-foreground/10 rounded-3xl p-6 lg:sticky lg:top-24">
             <h3 className="font-bold mb-4 text-sm text-foreground/60 uppercase tracking-wide">Bảng câu hỏi</h3>
             <div className="flex flex-wrap gap-2">
               {questions.map((_: any, i: number) => {

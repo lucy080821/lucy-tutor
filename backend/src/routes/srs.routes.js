@@ -157,6 +157,73 @@ router.post('/review/:progressId', async (req, res) => {
   }
 });
 
+// 5. Student self-adds a custom vocabulary word (no Lesson/classroom required) — the only
+// path a classless student has to ever get a word into their deck, since VocabItem previously
+// could only be created as a child of a teacher's classroom-scoped Lesson.
+router.post('/vocab/custom', async (req, res) => {
+  try {
+    const { userId, word, meaning, phonetic, pos, example } = req.body;
+    if (!userId || !word || !meaning) {
+      return res.status(400).json({ error: 'Thiếu từ hoặc nghĩa của từ.' });
+    }
+
+    const vocab = await prisma.vocabItem.create({
+      data: { word, meaning, phonetic: phonetic || null, pos: pos || null, example: example || null, addedByUserId: userId }
+    });
+
+    const progress = await prisma.userVocabProgress.create({
+      data: {
+        userId,
+        vocabId: vocab.id,
+        status: 'LEARNING',
+        nextReviewDate: new Date(),
+        interval: 0,
+        easeFactor: 2.5,
+        repetitions: 0
+      },
+      include: { vocab: true }
+    });
+
+    res.json(progress);
+  } catch (error) {
+    console.error('Error adding custom vocab:', error);
+    res.status(500).json({ error: 'Failed to add custom vocab' });
+  }
+});
+
+// 6. List words a student added themselves (so they can review/delete them)
+router.get('/vocab/custom/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const vocab = await prisma.vocabItem.findMany({
+      where: { addedByUserId: userId },
+      orderBy: { id: 'desc' }
+    });
+    res.json(vocab);
+  } catch (error) {
+    console.error('Error fetching custom vocab:', error);
+    res.status(500).json({ error: 'Failed to fetch custom vocab' });
+  }
+});
+
+// 7. Delete a self-added word — only the student who added it may delete it (teacher-assigned
+// VocabItem rows have addedByUserId === null and can never be targeted through this route).
+router.delete('/vocab/custom/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.query;
+    const vocab = await prisma.vocabItem.findUnique({ where: { id } });
+    if (!vocab || vocab.addedByUserId !== userId) {
+      return res.status(403).json({ error: 'Không thể xóa từ này.' });
+    }
+    await prisma.vocabItem.delete({ where: { id } }); // cascades to UserVocabProgress
+    res.json({ message: 'Đã xóa từ' });
+  } catch (error) {
+    console.error('Error deleting custom vocab:', error);
+    res.status(500).json({ error: 'Failed to delete custom vocab' });
+  }
+});
+
 // 4. Fetch statistics for charts
 router.get('/stats/:userId', async (req, res) => {
   try {

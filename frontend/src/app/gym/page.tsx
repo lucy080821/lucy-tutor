@@ -8,12 +8,21 @@ import { cleanString, levenshteinDistance, getHintMask } from '@/lib/textGrading
 export default function GymPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'STATS' | 'PRACTICE'>('STATS');
-  
+  const [activeTab, setActiveTab] = useState<'STATS' | 'PRACTICE' | 'MY_WORDS'>('STATS');
+
   // Data state
   const [stats, setStats] = useState<any>(null);
   const [dueVocabs, setDueVocabs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Self-added vocab state (the only way a classless student gets words into their deck)
+  const [customVocab, setCustomVocab] = useState<any[]>([]);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newWord, setNewWord] = useState('');
+  const [newMeaning, setNewMeaning] = useState('');
+  const [newPhonetic, setNewPhonetic] = useState('');
+  const [newExample, setNewExample] = useState('');
+  const [savingWord, setSavingWord] = useState(false);
 
   // Practice state
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
@@ -48,17 +57,70 @@ export default function GymPage() {
   const fetchData = async (uid: string) => {
     setLoading(true);
     try {
-      const [statsRes, dueRes] = await Promise.all([
+      const [statsRes, dueRes, customRes] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/srs/stats/${uid}`),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/srs/due/${uid}`)
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/srs/due/${uid}`),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/srs/vocab/custom/${uid}`)
       ]);
       if (statsRes.ok) setStats(await statsRes.json());
       if (dueRes.ok) setDueVocabs(await dueRes.json());
+      if (customRes.ok) setCustomVocab(await customRes.json());
     } catch (err) {
       console.error(err);
       Swal.fire('Lỗi', 'Không thể tải dữ liệu SRS', 'error');
     }
     setLoading(false);
+  };
+
+  const handleAddCustomVocab = async () => {
+    if (!userId || !newWord.trim() || !newMeaning.trim()) {
+      Swal.fire('Thiếu thông tin', 'Vui lòng nhập từ và nghĩa của từ.', 'warning');
+      return;
+    }
+    setSavingWord(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/srs/vocab/custom`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId, word: newWord.trim(), meaning: newMeaning.trim(),
+          phonetic: newPhonetic.trim() || undefined, example: newExample.trim() || undefined
+        })
+      });
+      if (res.ok) {
+        setNewWord(''); setNewMeaning(''); setNewPhonetic(''); setNewExample('');
+        setShowAddForm(false);
+        Swal.fire({ title: 'Đã thêm từ mới!', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
+        fetchData(userId);
+      } else {
+        Swal.fire('Lỗi', 'Không thể thêm từ này', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Lỗi', 'Không thể thêm từ này', 'error');
+    }
+    setSavingWord(false);
+  };
+
+  const handleDeleteCustomVocab = async (id: string) => {
+    if (!userId) return;
+    const confirm = await Swal.fire({
+      title: 'Xóa từ này?', text: 'Tiến độ ôn tập của từ này cũng sẽ bị xóa.', icon: 'warning',
+      showCancelButton: true, confirmButtonText: 'Xóa', cancelButtonText: 'Hủy', confirmButtonColor: '#e11d48'
+    });
+    if (!confirm.isConfirmed) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/srs/vocab/custom/${id}?userId=${userId}`, { method: 'DELETE' });
+      if (res.ok) {
+        setCustomVocab(prev => prev.filter(v => v.id !== id));
+        fetchData(userId);
+      } else {
+        Swal.fire('Lỗi', 'Không thể xóa từ này', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Lỗi', 'Không thể xóa từ này', 'error');
+    }
   };
 
   const resetCardState = () => {
@@ -157,27 +219,27 @@ export default function GymPage() {
       
       {/* Header */}
       <div className="w-full bg-surface border-b border-foreground/10 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4 justify-between">
+        <div className="max-w-4xl mx-auto px-4 py-4 flex flex-wrap items-center gap-4 justify-between">
           <div className="flex items-center gap-4">
             <button onClick={() => router.push('/dashboard')} className="w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center hover:bg-foreground/10 transition-colors">
               ←
             </button>
             <div>
-              <h1 className="text-xl font-black text-primary flex items-center gap-2">
+              <h1 className="text-lg sm:text-xl font-black text-primary flex items-center gap-2">
                 🏋️‍♀️ Phòng Gym Từ Vựng
               </h1>
             </div>
           </div>
           <div className="flex bg-foreground/5 p-1 rounded-xl">
-            <button 
-              onClick={() => setActiveTab('STATS')} 
-              className={`px-6 py-2 rounded-lg text-sm font-bold transition-colors ${activeTab === 'STATS' ? 'bg-surface shadow-sm text-foreground' : 'text-foreground/50 hover:text-foreground'}`}
+            <button
+              onClick={() => setActiveTab('STATS')}
+              className={`px-3 sm:px-6 py-2 rounded-lg text-sm font-bold transition-colors ${activeTab === 'STATS' ? 'bg-surface shadow-sm text-foreground' : 'text-foreground/50 hover:text-foreground'}`}
             >
               Thống Kê
             </button>
-            <button 
-              onClick={() => setActiveTab('PRACTICE')} 
-              className={`px-6 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${activeTab === 'PRACTICE' ? 'bg-primary text-white shadow-sm' : 'text-foreground/50 hover:text-foreground'}`}
+            <button
+              onClick={() => setActiveTab('PRACTICE')}
+              className={`px-3 sm:px-6 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${activeTab === 'PRACTICE' ? 'bg-primary text-white shadow-sm' : 'text-foreground/50 hover:text-foreground'}`}
             >
               Ôn Tập
               {dueVocabs.length > 0 && (
@@ -185,6 +247,12 @@ export default function GymPage() {
                   {dueVocabs.length}
                 </span>
               )}
+            </button>
+            <button
+              onClick={() => setActiveTab('MY_WORDS')}
+              className={`px-3 sm:px-6 py-2 rounded-lg text-sm font-bold transition-colors ${activeTab === 'MY_WORDS' ? 'bg-surface shadow-sm text-foreground' : 'text-foreground/50 hover:text-foreground'}`}
+            >
+              Từ Của Tôi
             </button>
           </div>
         </div>
@@ -449,6 +517,82 @@ export default function GymPage() {
               </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* MY_WORDS TAB — self-add vocab (no lesson/classroom required) */}
+        {activeTab === 'MY_WORDS' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
+            <div className="flex justify-between items-center flex-wrap gap-4">
+              <div>
+                <h2 className="text-xl font-bold">Từ Vựng Tự Thêm</h2>
+                <p className="text-sm text-foreground/50 mt-1">Tự thêm từ mới để luyện tập — không cần chờ giáo viên giao bài.</p>
+              </div>
+              <button
+                onClick={() => setShowAddForm(v => !v)}
+                className="px-5 py-2.5 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity"
+              >
+                {showAddForm ? 'Đóng' : '+ Thêm Từ Mới'}
+              </button>
+            </div>
+
+            {showAddForm && (
+              <div className="bg-surface border border-foreground/10 rounded-2xl p-6 shadow-sm space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold mb-1.5">Từ tiếng Anh *</label>
+                    <input type="text" value={newWord} onChange={e => setNewWord(e.target.value)} placeholder="vd: resilient"
+                      className="w-full px-4 py-2.5 border border-foreground/10 bg-background rounded-xl focus:outline-none focus:border-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-1.5">Nghĩa tiếng Việt *</label>
+                    <input type="text" value={newMeaning} onChange={e => setNewMeaning(e.target.value)} placeholder="vd: kiên cường, dễ phục hồi"
+                      className="w-full px-4 py-2.5 border border-foreground/10 bg-background rounded-xl focus:outline-none focus:border-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-1.5">Phiên âm — tuỳ chọn</label>
+                    <input type="text" value={newPhonetic} onChange={e => setNewPhonetic(e.target.value)} placeholder="vd: /rɪˈzɪl.i.ənt/"
+                      className="w-full px-4 py-2.5 border border-foreground/10 bg-background rounded-xl focus:outline-none focus:border-primary" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold mb-1.5">Câu ví dụ — tuỳ chọn</label>
+                    <input type="text" value={newExample} onChange={e => setNewExample(e.target.value)} placeholder="vd: She stayed resilient through hardship."
+                      className="w-full px-4 py-2.5 border border-foreground/10 bg-background rounded-xl focus:outline-none focus:border-primary" />
+                  </div>
+                </div>
+                <button
+                  onClick={handleAddCustomVocab}
+                  disabled={savingWord}
+                  className="px-6 py-2.5 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                >
+                  {savingWord ? 'Đang lưu...' : 'Lưu Từ Mới'}
+                </button>
+              </div>
+            )}
+
+            {customVocab.length === 0 ? (
+              <p className="text-foreground/40 text-center py-8">Bạn chưa tự thêm từ nào. Bấm "+ Thêm Từ Mới" để bắt đầu.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {customVocab.map((v: any) => (
+                  <div key={v.id} className="bg-surface border border-foreground/10 rounded-2xl p-5 shadow-sm flex justify-between items-start gap-3">
+                    <div>
+                      <h3 className="font-bold text-lg text-primary">{v.word}</h3>
+                      {v.phonetic && <p className="text-foreground/50 font-mono text-sm">{v.phonetic}</p>}
+                      <p className="text-foreground/80 mt-1">{v.meaning}</p>
+                      {v.example && <p className="text-foreground/50 italic text-sm mt-2">&quot;{v.example}&quot;</p>}
+                    </div>
+                    <button
+                      onClick={() => handleDeleteCustomVocab(v.id)}
+                      className="w-9 h-9 flex items-center justify-center rounded-lg text-foreground/30 hover:text-rose-500 hover:bg-rose-500/10 transition-colors shrink-0"
+                      title="Xóa từ"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

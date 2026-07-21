@@ -32,6 +32,17 @@ model User {
   uploadedExams    Exam[]      @relation("TeacherExams")
   assignedExams    Exam[]      @relation("AssignedExams")
 
+  // Free-standing students (no classroom): assigned at signup, drives the trial/monthly-lock cycle.
+  // Null for classroom students, teachers, and accounts created before the trial feature's cutoff date.
+  accessExpiresAt DateTime?
+
+  managerTeacherId String?
+  managerTeacher   User?   @relation("ManagedFreeStudents", fields: [managerTeacherId], references: [id], onDelete: SetNull)
+  managedFreeStudents User[] @relation("ManagedFreeStudents")
+
+  freeStudentPaymentsMade      FreeStudentPayment[] @relation("FreeStudentPaymentStudent")
+  freeStudentPaymentsConfirmed FreeStudentPayment[] @relation("FreeStudentPaymentTeacher")
+
   uploadedLessons   Lesson[]         @relation("TeacherLessons")
   lessonProgress    LessonProgress[]
   uploadedDocuments Document[]       @relation("TeacherDocuments")
@@ -53,6 +64,10 @@ model User {
   savedWritingPrompts   SavedWritingPrompt[]
   readingAttempts       ReadingAttempt[]
   listeningExamAttempts ListeningExamAttempt[]
+
+  selfAddedVocab        VocabItem[]            @relation("SelfAddedVocab")
+  pronunciationAttempts PronunciationAttempt[]
+  mockTestAttempts      MockTestAttempt[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -244,7 +259,7 @@ model Lesson {
 
 model VocabItem {
   id       String  @id @default(uuid())
-  lessonId String
+  lessonId String? // null when self-added by a student directly (see addedByUserId), not tied to any teacher Lesson
   word     String
   pos      String?
   phonetic String?
@@ -252,7 +267,11 @@ model VocabItem {
   example  String?
   imageUrl String?
 
-  lesson   Lesson              @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  lesson Lesson? @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  addedByUserId String?
+  addedBy       User?   @relation("SelfAddedVocab", fields: [addedByUserId], references: [id], onDelete: Cascade)
+
   progress UserVocabProgress[]
 }
 
@@ -313,6 +332,22 @@ model TuitionPayment {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([classroomId, userId, month, year])
+}
+
+// One row per monthly renewal a teacher confirms for a free-standing (classless) student.
+// Mirrors TuitionPayment's confirm-payment shape but has no classroom scope and no fixed
+// fee — the teacher types the amount in each time (see freeStudent.routes.js).
+model FreeStudentPayment {
+  id        String   @id @default(uuid())
+  userId    String
+  teacherId String
+  amount    Int
+  paidAt    DateTime @default(now())
+  periodEnd DateTime // access renewed until this date (paidAt + 1 calendar month)
+  createdAt DateTime @default(now())
+
+  user    User @relation("FreeStudentPaymentStudent", fields: [userId], references: [id], onDelete: Cascade)
+  teacher User @relation("FreeStudentPaymentTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
 }
 
 model Document {
@@ -457,6 +492,43 @@ model ListeningExamAttempt {
   answers     String // JSON string
   score       Float
   practicedAt DateTime @default(now()) // shown on the exported PDF
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+// Each row is one recorded-and-scored word/sentence attempt in Pronunciation Practice.
+// Content is sourced from the student's own SRS vocab deck (VocabItem.phonetic/example),
+// not teacher-authored — see VocabItem.addedByUserId for how classless students get words in.
+model PronunciationAttempt {
+  id          String   @id @default(uuid())
+  userId      String
+  vocabId     String? // VocabItem practiced, if sourced from the deck (may be deleted later, kept nullable)
+  targetText  String
+  transcript  String // Groq Whisper transcription of the student's recording
+  matchScore  Float // 0-10, word-match ratio — an ASR-based proxy, not true phoneme scoring
+  feedback    String? // JSON string: { overall, likelyIssues: [{word, tip}], suggestions: [] } from /coach
+  practicedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+// One attempt at an AI-generated mock test shaped like the real Vietnamese THPT Quốc Gia
+// English exam (phonetics/stress, grammar & vocab, communication, cloze, reading comprehension
+// — all sections share the ReadingQuestion shape from readingGrading.ts, tagged by `section`).
+model MockTestAttempt {
+  id           String    @id @default(uuid())
+  userId       String
+  variant      String    @default("SHORT") // "SHORT" (~20 câu/25 phút) or "FULL" (~40 câu/50 phút)
+  sections     String // JSON string: [{ section, passage?, questions: ReadingQuestion[] }]
+  answers      String // JSON string: answers keyed by flat question index
+  score        Float // 0-10
+  timeSpentSec Int?
+  analysis     String? // JSON string, added after "Phân Tích Chi Tiết (AI)"
+  practicedAt  DateTime  @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

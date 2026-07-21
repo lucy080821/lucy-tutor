@@ -64,6 +64,10 @@ export default function TeacherDashboard() {
   const [searchStudentQuery, setSearchStudentQuery] = useState("");
   const [globalLoading, setGlobalLoading] = useState({ isLoading: false, message: "" });
 
+  // ── FREE_STUDENTS tab: free-standing (no classroom) students managed by this teacher ──
+  const [freeStudents, setFreeStudents] = useState<any[]>([]);
+  const [searchFreeStudentQuery, setSearchFreeStudentQuery] = useState("");
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -454,6 +458,56 @@ export default function TeacherDashboard() {
       fetchDocuments();
     }
   }, [activeTab, user]);
+
+  const fetchFreeStudents = async () => {
+    if (!user?.id) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/free-students/teacher/${user.id}`);
+      if (res.ok) setFreeStudents(await res.json());
+    } catch (err) { console.error(err); }
+  };
+
+  useEffect(() => {
+    if (activeTab === "FREE_STUDENTS" && user) {
+      fetchFreeStudents();
+    }
+  }, [activeTab, user]);
+
+  const handleConfirmFreeStudentPayment = async (student: any) => {
+    const { value: amount } = await Swal.fire({
+      title: `Xác nhận học phí — ${student.name}`,
+      html: `Kích hoạt lại sẽ gia hạn quyền sử dụng thêm <b>1 tháng</b> kể từ hôm nay.`,
+      input: 'number',
+      inputLabel: 'Số tiền học phí (VNĐ)',
+      inputPlaceholder: 'Vd: 500000',
+      inputAttributes: { min: '0' },
+      showCancelButton: true,
+      confirmButtonText: 'Xác nhận & Kích hoạt',
+      cancelButtonText: 'Hủy',
+      inputValidator: (value) => (!value || parseInt(value) < 0) ? 'Vui lòng nhập số tiền hợp lệ' : undefined
+    });
+    if (amount === undefined) return;
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/free-students/confirm-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ studentId: student.id, teacherId: user.id, amount: parseInt(amount) })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        Swal.fire('Thành công', 'Đã kích hoạt lại tài khoản học viên!', 'success');
+        setFreeStudents(prev => prev.map(s => s.id === student.id
+          ? { ...s, accessExpiresAt: data.accessExpiresAt, accessLocked: false, accessDaysRemaining: Math.ceil((new Date(data.accessExpiresAt).getTime() - Date.now()) / 86400000) }
+          : s));
+      } else {
+        Swal.fire('Lỗi', data.error || 'Không thể xác nhận thanh toán', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Lỗi', 'Không thể xác nhận thanh toán', 'error');
+    }
+  };
 
   const handleUploadDocument = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1467,6 +1521,7 @@ export default function TeacherDashboard() {
       subItems: [
         { id: "CLASSES", label: "Lớp Học", icon: "🏫" },
         { id: "STUDENTS", label: "Học Viên", icon: "🧑‍🎓" },
+        { id: "FREE_STUDENTS", label: "Học Viên Tự Do", icon: "🕊️" },
         { id: "ATTENDANCE", label: "Điểm Danh & Học Phí", icon: "💳" },
         { id: "CALENDAR", label: "Thời Khóa Biểu", icon: "📅" },
         { id: "CHEAT_CONTROL", label: "Kiểm Soát Gian Lận", icon: "🛡️" }
@@ -1574,6 +1629,13 @@ export default function TeacherDashboard() {
   );
   const TABLE_PAGE_SIZE = 15;
   const studentsPagination = usePagination(filteredStudents, TABLE_PAGE_SIZE, searchStudentQuery);
+
+  // ── FREE_STUDENTS tab: filter over the full list, then paginate ──
+  const filteredFreeStudents = freeStudents.filter((s: any) =>
+    s.name.toLowerCase().includes(searchFreeStudentQuery.toLowerCase()) ||
+    s.email.toLowerCase().includes(searchFreeStudentQuery.toLowerCase())
+  );
+  const freeStudentsPagination = usePagination(filteredFreeStudents, TABLE_PAGE_SIZE, searchFreeStudentQuery);
 
   // ── DOCUMENTS tab: filter over the full list, then paginate ──
   const filteredDocuments = documents.filter(d => d.title.toLowerCase().includes(searchDocQuery.toLowerCase()));
@@ -2157,6 +2219,96 @@ export default function TeacherDashboard() {
               </div>
               );
             })()}
+          </div>
+        )}
+
+        {/* ── FREE_STUDENTS ── */}
+        {activeTab === "FREE_STUDENTS" && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex justify-between items-center flex-wrap gap-4">
+              <div>
+                <h1 className="text-3xl font-bold">Học Viên Tự Do</h1>
+                <p className="text-sm text-slate-400 mt-1">Học viên đăng ký không tham gia lớp nào, chọn bạn làm giáo viên phụ trách. Dùng thử 3 ngày, sau đó cần xác nhận đóng học phí mỗi tháng để tiếp tục sử dụng.</p>
+              </div>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên hoặc email..."
+                  value={searchFreeStudentQuery}
+                  onChange={(e) => setSearchFreeStudentQuery(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-200 bg-white rounded-lg focus:border-primary focus:outline-none min-w-[250px]"
+                />
+              </div>
+            </div>
+
+            {freeStudents.length === 0 ? (
+              <p className="text-slate-400">Chưa có học viên tự do nào chọn bạn làm giáo viên phụ trách.</p>
+            ) : filteredFreeStudents.length === 0 ? (
+              <p className="text-slate-400">Không tìm thấy học viên phù hợp.</p>
+            ) : (
+              <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-left min-w-[800px]">
+                    <thead>
+                      <tr className="bg-slate-50 text-slate-400 text-xs uppercase tracking-widest">
+                        <th className="p-4 font-bold border-b border-gray-100">Học Viên</th>
+                        <th className="p-4 font-bold border-b border-gray-100">Ngày đăng ký</th>
+                        <th className="p-4 font-bold border-b border-gray-100">Trạng thái</th>
+                        <th className="p-4 font-bold border-b border-gray-100">Hạn sử dụng</th>
+                        <th className="p-4 font-bold border-b border-gray-100 text-center">Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {freeStudentsPagination.pageItems.map((s: any) => {
+                        const lastPayment = s.freeStudentPaymentsMade?.[0];
+                        const status = s.accessLocked
+                          ? { label: 'Đã khóa', color: 'text-red-600 bg-red-500/10 border border-red-500/20' }
+                          : lastPayment
+                          ? { label: 'Đang hoạt động', color: 'text-emerald-600 bg-emerald-500/10 border border-emerald-500/20' }
+                          : { label: 'Đang dùng thử', color: 'text-amber-600 bg-amber-500/10 border border-amber-500/20' };
+                        return (
+                          <tr key={s.id} className="border-b border-gray-100 last:border-0 hover:bg-slate-50 transition-colors">
+                            <td className="p-4 font-medium flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-xs shrink-0 overflow-hidden">
+                                {s.avatar ? <img src={s.avatar} alt="Avatar" className="w-full h-full object-cover" /> : s.name.charAt(0)}
+                              </div>
+                              <div>
+                                <div>{s.name}</div>
+                                <div className="text-xs text-slate-400 font-normal">{s.email}</div>
+                              </div>
+                            </td>
+                            <td className="p-4 text-sm">{new Date(s.createdAt).toLocaleDateString('vi-VN')}</td>
+                            <td className="p-4">
+                              <span className={`px-2 py-1 text-xs font-bold ${status.color} shadow-sm`}>{status.label}</span>
+                            </td>
+                            <td className="p-4 text-sm">
+                              {s.accessExpiresAt ? (
+                                <span className={s.accessLocked ? 'text-red-500 font-semibold' : ''}>
+                                  {new Date(s.accessExpiresAt).toLocaleDateString('vi-VN')}
+                                  {!s.accessLocked && s.accessDaysRemaining !== null && ` (còn ${s.accessDaysRemaining} ngày)`}
+                                </span>
+                              ) : '—'}
+                            </td>
+                            <td className="p-4 text-center">
+                              <button
+                                onClick={() => handleConfirmFreeStudentPayment(s)}
+                                className="px-4 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-colors cursor-pointer"
+                              >
+                                {s.accessLocked ? 'Kích Hoạt Lại' : 'Xác Nhận Đóng Phí'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="p-4 border-t border-gray-100">
+                  <Pagination page={freeStudentsPagination.page} totalPages={freeStudentsPagination.totalPages} totalItems={freeStudentsPagination.totalItems} pageSize={TABLE_PAGE_SIZE} onPageChange={freeStudentsPagination.setPage} />
+                </div>
+              </div>
+            )}
           </div>
         )}
 

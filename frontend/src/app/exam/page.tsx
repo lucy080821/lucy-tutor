@@ -42,13 +42,13 @@ export default function ExamSimulator() {
     (mode === "EXAM" && isSubmitted && isWrong);
 
   return (
-    <div className="p-8 max-w-4xl mx-auto w-full space-y-8">
-      <div className="flex justify-between items-center bg-surface p-4 rounded-2xl border border-foreground/10">
+    <div className="p-4 md:p-8 max-w-4xl mx-auto w-full space-y-8">
+      <div className="flex flex-wrap justify-between items-center gap-3 bg-surface p-4 rounded-2xl border border-foreground/10">
         <div>
           <h1 className="text-2xl font-bold">Mô phỏng Làm bài</h1>
           <p className="text-sm text-foreground/60">Kiểm tra tính năng AI hỗ trợ học tập</p>
         </div>
-        
+
         <div className="flex bg-foreground/5 p-1 rounded-xl">
           <button 
             onClick={() => { setMode("PRACTICE"); reset(); }}
@@ -65,8 +65,8 @@ export default function ExamSimulator() {
         </div>
       </div>
 
-      <div className="glass p-8 rounded-3xl">
-        <div className="mb-6 flex justify-between items-start">
+      <div className="glass p-4 sm:p-8 rounded-3xl">
+        <div className="mb-6 flex flex-wrap justify-between items-start gap-2">
           <span className="bg-foreground/10 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
             Câu 1 / 50
           </span>

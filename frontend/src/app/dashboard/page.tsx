@@ -22,6 +22,55 @@ export default function StudentDashboard() {
   const [lessonClassFilter, setLessonClassFilter] = useState("");
   const [skillProgress, setSkillProgress] = useState<Record<string, { score: number; hasData: boolean }>>({});
 
+  // ── SETTINGS tab: change password + free-standing student account status ──
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (activeTab === "SETTINGS" && user?.id && user?.managerTeacher) {
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/free-students/payments/${user.id}`)
+        .then(res => res.json())
+        .then(data => setPaymentHistory(Array.isArray(data) ? data : []))
+        .catch(() => {});
+    }
+  }, [activeTab, user?.id, user?.managerTeacher]);
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id) return;
+    if (newPassword !== confirmNewPassword) {
+      Swal.fire('Lỗi', 'Mật khẩu mới nhập lại không khớp.', 'error');
+      return;
+    }
+    if (newPassword.length < 6) {
+      Swal.fire('Lỗi', 'Mật khẩu mới phải có ít nhất 6 ký tự.', 'error');
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/change-password`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, currentPassword, newPassword })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        Swal.fire('Thành công', 'Đã đổi mật khẩu thành công!', 'success');
+        setCurrentPassword(""); setNewPassword(""); setConfirmNewPassword("");
+      } else {
+        Swal.fire('Lỗi', data.error || 'Không thể đổi mật khẩu', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire('Lỗi', 'Không thể đổi mật khẩu', 'error');
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
   useEffect(() => {
     if (user?.classroomsJoined?.length > 0) {
       Promise.all(user.classroomsJoined.map((c: any) => 
@@ -70,7 +119,9 @@ export default function StudentDashboard() {
       });
       const data = await res.json();
       if (res.ok) {
-        setUser({ ...user, classroomsJoined: [...(user.classroomsJoined || []), data.classroom] });
+        // Joining a classroom hands tuition tracking to that classroom's own billing — clear
+        // any free-standing trial/lock state client-side too (backend already nulled it).
+        setUser({ ...user, classroomsJoined: [...(user.classroomsJoined || []), data.classroom], accessLocked: false, accessDaysRemaining: null });
         Swal.fire('Thành công', 'Đã tham gia lớp học thành công!', 'success');
         setJoinCode("");
       } else {
@@ -206,36 +257,51 @@ export default function StudentDashboard() {
     setExpandedNav(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  // Once we know the account has no classroom, default-open the self-practice groups instead
+  // of the (still-empty) "Học Tập" group — only runs once per login, so it doesn't fight a
+  // student's own manual expand/collapse afterwards.
+  useEffect(() => {
+    if (user?.id && !user?.classroomsJoined?.length) {
+      setExpandedNav(prev => ({ ...prev, FOUR_SKILLS: true, TRAINING_CENTER: true }));
+    }
+  }, [user?.id, user?.classroomsJoined?.length]);
+
+  const learningGroup = {
+    id: "LEARNING", label: "Học Tập", icon: "🎓",
+    subItems: [
+      { id: "LESSONS", label: "Bài Học", icon: "📖" },
+      { id: "PRACTICE", label: "Bài Tập", icon: "📝" },
+      { id: "EXAMS", label: "Bài Kiểm Tra", icon: "🧪" },
+      { id: "ATTENDANCE", label: "Chuyên Cần", icon: "🗓️" },
+      { id: "DOCUMENTS", label: "Tài Liệu", icon: "📁" },
+    ]
+  };
+  const fourSkillsGroup = {
+    id: "FOUR_SKILLS", label: "Huấn Luyện 4 Kỹ Năng", icon: "🎯",
+    subItems: [
+      { id: "LISTENING_LINK",    featureKey: "listening",    label: "Luyện Nghe Cùng AI",         icon: "🎧", isLink: true, href: '/listening' },
+      { id: "CONVERSATION_LINK", featureKey: "speaking_conversation", label: "Luyện Nói Cùng AI", icon: "🗨️", isLink: true, href: '/conversation' },
+      { id: "READING_LINK",      featureKey: "reading",      label: "Luyện Đọc Hiểu Cùng AI",     icon: "📰", isLink: true, href: '/reading' },
+      { id: "WRITING_LINK",      featureKey: "writing",      label: "Luyện Viết Cùng AI",         icon: "✍️", isLink: true, href: '/writing' },
+    ]
+  };
+  const trainingCenterGroup = {
+    id: "TRAINING_CENTER", label: "Trại Huấn Luyện", icon: "💪",
+    subItems: [
+      { id: "GYM_LINK",          featureKey: "gym",          label: "Vocab Gym — Từ vựng",       icon: "🔤", isLink: true, href: '/gym' },
+      { id: "GRAMMAR_GYM_LINK",  featureKey: "grammar_gym",  label: "Grammar Gym — Ngữ pháp",    icon: "🧩", isLink: true, href: '/grammar-gym' },
+      { id: "STUDY_PLAN_LINK",   featureKey: "study_plan",   label: "Lộ trình học (AI)",          icon: "🤖", isLink: true, href: '/study-plan' },
+      { id: "PHONETICS_LINK",    featureKey: "phonetics",    label: "Bảng Âm IPA",               icon: "🔊", isLink: true, href: '/phonetics' },
+      { id: "PRONUNCIATION_LINK", featureKey: "pronunciation", label: "Luyện Phát Âm",           icon: "🗣️", isLink: true, href: '/pronunciation' },
+      { id: "MOCK_TEST_LINK",    featureKey: "mock_test",    label: "Đề Thi Thử THPT",            icon: "🏁", isLink: true, href: '/mock-test' },
+    ]
+  };
+  // Học viên chưa tham gia lớp nào chưa dùng được nhóm "Học Tập" (phụ thuộc giáo viên giao) —
+  // đưa 2 nhóm tự luyện (không cần lớp) lên trước để chúng là thứ đầu tiên nhìn thấy.
+  const isClassless = !user?.classroomsJoined?.length;
   const navGroups = [
     { id: "OVERVIEW", label: "Tổng Quan", icon: "📊" },
-    {
-      id: "LEARNING", label: "Học Tập", icon: "🎓",
-      subItems: [
-        { id: "LESSONS", label: "Bài Học", icon: "📖" },
-        { id: "PRACTICE", label: "Bài Tập", icon: "📝" },
-        { id: "EXAMS", label: "Bài Kiểm Tra", icon: "🧪" },
-        { id: "ATTENDANCE", label: "Chuyên Cần", icon: "🗓️" },
-        { id: "DOCUMENTS", label: "Tài Liệu", icon: "📁" },
-      ]
-    },
-    {
-      id: "FOUR_SKILLS", label: "Huấn Luyện 4 Kỹ Năng", icon: "🎯",
-      subItems: [
-        { id: "LISTENING_LINK",    featureKey: "listening",    label: "Luyện Nghe Cùng AI",         icon: "🎧", isLink: true, href: '/listening' },
-        { id: "CONVERSATION_LINK", featureKey: "speaking_conversation", label: "Luyện Nói Cùng AI", icon: "🗨️", isLink: true, href: '/conversation' },
-        { id: "READING_LINK",      featureKey: "reading",      label: "Luyện Đọc Hiểu Cùng AI",     icon: "📰", isLink: true, href: '/reading' },
-        { id: "WRITING_LINK",      featureKey: "writing",      label: "Luyện Viết Cùng AI",         icon: "✍️", isLink: true, href: '/writing' },
-      ]
-    },
-    {
-      id: "TRAINING_CENTER", label: "Trại Huấn Luyện", icon: "💪",
-      subItems: [
-        { id: "GYM_LINK",          featureKey: "gym",          label: "Vocab Gym — Từ vựng",       icon: "🔤", isLink: true, href: '/gym' },
-        { id: "GRAMMAR_GYM_LINK",  featureKey: "grammar_gym",  label: "Grammar Gym — Ngữ pháp",    icon: "🧩", isLink: true, href: '/grammar-gym' },
-        { id: "STUDY_PLAN_LINK",   featureKey: "study_plan",   label: "Lộ trình học (AI)",          icon: "🤖", isLink: true, href: '/study-plan' },
-        { id: "PHONETICS_LINK",    featureKey: "phonetics",    label: "Bảng Âm IPA",               icon: "🔊", isLink: true, href: '/phonetics' },
-      ]
-    },
+    ...(isClassless ? [fourSkillsGroup, trainingCenterGroup, learningGroup] : [learningGroup, fourSkillsGroup, trainingCenterGroup]),
     { id: "CALENDAR", label: "Thời Khóa Biểu", icon: "📅" },
     { id: "NOTEBOOK", label: "Sổ Tay Lỗi Sai", icon: "📔" },
     { id: "LEADERBOARD", label: "Bảng Xếp Hạng", icon: "🏆" },
@@ -244,7 +310,7 @@ export default function StudentDashboard() {
 
   // Compute union of enabled features across all joined classrooms.
   // Empty array in a classroom = all features enabled for that classroom.
-  const ALL_FEATURES = ["gym", "grammar_gym", "reading", "writing", "speaking_conversation", "listening", "study_plan", "phonetics"];
+  const ALL_FEATURES = ["gym", "grammar_gym", "reading", "writing", "speaking_conversation", "listening", "study_plan", "phonetics", "pronunciation", "mock_test"];
   const enabledFeatures: Set<string> = (() => {
     if (!user?.classroomsJoined?.length) return new Set(ALL_FEATURES);
     const union = new Set<string>();
@@ -378,14 +444,16 @@ export default function StudentDashboard() {
     const numAvgScore = parseFloat(avgScore);
 
     if (totalExams === 0) {
-      items.push({ level: 'info', icon: '🚀', title: 'Bắt đầu hành trình học tập', message: 'Bạn chưa hoàn thành bài kiểm tra nào. Hãy làm thử một bài trong mục Bài Tập/Đề Thi để hệ thống bắt đầu phân tích và đưa ra gợi ý phù hợp với bạn.' });
+      items.push(!user?.classroomsJoined?.length
+        ? { level: 'info', icon: '🚀', title: 'Bắt đầu hành trình học tập', message: 'Bạn đang học tự do nên chưa có Bài Tập/Đề Thi từ giáo viên. Hãy thử Vocab Gym, Grammar Gym hoặc Huấn Luyện 4 Kỹ Năng cùng AI để hệ thống bắt đầu phân tích và đưa ra gợi ý phù hợp với bạn.', cta: { label: 'Vào Vocab Gym', href: '/gym' } }
+        : { level: 'info', icon: '🚀', title: 'Bắt đầu hành trình học tập', message: 'Bạn chưa hoàn thành bài kiểm tra nào. Hãy làm thử một bài trong mục Bài Tập/Đề Thi để hệ thống bắt đầu phân tích và đưa ra gợi ý phù hợp với bạn.', cta: { label: 'Xem Bài Tập', tab: 'PRACTICE' } });
     } else {
       if (percentToTarget < 50) {
-        items.push({ level: 'warning', icon: '🎯', title: 'Còn cách xa mục tiêu', message: `Điểm trung bình hiện tại (${avgScore}) mới đạt ${percentToTarget}% mục tiêu ${user?.targetScore}+. Hãy ôn lại Sổ Tay Lỗi Sai và làm thêm bài luyện tập để rút ngắn khoảng cách.` });
+        items.push({ level: 'warning', icon: '🎯', title: 'Còn cách xa mục tiêu', message: `Điểm trung bình hiện tại (${avgScore}) mới đạt ${percentToTarget}% mục tiêu ${user?.targetScore}+. Hãy ôn lại Sổ Tay Lỗi Sai và làm thêm bài luyện tập để rút ngắn khoảng cách.`, cta: { label: 'Xem Sổ Tay Lỗi Sai', tab: 'NOTEBOOK' } });
       } else if (numAvgScore >= (user?.targetScore || 999)) {
-        items.push({ level: 'success', icon: '🎉', title: 'Đã đạt mục tiêu điểm số!', message: `Điểm trung bình ${avgScore} đã đạt/vượt mục tiêu ${user?.targetScore}+. Hãy đặt mục tiêu cao hơn trong Cài Đặt để tiếp tục bứt phá!` });
+        items.push({ level: 'success', icon: '🎉', title: 'Đã đạt mục tiêu điểm số!', message: `Điểm trung bình ${avgScore} đã đạt/vượt mục tiêu ${user?.targetScore}+. Hãy đặt mục tiêu cao hơn trong Cài Đặt để tiếp tục bứt phá!`, cta: { label: 'Cập Nhật Mục Tiêu', tab: 'SETTINGS' } });
       } else if (percentToTarget >= 85) {
-        items.push({ level: 'success', icon: '🔥', title: 'Sắp chạm mục tiêu', message: `Bạn đã đạt ${percentToTarget}% mục tiêu ${user?.targetScore}+ điểm — chỉ cần cố thêm chút nữa!` });
+        items.push({ level: 'success', icon: '🔥', title: 'Sắp chạm mục tiêu', message: `Bạn đã đạt ${percentToTarget}% mục tiêu ${user?.targetScore}+ điểm — chỉ cần cố thêm chút nữa!`, cta: { label: 'Luyện Tập Thêm', tab: 'PRACTICE' } });
       }
 
       const sortedHistory = [...history].sort((a: any, b: any) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
@@ -399,12 +467,13 @@ export default function StudentDashboard() {
           if (diff >= 1) {
             items.push({ level: 'success', icon: '📈', title: 'Tiến bộ rõ rệt', message: `Điểm trung bình 3 bài gần nhất tăng ${diff} điểm so với trước đó — bạn đang tiến bộ rất tốt, tiếp tục duy trì nhé!` });
           } else if (diff <= -1) {
-            items.push({ level: 'warning', icon: '📉', title: 'Điểm số đang chững lại', message: `Điểm trung bình 3 bài gần nhất giảm ${Math.abs(diff)} điểm so với trước. Xem lại Sổ Tay Lỗi Sai để tìm nguyên nhân và điều chỉnh cách ôn tập.` });
+            items.push({ level: 'warning', icon: '📉', title: 'Điểm số đang chững lại', message: `Điểm trung bình 3 bài gần nhất giảm ${Math.abs(diff)} điểm so với trước. Xem lại Sổ Tay Lỗi Sai để tìm nguyên nhân và điều chỉnh cách ôn tập.`, cta: { label: 'Xem Sổ Tay Lỗi Sai', tab: 'NOTEBOOK' } });
           }
         }
       }
     }
 
+    const skillHref: Record<string, string> = { READING: '/reading', LISTENING: '/listening', SPEAKING: '/conversation', WRITING: '/writing' };
     const skillList = ['READING', 'LISTENING', 'SPEAKING', 'WRITING'].map(key => ({
       key, label: key.charAt(0) + key.slice(1).toLowerCase(),
       score: skillProgress[key]?.score ?? 0, hasData: skillProgress[key]?.hasData ?? false
@@ -413,18 +482,18 @@ export default function StudentDashboard() {
     if (skillsWithData.length > 0) {
       const weakest = [...skillsWithData].sort((a, b) => a.score - b.score)[0];
       if (weakest.score < 6) {
-        items.push({ level: 'warning', icon: '🧩', title: `Kỹ năng ${weakest.label} cần cải thiện`, message: `Kỹ năng ${weakest.label} hiện chỉ đạt ${weakest.score.toFixed(1)}/10 — thấp nhất trong 4 kỹ năng của bạn. Dành thêm thời gian luyện tập tại mục Huấn Luyện 4 Kỹ Năng để cải thiện.` });
+        items.push({ level: 'warning', icon: '🧩', title: `Kỹ năng ${weakest.label} cần cải thiện`, message: `Kỹ năng ${weakest.label} hiện chỉ đạt ${weakest.score.toFixed(1)}/10 — thấp nhất trong 4 kỹ năng của bạn. Dành thêm thời gian luyện tập tại mục Huấn Luyện 4 Kỹ Năng để cải thiện.`, cta: { label: `Luyện ${weakest.label} Ngay`, href: skillHref[weakest.key] } });
       }
     }
     const untrained = skillList.find(s => !s.hasData);
     if (untrained && skillsWithData.length > 0) {
-      items.push({ level: 'info', icon: '🌱', title: `Chưa luyện tập kỹ năng ${untrained.label}`, message: `Bạn chưa có dữ liệu luyện tập ${untrained.label}. Thử ngay để có bức tranh đầy đủ về năng lực 4 kỹ năng của mình.` });
+      items.push({ level: 'info', icon: '🌱', title: `Chưa luyện tập kỹ năng ${untrained.label}`, message: `Bạn chưa có dữ liệu luyện tập ${untrained.label}. Thử ngay để có bức tranh đầy đủ về năng lực 4 kỹ năng của mình.`, cta: { label: `Luyện ${untrained.label} Ngay`, href: skillHref[untrained.key] } });
     }
 
     if (user?.notebooks?.length > 0) {
       const topMistake = [...user.notebooks].sort((a: any, b: any) => b.mistakeCount - a.mistakeCount)[0];
       if (topMistake.mistakeCount >= 3) {
-        items.push({ level: 'warning', icon: '📔', title: 'Lỗ hổng kiến thức cần khắc phục', message: `Bạn sai nhiều nhất ở chuyên đề "${topMistake.topic}" (${topMistake.mistakeCount} lần). Ôn lại chuyên đề này trong Sổ Tay Lỗi Sai để tránh lặp lại lỗi cũ.` });
+        items.push({ level: 'warning', icon: '📔', title: 'Lỗ hổng kiến thức cần khắc phục', message: `Bạn sai nhiều nhất ở chuyên đề "${topMistake.topic}" (${topMistake.mistakeCount} lần). Ôn lại chuyên đề này trong Sổ Tay Lỗi Sai để tránh lặp lại lỗi cũ.`, cta: { label: 'Xem Sổ Tay Lỗi Sai', tab: 'NOTEBOOK' } });
       }
     }
 
@@ -433,7 +502,7 @@ export default function StudentDashboard() {
     }
 
     if (needsActionExams.length >= 3) {
-      items.push({ level: 'critical', icon: '⚠️', title: 'Nhiều bài đang chờ xử lý', message: `Bạn có ${needsActionExams.length} bài tập/đề thi chưa làm hoặc chưa đạt điểm yêu cầu. Ưu tiên xử lý sớm để không bị dồn bài gần hạn nộp.` });
+      items.push({ level: 'critical', icon: '⚠️', title: 'Nhiều bài đang chờ xử lý', message: `Bạn có ${needsActionExams.length} bài tập/đề thi chưa làm hoặc chưa đạt điểm yêu cầu. Ưu tiên xử lý sớm để không bị dồn bài gần hạn nộp.`, cta: { label: 'Xem Bài Đang Chờ', tab: 'PRACTICE' } });
     }
 
     const severityOrder: Record<StudentInsight['level'], number> = { critical: 0, warning: 1, success: 2, info: 3 };
@@ -495,6 +564,35 @@ export default function StudentDashboard() {
     </div>
   );
 
+  // Free-standing (no classroom) student whose trial/monthly subscription has expired —
+  // computed server-side in GET /api/auth/me (see backend/src/utils/freeTrial.js). Full-app
+  // lock: no dashboard, no self-practice tools, only contact info for the managing teacher.
+  if (user?.accessLocked) return (
+    <div className="flex h-[calc(100vh-80px)] w-full items-center justify-center bg-slate-100 p-6">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-xl border border-gray-100 p-8 text-center">
+        <div className="text-5xl mb-4">🔒</div>
+        <h1 className="text-xl font-bold mb-2 text-foreground">Tài khoản đã tạm khóa</h1>
+        <p className="text-slate-500 text-sm mb-6 leading-relaxed">
+          Thời gian dùng thử hoặc kỳ học phí tháng này của bạn đã kết thúc. Vui lòng liên hệ giáo viên phụ trách để đóng học phí và kích hoạt lại tài khoản.
+        </p>
+        {user.managerTeacher && (
+          <div className="bg-slate-50 rounded-xl p-4 text-left mb-6 border border-gray-100">
+            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Giáo viên phụ trách</p>
+            <p className="font-bold text-foreground">{user.managerTeacher.name}</p>
+            {user.managerTeacher.phone && <p className="text-sm text-slate-500 mt-1">📞 {user.managerTeacher.phone}</p>}
+            <p className="text-sm text-slate-500 mt-1">✉️ {user.managerTeacher.email}</p>
+          </div>
+        )}
+        <button
+          onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); window.location.href = '/'; }}
+          className="text-sm font-semibold text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+        >
+          Đăng xuất
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex h-[calc(100vh-80px)] overflow-hidden w-full relative">
 
@@ -528,7 +626,7 @@ export default function StudentDashboard() {
         </div>
 
         <div className="flex flex-col gap-0.5 px-2">
-          {navGroups.map((group, index) => (
+          {navGroups.map((group: any, index) => (
             <div key={group.id} className={`flex flex-col ${index > 0 && (group.subItems || (navGroups[index - 1] as any).subItems) ? 'mt-2 pt-2 border-t border-white/10' : ''}`}>
               {group.subItems ? (
                 <>
@@ -577,7 +675,7 @@ export default function StudentDashboard() {
 
         <div className="mt-auto border-t border-white/10 px-3 py-3">
           <button
-            onClick={() => { localStorage.removeItem('userId'); window.location.href = '/'; }}
+            onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); window.location.href = '/'; }}
             className="flex items-center justify-center gap-2 px-3 py-2.5 font-semibold text-white/40 hover:bg-white/10 hover:text-white/80 transition-colors w-full cursor-pointer text-sm rounded-lg"
           >
             Đăng xuất
@@ -597,6 +695,17 @@ export default function StudentDashboard() {
             <h2 className="font-bold text-primary tracking-tight">LUCY TUTOR</h2>
           </div>
         </div>
+
+        {/* Free-standing student subscription reminder — shown on every tab once ≤7 days remain */}
+        {user?.accessDaysRemaining !== null && user?.accessDaysRemaining !== undefined && user.accessDaysRemaining <= 7 && (
+          <div className="mb-6 flex items-center gap-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-5 py-3 text-sm font-medium">
+            <span className="text-lg">⏰</span>
+            <span>
+              Còn <b>{Math.max(user.accessDaysRemaining, 0)} ngày</b> nữa là đến hạn đóng học phí — liên hệ giáo viên phụ trách
+              {user.managerTeacher ? ` (${user.managerTeacher.name}${user.managerTeacher.phone ? `, ${user.managerTeacher.phone}` : ''})` : ''} để gia hạn, tránh bị tạm khóa tài khoản.
+            </span>
+          </div>
+        )}
 
         {/* Dashboard Header - User Info Sync */}
         {user && (
@@ -663,7 +772,7 @@ export default function StudentDashboard() {
                               confirmButtonColor: '#3b82f6',
                             });
                           }}
-                          className={`px-2.5 py-0.5 border text-xs font-bold ${rank.color} shadow-sm whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity`}
+                          className={`px-2.5 py-1.5 border text-xs font-bold ${rank.color} shadow-sm whitespace-nowrap cursor-pointer hover:opacity-80 transition-opacity inline-flex items-center`}
                         >
                           Cấp {level} - {rank.label}
                         </span>
@@ -687,7 +796,31 @@ export default function StudentDashboard() {
         {activeTab === "OVERVIEW" && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
             <h1 className="text-3xl font-bold">Tổng Quan Học Tập</h1>
-            
+
+            {!user?.classroomsJoined?.length && (
+              <div className="bg-blue-50 rounded-xl border border-blue-200 p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
+                <div className="flex items-center gap-4 w-full">
+                  <div className="w-12 h-12 shrink-0 bg-blue-500 text-white rounded-full flex items-center justify-center text-2xl shadow-md">
+                    🎓
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-blue-700">Bạn đang học tự do</h3>
+                    <p className="text-sm text-blue-600/80 font-medium mt-1">Nhập mã lớp giáo viên cung cấp để mở khoá Bài Học, Bài Tập, Đề Thi, Chuyên Cần — hoặc cứ tiếp tục tự luyện với AI ở mục &ldquo;Huấn Luyện 4 Kỹ Năng&rdquo; và &ldquo;Trại Huấn Luyện&rdquo; bên menu trái.</p>
+                  </div>
+                </div>
+                <form onSubmit={handleJoinClass} className="flex gap-2 w-full sm:w-auto shrink-0">
+                  <input
+                    type="text" value={joinCode} onChange={e => setJoinCode(e.target.value)}
+                    placeholder="Nhập mã lớp..."
+                    className="flex-1 sm:w-40 px-3 py-2.5 border border-blue-200 bg-white rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  />
+                  <button type="submit" className="px-5 py-2.5 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-700 transition-colors shadow-sm whitespace-nowrap">
+                    Tham gia
+                  </button>
+                </form>
+              </div>
+            )}
+
             {needsActionExams.length > 0 && (
               <div className="bg-rose-50 rounded-xl border border-rose-200 p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
                 <div className="flex items-center gap-4 w-full">
@@ -758,7 +891,7 @@ export default function StudentDashboard() {
               </div>
               {studentInsights.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                  {studentInsights.map((insight, i) => <InsightCard key={i} insight={insight} />)}
+                  {studentInsights.map((insight, i) => <InsightCard key={i} insight={insight} onNavigateTab={setActiveTab} />)}
                 </div>
               ) : (
                 <p className="text-sm text-slate-400 italic">Chưa đủ dữ liệu để đưa ra gợi ý. Hãy làm thêm bài tập và luyện tập các kỹ năng để hệ thống phân tích chính xác hơn.</p>
@@ -876,7 +1009,10 @@ export default function StudentDashboard() {
                   <span className="text-3xl">📚</span>
                 </div>
                 <h2 className="text-2xl font-bold mb-2">Chưa có bài học nào</h2>
-                <p className="text-slate-400 max-w-md">Hiện tại lớp của bạn chưa có bài học mới.</p>
+                <p className="text-slate-400 max-w-md">{user?.classroomsJoined?.length ? 'Hiện tại lớp của bạn chưa có bài học mới.' : 'Bài học do giáo viên soạn — tham gia 1 lớp học để xem bài học của lớp đó.'}</p>
+                {!user?.classroomsJoined?.length && (
+                  <JoinClassPrompt hint="" joinCode={joinCode} setJoinCode={setJoinCode} onSubmit={handleJoinClass} />
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -926,7 +1062,10 @@ export default function StudentDashboard() {
                     <span className="text-3xl">📝</span>
                   </div>
                   <h2 className="text-2xl font-bold mb-2">Chưa có bài tập nào</h2>
-                  <p className="text-slate-400 max-w-md">Hiện tại bạn chưa được giao bài tập về nhà. Hãy quay lại sau nhé!</p>
+                  <p className="text-slate-400 max-w-md">{user?.classroomsJoined?.length ? 'Hiện tại bạn chưa được giao bài tập về nhà. Hãy quay lại sau nhé!' : 'Bài tập do giáo viên giao — tham gia 1 lớp học để bắt đầu nhận bài tập.'}</p>
+                  {!user?.classroomsJoined?.length && (
+                    <JoinClassPrompt hint="" joinCode={joinCode} setJoinCode={setJoinCode} onSubmit={handleJoinClass} />
+                  )}
                 </div>
               );
 
@@ -980,7 +1119,10 @@ export default function StudentDashboard() {
                     <span className="text-3xl">⏰</span>
                   </div>
                   <h2 className="text-2xl font-bold mb-2">Chưa có bài kiểm tra</h2>
-                  <p className="text-slate-400 max-w-md">Chưa có bài thi nào sắp diễn ra hoặc đã hoàn thành. Chăm chỉ luyện tập chờ kỳ thi tiếp theo nhé!</p>
+                  <p className="text-slate-400 max-w-md">{user?.classroomsJoined?.length ? 'Chưa có bài thi nào sắp diễn ra hoặc đã hoàn thành. Chăm chỉ luyện tập chờ kỳ thi tiếp theo nhé!' : 'Bài kiểm tra do giáo viên tổ chức — tham gia 1 lớp học để tham gia các kỳ thi của lớp.'}</p>
+                  {!user?.classroomsJoined?.length && (
+                    <JoinClassPrompt hint="" joinCode={joinCode} setJoinCode={setJoinCode} onSubmit={handleJoinClass} />
+                  )}
                 </div>
               );
 
@@ -1094,12 +1236,12 @@ export default function StudentDashboard() {
         {/* ── ATTENDANCE ── */}
         {activeTab === "ATTENDANCE" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-3xl font-bold">Chuyên Cần & Học Phí</h1>
-              <input 
-                type="month" 
-                value={attMonth} 
-                onChange={e => setAttMonth(e.target.value)} 
+            <div className="flex flex-wrap justify-between items-center gap-3 mb-6">
+              <h1 className="text-2xl sm:text-3xl font-bold">Chuyên Cần & Học Phí</h1>
+              <input
+                type="month"
+                value={attMonth}
+                onChange={e => setAttMonth(e.target.value)}
                 className="p-3 border border-gray-200 bg-white rounded-lg font-bold shadow-sm"
               />
             </div>
@@ -1107,23 +1249,26 @@ export default function StudentDashboard() {
             {attReports.length === 0 ? (
               <div className="text-center text-slate-400 py-12 bg-white rounded-xl border-2 border-dashed border-gray-200">
                 <p className="text-lg font-medium mb-2">Không có dữ liệu tháng này</p>
-                <p className="text-sm">Tháng này bạn chưa tham gia hoặc chưa được điểm danh lớp nào.</p>
+                <p className="text-sm">{user?.classroomsJoined?.length ? 'Tháng này bạn chưa được điểm danh ở lớp nào.' : 'Chuyên cần & học phí gắn với lớp học — tham gia 1 lớp học để xem dữ liệu điểm danh.'}</p>
+                {!user?.classroomsJoined?.length && (
+                  <JoinClassPrompt hint="" joinCode={joinCode} setJoinCode={setJoinCode} onSubmit={handleJoinClass} />
+                )}
               </div>
             ) : (
               <div className="space-y-6">
                 {attReports.map((report: any) => (
                   <div key={report.classroomId} className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-4">
-                      <h2 className="text-xl font-bold flex items-center gap-2">
-                        <span className="w-3 h-3 rounded-full bg-primary inline-block"></span>
-                        {report.classroomName}
+                    <div className="flex flex-wrap justify-between items-center gap-2 border-b border-gray-100 pb-4 mb-4">
+                      <h2 className="text-xl font-bold flex items-center gap-2 min-w-0">
+                        <span className="w-3 h-3 rounded-full bg-primary inline-block shrink-0"></span>
+                        <span className="truncate">{report.classroomName}</span>
                       </h2>
                       {report.isPaid ? (
-                        <div className="bg-green-500/10 text-green-600 px-4 py-1.5 rounded-full font-bold text-sm border border-green-500/20">
+                        <div className="bg-green-500/10 text-green-600 px-4 py-1.5 rounded-full font-bold text-sm border border-green-500/20 shrink-0">
                           Đã thanh toán: {new Date(report.paidAt).toLocaleDateString('vi-VN')}
                         </div>
                       ) : (
-                        <div className="bg-rose-500/10 text-rose-600 px-4 py-1.5 rounded-full font-bold text-sm border border-rose-500/20">
+                        <div className="bg-rose-500/10 text-rose-600 px-4 py-1.5 rounded-full font-bold text-sm border border-rose-500/20 shrink-0">
                           Chưa thanh toán
                         </div>
                       )}
@@ -1253,7 +1398,7 @@ export default function StudentDashboard() {
               <div className="flex justify-center items-end gap-2 sm:gap-6 mb-12 mt-12">
                 {/* 2nd Place */}
                 {leaderboardData.length > 1 && (
-                  <div className="flex flex-col items-center animate-in slide-in-from-bottom-8 duration-700 delay-100 w-1/3 max-w-[120px]">
+                  <div className="flex flex-col items-center animate-in slide-in-from-bottom-8 duration-700 delay-100 w-1/3 max-w-[90px] sm:max-w-[120px]">
                     <div className="relative mb-2">
                       <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-[#C0C0C0] bg-white flex items-center justify-center font-bold text-xl overflow-hidden shadow-[0_0_15px_rgba(192,192,192,0.5)]">
                         {leaderboardData[1].avatar ? <img src={leaderboardData[1].avatar} className="w-full h-full object-cover"/> : leaderboardData[1].name.charAt(0)}
@@ -1268,7 +1413,7 @@ export default function StudentDashboard() {
                 
                 {/* 1st Place */}
                 {leaderboardData.length > 0 && (
-                  <div className="flex flex-col items-center animate-in slide-in-from-bottom-12 duration-700 z-10 relative w-1/3 max-w-[140px]">
+                  <div className="flex flex-col items-center animate-in slide-in-from-bottom-12 duration-700 z-10 relative w-1/3 max-w-[100px] sm:max-w-[140px]">
                     <div className="absolute -top-10 text-4xl animate-bounce">👑</div>
                     <div className="relative mb-2">
                       <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-4 border-[#FFD700] bg-white flex items-center justify-center font-bold text-3xl overflow-hidden shadow-[0_0_30px_rgba(255,215,0,0.6)]">
@@ -1284,7 +1429,7 @@ export default function StudentDashboard() {
 
                 {/* 3rd Place */}
                 {leaderboardData.length > 2 && (
-                  <div className="flex flex-col items-center animate-in slide-in-from-bottom-8 duration-700 delay-200 w-1/3 max-w-[120px]">
+                  <div className="flex flex-col items-center animate-in slide-in-from-bottom-8 duration-700 delay-200 w-1/3 max-w-[90px] sm:max-w-[120px]">
                     <div className="relative mb-2">
                       <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-4 border-[#CD7F32] bg-white flex items-center justify-center font-bold text-xl overflow-hidden shadow-[0_0_15px_rgba(205,127,50,0.5)]">
                         {leaderboardData[2].avatar ? <img src={leaderboardData[2].avatar} className="w-full h-full object-cover"/> : leaderboardData[2].name.charAt(0)}
@@ -1342,16 +1487,20 @@ export default function StudentDashboard() {
 
         {/* VIEW: SETTINGS */}
         {activeTab === "SETTINGS" && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-2xl">
-            <h1 className="text-3xl font-bold mb-6">Cài Đặt Tài Khoản</h1>
-            
-            <form 
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 max-w-5xl">
+            <h1 className="text-3xl font-bold mb-1">Cài Đặt Tài Khoản</h1>
+            <p className="text-sm text-slate-400 mb-6">Quản lý thông tin cá nhân, bảo mật và lớp học của bạn.</p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <div className="space-y-6">
+
+            <form
               onSubmit={async (e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
                 const userId = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
                 if (!userId) return;
-                
+
                 try {
                   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/auth/me?userId=${userId}`, {
                     method: 'PUT',
@@ -1373,26 +1522,34 @@ export default function StudentDashboard() {
                   Swal.fire('Lỗi', 'Lỗi cập nhật thông tin', 'error');
                 }
               }}
-              className="bg-white rounded-xl border border-gray-100 p-8 space-y-6 shadow-sm"
+              className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 space-y-5 shadow-sm"
             >
-              <div>
-                <label className="block text-sm font-bold mb-2">Họ và Tên</label>
-                <input type="text" disabled defaultValue={user?.name} className="w-full px-4 py-3 border border-gray-100 bg-slate-50 text-slate-400 cursor-not-allowed" />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-bold mb-2">Email</label>
-                <input type="email" disabled defaultValue={user?.email} className="w-full px-4 py-3 border border-gray-100 bg-slate-50 text-slate-400 cursor-not-allowed" />
+              <div className="flex items-center gap-4 mb-1">
+                <div className="w-12 h-12 shrink-0 bg-primary text-white rounded-full flex items-center justify-center text-2xl shadow-md">👤</div>
+                <div>
+                  <h2 className="text-lg font-bold">Thông Tin Cá Nhân</h2>
+                  <p className="text-xs text-slate-400">Thông tin liên hệ và mục tiêu học tập</p>
+                </div>
               </div>
 
               <div>
-                <label className="block text-sm font-bold mb-2">Số điện thoại liên hệ</label>
-                <input type="tel" name="phone" defaultValue={user?.phone || ''} placeholder="0987654321" className="w-full px-4 py-3 border border-gray-100 bg-transparent focus:outline-none focus:border-primary" />
+                <label className="block text-sm font-bold mb-2 text-slate-600">Họ và Tên</label>
+                <input type="text" disabled defaultValue={user?.name} className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-slate-50 text-slate-400 cursor-not-allowed" />
               </div>
-              
+
               <div>
-                <label className="block text-sm font-bold mb-2">Mục tiêu điểm số</label>
-                <select name="targetScore" defaultValue={user?.targetScore || 7.0} className="w-full px-4 py-3 border border-gray-100 bg-transparent focus:outline-none focus:border-primary">
+                <label className="block text-sm font-bold mb-2 text-slate-600">Email</label>
+                <input type="email" disabled defaultValue={user?.email} className="w-full px-4 py-3 rounded-xl border border-gray-100 bg-slate-50 text-slate-400 cursor-not-allowed" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2 text-slate-600">Số điện thoại liên hệ</label>
+                <input type="tel" name="phone" defaultValue={user?.phone || ''} placeholder="0987654321" className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2 text-slate-600">Mục tiêu điểm số</label>
+                <select name="targetScore" defaultValue={user?.targetScore || 7.0} className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors font-medium">
                   <option value="5">5.0 - Cơ bản</option>
                   <option value="6">6.0 - Trung bình khá</option>
                   <option value="7">7.0 - Khá</option>
@@ -1402,30 +1559,180 @@ export default function StudentDashboard() {
                 </select>
               </div>
 
-              <button type="submit" className="w-full py-4 bg-primary text-white font-bold hover:bg-primary/90 transition-colors shadow-lg cursor-pointer">
+              <button type="submit" className="w-full py-3.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 hover:shadow-lg transition-all cursor-pointer">
                 Lưu Thay Đổi
               </button>
             </form>
 
-            <div className="bg-white rounded-xl border border-gray-100 p-4 md:p-8 space-y-4 shadow-sm mt-8">
-              <h2 className="text-xl font-bold">Tham Gia Lớp Học</h2>
-              <p className="text-sm text-slate-500 mb-4">Nhập mã lớp do Giáo viên cung cấp để tham gia làm bài tập và đề thi được giao.</p>
-              <form onSubmit={handleJoinClass} className="flex flex-col sm:flex-row gap-4 items-end">
+            <form onSubmit={handleChangePassword} className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 space-y-5 shadow-sm">
+              <div className="flex items-center gap-4 mb-1">
+                <div className="w-12 h-12 shrink-0 bg-slate-700 text-white rounded-full flex items-center justify-center text-2xl shadow-md">🔒</div>
+                <div>
+                  <h2 className="text-lg font-bold">Đổi Mật Khẩu</h2>
+                  <p className="text-xs text-slate-400">Bảo mật tài khoản của bạn</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-2 text-slate-600">Mật khẩu hiện tại</label>
+                <input
+                  type="password" value={currentPassword} onChange={e => setCurrentPassword(e.target.value)} required
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-2 text-slate-600">Mật khẩu mới</label>
+                <input
+                  type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} required minLength={6}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-bold mb-2 text-slate-600">Nhập lại mật khẩu mới</label>
+                <input
+                  type="password" value={confirmNewPassword} onChange={e => setConfirmNewPassword(e.target.value)} required minLength={6}
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors"
+                />
+              </div>
+              <button type="submit" disabled={changingPassword} className="w-full py-3.5 bg-primary text-white font-bold rounded-xl hover:bg-primary/90 hover:shadow-lg transition-all cursor-pointer disabled:opacity-50">
+                {changingPassword ? 'Đang xử lý...' : 'Đổi Mật Khẩu'}
+              </button>
+            </form>
+            </div>
+
+            <div className="space-y-6">
+            {user?.managerTeacher && (() => {
+              const statusMeta = user.accessLocked
+                ? { label: 'Đã khóa', badge: 'bg-red-500/10 text-red-600', circle: 'bg-red-500', icon: '🔒' }
+                : paymentHistory.length > 0
+                ? { label: 'Đang hoạt động', badge: 'bg-emerald-500/10 text-emerald-600', circle: 'bg-emerald-500', icon: '✅' }
+                : { label: 'Đang dùng thử', badge: 'bg-amber-500/10 text-amber-600', circle: 'bg-amber-500', icon: '⏳' };
+              return (
+              <div className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 space-y-5 shadow-sm">
+                <div className="flex items-center gap-4 mb-1">
+                  <div className={`w-12 h-12 shrink-0 ${statusMeta.circle} text-white rounded-full flex items-center justify-center text-2xl shadow-md`}>{statusMeta.icon}</div>
+                  <div>
+                    <h2 className="text-lg font-bold">Tình Trạng Tài Khoản</h2>
+                    <p className="text-xs text-slate-400">Học phí & quyền sử dụng của bạn</p>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className={`px-3 py-1.5 text-sm font-bold rounded-full ${statusMeta.badge}`}>
+                    {statusMeta.label}
+                  </span>
+                  {!user.accessLocked && user.accessDaysRemaining !== null && user.accessDaysRemaining !== undefined && (
+                    <span className="text-sm text-slate-500">
+                      Còn <b>{Math.max(user.accessDaysRemaining, 0)} ngày</b> sử dụng
+                      {user.accessExpiresAt && ` (hết hạn ${new Date(user.accessExpiresAt).toLocaleDateString('vi-VN')})`}
+                    </span>
+                  )}
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-4 border border-gray-100">
+                  <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2">Giáo viên phụ trách</p>
+                  <p className="font-bold text-foreground">{user.managerTeacher.name}</p>
+                  {user.managerTeacher.phone && <p className="text-sm text-slate-500 mt-1">📞 {user.managerTeacher.phone}</p>}
+                  <p className="text-sm text-slate-500 mt-1">✉️ {user.managerTeacher.email}</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-bold mb-2 text-slate-600">Lịch sử thanh toán</p>
+                  {paymentHistory.length === 0 ? (
+                    <p className="text-sm text-slate-400">Chưa có lần thanh toán nào.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {paymentHistory.map((p: any) => (
+                        <div key={p.id} className="flex flex-wrap justify-between items-center gap-1 text-sm bg-slate-50 rounded-xl px-4 py-3 border border-gray-100">
+                          <span className="flex items-center gap-2 text-slate-500 min-w-0">
+                            <span className="text-emerald-500 shrink-0">🧾</span>
+                            <span className="truncate">{new Date(p.paidAt).toLocaleDateString('vi-VN')} — hết hạn {new Date(p.periodEnd).toLocaleDateString('vi-VN')}</span>
+                          </span>
+                          <span className="font-bold text-primary shrink-0">{p.amount.toLocaleString('vi-VN')}đ</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              );
+            })()}
+
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 space-y-5 shadow-sm">
+              <div className="flex items-center gap-4 mb-1">
+                <div className="w-12 h-12 shrink-0 bg-indigo-500 text-white rounded-full flex items-center justify-center text-2xl shadow-md">🏫</div>
+                <div>
+                  <h2 className="text-lg font-bold">Lớp Học Của Tôi</h2>
+                  <p className="text-xs text-slate-400">Các lớp bạn đã tham gia</p>
+                </div>
+              </div>
+              {!user?.classroomsJoined?.length ? (
+                <p className="text-sm text-slate-400">Bạn chưa tham gia lớp nào — nhập mã lớp ở bên dưới để bắt đầu.</p>
+              ) : (
+                <div className="space-y-2">
+                  {user.classroomsJoined.map((c: any) => {
+                    const dayMap: Record<number, string> = { 0: 'CN', 1: 'T2', 2: 'T3', 3: 'T4', 4: 'T5', 5: 'T6', 6: 'T7' };
+                    let days: number[] = [];
+                    try { days = JSON.parse(c.scheduleDays || '[]'); } catch {}
+                    const daysStr = days.length > 0 ? days.sort((a: number, b: number) => a - b).map((d: number) => dayMap[d]).join(' - ') : null;
+                    return (
+                      <div key={c.id} className="bg-slate-50 rounded-xl p-4 border border-gray-100">
+                        <p className="font-bold text-foreground">{c.name}</p>
+                        {daysStr && (
+                          <p className="text-sm text-slate-500 mt-1">
+                            🗓️ {daysStr}{c.startTime && c.endTime && ` · ${c.startTime}-${c.endTime}`}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 space-y-5 shadow-sm">
+              <div className="flex items-center gap-4 mb-1">
+                <div className="w-12 h-12 shrink-0 bg-green-500 text-white rounded-full flex items-center justify-center text-2xl shadow-md">🎓</div>
+                <div>
+                  <h2 className="text-lg font-bold">Tham Gia Lớp Học</h2>
+                  <p className="text-xs text-slate-400">Nhập mã lớp do giáo viên cung cấp</p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-500">Nhập mã lớp để tham gia làm bài tập và đề thi được giao.</p>
+              <form onSubmit={handleJoinClass} className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
                 <div className="flex-1 w-full">
-                  <label className="block text-sm font-bold mb-2">Mã Lớp Học (Join Code)</label>
-                  <input 
-                    type="text" 
+                  <label className="block text-sm font-bold mb-2 text-slate-600">Mã Lớp Học (Join Code)</label>
+                  <input
+                    type="text"
                     value={joinCode}
                     onChange={e => setJoinCode(e.target.value)}
-                    placeholder="VD: A1B2C3" 
-                    className="w-full px-4 py-3 border border-gray-100 bg-transparent focus:outline-none focus:border-primary uppercase" 
+                    placeholder="VD: A1B2C3"
+                    className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-colors uppercase"
                     required
                   />
                 </div>
-                <button type="submit" className="w-full sm:w-auto px-6 py-3 bg-green-500 text-white font-bold hover:bg-green-600 transition-colors shadow-lg cursor-pointer h-[50px] whitespace-nowrap">
+                <button type="submit" className="w-full sm:w-auto px-6 py-3 bg-green-500 text-white font-bold rounded-xl hover:bg-green-600 hover:shadow-lg transition-all cursor-pointer h-[50px] whitespace-nowrap">
                   Tham Gia
                 </button>
               </form>
+            </div>
+
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 sm:p-8 space-y-4 shadow-sm">
+              <div className="flex items-center gap-4 mb-1">
+                <div className="w-12 h-12 shrink-0 bg-red-500 text-white rounded-full flex items-center justify-center text-2xl shadow-md">🚪</div>
+                <div>
+                  <h2 className="text-lg font-bold">Đăng Xuất</h2>
+                  <p className="text-xs text-slate-400">Thoát khỏi tài khoản trên thiết bị này</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); window.location.href = '/'; }}
+                className="w-full py-3.5 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 hover:shadow-lg transition-all cursor-pointer"
+              >
+                Đăng Xuất
+              </button>
+            </div>
+            </div>
             </div>
           </div>
         )}
@@ -1586,9 +1893,33 @@ function AssignmentCard({ title, deadline, status, teacher, score }: { title: st
   );
 }
 
-type StudentInsight = { level: 'critical' | 'warning' | 'success' | 'info'; icon: string; title: string; message: string };
+// Reusable "nhập mã lớp" prompt for classless students — defined at module scope (not inline
+// inside StudentDashboard) so its component identity stays stable across renders; an inline
+// function component recreated every render would remount the input and drop keystroke focus.
+function JoinClassPrompt({ hint, joinCode, setJoinCode, onSubmit }: { hint: string; joinCode: string; setJoinCode: (v: string) => void; onSubmit: (e: React.FormEvent) => void }) {
+  return (
+    <div className="mt-6 flex flex-col items-center gap-3">
+      {hint && <p className="text-sm text-slate-500 text-center max-w-sm">{hint}</p>}
+      <form onSubmit={onSubmit} className="flex gap-2">
+        <input
+          type="text" value={joinCode} onChange={e => setJoinCode(e.target.value)}
+          placeholder="Nhập mã lớp..."
+          className="px-3 py-2 border border-gray-200 bg-white rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <button type="submit" className="px-4 py-2 bg-primary text-white font-bold rounded-lg text-sm hover:opacity-90 transition-opacity whitespace-nowrap">
+          Tham gia lớp
+        </button>
+      </form>
+    </div>
+  );
+}
 
-function InsightCard({ insight }: { insight: StudentInsight }) {
+type StudentInsight = {
+  level: 'critical' | 'warning' | 'success' | 'info'; icon: string; title: string; message: string;
+  cta?: { label: string; tab?: string; href?: string };
+};
+
+function InsightCard({ insight, onNavigateTab }: { insight: StudentInsight; onNavigateTab: (tab: string) => void }) {
   const styles: Record<StudentInsight['level'], string> = {
     critical: 'border-rose-200 bg-rose-50/60',
     warning: 'border-amber-200 bg-amber-50/60',
@@ -1601,15 +1932,38 @@ function InsightCard({ insight }: { insight: StudentInsight }) {
     success: 'text-emerald-700',
     info: 'text-blue-700',
   };
+  const buttonColor: Record<StudentInsight['level'], string> = {
+    critical: 'bg-rose-600 hover:bg-rose-700',
+    warning: 'bg-amber-600 hover:bg-amber-700',
+    success: 'bg-emerald-600 hover:bg-emerald-700',
+    info: 'bg-blue-600 hover:bg-blue-700',
+  };
   return (
-    <div className={`p-4 rounded-xl border ${styles[insight.level]} h-full`}>
-      <div className="flex items-start gap-3">
+    <div className={`p-4 rounded-xl border ${styles[insight.level]} h-full flex flex-col`}>
+      <div className="flex items-start gap-3 flex-1">
         <span className="text-xl shrink-0">{insight.icon}</span>
         <div className="min-w-0">
           <h4 className={`font-bold text-sm mb-1 ${titleColor[insight.level]}`}>{insight.title}</h4>
           <p className="text-sm text-slate-600 leading-relaxed">{insight.message}</p>
         </div>
       </div>
+      {insight.cta && (
+        insight.cta.href ? (
+          <Link
+            href={insight.cta.href}
+            className={`inline-flex items-center justify-center gap-1.5 mt-3 px-4 py-2 text-xs font-bold text-white rounded-lg transition-colors self-start ${buttonColor[insight.level]}`}
+          >
+            {insight.cta.label} →
+          </Link>
+        ) : (
+          <button
+            onClick={() => insight.cta && onNavigateTab(insight.cta.tab!)}
+            className={`inline-flex items-center justify-center gap-1.5 mt-3 px-4 py-2 text-xs font-bold text-white rounded-lg transition-colors self-start cursor-pointer ${buttonColor[insight.level]}`}
+          >
+            {insight.cta.label} →
+          </button>
+        )
+      )}
     </div>
   );
 }

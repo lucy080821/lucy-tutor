@@ -263,7 +263,7 @@ export default function ReadingPracticePage() {
             <button
               key={v.key}
               onClick={() => { setViewMode(v.key as any); setViewingHistoryItem(null); }}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${viewMode === v.key ? "bg-primary text-white shadow-sm" : "text-foreground/50 hover:text-foreground"}`}
+              className={`px-3 py-2 text-xs font-bold rounded-lg transition-colors ${viewMode === v.key ? "bg-primary text-white shadow-sm" : "text-foreground/50 hover:text-foreground"}`}
             >
               {v.label}
             </button>
@@ -358,7 +358,7 @@ export default function ReadingPracticePage() {
                     <button
                       key={t}
                       onClick={() => toggleType(t)}
-                      className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-colors ${
+                      className={`px-3 py-2 text-xs font-bold rounded-full border transition-colors ${
                         questionTypes.includes(t)
                           ? "bg-primary text-white border-primary"
                           : "bg-background border-foreground/15 text-foreground/60 hover:border-primary/40"
@@ -393,7 +393,7 @@ export default function ReadingPracticePage() {
                   <button
                     onClick={downloadWord}
                     disabled={downloading}
-                    className="text-xs font-bold px-3 py-1.5 bg-foreground/5 hover:bg-foreground/10 text-foreground/70 rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5 shrink-0"
+                    className="text-xs font-bold px-3 py-2 bg-foreground/5 hover:bg-foreground/10 text-foreground/70 rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5 shrink-0"
                   >
                     📄 {downloading ? "Đang tạo file..." : "Tải Word"}
                   </button>
@@ -512,7 +512,7 @@ export default function ReadingPracticePage() {
                           <button
                             onClick={() => downloadPdf(pdfRef.current)}
                             disabled={exportingPdf}
-                            className="text-xs font-bold px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                            className="text-xs font-bold px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
                           >
                             🖨️ {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
                           </button>
@@ -619,7 +619,7 @@ export default function ReadingPracticePage() {
                   <button
                     onClick={() => downloadPdf(historyPdfRef.current)}
                     disabled={exportingPdf}
-                    className="text-xs font-bold px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    className="text-xs font-bold px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
                   >
                     🖨️ {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
                   </button>
