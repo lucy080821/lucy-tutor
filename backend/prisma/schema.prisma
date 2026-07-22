@@ -202,7 +202,9 @@ model Classroom {
   scheduleDays    String? // e.g. "1,3,5" for Mon, Wed, Fri (0 = Sunday)
   startTime       String? // e.g. "18:00"
   endTime         String? // e.g. "20:00"
-  feePerLesson    Int     @default(0)
+  feeType         String  @default("PER_LESSON") // "PER_LESSON" | "MONTHLY" — chosen by teacher at class creation
+  feePerLesson    Int     @default(0) // used when feeType = PER_LESSON
+  feePerMonth     Int     @default(0) // used when feeType = MONTHLY — flat fee, independent of session count
   enabledFeatures String  @default("[]") // JSON array; empty = all features enabled
 
   teacher         User             @relation("TeacherClassrooms", fields: [teacherId], references: [id], onDelete: Cascade)

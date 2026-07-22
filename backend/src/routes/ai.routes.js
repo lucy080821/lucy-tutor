@@ -395,6 +395,52 @@ Phải có đúng ${count} câu hỏi trong mảng "questions", đúng theo các
   }
 });
 
+// Real-time dictionary lookup for a word clicked inside a reading passage — meaning is
+// resolved from the surrounding sentence (not just the bare word) since English word
+// sense depends heavily on context, unlike a static dictionary lookup.
+router.post('/lookup-word', async (req, res) => {
+  try {
+    const { word, sentence } = req.body;
+    if (!word || !sentence) return res.status(400).json({ error: 'Missing word or sentence' });
+
+    const prompt = `Học viên đang đọc đoạn văn tiếng Anh và bấm vào 1 từ để tra nghĩa nhanh.
+Câu chứa từ: "${sentence}"
+Từ cần tra: "${word}"
+
+Trả về JSON nguyên chất (không markdown code block bọc ngoài), cấu trúc:
+{
+  "word": "dạng từ điển gốc (lemma) của từ, ví dụ bấm vào 'running' thì trả về 'run'",
+  "meaning": "nghĩa tiếng Việt NGẮN GỌN, đúng theo ngữ cảnh câu trên, không liệt kê hết mọi nghĩa có thể có",
+  "phonetic": "phiên âm IPA kiểu Anh-Anh, có dấu / /, để chuỗi rỗng nếu không chắc chắn",
+  "pos": "từ loại viết tắt bằng tiếng Anh, ví dụ n. / v. / adj. / adv. / prep. / conj."
+}`;
+
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: 'You are a concise English-Vietnamese contextual dictionary assistant. Always respond in valid JSON.' },
+        { role: 'user', content: prompt }
+      ],
+      model: 'llama-3.3-70b-versatile',
+      temperature: 0.3,
+      response_format: { type: 'json_object' }
+    });
+
+    const raw = chatCompletion.choices[0]?.message?.content || '{}';
+    let data;
+    try { data = JSON.parse(raw); } catch { data = {}; }
+
+    res.json({
+      word: data.word || word,
+      meaning: data.meaning || 'Không tra được nghĩa lúc này.',
+      phonetic: data.phonetic || '',
+      pos: data.pos || ''
+    });
+  } catch (error) {
+    console.error('Groq AI Error (lookup-word):', error);
+    res.status(500).json({ error: 'Failed to look up word' });
+  }
+});
+
 const WRITING_LEVEL_LABELS = {
   A1: 'A1 - mới bắt đầu: câu đơn giản, từ vựng cơ bản nhất',
   A2: 'A2 - sơ cấp: câu đơn giản, từ vựng thông dụng hàng ngày',

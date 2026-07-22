@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "sweetalert2";
 import { HighlightedText } from "@/lib/highlightText";
+import { WordLookupText } from "@/components/reading/WordLookupText";
 import { exportReadingToWord } from "@/lib/wordExport";
 import { isReadingAnswerCorrect, FILL_TYPES, QUESTION_TYPE_META, type ReadingQuestion, type QuestionType } from "@/lib/readingGrading";
 import { logSkillProgress } from "@/lib/skillProgress";
@@ -399,8 +400,9 @@ export default function ReadingPracticePage() {
                   </button>
                 </div>
                 <p className="text-foreground/80 leading-relaxed whitespace-pre-line -mt-3 border-l-4 border-primary/20 pl-4">
-                  {passage.passage}
+                  <WordLookupText text={passage.passage} userId={userId} />
                 </p>
+                <p className="text-xs text-foreground/40 -mt-4">💡 Bấm vào 1 từ bất kỳ trong bài đọc để tra nghĩa nhanh</p>
 
                 <div className="space-y-4">
                   {passage.questions.map((q, qi) => (
@@ -604,7 +606,9 @@ export default function ReadingPracticePage() {
               ← Quay lại danh sách
             </button>
             <h2 className="text-xl font-bold text-foreground">{viewingHistoryItem.topic || "Bài đọc"}</h2>
-            <p className="text-foreground/80 leading-relaxed whitespace-pre-line border-l-4 border-primary/20 pl-4">{viewingHistoryItem.passage}</p>
+            <p className="text-foreground/80 leading-relaxed whitespace-pre-line border-l-4 border-primary/20 pl-4">
+              <WordLookupText text={viewingHistoryItem.passage} userId={userId} />
+            </p>
             <div className="bg-primary/5 border border-primary/15 rounded-2xl p-5 flex items-center gap-5">
               <ScoreRing score={historyScore} total={historyQuestions.length} />
               <div>

@@ -33,6 +33,103 @@ export default function ExamPage() {
   const lastCheatTimeRef = useRef(0);
   const handleSubmitRef = useRef<any>(null);
 
+  // ── Highlight đề bài + Ghi chú nháp (không tính điểm, chỉ hỗ trợ tư duy lúc làm bài) ──
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [showNoteBox, setShowNoteBox] = useState(false);
+  const [highlightToolbar, setHighlightToolbar] = useState<{ top: number; left: number } | null>(null);
+  const contentAreaRef = useRef<HTMLDivElement>(null);
+  const highlightToolbarRef = useRef<HTMLButtonElement>(null);
+
+  // Ghi chú chỉ là giấy nháp tạm thời — lưu localStorage để sống sót qua refresh vô tình,
+  // không lưu server (không cần xem lại sau khi nộp bài, xem CLAUDE.md).
+  useEffect(() => {
+    if (!examId || !userId) return;
+    try {
+      const raw = localStorage.getItem(`examNotes_${examId}_${userId}`);
+      if (raw) setNotes(JSON.parse(raw));
+    } catch {}
+  }, [examId, userId]);
+
+  useEffect(() => {
+    if (!examId || !userId) return;
+    try { localStorage.setItem(`examNotes_${examId}_${userId}`, JSON.stringify(notes)); } catch {}
+  }, [notes, examId, userId]);
+
+  // Wraps each text node intersecting the selection Range in its own <mark> — safer than
+  // Range.surroundContents() on the whole range, which throws the moment a selection spans
+  // more than one element (very common here since đề bài is HTML from ReactQuill).
+  const wrapRangeAsHighlight = (range: Range) => {
+    if (range.collapsed) return;
+    let root: Node = range.commonAncestorContainer;
+    if (root.nodeType === Node.TEXT_NODE) root = root.parentNode as Node;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+      }
+    });
+    const textNodes: Text[] = [];
+    let node: Node | null;
+    while ((node = walker.nextNode())) textNodes.push(node as Text);
+    textNodes.forEach((textNode) => {
+      const start = textNode === range.startContainer ? range.startOffset : 0;
+      const end = textNode === range.endContainer ? range.endOffset : textNode.length;
+      if (start >= end || !textNode.parentNode) return;
+      const subRange = document.createRange();
+      subRange.setStart(textNode, start);
+      subRange.setEnd(textNode, end);
+      const mark = document.createElement('mark');
+      mark.className = 'exam-user-highlight';
+      mark.style.backgroundColor = '#fde68a';
+      mark.style.borderRadius = '3px';
+      mark.style.padding = '0 1px';
+      mark.style.cursor = 'pointer';
+      mark.title = 'Bấm để bỏ highlight';
+      try { subRange.surroundContents(mark); } catch {}
+    });
+  };
+
+  const handleContentMouseUp = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) { setHighlightToolbar(null); return; }
+    const range = sel.getRangeAt(0);
+    if (!contentAreaRef.current || !contentAreaRef.current.contains(range.commonAncestorContainer)) {
+      setHighlightToolbar(null);
+      return;
+    }
+    const rect = range.getBoundingClientRect();
+    if (rect.width === 0 && rect.height === 0) { setHighlightToolbar(null); return; }
+    setHighlightToolbar({ top: rect.top - 44, left: rect.left + rect.width / 2 });
+  };
+
+  useEffect(() => {
+    if (!highlightToolbar) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (highlightToolbarRef.current?.contains(e.target as Node)) return;
+      setHighlightToolbar(null);
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    return () => document.removeEventListener('mousedown', onMouseDown);
+  }, [highlightToolbar]);
+
+  const applyHighlight = () => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+    wrapRangeAsHighlight(sel.getRangeAt(0));
+    sel.removeAllRanges();
+    setHighlightToolbar(null);
+  };
+
+  // Click on an existing highlight to remove it (unwrap the <mark>).
+  const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const mark = (e.target as HTMLElement).closest('mark.exam-user-highlight');
+    if (mark && mark.parentNode) {
+      const parent = mark.parentNode;
+      while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
+      parent.removeChild(mark);
+      parent.normalize();
+    }
+  };
+
   useEffect(() => {
     const fetchExam = async () => {
       try {
@@ -401,29 +498,53 @@ export default function ExamPage() {
         {/* Question Panel */}
         <main className="flex-1 w-full">
           <div className="bg-surface border border-foreground/10 rounded-3xl p-6 md:p-8 h-full">
-            <p className="text-sm text-foreground/50 font-bold mb-3">Câu {currentQ + 1}/{totalQ}</p>
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <p className="text-sm text-foreground/50 font-bold">Câu {currentQ + 1}/{totalQ}</p>
+              <button
+                onClick={() => setShowNoteBox(v => !v)}
+                className="text-xs font-bold px-3 py-1.5 rounded-full bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors cursor-pointer flex items-center gap-1"
+              >
+                📝 Ghi Chú{notes[question?.id] ? ' •' : ''}
+              </button>
+            </div>
             {/* Progress bar */}
             <div className="w-full bg-foreground/10 h-1.5 rounded-full mb-8">
               <div className="bg-primary h-1.5 rounded-full transition-all" style={{width: `${((currentQ+1)/totalQ)*100}%`}}></div>
             </div>
 
-            {question?.heading && (
-              <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-700/90 font-bold whitespace-pre-wrap leading-relaxed break-words quill-content [&>p]:m-0" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(question.heading) }}>
-              </div>
-            )}
-            
-            {question?.imageUrl && (
-              <div className="mb-6">
-                <img src={question.imageUrl} alt="Question" className="max-h-64 max-w-full object-contain rounded-xl border border-foreground/10" />
+            {showNoteBox && (
+              <div className="mb-6 p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl">
+                <p className="text-xs font-bold text-amber-600 mb-2">📝 Ghi chú nháp cho câu này — chỉ mình bạn thấy, không tính điểm, không lưu sau khi rời trang</p>
+                <textarea
+                  value={notes[question?.id] || ''}
+                  onChange={(e) => setNotes(prev => ({ ...prev, [question.id]: e.target.value }))}
+                  rows={3}
+                  placeholder="Gõ ghi chú của bạn ở đây..."
+                  className="w-full p-3 rounded-xl border border-amber-500/20 bg-surface text-sm resize-none focus:outline-none focus:border-amber-500/50"
+                />
               </div>
             )}
 
-            <div className="text-xl leading-relaxed mb-8 break-words min-w-0">
-              {question?.content ? (
-                <div className="quill-content" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(question.content)}}></div>
-              ) : (
-                <div className="text-foreground/40 italic text-base">Nội dung trống</div>
+            <p className="text-xs text-foreground/40 mb-2">💡 Bôi đen đề bài để highlight — bấm vào chỗ đã highlight để bỏ</p>
+            <div ref={contentAreaRef} onMouseUp={handleContentMouseUp} onClick={handleContentClick} className="select-text">
+              {question?.heading && (
+                <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-amber-700/90 font-bold whitespace-pre-wrap leading-relaxed break-words quill-content [&>p]:m-0" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(question.heading) }}>
+                </div>
               )}
+
+              {question?.imageUrl && (
+                <div className="mb-6">
+                  <img src={question.imageUrl} alt="Question" className="max-h-64 max-w-full object-contain rounded-xl border border-foreground/10" />
+                </div>
+              )}
+
+              <div className="text-xl leading-relaxed mb-8 break-words min-w-0">
+                {question?.content ? (
+                  <div className="quill-content" dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(question.content)}}></div>
+                ) : (
+                  <div className="text-foreground/40 italic text-base">Nội dung trống</div>
+                )}
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -586,6 +707,17 @@ export default function ExamPage() {
           </div>
         </aside>
       </div>
+
+      {highlightToolbar && (
+        <button
+          ref={highlightToolbarRef}
+          onClick={applyHighlight}
+          style={{ position: 'fixed', top: highlightToolbar.top, left: highlightToolbar.left, transform: 'translateX(-50%)', zIndex: 300 }}
+          className="px-3 py-2 bg-foreground text-background text-xs font-bold rounded-full shadow-2xl flex items-center gap-1.5 cursor-pointer animate-in fade-in zoom-in-95 duration-150"
+        >
+          🖍 Highlight
+        </button>
+      )}
     </div>
   );
 }

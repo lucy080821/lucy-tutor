@@ -6,8 +6,11 @@ interface TuitionInvoiceProps {
   year: number;
   classes: Array<{
     classroomName: string;
+    feeType?: string;
     presentCount: number;
     feePerLesson: number;
+    feePerMonth?: number;
+    standardLessons?: number | null;
     totalAmount: number;
   }>;
   totalAmount: number;
@@ -58,17 +61,30 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
             </tr>
           </thead>
           <tbody>
-            {classes.map((cls, idx) => (
-              <tr key={idx} className="border-b border-slate-100">
-                <td className="py-6 px-6">
-                  <p className="font-bold text-slate-800">Học phí tháng {month}/{year}</p>
-                  <p className="text-sm text-slate-500 mt-1">Lớp {cls.classroomName} (Tính theo số buổi đi học thực tế)</p>
-                </td>
-                <td className="py-6 px-6 text-center font-semibold text-slate-700 whitespace-nowrap">{cls.presentCount} buổi</td>
-                <td className="py-6 px-6 text-right font-semibold text-slate-700 whitespace-nowrap">{cls.feePerLesson.toLocaleString('vi-VN')} đ</td>
-                <td className="py-6 px-6 text-right font-black text-primary text-lg whitespace-nowrap">{cls.totalAmount.toLocaleString('vi-VN')} đ</td>
-              </tr>
-            ))}
+            {classes.map((cls, idx) => {
+              const isMonthly = cls.feeType === 'MONTHLY';
+              // MONTHLY classes with a set weekly schedule prorate feePerMonth by attendance
+              // (feePerMonth ÷ standard lessons that month × sessions actually attended)
+              // instead of always charging the flat fee — reflect that rate here instead of
+              // showing a misleading "1 tháng @ feePerMonth" when totalAmount is actually less/more.
+              const isProrated = isMonthly && !!cls.standardLessons;
+              const unitPrice = isProrated ? Math.round((cls.feePerMonth || 0) / (cls.standardLessons as number)) : (isMonthly ? (cls.feePerMonth || 0) : cls.feePerLesson);
+              return (
+                <tr key={idx} className="border-b border-slate-100">
+                  <td className="py-6 px-6">
+                    <p className="font-bold text-slate-800">Học phí tháng {month}/{year}</p>
+                    <p className="text-sm text-slate-500 mt-1">
+                      Lớp {cls.classroomName} {isProrated
+                        ? `(Theo tháng, quy đổi ${cls.standardLessons} buổi chuẩn — đã học ${cls.presentCount} buổi)`
+                        : isMonthly ? `(Trọn gói theo tháng, đã học ${cls.presentCount} buổi)` : '(Tính theo số buổi đi học thực tế)'}
+                    </p>
+                  </td>
+                  <td className="py-6 px-6 text-center font-semibold text-slate-700 whitespace-nowrap">{isProrated ? `${cls.presentCount}/${cls.standardLessons} buổi` : isMonthly ? '1 tháng' : `${cls.presentCount} buổi`}</td>
+                  <td className="py-6 px-6 text-right font-semibold text-slate-700 whitespace-nowrap">{unitPrice.toLocaleString('vi-VN')} đ{isProrated ? '/buổi' : ''}</td>
+                  <td className="py-6 px-6 text-right font-black text-primary text-lg whitespace-nowrap">{cls.totalAmount.toLocaleString('vi-VN')} đ</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

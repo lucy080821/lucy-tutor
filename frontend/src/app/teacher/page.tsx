@@ -60,9 +60,22 @@ export default function TeacherDashboard() {
   const [scheduleDays, setScheduleDays] = useState<number[]>([]);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [feeType, setFeeType] = useState<"PER_LESSON" | "MONTHLY">("PER_LESSON");
   const [feePerLesson, setFeePerLesson] = useState("");
+  const [feePerMonth, setFeePerMonth] = useState("");
   const [searchStudentQuery, setSearchStudentQuery] = useState("");
+  const [studentSortOption, setStudentSortOption] = useState<
+    "NAME_ASC" | "NAME_DESC" | "XP_DESC" | "XP_ASC" | "SCORE_DESC" | "SCORE_ASC" | "PROGRESS_DESC" | "PROGRESS_ASC" | "DATE_DESC" | "DATE_ASC"
+  >("NAME_ASC");
   const [globalLoading, setGlobalLoading] = useState({ isLoading: false, message: "" });
+
+  // ── Manually add a student (teacher enrolls someone in person, default password 123456) ──
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [addStudentName, setAddStudentName] = useState("");
+  const [addStudentEmail, setAddStudentEmail] = useState("");
+  const [addStudentPhone, setAddStudentPhone] = useState("");
+  const [addStudentClassroomIds, setAddStudentClassroomIds] = useState<string[]>([]);
+  const [isAddingStudent, setIsAddingStudent] = useState(false);
 
   // ── FREE_STUDENTS tab: free-standing (no classroom) students managed by this teacher ──
   const [freeStudents, setFreeStudents] = useState<any[]>([]);
@@ -131,7 +144,9 @@ export default function TeacherDashboard() {
         scheduleDays: JSON.stringify(scheduleDays),
         startTime,
         endTime,
-        feePerLesson: feePerLesson ? parseInt(feePerLesson) : 0
+        feeType,
+        feePerLesson: feePerLesson ? parseInt(feePerLesson) : 0,
+        feePerMonth: feePerMonth ? parseInt(feePerMonth) : 0
       };
       if (!isEditing) payload.teacherId = user.id;
 
@@ -145,7 +160,9 @@ export default function TeacherDashboard() {
         setScheduleDays([]);
         setStartTime("");
         setEndTime("");
+        setFeeType("PER_LESSON");
         setFeePerLesson("");
+        setFeePerMonth("");
         setShowModal(false);
         setEditClassroom(null);
         fetchTeacherData();
@@ -161,18 +178,80 @@ export default function TeacherDashboard() {
     try { setScheduleDays(c.scheduleDays ? JSON.parse(c.scheduleDays) : []); } catch { setScheduleDays([]); }
     setStartTime(c.startTime || "");
     setEndTime(c.endTime || "");
+    setFeeType(c.feeType === "MONTHLY" ? "MONTHLY" : "PER_LESSON");
     setFeePerLesson(c.feePerLesson ? String(c.feePerLesson) : "");
+    setFeePerMonth(c.feePerMonth ? String(c.feePerMonth) : "");
     setShowModal(true);
   };
-  
+
   const openCreateModal = () => {
     setEditClassroom(null);
     setNewClassName("");
     setScheduleDays([]);
     setStartTime("");
     setEndTime("");
+    setFeeType("PER_LESSON");
     setFeePerLesson("");
+    setFeePerMonth("");
     setShowModal(true);
+  };
+
+  const openAddStudentModal = () => {
+    setAddStudentName("");
+    setAddStudentEmail("");
+    setAddStudentPhone("");
+    setAddStudentClassroomIds([]);
+    setShowAddStudentModal(true);
+  };
+
+  const handleAddStudent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.id || isAddingStudent) return;
+    if (addStudentClassroomIds.length === 0) {
+      Swal.fire('Lỗi', 'Vui lòng chọn ít nhất 1 lớp học', 'error');
+      return;
+    }
+    setIsAddingStudent(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/classroom/add-student`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: addStudentName,
+          email: addStudentEmail,
+          phone: addStudentPhone,
+          classroomIds: addStudentClassroomIds,
+          teacherId: user.id
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        Swal.fire('Lỗi', data.error || 'Không thể thêm học viên', 'error');
+        return;
+      }
+      // Optimistic update — patch the new student straight into local state so the
+      // STUDENTS/CLASSES lists reflect it immediately, instead of waiting on the
+      // round-trip of a full fetchTeacherData() refetch. That refetch still runs
+      // right after to reconcile with the server (e.g. any relation fields this
+      // create response doesn't carry).
+      setClassrooms(prev => prev.map(c =>
+        addStudentClassroomIds.includes(c.id)
+          ? { ...c, students: [...(c.students || []), data] }
+          : c
+      ));
+      setShowAddStudentModal(false);
+      fetchTeacherData();
+      Swal.fire({
+        title: 'Đã thêm học viên!',
+        html: `Tài khoản <b>${data.email}</b> đã được tạo với mật khẩu mặc định <b>123456</b>. Học viên có thể đăng nhập và đổi mật khẩu sau trong mục Cài Đặt.`,
+        icon: 'success'
+      });
+    } catch (err) {
+      console.error('Error adding student', err);
+      Swal.fire('Lỗi', 'Không thể thêm học viên', 'error');
+    } finally {
+      setIsAddingStudent(false);
+    }
   };
 
   // ── Document management state ──
@@ -468,7 +547,7 @@ export default function TeacherDashboard() {
   };
 
   useEffect(() => {
-    if (activeTab === "FREE_STUDENTS" && user) {
+    if ((activeTab === "FREE_STUDENTS" || activeTab === "OVERVIEW") && user) {
       fetchFreeStudents();
     }
   }, [activeTab, user]);
@@ -856,11 +935,13 @@ export default function TeacherDashboard() {
     if (activeTab !== "OVERVIEW" || !user?.id) return;
     const interval = setInterval(() => {
       fetchTeacherData();
+      fetchFreeStudents();
       setOverviewRefreshTick(t => t + 1);
     }, 30000);
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
         fetchTeacherData();
+        fetchFreeStudents();
         setOverviewRefreshTick(t => t + 1);
       }
     };
@@ -896,6 +977,7 @@ export default function TeacherDashboard() {
         name: `T${months[i].month}/${String(months[i].year).slice(2)}`,
         DaThu: r.totalCollected || 0,
         CanThu: r.totalExpected || 0,
+        HocVienTuDo: r.freeStudentRevenue || 0,
       })));
     }).catch(console.error);
     return () => { cancelled = true; };
@@ -933,8 +1015,11 @@ export default function TeacherDashboard() {
             if (sr.totalAmount > 0 || sr.presentCount > 0) {
               allReports[sr.user.id].classes.push({
                 classroomName: data.classroom.name,
+                feeType: data.classroom.feeType,
                 presentCount: sr.presentCount,
                 feePerLesson: data.classroom.feePerLesson,
+                feePerMonth: data.classroom.feePerMonth,
+                standardLessons: data.classroom.standardLessons,
                 totalAmount: sr.totalAmount,
               });
               allReports[sr.user.id].totalAmount += sr.totalAmount;
@@ -1002,25 +1087,31 @@ export default function TeacherDashboard() {
   // attMonthRecords optimistically first so the running total column reflects it instantly,
   // then persists via the existing single-day /mark endpoint (sending just this one record),
   // rolling back on failure.
+  // 3 trạng thái nối tiếp nhau mỗi lần bấm: trống → Có mặt → Vắng → trống (bỏ chọn hẳn,
+  // xoá bản ghi Attendance) — trước đây chỉ có 2 trạng thái lặp vô hạn dù tooltip đã ghi "bấm để xoá".
   const toggleAttendanceCell = async (classroomId: string, userId: string, day: number) => {
     const [year, month] = attMonth.split("-");
     const dateStr = `${year}-${month}-${String(day).padStart(2, '0')}`;
     const cellKey = `${classroomId}|${userId}|${day}`;
     const existing = attMonthRecords.find(r => r.classroomId === classroomId && r.userId === userId && new Date(r.date).getDate() === day);
-    const nextStatus = existing?.status === 'PRESENT' ? 'UNEXCUSED' : 'PRESENT';
+    const nextStatus = !existing ? 'PRESENT' : existing.status === 'PRESENT' ? 'UNEXCUSED' : null;
 
-    setAttMonthRecords(prev => [
-      ...prev.filter(r => !(r.classroomId === classroomId && r.userId === userId && new Date(r.date).getDate() === day)),
-      { classroomId, userId, date: dateStr, status: nextStatus }
-    ]);
+    setAttMonthRecords(prev => {
+      const others = prev.filter(r => !(r.classroomId === classroomId && r.userId === userId && new Date(r.date).getDate() === day));
+      return nextStatus ? [...others, { classroomId, userId, date: dateStr, status: nextStatus }] : others;
+    });
     setAttSavingCell(cellKey);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/mark`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ classroomId, date: dateStr, records: [{ userId, status: nextStatus }] })
-      });
+      const res = nextStatus
+        ? await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/mark`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ classroomId, date: dateStr, records: [{ userId, status: nextStatus }] })
+          })
+        : await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/mark?${new URLSearchParams({ classroomId, userId, date: dateStr })}`, {
+            method: 'DELETE'
+          });
       if (!res.ok) throw new Error();
     } catch (err) {
       console.error(err);
@@ -1622,13 +1713,32 @@ export default function TeacherDashboard() {
     });
   const lessonsPagination = usePagination(filteredLessons, LIST_PAGE_SIZE, `${lessonSearchQuery}|${lessonClassFilter}|${lessonSortOrder}`);
 
-  // ── STUDENTS tab: filter over the full roster, then paginate ──
+  // ── STUDENTS tab: filter over the full roster, sort, then paginate ──
   const filteredStudents = allStudents.filter((s: any) =>
     s.name.toLowerCase().includes(searchStudentQuery.toLowerCase()) ||
     s.email.toLowerCase().includes(searchStudentQuery.toLowerCase())
   );
+  const studentProgress = (s: any) => {
+    const avg = studentAvgScore(s) || 0;
+    return s.targetScore > 0 ? Math.min(100, (avg / s.targetScore) * 100) : 0;
+  };
+  const sortedStudents = [...filteredStudents].sort((a: any, b: any) => {
+    switch (studentSortOption) {
+      case "NAME_DESC": return b.name.localeCompare(a.name);
+      case "XP_DESC": return (b.totalXP || 0) - (a.totalXP || 0);
+      case "XP_ASC": return (a.totalXP || 0) - (b.totalXP || 0);
+      case "SCORE_DESC": return (studentAvgScore(b) || 0) - (studentAvgScore(a) || 0);
+      case "SCORE_ASC": return (studentAvgScore(a) || 0) - (studentAvgScore(b) || 0);
+      case "PROGRESS_DESC": return studentProgress(b) - studentProgress(a);
+      case "PROGRESS_ASC": return studentProgress(a) - studentProgress(b);
+      case "DATE_DESC": return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      case "DATE_ASC": return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+      case "NAME_ASC":
+      default: return a.name.localeCompare(b.name);
+    }
+  });
   const TABLE_PAGE_SIZE = 15;
-  const studentsPagination = usePagination(filteredStudents, TABLE_PAGE_SIZE, searchStudentQuery);
+  const studentsPagination = usePagination(sortedStudents, TABLE_PAGE_SIZE, `${searchStudentQuery}|${studentSortOption}`);
 
   // ── FREE_STUDENTS tab: filter over the full list, then paginate ──
   const filteredFreeStudents = freeStudents.filter((s: any) =>
@@ -1686,8 +1796,12 @@ export default function TeacherDashboard() {
   // ── Business metrics derived from revenue trend & tuition report (for OVERVIEW KPIs + insights) ──
   const revenueThisMonth = revenueTrend && revenueTrend.length > 0 ? revenueTrend[revenueTrend.length - 1] : null;
   const revenuePrevMonth = revenueTrend && revenueTrend.length > 1 ? revenueTrend[revenueTrend.length - 2] : null;
-  const revenueMoMPct = (revenueThisMonth && revenuePrevMonth && revenuePrevMonth.DaThu > 0)
-    ? Math.round(((revenueThisMonth.DaThu - revenuePrevMonth.DaThu) / revenuePrevMonth.DaThu) * 1000) / 10
+  // "Doanh Thu Tháng Này" = tổng doanh thu thật (học phí theo lớp + học viên tự do đã đóng),
+  // khác với DaThu/CanThu trong biểu đồ 6 tháng vốn cố tình chỉ so sánh riêng học phí theo lớp.
+  const revenueThisMonthTotal = revenueThisMonth ? revenueThisMonth.DaThu + (revenueThisMonth.HocVienTuDo || 0) : null;
+  const revenuePrevMonthTotal = revenuePrevMonth ? revenuePrevMonth.DaThu + (revenuePrevMonth.HocVienTuDo || 0) : null;
+  const revenueMoMPct = (revenueThisMonthTotal !== null && revenuePrevMonthTotal !== null && revenuePrevMonthTotal > 0)
+    ? Math.round(((revenueThisMonthTotal - revenuePrevMonthTotal) / revenuePrevMonthTotal) * 1000) / 10
     : null;
   const tuitionCollectionRate = (overviewTuitionData && overviewTuitionData.totalExpected > 0)
     ? Math.round((overviewTuitionData.totalCollected / overviewTuitionData.totalExpected) * 100)
@@ -1706,6 +1820,14 @@ export default function TeacherDashboard() {
       } else if (revenueMoMPct >= 15) {
         items.push({ level: 'success', icon: '📈', title: 'Doanh thu tăng trưởng tốt', message: `Doanh thu tháng này tăng ${revenueMoMPct}% so với tháng trước. Duy trì chất lượng giảng dạy để giữ đà tăng trưởng này.` });
       }
+    }
+
+    const lockedFreeStudents = freeStudents.filter((s: any) => s.accessLocked);
+    const expiringFreeStudents = freeStudents.filter((s: any) => !s.accessLocked && s.accessDaysRemaining !== null && s.accessDaysRemaining !== undefined && s.accessDaysRemaining <= 7);
+    if (lockedFreeStudents.length > 0) {
+      items.push({ level: 'critical', icon: '🔒', title: 'Học viên tự do đã bị khóa', message: `${lockedFreeStudents.length} học viên tự do đã hết hạn dùng thử/đóng phí và bị khóa app. Vào tab "Học Viên Tự Do" để xác nhận đóng phí và kích hoạt lại.` });
+    } else if (expiringFreeStudents.length > 0) {
+      items.push({ level: 'warning', icon: '⏳', title: 'Học viên tự do sắp hết hạn', message: `${expiringFreeStudents.length} học viên tự do sẽ hết hạn trong 7 ngày tới. Nhắc đóng phí sớm để tránh gián đoạn học tập.` });
     }
 
     if (tuitionCollectionRate !== null && overviewTuitionData) {
@@ -1897,8 +2019,8 @@ export default function TeacherDashboard() {
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
               <StatCard title="Tổng Học Viên" value={String(allStudents.length)} icon="🧑‍🎓" accent="violet" />
               <StatCard title="Tổng Lớp Đang Dạy" value={String(classrooms.length)} icon="🏫" accent="blue" />
-              <StatCard title="Doanh Thu Tháng Này" value={revenueThisMonth ? `${(revenueThisMonth.DaThu / 1000000).toFixed(1)}tr` : '—'} icon="💵" accent="green"
-                delta={revenueMoMPct !== null ? { value: `${Math.abs(revenueMoMPct)}%`, positive: revenueMoMPct >= 0 } : undefined} />
+              <StatCard title="Doanh Thu Tháng Này" value={revenueThisMonthTotal !== null ? `${(revenueThisMonthTotal / 1000000).toFixed(1)}tr` : '—'} icon="💵" accent="green"
+                sub="Học phí lớp + học viên tự do" delta={revenueMoMPct !== null ? { value: `${Math.abs(revenueMoMPct)}%`, positive: revenueMoMPct >= 0 } : undefined} />
               <StatCard title="Tỷ Lệ Thu Học Phí" value={tuitionCollectionRate !== null ? `${tuitionCollectionRate}%` : '—'} icon="💰" accent="amber" sub="Trong tháng hiện tại" />
               <StatCard title="Tỷ Lệ Nộp Bài" value={completionRate !== null ? `${completionRate}%` : '—'} icon="📊" accent="cyan" sub="Trên tổng số bài đã giao" />
               <StatCard title="Điểm TB Học Viên" value={avgSystemScore !== null ? `${avgSystemScore}/10` : '—'} icon="🎯" accent="rose" sub="Trung bình các lớp" />
@@ -1928,7 +2050,7 @@ export default function TeacherDashboard() {
             <div className="bg-white rounded-xl p-6 border border-gray-100 shadow-sm mt-6">
               <div className="mb-6">
                 <h3 className="font-bold text-slate-700">Doanh Thu Học Phí 6 Tháng Gần Đây</h3>
-                <p className="text-xs text-slate-400 mt-0.5">Tổng đã thu so với tổng cần thu mỗi tháng, trên tất cả các lớp</p>
+                <p className="text-xs text-slate-400 mt-0.5">Cần thu/Đã thu học phí theo lớp, cộng thêm doanh thu học viên tự do mỗi tháng</p>
               </div>
               {revenueTrend ? (
                 <div className="h-[260px] w-full">
@@ -1941,8 +2063,9 @@ export default function TeacherDashboard() {
                       <Tooltip cursor={{ fill: '#f1f5f9' }} formatter={(v: any) => `${Number(v).toLocaleString()} đ`}
                         contentStyle={{ borderRadius: '12px', border: '1px solid #f1f5f9', boxShadow: '0 4px 20px rgba(0,0,0,0.08)', fontSize: '13px' }} />
                       <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px', fontSize: '13px' }} />
-                      <Bar dataKey="CanThu" name="Cần Thu" fill="#cbd5e1" radius={[4, 4, 0, 0]} barSize={22} />
-                      <Bar dataKey="DaThu" name="Đã Thu" fill="#059669" radius={[4, 4, 0, 0]} barSize={22} />
+                      <Bar dataKey="CanThu" name="Cần Thu (Lớp)" fill="#cbd5e1" radius={[4, 4, 0, 0]} barSize={18} />
+                      <Bar dataKey="DaThu" name="Đã Thu (Lớp)" fill="#059669" radius={[4, 4, 0, 0]} barSize={18} />
+                      <Bar dataKey="HocVienTuDo" name="Học Viên Tự Do" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={18} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -2129,16 +2252,35 @@ export default function TeacherDashboard() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <h1 className="text-3xl font-bold">Danh Sách Học Viên</h1>
-              <div className="relative">
+              <button onClick={openAddStudentModal} disabled={classrooms.length === 0} title={classrooms.length === 0 ? 'Cần tạo ít nhất 1 lớp học trước' : ''} className="px-4 py-2 bg-primary text-white font-bold hover:bg-blue-700 rounded-lg cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">+ Thêm Học Viên</button>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <div className="relative flex-1 min-w-[220px]">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-                <input 
-                  type="text" 
-                  placeholder="Tìm theo tên hoặc email..." 
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên hoặc email..."
                   value={searchStudentQuery}
                   onChange={(e) => setSearchStudentQuery(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-200 bg-white rounded-lg focus:border-primary focus:outline-none min-w-[250px]"
+                  className="pl-10 pr-4 py-2 border border-gray-200 bg-white rounded-lg focus:border-primary focus:outline-none w-full"
                 />
               </div>
+              <select
+                value={studentSortOption}
+                onChange={(e) => setStudentSortOption(e.target.value as typeof studentSortOption)}
+                className="px-3 py-2 border border-gray-200 bg-white rounded-lg text-sm font-medium sm:w-56"
+              >
+                <option value="NAME_ASC">🔤 Tên A → Z</option>
+                <option value="NAME_DESC">🔤 Tên Z → A</option>
+                <option value="XP_DESC">⭐ XP cao → thấp</option>
+                <option value="XP_ASC">⭐ XP thấp → cao</option>
+                <option value="SCORE_DESC">📊 Điểm TB cao → thấp</option>
+                <option value="SCORE_ASC">📊 Điểm TB thấp → cao</option>
+                <option value="PROGRESS_DESC">🎯 Tiến độ cao → thấp</option>
+                <option value="PROGRESS_ASC">🎯 Tiến độ thấp → cao</option>
+                <option value="DATE_DESC">📅 Đăng ký mới nhất</option>
+                <option value="DATE_ASC">📅 Đăng ký lâu nhất</option>
+              </select>
             </div>
             {(() => {
               if (allStudents.length === 0) return <p className="text-slate-400">Chưa có học viên nào tham gia lớp.</p>;
@@ -2156,7 +2298,7 @@ export default function TeacherDashboard() {
               return (
                 <div className="bg-white rounded-xl border border-gray-100 overflow-hidden shadow-sm">
                   <div className="overflow-x-auto w-full">
-                    <table className="w-full text-left min-w-[800px]">
+                    <table className="w-full text-left min-w-[900px]">
                       <thead>
                         <tr className="bg-slate-50 text-slate-400 text-xs uppercase tracking-widest">
                         <th className="p-4 font-bold border-b border-gray-100">Học Viên</th>
@@ -2166,6 +2308,7 @@ export default function TeacherDashboard() {
                         <th className="p-4 font-bold border-b border-gray-100 text-center">Điểm TB</th>
                         <th className="p-4 font-bold border-b border-gray-100 text-center">Mục tiêu</th>
                         <th className="p-4 font-bold border-b border-gray-100 w-32">Tiến độ</th>
+                        <th className="p-4 font-bold border-b border-gray-100">Ngày Đăng Ký</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2207,6 +2350,7 @@ export default function TeacherDashboard() {
                                 <div className="bg-primary h-2 rounded-full transition-all" style={{ width: `${percentToTarget}%` }}></div>
                               </div>
                             </td>
+                            <td className="p-4 text-sm text-slate-500">{s.createdAt ? new Date(s.createdAt).toLocaleDateString('vi-VN') : '—'}</td>
                           </tr>
                         );
                       })}
@@ -2759,14 +2903,23 @@ export default function TeacherDashboard() {
                 {attView === 'REPORT' && (attClassroomId ? (
                   <div className="bg-white rounded-xl border border-gray-100 p-6 shadow-sm">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-4 flex-wrap">
                         <h2 className="text-xl font-bold">Báo Cáo Học Phí</h2>
-                        <input 
-                          type="month" 
-                          value={attMonth} 
-                          onChange={e => setAttMonth(e.target.value)} 
+                        <input
+                          type="month"
+                          value={attMonth}
+                          onChange={e => setAttMonth(e.target.value)}
                           className="p-2 border border-gray-200 bg-white rounded-lg"
                         />
+                        {attReport?.classroom && (
+                          <span className="text-xs font-bold bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg">
+                            {attReport.classroom.feeType === 'MONTHLY'
+                              ? attReport.classroom.standardLessons
+                                ? `📅 Theo tháng — ${(attReport.classroom.feePerMonth || 0).toLocaleString('vi-VN')} đ/tháng ÷ ${attReport.classroom.standardLessons} buổi chuẩn × số buổi thực học`
+                                : `📅 Theo tháng — ${(attReport.classroom.feePerMonth || 0).toLocaleString('vi-VN')} đ/tháng (chưa đặt lịch học cố định nên tính trọn gói)`
+                              : `🗓️ Theo buổi — ${(attReport.classroom.feePerLesson || 0).toLocaleString('vi-VN')} đ/buổi`}
+                          </span>
+                        )}
                       </div>
                       {attReport?.report?.length > 0 && (
                         <button 
@@ -2794,7 +2947,11 @@ export default function TeacherDashboard() {
                             {attReportPagination.pageItems.map((sr: any) => (
                               <tr key={sr.user.id} className="border-b border-gray-100 last:border-0 hover:bg-slate-50">
                                 <td className="p-4 font-medium">{sr.user.name}</td>
-                                <td className="p-4">{sr.presentCount} buổi</td>
+                                <td className="p-4">
+                                  {attReport.classroom?.feeType === 'MONTHLY' && attReport.classroom?.standardLessons
+                                    ? `${sr.presentCount}/${attReport.classroom.standardLessons} buổi`
+                                    : `${sr.presentCount} buổi`}
+                                </td>
                                 <td className="p-4 font-black text-primary text-right">{sr.totalAmount.toLocaleString()} VNĐ</td>
                                 <td className="p-4 text-center">
                                   {sr.paymentStatus === 'PAID' ? (
@@ -3694,6 +3851,57 @@ export default function TeacherDashboard() {
       </div>
 
       {/* ── Create / Edit Class Modal ── */}
+      {showAddStudentModal && (
+        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-8 w-full max-w-xl border border-gray-100 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h2 className="text-2xl font-bold mb-2">Thêm Học Viên Thủ Công</h2>
+            <p className="text-sm text-slate-400 mb-6">Tài khoản mới sẽ có mật khẩu mặc định <b>123456</b> — học viên có thể đổi lại sau khi đăng nhập.</p>
+            <form onSubmit={handleAddStudent}>
+              <div className="mb-4">
+                <label className="block text-sm font-bold mb-2">Họ Tên</label>
+                <input type="text" value={addStudentName} onChange={e => setAddStudentName(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 bg-white rounded-lg focus:outline-none focus:border-primary"
+                  placeholder="VD: Nguyễn Văn A" required autoFocus />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-bold mb-2">Email</label>
+                <input type="email" value={addStudentEmail} onChange={e => setAddStudentEmail(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 bg-white rounded-lg focus:outline-none focus:border-primary"
+                  placeholder="vd@email.com" required />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-bold mb-2">Số Điện Thoại (Tùy chọn)</label>
+                <input type="tel" value={addStudentPhone} onChange={e => setAddStudentPhone(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-200 bg-white rounded-lg focus:outline-none focus:border-primary"
+                  placeholder="09xxxxxxxx" />
+              </div>
+              <div className="mb-6">
+                <label className="block text-sm font-bold mb-2">Gán Vào Lớp Học</label>
+                {classrooms.length === 0 ? (
+                  <p className="text-sm text-slate-400">Bạn chưa có lớp học nào. Hãy tạo lớp trước.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
+                    {classrooms.map(c => (
+                      <label key={c.id} className={`flex items-center gap-2 px-3 py-2 border font-bold text-sm cursor-pointer transition-colors ${addStudentClassroomIds.includes(c.id) ? 'bg-primary text-white border-primary' : 'border-gray-200 text-slate-600 hover:bg-slate-50'}`}>
+                        <input type="checkbox" className="hidden shrink-0" checked={addStudentClassroomIds.includes(c.id)} onChange={(e) => {
+                          if (e.target.checked) setAddStudentClassroomIds([...addStudentClassroomIds, c.id]);
+                          else setAddStudentClassroomIds(addStudentClassroomIds.filter(id => id !== c.id));
+                        }} />
+                        <span>{c.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-3 justify-end">
+                <button type="button" onClick={() => setShowAddStudentModal(false)} className="px-5 py-2.5 font-bold hover:bg-slate-50 cursor-pointer text-slate-600">Hủy</button>
+                <button type="submit" disabled={isAddingStudent} className="px-5 py-2.5 bg-primary text-white font-bold hover:bg-primary/90 cursor-pointer disabled:opacity-50">{isAddingStudent ? 'Đang thêm...' : 'Thêm Học Viên'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {showModal && (
         <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-8 w-full max-w-md border border-gray-100 shadow-2xl animate-in zoom-in-95 duration-200">
@@ -3735,10 +3943,32 @@ export default function TeacherDashboard() {
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-bold mb-2">Học phí mỗi buổi (VNĐ)</label>
-                <input type="number" value={feePerLesson} onChange={e => setFeePerLesson(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-200 bg-white rounded-lg focus:outline-none focus:border-primary"
-                  placeholder="VD: 100000" />
+                <label className="block text-sm font-bold mb-2">Cách Tính Học Phí</label>
+                <div className="grid grid-cols-2 gap-2 mb-3">
+                  <label className={`flex items-center justify-center px-2 py-2 border font-bold text-sm cursor-pointer transition-colors ${feeType === 'PER_LESSON' ? 'bg-primary text-white border-primary' : 'border-gray-200 text-slate-600 hover:bg-slate-50'}`}>
+                    <input type="radio" className="hidden" checked={feeType === 'PER_LESSON'} onChange={() => setFeeType('PER_LESSON')} />
+                    Theo Buổi
+                  </label>
+                  <label className={`flex items-center justify-center px-2 py-2 border font-bold text-sm cursor-pointer transition-colors ${feeType === 'MONTHLY' ? 'bg-primary text-white border-primary' : 'border-gray-200 text-slate-600 hover:bg-slate-50'}`}>
+                    <input type="radio" className="hidden" checked={feeType === 'MONTHLY'} onChange={() => setFeeType('MONTHLY')} />
+                    Theo Tháng
+                  </label>
+                </div>
+                {feeType === 'PER_LESSON' ? (
+                  <>
+                    <input type="number" value={feePerLesson} onChange={e => setFeePerLesson(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-200 bg-white rounded-lg focus:outline-none focus:border-primary"
+                      placeholder="VD: 100000 (học phí mỗi buổi, VNĐ)" />
+                    <p className="text-xs text-slate-400 mt-1.5">Tính theo số buổi học viên có mặt trong tháng — vắng không tính tiền.</p>
+                  </>
+                ) : (
+                  <>
+                    <input type="number" value={feePerMonth} onChange={e => setFeePerMonth(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-200 bg-white rounded-lg focus:outline-none focus:border-primary"
+                      placeholder="VD: 1500000 (học phí trọn gói/tháng, VNĐ)" />
+                    <p className="text-xs text-slate-400 mt-1.5">Thu cố định mỗi tháng, không phụ thuộc số buổi đi học.</p>
+                  </>
+                )}
               </div>
 
               <div className="flex gap-3 justify-end">
