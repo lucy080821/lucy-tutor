@@ -105,86 +105,88 @@ function AuthForm() {
   };
 
   return (
-    <div className="flex-1 flex min-h-[calc(100vh-64px)] bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <div className="flex-1 flex min-h-[calc(100vh-64px)] bg-background">
 
-      {/* Left decorative panel — hidden on mobile */}
-      <div className="hidden lg:flex flex-1 bg-gradient-to-br from-primary via-blue-700 to-secondary p-12 flex-col justify-between relative overflow-hidden">
-        {/* Background orbs */}
+      {/* Left brand panel — hidden on mobile */}
+      <div className="hidden lg:flex flex-1 relative overflow-hidden bg-gradient-to-br from-primary via-primary to-secondary">
+        {/* Subtle dot-grid texture */}
+        <div
+          className="absolute inset-0 opacity-[0.12]"
+          style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.7) 1px, transparent 1px)', backgroundSize: '24px 24px' }}
+        />
+        {/* Soft glow orbs */}
         <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-0 right-0 w-72 h-72 bg-white/8 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-72 h-72 bg-white/8 rounded-full blur-3xl" />
-        </div>
-        {/* Top brand */}
-        <div className="relative z-10">
-          <Link href="/" className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center text-white font-black text-lg backdrop-blur">L</div>
-            <span className="text-xl font-black text-white tracking-tight">LUCY<span className="text-white/60">TUTOR</span></span>
-          </Link>
-          <p className="text-white/60 text-sm">Nền tảng luyện thi Tiếng Anh thông minh</p>
+          <div className="absolute -top-28 -right-20 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-32 -left-20 w-96 h-96 bg-secondary/30 rounded-full blur-3xl" />
         </div>
 
-        {/* Center content */}
-        <div className="relative z-10 space-y-8">
-          <div>
-            <h2 className="text-3xl font-extrabold text-white leading-snug mb-3">
-              Chinh phục Tiếng Anh<br />
-              <span className="text-white/80">bằng AI thế hệ mới</span>
-            </h2>
-            <p className="text-white/60 text-sm leading-relaxed max-w-xs">
+        <div className="relative z-10 flex flex-col justify-center h-full p-8 xl:p-14 w-full">
+          <div className="max-w-md">
+            {/* Eyebrow badge */}
+            <span className="inline-flex items-center gap-2 text-[11px] font-bold tracking-[0.1em] uppercase text-white/80 bg-white/10 border border-white/15 rounded-full px-3.5 py-1.5 mb-6 backdrop-blur-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              Nền tảng luyện thi Tiếng Anh thông minh
+            </span>
+
+            <h1 className="text-[2.1rem] xl:text-[2.6rem] font-extrabold text-white leading-[1.15] mb-4 tracking-tight">
+              Chinh phục Tiếng Anh<br />bằng AI thế hệ mới
+            </h1>
+            <p className="text-white/70 text-[15px] leading-relaxed mb-8 max-w-sm">
               Lộ trình cá nhân hóa, luyện 4 kỹ năng IELTS/TOEIC và phân tích điểm yếu ngay sau mỗi bài.
             </p>
-          </div>
-          <ul className="space-y-4">
-            {FEATURE_BULLETS.map((f, i) => (
-              <li key={i} className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-white/15 rounded-xl flex items-center justify-center text-lg shrink-0">{f.icon}</div>
-                <span className="text-white/85 text-sm font-medium">{f.text}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
 
-        {/* Trial callout — an honest, concrete offer instead of vanity metrics */}
-        <div className="relative z-10 bg-white/10 rounded-2xl p-4 backdrop-blur flex items-center gap-3">
-          <span className="text-2xl shrink-0">🎁</span>
-          <p className="text-white/85 text-sm font-medium leading-snug">
-            Học tự do được <span className="font-bold text-white">dùng thử miễn phí 3 ngày</span> — không cần thẻ tín dụng.
-          </p>
+            <ul className="grid grid-cols-2 gap-x-5 gap-y-4 border-y border-white/10 py-5 mb-8">
+              {FEATURE_BULLETS.map((f, i) => (
+                <li key={i} className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 shrink-0 bg-white/10 border border-white/10 rounded-lg flex items-center justify-center text-sm">{f.icon}</div>
+                  <span className="text-white/90 text-[12.5px] leading-snug font-semibold">{f.text}</span>
+                </li>
+              ))}
+            </ul>
+
+            {/* Trial callout — an honest, concrete offer instead of vanity metrics */}
+            <div className="flex items-start gap-3.5 bg-white/10 border border-white/15 rounded-2xl p-4 backdrop-blur-sm">
+              <span className="text-xl shrink-0 w-10 h-10 bg-white/15 rounded-xl flex items-center justify-center">🎁</span>
+              <p className="text-white/85 text-sm leading-snug pt-1.5">
+                Học tự do được <span className="font-bold text-white">dùng thử miễn phí 3 ngày</span> — không cần thẻ tín dụng.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
-        <div className="w-full max-w-md">
+      <div className="flex-1 flex items-center justify-center p-6 py-10 lg:p-12">
+        <div className="w-full max-w-[420px]">
 
           {/* Mobile brand */}
           <div className="flex lg:hidden items-center justify-center gap-2 mb-8">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center text-white font-black text-sm">L</div>
+            <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center text-white font-black text-sm">L</div>
             <span className="text-xl font-black text-foreground tracking-tight">LUCY<span className="text-slate-400">TUTOR</span></span>
           </div>
 
           {/* Card */}
-          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200 border border-gray-100 p-8">
-            <h2 className="text-2xl font-extrabold text-center mb-1">
+          <div className="bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(15,23,42,0.18)] border border-slate-100 p-7 sm:p-8">
+            <h2 className="text-[24px] font-extrabold text-center leading-tight mb-1.5 tracking-tight">
               {isLogin ? 'Chào mừng trở lại 👋' : 'Tạo tài khoản mới'}
             </h2>
-            <p className="text-center text-slate-400 text-sm mb-7">
+            <p className="text-center text-slate-400 text-[13.5px] mb-5">
               {isLogin ? 'Đăng nhập để tiếp tục hành trình học của bạn' : 'Đăng ký miễn phí, không cần thẻ tín dụng'}
             </p>
 
             {/* Role Toggle */}
-            <div className="flex p-1 bg-slate-100 rounded-2xl mb-6">
+            <div className="grid grid-cols-2 gap-1.5 p-1.5 bg-slate-100 rounded-2xl mb-5">
               <button
                 type="button"
                 onClick={() => setRole('STUDENT')}
-                className={`flex-1 py-2.5 text-sm font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${role === 'STUDENT' ? 'bg-white shadow-sm text-primary' : 'text-slate-400 hover:text-foreground'}`}
+                className={`py-2 text-sm font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${role === 'STUDENT' ? 'bg-white shadow-sm text-primary' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 🎓 Học Viên
               </button>
               <button
                 type="button"
                 onClick={() => setRole('TEACHER')}
-                className={`flex-1 py-2.5 text-sm font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${role === 'TEACHER' ? 'bg-white shadow-sm text-primary' : 'text-slate-400 hover:text-foreground'}`}
+                className={`py-2 text-sm font-bold transition-all rounded-xl cursor-pointer flex items-center justify-center gap-1.5 ${role === 'TEACHER' ? 'bg-white shadow-sm text-primary' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 👨‍🏫 Giáo Viên
               </button>
@@ -199,13 +201,13 @@ function AuthForm() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-3.5">
               {!isLogin && (
                 <div>
                   <label className="block text-sm font-semibold mb-1.5 text-slate-700">Họ và Tên</label>
                   <input
                     type="text" value={name} onChange={e => setName(e.target.value)} required
-                    className="w-full px-4 py-3 border border-gray-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-xl transition-all"
+                    className="w-full px-4 py-2.5 border border-slate-200 bg-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl transition-all"
                     placeholder="Nguyễn Văn A"
                   />
                 </div>
@@ -219,7 +221,7 @@ function AuthForm() {
                   </svg>
                   <input
                     type="email" value={email} onChange={e => setEmail(e.target.value)} required
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-xl transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-slate-200 bg-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl transition-all"
                     placeholder="email@example.com"
                   />
                 </div>
@@ -233,10 +235,10 @@ function AuthForm() {
                   </svg>
                   <input
                     type={showPassword ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} required
-                    className="w-full pl-10 pr-11 py-3 border border-gray-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-xl transition-all"
+                    className="w-full pl-10 pr-11 py-2.5 border border-slate-200 bg-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl transition-all"
                     placeholder="••••••••"
                   />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1/2 -translate-y-1/2 p-2.5 rounded-lg text-slate-400 hover:text-slate-500 hover:bg-slate-50 cursor-pointer">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-1 top-1/2 -translate-y-1/2 p-2.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 cursor-pointer">
                     {showPassword ? (
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
@@ -260,7 +262,7 @@ function AuthForm() {
                     </svg>
                     <input
                       type="text" value={classCode} onChange={e => setClassCode(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-secondary/20 bg-secondary/5 focus:bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/10 rounded-xl transition-all"
+                      className="w-full pl-10 pr-4 py-2.5 border border-secondary/20 bg-secondary/5 focus:bg-white focus:outline-none focus:border-secondary focus:ring-4 focus:ring-secondary/10 rounded-xl transition-all"
                       placeholder="Nhập mã giáo viên cấp..."
                     />
                   </div>
@@ -272,7 +274,7 @@ function AuthForm() {
                   <label className="block text-sm font-semibold mb-1.5 text-secondary/80">Mã Lớp Học — Tuỳ chọn (nếu giáo viên đã cấp mã)</label>
                   <input
                     type="text" value={signupClassCode} onChange={e => setSignupClassCode(e.target.value)}
-                    className="w-full px-4 py-3 border border-secondary/20 bg-secondary/5 focus:bg-white focus:outline-none focus:border-secondary focus:ring-2 focus:ring-secondary/10 rounded-xl transition-all"
+                    className="w-full px-4 py-2.5 border border-secondary/20 bg-secondary/5 focus:bg-white focus:outline-none focus:border-secondary focus:ring-4 focus:ring-secondary/10 rounded-xl transition-all"
                     placeholder="Bỏ trống nếu bạn học tự do, chưa có lớp"
                   />
                   {!signupClassCode.trim() && (
@@ -280,7 +282,7 @@ function AuthForm() {
                       <label className="block text-sm font-semibold mb-1.5 text-slate-700">Chọn Giáo Viên Phụ Trách</label>
                       <select
                         value={managerTeacherId} onChange={e => setManagerTeacherId(e.target.value)} required
-                        className="w-full px-4 py-3 border border-gray-200 bg-slate-50 focus:bg-white focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 rounded-xl transition-all"
+                        className="w-full px-4 py-2.5 border border-slate-200 bg-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 rounded-xl transition-all"
                       >
                         <option value="">-- Chọn giáo viên --</option>
                         {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
@@ -302,7 +304,7 @@ function AuthForm() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3.5 bg-gradient-to-r from-primary to-blue-700 text-white font-bold text-base hover:shadow-lg hover:shadow-primary/25 hover:-translate-y-0.5 transition-all rounded-xl mt-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:translate-y-0 flex items-center justify-center gap-2"
+                className="w-full py-3.5 bg-primary hover:bg-[#152c69] text-white font-bold text-base shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/25 transition-all rounded-xl mt-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   <>
@@ -325,20 +327,24 @@ function AuthForm() {
               </button>
             </p>
 
-            <div className="mt-4 pt-4 border-t border-gray-100 text-center">
-              <Link href="/" className="text-xs text-slate-400 hover:text-slate-500 transition-colors">
+            <div className="mt-3.5 pt-3.5 border-t border-slate-100 text-center">
+              <Link href="/" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
                 ← Về trang chủ
               </Link>
             </div>
           </div>
 
           {/* Trust badges */}
-          <div className="flex items-center justify-center gap-4 mt-6 text-xs text-slate-400">
-            <span className="flex items-center gap-1">🔒 Bảo mật SSL</span>
-            <span>·</span>
-            <span className="flex items-center gap-1">✅ Miễn phí 100%</span>
-            <span>·</span>
-            <span className="flex items-center gap-1">🇻🇳 Dành cho VN</span>
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-5">
+            {[
+              { icon: "🔒", label: "Bảo mật SSL" },
+              { icon: "✅", label: "Miễn phí 100%" },
+              { icon: "🇻🇳", label: "Dành cho VN" },
+            ].map((b, i) => (
+              <span key={i} className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 bg-white border border-slate-200 rounded-full px-3 py-1.5 shadow-sm">
+                <span>{b.icon}</span>{b.label}
+              </span>
+            ))}
           </div>
         </div>
       </div>
