@@ -12,6 +12,7 @@ export default function LessonPage() {
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [learnedIndices, setLearnedIndices] = useState<Set<number>>(new Set());
+  const [completing, setCompleting] = useState(false);
 
   useEffect(() => {
     const uid = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
@@ -48,28 +49,32 @@ export default function LessonPage() {
   const percent = totalVocabs > 0 ? Math.round((learnedCount / totalVocabs) * 100) : 100;
 
   const handleComplete = async () => {
-    if (!userId) return;
+    if (!userId || completing) return;
     if (percent < 60) {
       Swal.fire('Chưa hoàn thành', `Bạn mới học ${percent}% từ vựng. Cần tối thiểu 60% để hoàn thành bài học này!`, 'warning');
       return;
     }
+    setCompleting(true);
     try {
-      // 1. Add flipped vocabs to SRS
+      // Add flipped vocabs to SRS and mark the lesson completed in parallel — the two
+      // requests are independent, so there's no reason to wait on one before the other.
       const flippedVocabIds = Array.from(learnedIndices).map(idx => lesson.vocabularies[idx].id);
-      if (flippedVocabIds.length > 0) {
-        await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/srs/add-from-lesson`, {
+      const srsRequest = flippedVocabIds.length > 0
+        ? fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/srs/add-from-lesson`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, vocabIds: flippedVocabIds })
+          }).catch(err => console.error("SRS Add Error:", err))
+        : Promise.resolve();
+
+      const [res] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/${id}/progress`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, vocabIds: flippedVocabIds })
-        }).catch(err => console.error("SRS Add Error:", err));
-      }
-
-      // 2. Mark lesson as completed
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/${id}/progress`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, status: 'COMPLETED' })
-      });
+          body: JSON.stringify({ userId, status: 'COMPLETED' })
+        }),
+        srsRequest,
+      ]);
       if (res.ok) {
         confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
         Swal.fire({
@@ -80,10 +85,14 @@ export default function LessonPage() {
         }).then(() => {
           router.push('/dashboard');
         });
+      } else {
+        Swal.fire('Lỗi', 'Không thể lưu tiến độ', 'error');
       }
     } catch (error) {
       console.error(error);
       Swal.fire('Lỗi', 'Không thể lưu tiến độ', 'error');
+    } finally {
+      setCompleting(false);
     }
   };
 
@@ -184,13 +193,15 @@ export default function LessonPage() {
 
           <button 
             onClick={handleComplete}
-            className={`px-8 py-3.5 font-bold text-lg rounded-full transition-all flex items-center gap-3 ${
+            disabled={completing}
+            className={`px-8 py-3.5 font-bold text-lg rounded-full transition-all flex items-center gap-3 disabled:opacity-70 disabled:cursor-wait ${
               percent >= 60 
                 ? 'bg-primary text-white hover:bg-[#172e6e] shadow-card-hover' 
                 : 'bg-line text-muted'
             }`}
           >
-            Đã hiểu & Hoàn thành
+            {completing && <span className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+            {completing ? 'Đang lưu...' : 'Đã hiểu & Hoàn thành'}
           </button>
         </div>
       </div>

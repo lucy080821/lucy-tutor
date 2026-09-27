@@ -36,10 +36,14 @@ export default function IeltsLandingPage() {
     ]).then(([availableData, historyData]) => {
       setTests(Array.isArray(availableData) ? availableData : []);
       setHistory(Array.isArray(historyData) ? historyData : []);
+    }).catch(() => {
+      setTests([]);
+      setHistory([]);
     }).finally(() => setLoading(false));
   }, [router]);
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-primary font-bold animate-pulse">Đang tải...</div>;
+  // Banner + tabs render immediately; only the list area waits for the two requests.
+  const listLoader = <div className="ui-card text-center py-12 px-4 text-primary font-bold animate-pulse">Đang tải...</div>;
 
   return (
     <div className="min-h-screen bg-background">
@@ -60,7 +64,7 @@ export default function IeltsLandingPage() {
         </section>
 
         <div className="flex flex-wrap gap-2">
-          {[{ key: "AVAILABLE", label: "Đề Có Sẵn" }, { key: "HISTORY", label: `Lịch Sử (${history.length})` }].map((t) => (
+          {[{ key: "AVAILABLE", label: "Đề Có Sẵn" }, { key: "HISTORY", label: loading ? "Lịch Sử" : `Lịch Sử (${history.length})` }].map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key as any)}
@@ -72,6 +76,7 @@ export default function IeltsLandingPage() {
         </div>
 
         <div className="space-y-4">
+        {loading ? listLoader : <>
         {tab === "AVAILABLE" && (
           tests.length === 0 ? (
             <div className="ui-card text-center py-12 px-4 text-muted italic">
@@ -155,6 +160,7 @@ export default function IeltsLandingPage() {
             ))
           )
         )}
+        </>}
         </div>
       </div>
     </div>

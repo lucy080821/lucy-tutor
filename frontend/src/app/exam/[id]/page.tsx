@@ -3,7 +3,6 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import DOMPurify from 'dompurify';
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import confetti from "canvas-confetti";
 import Swal from 'sweetalert2';
 
 export default function ExamPage() {
@@ -330,13 +329,14 @@ export default function ExamPage() {
         setUserId(data.userId);
       }
       const refreshUserId = data.userId || actualUserId;
-      try {
-        const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/${examId}?userId=${refreshUserId}`);
-        const refreshed = await refreshRes.json();
-        if (refreshRes.ok) setExam(refreshed);
-      } catch (e) {
-        console.warn('Failed to refresh exam after submit', e);
-      }
+      // Refresh attempt counters in the background — the result screen only needs `data`, so
+      // don't hold it back behind another full round trip.
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/${examId}?userId=${refreshUserId}`)
+        .then(async refreshRes => {
+          const refreshed = await refreshRes.json();
+          if (refreshRes.ok) setExam(refreshed);
+        })
+        .catch(e => console.warn('Failed to refresh exam after submit', e));
 
       if (data.result?.gradingDetails) {
         try {
@@ -470,12 +470,12 @@ export default function ExamPage() {
     if (submitted && result && !isReviewMode) {
       const score = result.result?.score ?? 0;
       if (score >= 8) {
-        confetti({
+        import("canvas-confetti").then(({ default: confetti }) => confetti({
           particleCount: 150,
           spread: 80,
           origin: { y: 0.6 },
           colors: ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6']
-        });
+        })).catch(() => {});
       }
     }
   }, [submitted, result, isReviewMode]);

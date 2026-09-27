@@ -1,6 +1,6 @@
 "use client";
 import { useState, Suspense, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 const FEATURE_BULLETS = [
@@ -14,6 +14,7 @@ const FEATURE_BULLETS = [
 
 function AuthForm() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialRole = searchParams.get('role') || 'STUDENT';
 
   const [role, setRole] = useState(initialRole);
@@ -49,9 +50,9 @@ function AuthForm() {
         })
         .then(data => {
           if (data.role === 'TEACHER') {
-            window.location.href = '/teacher';
+            router.replace('/teacher');
           } else {
-            window.location.href = '/dashboard';
+            router.replace('/dashboard');
           }
         })
         .catch(() => {
@@ -93,9 +94,9 @@ function AuthForm() {
       // Redirect based on the account's actual stored role (server response), not the locally
       // selected toggle — keeps this consistent with the session-restore effect above.
       if (data.role === 'TEACHER') {
-        window.location.href = '/teacher';
+        router.replace('/teacher');
       } else {
-        window.location.href = '/dashboard';
+        router.replace('/dashboard');
       }
     } catch (err: any) {
       setError(err.message);

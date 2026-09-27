@@ -1,5 +1,5 @@
-import jsPDF from "jspdf";
-import { toPng } from "html-to-image";
+// jspdf + html-to-image are loaded lazily inside exportNodeToPDF so pages that only *offer* a PDF
+// export button do not ship these libraries in their initial bundle.
 
 const PAGE_WIDTH = 800;
 const PAGE_HEIGHT = 1131; // matches TuitionInvoice's A4-ish page size at 800px width
@@ -8,6 +8,7 @@ const PAGE_HEIGHT = 1131; // matches TuitionInvoice's A4-ish page size at 800px 
 // multi-page PDF. Content taller than one page is split across additional pages, since practice
 // reports (essays, transcripts) can run much longer than a single-page invoice.
 export async function exportNodeToPDF(node: HTMLElement, filename: string) {
+  const [{ default: jsPDF }, { toPng }] = await Promise.all([import("jspdf"), import("html-to-image")]);
   const dataUrl = await toPng(node, { pixelRatio: 2, cacheBust: true, backgroundColor: "#ffffff" });
 
   const img = new Image();

@@ -1,14 +1,17 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
-import { saveAs } from "file-saver";
+// docx + file-saver are loaded lazily inside buildAndDownload so the reading/writing pages do not
+// ship them in their initial bundle — they are only needed when the user clicks "export Word".
 import { parseHighlightSegments } from "./highlightText";
 import { isReadingAnswerCorrect, readingCorrectAnswerLabel, readingStudentAnswerLabel, type ReadingQuestion } from "./readingGrading";
+
+type DocxModule = typeof import("docx");
 
 interface DocSection {
   heading: string;
   body: string; // may contain **highlighted** phrases
 }
 
-function highlightedRuns(line: string): TextRun[] {
+function highlightedRuns(docx: DocxModule, line: string) {
+  const { TextRun } = docx;
   const segments = parseHighlightSegments(line);
   if (segments.length === 0) return [new TextRun({ text: "" })];
   return segments.map(
@@ -22,7 +25,9 @@ function highlightedRuns(line: string): TextRun[] {
 }
 
 async function buildAndDownload(filename: string, title: string, sections: DocSection[]) {
-  const children: Paragraph[] = [
+  const [docx, { saveAs }] = await Promise.all([import("docx"), import("file-saver")]);
+  const { Document, Packer, Paragraph, HeadingLevel } = docx;
+  const children: InstanceType<typeof Paragraph>[] = [
     new Paragraph({ text: title, heading: HeadingLevel.TITLE, spacing: { after: 300 } })
   ];
 
@@ -33,7 +38,7 @@ async function buildAndDownload(filename: string, title: string, sections: DocSe
     );
     const lines = section.body.split("\n").filter((l) => l.trim() !== "");
     for (const line of lines) {
-      children.push(new Paragraph({ children: highlightedRuns(line), spacing: { after: 120 } }));
+      children.push(new Paragraph({ children: highlightedRuns(docx, line), spacing: { after: 120 } }));
     }
   }
 

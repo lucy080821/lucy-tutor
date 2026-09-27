@@ -1,18 +1,50 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from 'recharts';
-import CalendarComponent from "@/components/calendar/CalendarComponent";
 import InstallPWAButton from "@/components/InstallPWAButton";
 import Swal from 'sweetalert2';
-import confetti from "canvas-confetti";
+
+// FullCalendar (+ its plugins) is only needed on the CALENDAR tab — load it on demand instead of
+// shipping/compiling it with every dashboard visit.
+const CalendarComponent = dynamic(() => import("@/components/calendar/CalendarComponent"), {
+  ssr: false,
+  loading: () => <div className="ui-card p-10 text-center text-muted text-sm">Đang tải lịch...</div>,
+});
+
+// canvas-confetti is only used for occasional celebrations — pull it in lazily at that moment.
+const fireConfetti = (opts: any) => {
+  import("canvas-confetti").then(m => m.default(opts)).catch(() => {});
+};
 import { usePagination } from "@/lib/usePagination";
 import Pagination from "@/components/Pagination";
 import { compressImageToBase64 } from "@/lib/imageCompress";
 
+// Daily check-in is a non-idempotent POST (adds XP) — share one in-flight request per user/day so
+// React StrictMode's double-mounted effect (dev) or a quick re-visit doesn't fire it twice.
+// `handled` makes the celebration toast show once even if the student navigates away and back.
+let checkinCache: { key: string; promise: Promise<any>; handled: boolean } | null = null;
+function dailyCheckin(API: string, userId: string) {
+  const key = `${userId}:${new Date().toDateString()}`;
+  if (checkinCache?.key !== key) {
+    const promise = fetch(`${API}/api/gamification/checkin`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId }),
+    }).then(r => r.json());
+    promise.catch(() => { if (checkinCache?.key === key) checkinCache = null; });
+    checkinCache = { key, promise, handled: false };
+  }
+  return checkinCache;
+}
+
 export default function StudentDashboard() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("OVERVIEW");
+  const [practiceFilter, setPracticeFilter] = useState<string>("ALL");
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [joinCode, setJoinCode] = useState("");
@@ -71,6 +103,11 @@ export default function StudentDashboard() {
     }
   };
 
+  // Stable key for "which classrooms am I in" — effects below depend on this instead of the whole
+  // `user` object, which is replaced every 30s by the OVERVIEW poll (and on check-in/avatar/etc.)
+  // and used to re-download every classroom's lessons/documents/leaderboard each time.
+  const joinedClassKey = (user?.classroomsJoined || []).map((c: any) => c.id).join(',');
+
   useEffect(() => {
     if (user?.classroomsJoined?.length > 0) {
       Promise.all(user.classroomsJoined.map((c: any) => 
@@ -80,7 +117,8 @@ export default function StudentDashboard() {
         setLessons(allLessons);
       }).catch(console.error);
     }
-  }, [user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [joinedClassKey]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -137,29 +175,57 @@ export default function StudentDashboard() {
     const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     const userId = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
     if (!userId) {
-      window.location.href = '/';
+      router.replace('/');
       return;
     }
 
-    fetch(`${API}/api/auth/me?userId=${userId}`)
-      .then(res => res.json())
+    // Fire every independent mount request at once (they only need the stored userId) instead of
+    // waiting for /me before starting the rest — each round trip is ~0.3s+ on the backend.
+    const ctrl = new AbortController();
+    const signal = ctrl.signal;
+    const meP = fetch(`${API}/api/auth/me?userId=${userId}`, { signal }).then(res => res.json());
+    fetch(`${API}/api/analytics/history/${userId}`, { signal })
+      .then(r => r.json())
+      .then(hist => setHistory(Array.isArray(hist) ? hist : []))
+      .catch(() => {});
+    fetch(`${API}/api/skill-progress/${userId}`, { signal })
+      .then(r => r.json())
+      .then(setSkillProgress)
+      .catch(() => {});
+    const checkin = dailyCheckin(API, userId);
+
+    meP
       .then(data => {
+        // /me can answer with `{ error }` (e.g. backend restarting or a transient DB error) —
+        // storing that as `user` crashed every `user.name.charAt(...)`. Keep the skeleton and offer a reload.
+        if (!data?.id) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Không tải được tài khoản',
+            text: data?.error || 'Máy chủ đang bận, vui lòng thử lại sau giây lát.',
+            confirmButtonText: 'Tải lại',
+          }).then(r => { if (r.isConfirmed) window.location.reload(); });
+          return;
+        }
         setUser(data);
         setLoading(false);
         if (data?.id) {
-          Promise.all([
-            fetch(`${API}/api/analytics/history/${data.id}`).then(r => r.json()),
-            fetch(`${API}/api/gamification/checkin`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ userId: data.id })
-            }).then(r => r.json())
-          ]).then(([hist, checkinData]) => {
-            setHistory(hist || []);
-            if (checkinData.checkedIn) {
-              setUser(checkinData.user);
+          checkin.promise.then((checkinData) => {
+            // Mark handled only here (where the toast is shown), so an aborted StrictMode run
+            // doesn't swallow it and a later re-visit doesn't show it again.
+            if (checkinData?.checkedIn && !checkin.handled) {
+              checkin.handled = true;
+              // checkin returns the bare User row (no classroomsJoined/assignedExams/notebooks/
+              // accessLocked...) — merge only the gamification fields instead of replacing the
+              // whole profile, which used to wipe those relations until the next /me refresh.
+              setUser((prev: any) => prev ? {
+                ...prev,
+                totalXP: checkinData.user.totalXP,
+                streakCount: checkinData.user.streakCount,
+                lastActive: checkinData.user.lastActive,
+              } : prev);
               if (checkinData.bonusXP > 0) {
-                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                fireConfetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
                 Swal.fire({
                   title: 'Đỉnh quá! 🎉',
                   html: `Bạn đã học liên tục <b>${checkinData.user.streakCount} ngày</b>!<br/>Được thưởng nóng <b>+${checkinData.xpAdded} XP</b> (gồm ${checkinData.bonusXP} XP thưởng chuỗi).`,
@@ -178,10 +244,21 @@ export default function StudentDashboard() {
                 });
               }
             }
-          }).catch(console.error);
+          }).catch(err => { if (err?.name !== 'AbortError') console.error(err); });
         }
       })
-      .catch(err => { console.error(err); setLoading(false); });
+      .catch(err => {
+        if (err?.name === 'AbortError') return;
+        console.error(err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Không kết nối được máy chủ',
+          text: 'Vui lòng kiểm tra kết nối mạng rồi thử lại.',
+          confirmButtonText: 'Tải lại',
+        }).then(r => { if (r.isConfirmed) window.location.reload(); });
+      });
+    return () => ctrl.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -208,7 +285,7 @@ export default function StudentDashboard() {
           
           if (prevRank !== currentRank) {
             // Rank up celebration
-            confetti({ particleCount: 200, spread: 160, origin: { y: 0.6 } });
+            fireConfetti({ particleCount: 200, spread: 160, origin: { y: 0.6 } });
             setTimeout(() => {
               Swal.fire({
                 title: 'THĂNG HẠNG THÀNH CÔNG!',
@@ -219,7 +296,7 @@ export default function StudentDashboard() {
             }, 500);
           } else {
             // Level up celebration
-            confetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
+            fireConfetti({ particleCount: 50, spread: 60, origin: { y: 0.8 } });
             Swal.fire({
               title: 'Lên Cấp!',
               text: `Tuyệt vời! Bạn vừa đạt Cấp ${currentLevel}!`,
@@ -238,6 +315,10 @@ export default function StudentDashboard() {
   }, [user?.totalXP]);
 
   // ── OVERVIEW real-time refresh: re-poll profile, exam history & skill progress every 30s while viewing this tab, and instantly when the browser tab regains focus ──
+  // The mount effect above already fetched all three in parallel, so the very first OVERVIEW
+  // activation skips the immediate refresh (it used to re-fetch /me + history + skill-progress
+  // right after they had just arrived). Coming back to OVERVIEW from another tab still refreshes.
+  const overviewPrimedRef = useRef(false);
   useEffect(() => {
     if (activeTab !== "OVERVIEW" || !user?.id || user?.accessLocked) return;
     const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
@@ -246,10 +327,10 @@ export default function StudentDashboard() {
       fetch(`${API}/api/analytics/history/${user.id}`).then(r => r.json()).then(data => setHistory(data || [])).catch(console.error);
       fetch(`${API}/api/skill-progress/${user.id}`).then(r => r.json()).then(setSkillProgress).catch(() => {});
     };
-    // Run immediately — otherwise skillProgress (feeding studentInsights below) stays empty
-    // for up to 30s after every OVERVIEW mount, since neither setInterval nor visibilitychange
-    // fires on initial load, causing the "weakest skill" insight to misfire as "no data yet".
-    refresh();
+    // Run immediately when returning to OVERVIEW — otherwise data could be up to 30s stale.
+    // (Initial load: skillProgress/history/me were just fetched by the mount effect.)
+    if (overviewPrimedRef.current) refresh();
+    overviewPrimedRef.current = true;
     const interval = setInterval(refresh, 30000);
     const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
     document.addEventListener('visibilitychange', onVisible);
@@ -358,7 +439,8 @@ export default function StudentDashboard() {
         setAttReports(reports.filter(r => r && r.user?.id)); // only valid reports
       }).catch(console.error);
     }
-  }, [activeTab, attMonth, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, attMonth, user?.id, joinedClassKey]);
 
   // ── DOCUMENTS state ──
   const [documents, setDocuments] = useState<any[]>([]);
@@ -380,7 +462,8 @@ export default function StudentDashboard() {
         })
         .catch(console.error);
     }
-  }, [activeTab, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, !!user, joinedClassKey]);
 
   // ── LEADERBOARD state ──
   const [leaderboardFilter, setLeaderboardFilter] = useState<string>("GLOBAL");
@@ -401,7 +484,8 @@ export default function StudentDashboard() {
         })
         .catch(console.error);
     }
-  }, [activeTab, leaderboardFilter, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, leaderboardFilter, user?.id]);
 
   const uniqueHistory = Object.values(history.reduce((acc: any, curr: any) => {
     if (!acc[curr.examId] || curr.score > acc[curr.examId].score) {
@@ -605,7 +689,7 @@ export default function StudentDashboard() {
           </div>
         )}
         <button
-          onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); window.location.href = '/'; }}
+          onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); router.push('/'); }}
           className="btn-outline px-6 py-2 text-sm cursor-pointer"
         >
           Đăng xuất
@@ -692,7 +776,7 @@ export default function StudentDashboard() {
 
         <div className="mt-auto border-t border-line px-3 py-3">
           <button
-            onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); window.location.href = '/'; }}
+            onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); router.push('/'); }}
             className="btn-ghost w-full px-3 py-2.5 text-sm cursor-pointer hover:text-red-600 hover:bg-red-50"
           >
             Đăng xuất
@@ -907,27 +991,74 @@ export default function StudentDashboard() {
               const practiceLinks = [...fourSkillsGroup.subItems, ...trainingCenterGroup.subItems]
                 .filter((item: any) => !item.featureKey || enabledFeatures.has(item.featureKey));
               if (practiceLinks.length === 0) return null;
+              const groups = PRACTICE_GROUPS
+                .map((g) => ({
+                  ...g,
+                  items: practiceLinks
+                    .filter((item: any) => g.hrefs.includes(item.href))
+                    .sort((a: any, b: any) => g.hrefs.indexOf(a.href) - g.hrefs.indexOf(b.href)),
+                }))
+                .filter((g) => g.items.length > 0);
+              const activeFilter = groups.some((g) => g.id === practiceFilter) ? practiceFilter : "ALL";
+              const visibleGroups = activeFilter === "ALL" ? groups : groups.filter((g) => g.id === activeFilter);
+
+              const renderCard = (item: any) => {
+                const featured = item.href === '/ielts';
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    className={`ui-card ui-card-hover overflow-hidden flex flex-col group relative ${featured ? 'border-2 border-[#d4af37] shadow-[0_8px_24px_rgba(212,175,55,0.28)] hover:shadow-[0_12px_30px_rgba(212,175,55,0.38)]' : ''}`}
+                  >
+                    {featured && (
+                      <span className="absolute top-3 right-3 z-10 text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full bg-[#fdf6e3] text-[#8a6d0b] border border-[#d4af37]">
+                        Nổi bật
+                      </span>
+                    )}
+                    <div className={`aspect-video overflow-hidden ${featured ? 'bg-[#fdf6e3]' : 'bg-primary-soft'}`}>
+                      <img
+                        src={`/images/thumbs/${PRACTICE_THUMBS[item.href] || 'reading'}.svg`}
+                        alt={`Ảnh minh hoạ ${item.label}`}
+                        width={640}
+                        height={360}
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    </div>
+                    <div className="p-4 sm:p-5 flex flex-col flex-1 gap-3">
+                      <h4 className={`font-bold leading-snug ${featured ? 'text-[#8a6d0b]' : 'text-primary'}`}>{item.label}</h4>
+                      <span className={`btn-outline mt-auto self-start px-4 py-2 text-sm ${featured ? 'border-[#d4af37] text-[#8a6d0b] hover:bg-[#fdf6e3]' : ''}`}>Luyện ngay</span>
+                    </div>
+                  </Link>
+                );
+              };
+
               return (
                 <section>
-                  <h3 className="ui-section-title text-lg mb-5">Luyện tập</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                    {practiceLinks.map((item: any) => (
-                      <Link key={item.id} href={item.href} className="ui-card ui-card-hover overflow-hidden flex flex-col group">
-                        <div className="aspect-video bg-primary-soft overflow-hidden">
-                          <img
-                            src={`/images/thumbs/${PRACTICE_THUMBS[item.href] || 'reading'}.svg`}
-                            alt={`Ảnh minh hoạ ${item.label}`}
-                            width={640}
-                            height={360}
-                            loading="lazy"
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          />
+                  <h3 className="ui-section-title text-lg mb-4">Luyện tập</h3>
+                  {groups.length > 1 && (
+                    <div className="flex flex-wrap gap-2 mb-6">
+                      <button onClick={() => setPracticeFilter("ALL")} className={`ui-chip cursor-pointer ${activeFilter === "ALL" ? 'ui-chip-active' : ''}`}>
+                        Tất cả <span className="opacity-70">({practiceLinks.length})</span>
+                      </button>
+                      {groups.map((g) => (
+                        <button key={g.id} onClick={() => setPracticeFilter(g.id)} className={`ui-chip cursor-pointer ${activeFilter === g.id ? 'ui-chip-active' : ''}`}>
+                          {g.label} <span className="opacity-70">({g.items.length})</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="flex flex-col gap-8">
+                    {visibleGroups.map((g) => (
+                      <div key={g.id}>
+                        <div className="mb-4">
+                          <h4 className="font-bold text-foreground">{g.label}</h4>
+                          <p className="text-sm text-muted">{g.description}</p>
                         </div>
-                        <div className="p-4 sm:p-5 flex flex-col flex-1 gap-3">
-                          <h4 className="font-bold text-primary leading-snug">{item.label}</h4>
-                          <span className="btn-outline mt-auto self-start px-4 py-2 text-sm">Luyện ngay</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+                          {g.items.map(renderCard)}
                         </div>
-                      </Link>
+                      </div>
                     ))}
                   </div>
                 </section>
@@ -955,7 +1086,7 @@ export default function StudentDashboard() {
             </div>
 
             {/* 4 Skills Panel */}
-            <SkillsPanel user={user} />
+            <SkillsPanel progress={skillProgress} />
 
             {/* Chart Section */}
             {history.length > 0 && (
@@ -1773,7 +1904,7 @@ export default function StudentDashboard() {
                 </div>
               </div>
               <button
-                onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); window.location.href = '/'; }}
+                onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); router.push('/'); }}
                 className="w-full py-3 rounded-full border border-red-200 bg-white text-red-600 font-bold hover:bg-red-50 transition-colors cursor-pointer"
               >
                 Đăng Xuất
@@ -1886,6 +2017,14 @@ export default function StudentDashboard() {
     </div>
   );
 }
+
+// Nhóm hiển thị + chip lọc cho lưới "Luyện tập" ở OVERVIEW (route không thuộc nhóm nào sẽ không hiện)
+const PRACTICE_GROUPS: { id: string; label: string; description: string; hrefs: string[] }[] = [
+  { id: 'SKILLS', label: '4 Kỹ Năng', description: 'Nghe, Nói, Đọc, Viết cùng AI', hrefs: ['/listening', '/conversation', '/reading', '/writing'] },
+  { id: 'EXAM', label: 'Luyện Thi', description: 'Đề thi thử THPT Quốc Gia và IELTS Cambridge', hrefs: ['/ielts', '/mock-test'] },
+  { id: 'FOUNDATION', label: 'Từ Vựng & Ngữ Pháp', description: 'Ôn từ vựng SRS, ngữ pháp theo chuyên đề và lộ trình học', hrefs: ['/gym', '/grammar-gym', '/study-plan'] },
+  { id: 'PRONUNCIATION', label: 'Phát Âm', description: 'Bảng âm IPA và luyện phát âm cùng AI', hrefs: ['/phonetics', '/pronunciation'] },
+];
 
 // Thumbnail per self-practice route for the OVERVIEW "Luyện tập" grid (files under /public/images/thumbs/)
 const PRACTICE_THUMBS: Record<string, string> = {
@@ -2043,16 +2182,9 @@ function InsightCard({ insight, onNavigateTab }: { insight: StudentInsight; onNa
   );
 }
 
-function SkillsPanel({ user }: { user: any }) {
-  const [progress, setProgress] = useState<Record<string, { score: number; hasData: boolean }>>({});
-
-  useEffect(() => {
-    if (!user?.id) return;
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/skill-progress/${user.id}`)
-      .then(res => res.json())
-      .then(data => setProgress(data))
-      .catch(() => {});
-  }, [user?.id]);
+// Skill progress comes from the parent's `skillProgress` (fetched on mount + OVERVIEW poll) —
+// this panel used to fetch the same endpoint again on its own.
+function SkillsPanel({ progress }: { progress: Record<string, { score: number; hasData: boolean }> }) {
 
   const skills = [
     {
@@ -2113,9 +2245,9 @@ function SkillsPanel({ user }: { user: any }) {
                   <span className={`font-bold text-sm px-3 py-1 rounded-full border ${s.bgClass} ${s.textClass}`}>{s.label}</span>
                   <div className="flex items-center gap-3">
                     {!s.hasData && (
-                      <a href={s.href} className="text-xs font-bold px-3 py-1.5 rounded-full border border-primary text-primary bg-white hover:bg-primary-soft transition-colors">
+                      <Link href={s.href} className="text-xs font-bold px-3 py-1.5 rounded-full border border-primary text-primary bg-white hover:bg-primary-soft transition-colors">
                         Bắt đầu luyện →
-                      </a>
+                      </Link>
                     )}
                     <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-background text-foreground border border-line">
                       {scoreLabel}/10

@@ -179,7 +179,10 @@ export default function ReadingPracticePage() {
         });
         const saved = await res.json();
         setAttemptId(saved.id);
-        fetchHistory(userId);
+        // POST returns the same row shape as the history GET — prepend it instead of re-downloading
+        // the whole history list.
+        if (saved?.id) setHistory(prev => [saved, ...prev.filter((h: any) => h.id !== saved.id)]);
+        else fetchHistory(userId);
       } catch {}
     }
   };

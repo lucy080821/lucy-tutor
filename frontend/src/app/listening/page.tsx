@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Swal from "sweetalert2";
 import { cleanString, levenshteinDistance, getHintMask } from "@/lib/textGrading";
 import { logSkillProgress } from "@/lib/skillProgress";
@@ -384,7 +385,7 @@ export default function ListeningPracticePage() {
         <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 flex items-center gap-6">
           <div className="flex-1 min-w-0">
             <nav aria-label="Breadcrumb" className="text-xs text-muted mb-2 flex flex-wrap items-center gap-1.5">
-              <button onClick={() => router.push("/dashboard")} className="hover:text-primary">Trang chủ</button>
+              <Link href="/dashboard" className="hover:text-primary">Trang chủ</Link>
               <span aria-hidden>/</span>
               <span className="text-foreground font-semibold">Luyện Nghe</span>
             </nav>
@@ -392,9 +393,9 @@ export default function ListeningPracticePage() {
             <p className="ui-page-subtitle max-w-2xl leading-relaxed">
               Nghe từ vựng trong ngữ cảnh audio thật do giáo viên giao, luyện chép chính tả và làm đề luyện nghe do AI tạo từ script gốc.
             </p>
-            <button onClick={() => router.push("/dashboard")} className="btn-ghost px-3 py-2 text-sm mt-3 -ml-3">
+            <Link href="/dashboard" className="btn-ghost px-3 py-2 text-sm mt-3 -ml-3">
               ← Dashboard
-            </button>
+            </Link>
           </div>
           <img
             src="/images/thumbs/listening.svg"

@@ -44,6 +44,7 @@ export default function IeltsWritingTakingPage() {
     fetch(`${API}/api/ielts-attempts/tests/${testId}/writing?userId=${uid}`)
       .then((r) => r.json())
       .then((d) => { if (d.error) { Swal.fire("Lỗi", d.error, "error"); router.push("/ielts"); return; } setTasks(d.tasks || []); })
+      .catch(() => { Swal.fire("Lỗi", "Không kết nối được máy chủ. Vui lòng thử lại sau.", "error"); })
       .finally(() => setLoading(false));
   }, [testId, router]);
 

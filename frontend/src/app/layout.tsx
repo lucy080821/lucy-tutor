@@ -59,6 +59,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: "#1E3A8A",
+  // App chỉ có giao diện sáng — chặn Chrome/Edge "Auto Dark Mode" tự đảo màu làm vỡ giao diện
+  colorScheme: "only light",
 };
 
 export default function RootLayout({

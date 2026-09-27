@@ -46,6 +46,7 @@ export default function IeltsSpeakingTakingPage() {
     fetch(`${API}/api/ielts-attempts/tests/${testId}/speaking?userId=${uid}`)
       .then((r) => r.json())
       .then((d) => { if (d.error) { Swal.fire("Lỗi", d.error, "error"); router.push("/ielts"); return; } setParts(d.parts || []); })
+      .catch(() => { Swal.fire("Lỗi", "Không kết nối được máy chủ. Vui lòng thử lại sau.", "error"); })
       .finally(() => setLoading(false));
   }, [testId, router]);
 

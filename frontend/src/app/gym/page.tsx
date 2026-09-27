@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Swal from 'sweetalert2';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, ResponsiveContainer, CartesianGrid, Legend } from 'recharts';
 import { cleanString, levenshteinDistance, getHintMask } from '@/lib/textGrading';
@@ -54,8 +55,10 @@ export default function GymPage() {
     }
   }, [activeTab]);
 
-  const fetchData = async (uid: string) => {
-    setLoading(true);
+  // `silent` refreshes (after add/delete/finishing a session) keep the page on screen instead of
+  // swapping the whole view for the full-page loader while the 3 requests round-trip.
+  const fetchData = async (uid: string, silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [statsRes, dueRes, customRes] = await Promise.all([
         fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/srs/stats/${uid}`),
@@ -91,7 +94,7 @@ export default function GymPage() {
         setNewWord(''); setNewMeaning(''); setNewPhonetic(''); setNewExample('');
         setShowAddForm(false);
         Swal.fire({ title: 'Đã thêm từ mới!', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 });
-        fetchData(userId);
+        fetchData(userId, true);
       } else {
         Swal.fire('Lỗi', 'Không thể thêm từ này', 'error');
       }
@@ -113,7 +116,7 @@ export default function GymPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/srs/vocab/custom/${id}?userId=${userId}`, { method: 'DELETE' });
       if (res.ok) {
         setCustomVocab(prev => prev.filter(v => v.id !== id));
-        fetchData(userId);
+        fetchData(userId, true);
       } else {
         Swal.fire('Lỗi', 'Không thể xóa từ này', 'error');
       }
@@ -161,7 +164,7 @@ export default function GymPage() {
           if (newQueue.length === 0) {
             Swal.fire('Chúc mừng!', 'Bạn đã hoàn thành mục tiêu ôn tập hôm nay.', 'success');
             setActiveTab('STATS');
-            fetchData(userId); // Refresh stats
+            fetchData(userId, true); // Refresh stats
           }
         }
       }
@@ -222,9 +225,9 @@ export default function GymPage() {
         <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 flex items-center gap-6">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 text-sm text-muted">
-              <button onClick={() => router.push('/dashboard')} className="w-9 h-9 shrink-0 rounded-full border border-line-strong text-muted flex items-center justify-center hover:border-primary hover:text-primary hover:bg-primary-soft transition-colors" aria-label="Quay lại">
+              <Link href="/dashboard" className="w-9 h-9 shrink-0 rounded-full border border-line-strong text-muted flex items-center justify-center hover:border-primary hover:text-primary hover:bg-primary-soft transition-colors" aria-label="Quay lại">
                 ←
-              </button>
+              </Link>
               <span>Trang chủ / Phòng Gym Từ Vựng</span>
             </div>
             <h1 className="ui-page-title mt-3 text-2xl sm:text-3xl">

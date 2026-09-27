@@ -1,15 +1,9 @@
 "use client";
-import { useState, useEffect, useRef, createRef } from "react";
+import { useState, useEffect, useRef, useMemo, createRef } from "react";
 import Link from "next/link";
-import CalendarComponent from "@/components/calendar/CalendarComponent";
+import { useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
-import * as XLSX from 'xlsx-js-style';
-import { jsPDF } from 'jspdf';
-import { toPng } from 'html-to-image';
-import JSZip from 'jszip';
-import { saveAs } from 'file-saver';
 import { TuitionInvoice } from '@/components/tuition/TuitionInvoice';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, PieChart, Pie, Cell, LabelList } from 'recharts';
 import dynamic from 'next/dynamic';
 import DOMPurify from 'dompurify';
 import { CEFR_LEVELS, CefrLevel } from '@/lib/skillPractice';
@@ -19,6 +13,20 @@ import { compressImageToBase64 } from '@/lib/imageCompress';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
+
+// Heavy client-only libraries are split out of the dashboard's initial bundle:
+// FullCalendar + recharts load via next/dynamic only when their tab renders, and the
+// export/import libs (xlsx-js-style, jspdf, html-to-image, jszip, file-saver) are pulled in
+// with `await import()` inside the click handlers that actually use them.
+const CalendarComponent = dynamic(() => import('@/components/calendar/CalendarComponent'), {
+  ssr: false,
+  loading: () => <div className="h-[600px] w-full rounded-2xl skeleton" />,
+});
+const chartFallback = () => <div className="h-full w-full rounded-xl skeleton opacity-60" />;
+const RevenueTrendChart = dynamic(() => import('./_components/OverviewCharts').then(m => m.RevenueTrendChart), { ssr: false, loading: chartFallback });
+const ClassSizeChart = dynamic(() => import('./_components/OverviewCharts').then(m => m.ClassSizeChart), { ssr: false, loading: chartFallback });
+const TuitionDonutChart = dynamic(() => import('./_components/OverviewCharts').then(m => m.TuitionDonutChart), { ssr: false, loading: chartFallback });
+const ClassScoreChart = dynamic(() => import('./_components/OverviewCharts').then(m => m.ClassScoreChart), { ssr: false, loading: chartFallback });
 const miniQuillModules = {
   toolbar: [
     ['bold', 'italic', 'underline', 'strike'],
@@ -52,6 +60,33 @@ const BLANK_QUESTION = () => ({
   points: 1,
 });
 
+// Lazy loaders for the export/import libraries (only needed when a button is clicked).
+// The CJS interop shape differs between bundlers, so fall back to `.default` when needed.
+const loadXLSX = async (): Promise<typeof import('xlsx-js-style')> => {
+  const mod: any = await import('xlsx-js-style');
+  return mod.utils ? mod : mod.default;
+};
+const loadPdfExportLibs = async () => {
+  const [{ jsPDF }, { toPng }] = await Promise.all([import('jspdf'), import('html-to-image')]);
+  return { jsPDF, toPng };
+};
+const loadZipLibs = async () => {
+  const [jszipMod, fileSaverMod]: any[] = await Promise.all([import('jszip'), import('file-saver')]);
+  const JSZip = jszipMod.default ?? jszipMod;
+  const saveAs = fileSaverMod.saveAs ?? fileSaverMod.default?.saveAs ?? fileSaverMod.default;
+  return { JSZip, saveAs } as { JSZip: typeof import('jszip'); saveAs: (data: Blob, filename?: string) => void };
+};
+
+// Average of each student's best score per exam (null when they have no results yet).
+const computeStudentAvgScore = (s: any): number | null => {
+  const results = s?.examResults || [];
+  const uniqueResults: any[] = Object.values(results.reduce((acc: any, r: any) => {
+    if (!acc[r.examId] || r.score > acc[r.examId].score) acc[r.examId] = r;
+    return acc;
+  }, {}));
+  return uniqueResults.length > 0 ? uniqueResults.reduce((sum: number, r: any) => sum + r.score, 0) / uniqueResults.length : null;
+};
+
 const stripHtml = (html?: string) => (html || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
 
 const escapeHtml = (text: string) => text
@@ -61,6 +96,7 @@ const escapeHtml = (text: string) => text
 const textToQuillHtml = (text: string) => text ? `<p>${escapeHtml(text)}</p>` : "";
 
 export default function TeacherDashboard() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("OVERVIEW");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
@@ -123,7 +159,7 @@ export default function TeacherDashboard() {
     const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     const userId = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
     if (!userId) {
-      window.location.href = '/';
+      router.replace('/');
       return;
     }
     fetch(`${API}/api/auth/me?userId=${userId}`)
@@ -132,16 +168,38 @@ export default function TeacherDashboard() {
       .catch(err => { console.error(err); setLoading(false); });
   }, []);
 
-  const fetchTeacherData = () => {
-    if (user?.id) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/classroom/teacher/${user.id}`)
-        .then(res => res.json()).then(setClassrooms).catch(console.error);
+  // Single in-flight request at a time: the OVERVIEW 30s poll, the visibilitychange handler and
+  // post-action reconciles can all ask for a refresh at once — instead of stacking several copies
+  // of this (heavy) endpoint, callers arriving mid-flight queue exactly ONE follow-up run, so a
+  // reconcile requested right after a mutation still sees the post-mutation data (an older
+  // in-flight response must not be the last word, or it would wipe an optimistic patch).
+  const teacherDataInFlight = useRef<Promise<void> | null>(null);
+  const teacherDataRerun = useRef(false);
+  const fetchTeacherData = (): Promise<void> => {
+    if (!user?.id) return Promise.resolve();
+    if (teacherDataInFlight.current) {
+      teacherDataRerun.current = true;
+      return teacherDataInFlight.current;
     }
+    const userId = user.id;
+    const run = (): Promise<void> => fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/classroom/teacher/${userId}`)
+      .then(res => res.json())
+      .then(data => {
+        // A newer refresh was requested while this one was loading — its result supersedes this one.
+        if (teacherDataRerun.current) { teacherDataRerun.current = false; return run(); }
+        if (Array.isArray(data)) setClassrooms(data);
+      })
+      .catch(console.error);
+    const p = run().finally(() => { teacherDataInFlight.current = null; });
+    teacherDataInFlight.current = p;
+    return p;
   };
 
+  // Keyed on user.id (not the user object) — an avatar upload replaces `user`, which used to
+  // re-trigger this and every other per-tab fetch for no reason.
   useEffect(() => {
     fetchTeacherData();
-  }, [user]);
+  }, [user?.id]);
 
   const handleCreateOrEditClass = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -180,7 +238,17 @@ export default function TeacherDashboard() {
         setFeePerMonth("");
         setShowModal(false);
         setEditClassroom(null);
-        fetchTeacherData();
+        // Patch local state from the response instead of refetching every classroom (with all
+        // students/exams/results) — create/edit only return the bare Classroom row, so keep the
+        // existing students/exams relations on edit and start empty ones on create.
+        const saved = await res.json().catch(() => null);
+        if (saved?.id) {
+          setClassrooms(prev => isEditing
+            ? prev.map(c => c.id === saved.id ? { ...c, ...saved, students: saved.students ?? c.students, exams: saved.exams ?? c.exams } : c)
+            : [...prev, { ...saved, students: saved.students ?? [], exams: saved.exams ?? [] }]);
+        } else {
+          fetchTeacherData();
+        }
       }
     } catch (err) {
       console.error('Error saving classroom', err);
@@ -305,7 +373,7 @@ export default function TeacherDashboard() {
     if (activeTab === "LISTENING_STUDIO" && user) {
       fetchListeningClips();
     }
-  }, [activeTab, user]);
+  }, [activeTab, user?.id]);
 
   // Poll while any clip is still being aligned in the background, so the status badge
   // (Đang xử lý → Sẵn sàng/Lỗi) updates without the teacher needing to switch tabs/refresh.
@@ -331,7 +399,7 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     if (activeTab === "IELTS_LIBRARY" && user) fetchIeltsBooks();
-  }, [activeTab, user]);
+  }, [activeTab, user?.id]);
 
   // Poll while any book is still being analyzed (Pass 1) or any of its tests is still being
   // extracted (Pass 2/3), so status badges update without needing a manual refresh — same
@@ -510,7 +578,7 @@ export default function TeacherDashboard() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/listening/${clipId}`, { method: 'DELETE' });
       if (res.ok) {
         Swal.fire('Đã xóa', '', 'success');
-        fetchListeningClips();
+        setListeningClips(prev => prev.filter(c => c.id !== clipId));
       }
     } catch (err) { console.error(err); }
   };
@@ -539,7 +607,7 @@ export default function TeacherDashboard() {
     if (activeTab === "SPEAKING_TOPICS" && user) {
       fetchSpeakingTopics();
     }
-  }, [activeTab, user]);
+  }, [activeTab, user?.id]);
 
   const resetSpeakingTopicForm = () => {
     setEditingTopicId(null);
@@ -629,7 +697,7 @@ export default function TeacherDashboard() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/speaking-conversation/topics/${topicId}`, { method: 'DELETE' });
       if (res.ok) {
         Swal.fire('Đã xóa', '', 'success');
-        fetchSpeakingTopics();
+        setSpeakingTopics(prev => prev.filter(t => t.id !== topicId));
       }
     } catch (err) { console.error(err); }
   };
@@ -649,21 +717,23 @@ export default function TeacherDashboard() {
     if (activeTab === "DOCUMENTS" && user) {
       fetchDocuments();
     }
-  }, [activeTab, user]);
+  }, [activeTab, user?.id]);
 
+  const freeStudentsInFlight = useRef(false);
   const fetchFreeStudents = async () => {
-    if (!user?.id) return;
+    if (!user?.id || freeStudentsInFlight.current) return; // don't stack polls behind a slow request
+    freeStudentsInFlight.current = true;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/free-students/teacher/${user.id}`);
       if (res.ok) setFreeStudents(await res.json());
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); } finally { freeStudentsInFlight.current = false; }
   };
 
   useEffect(() => {
     if ((activeTab === "FREE_STUDENTS" || activeTab === "OVERVIEW") && user) {
       fetchFreeStudents();
     }
-  }, [activeTab, user]);
+  }, [activeTab, user?.id]);
 
   const handleConfirmFreeStudentPayment = async (student: any) => {
     const { value: amount } = await Swal.fire({
@@ -721,11 +791,20 @@ export default function TeacherDashboard() {
       });
       if (res.ok) {
         Swal.fire('Thành công', 'Tải tài liệu lên thành công!', 'success');
+        const uploadedClassroomId = docVisibility === 'CLASS' ? docClassroomId : '';
         setDocFile(null);
         setDocTitle("");
         setDocVisibility("PUBLIC");
         setDocClassroomId("");
-        fetchDocuments();
+        // The upload response carries the new Document row — prepend it locally (with the
+        // classroom name the list view shows) instead of refetching the whole library.
+        const data = await res.json().catch(() => null);
+        if (data?.document?.id) {
+          const cls = classrooms.find((c: any) => c.id === (data.document.classroomId || uploadedClassroomId));
+          setDocuments(prev => [{ ...data.document, classroom: data.document.classroom ?? (cls ? { name: cls.name } : null) }, ...prev]);
+        } else {
+          fetchDocuments();
+        }
       } else {
         const errData = await res.json();
         Swal.fire('Lỗi', errData.error || 'Tải lên thất bại', 'error');
@@ -746,7 +825,7 @@ export default function TeacherDashboard() {
       });
       if (res.ok) {
         Swal.fire('Đã xóa', 'Xóa tài liệu thành công', 'success');
-        fetchDocuments();
+        setDocuments(prev => prev.filter(d => d.id !== docId));
       } else {
         Swal.fire('Lỗi', 'Xóa thất bại', 'error');
       }
@@ -789,7 +868,11 @@ export default function TeacherDashboard() {
           body: JSON.stringify({ visibility: newVisibility, classroomId: newClassroomId })
         });
         if (res.ok) {
-          fetchDocuments();
+          const data = await res.json().catch(() => null);
+          const cls = newClassroomId ? classrooms.find((c: any) => c.id === newClassroomId) : null;
+          setDocuments(prev => prev.map(d => d.id === doc.id
+            ? { ...d, ...(data?.document || {}), visibility: newVisibility, classroomId: newClassroomId, classroom: cls ? { name: cls.name } : null }
+            : d));
           Swal.fire('Thành công', 'Đã cập nhật trạng thái', 'success');
         } else {
           Swal.fire('Lỗi', 'Cập nhật thất bại', 'error');
@@ -819,7 +902,7 @@ export default function TeacherDashboard() {
         })
         .catch(console.error);
     }
-  }, [activeTab, leaderboardFilter, user]);
+  }, [activeTab, leaderboardFilter, user?.id]);
 
   // ── Cheat Logs state ──
   const [cheatIncidents, setCheatIncidents] = useState<any[]>([]);
@@ -858,19 +941,24 @@ export default function TeacherDashboard() {
     fetchCheatLogs(user.id);
     const interval = setInterval(() => fetchCheatLogs(user.id), 30000);
     return () => clearInterval(interval);
-  }, [activeTab, user]);
+  }, [activeTab, user?.id]);
 
   // ── Lesson management state ──
   const [localLessons, setLocalLessons] = useState<any[]>([]);
   const [lessonClassFilter, setLessonClassFilter] = useState("");
   const [lessonSearchQuery, setLessonSearchQuery] = useState('');
   const [lessonSortOrder, setLessonSortOrder] = useState<'NEWEST' | 'OLDEST'>('NEWEST');
+  // Only the LESSONS tab reads this list — load it the first time that tab opens instead of on
+  // every dashboard mount. Create/edit/delete already patch localLessons in place afterwards.
+  const lessonsLoadedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (user?.id) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/teacher/${user.id}`)
-        .then(res => res.json()).then(setLocalLessons).catch(console.error);
-    }
-  }, [user]);
+    if (activeTab !== "LESSONS" || !user?.id || lessonsLoadedFor.current === user.id) return;
+    lessonsLoadedFor.current = user.id;
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/lessons/teacher/${user.id}`)
+      .then(res => res.json())
+      .then(data => { if (Array.isArray(data)) setLocalLessons(data); })
+      .catch(err => { console.error(err); lessonsLoadedFor.current = null; });
+  }, [activeTab, user?.id]);
 
   const [createLessonTitle, setCreateLessonTitle] = useState("");
   const [createLessonDesc, setCreateLessonDesc] = useState("");
@@ -879,7 +967,8 @@ export default function TeacherDashboard() {
   const [lessonGrammars, setLessonGrammars] = useState<any[]>([]);
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null);
 
-  const handleDownloadVocabTemplate = () => {
+  const handleDownloadVocabTemplate = async () => {
+    const XLSX = await loadXLSX();
     const ws = XLSX.utils.json_to_sheet([
       { word: "apple", pos: "Noun", phonetic: "/ˈæpl/", meaning: "quả táo", example: "I eat an apple." }
     ]);
@@ -940,8 +1029,9 @@ export default function TeacherDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       const bstr = evt.target?.result;
+      const XLSX = await loadXLSX();
       const wb = XLSX.read(bstr, { type: 'binary' });
       const wsname = wb.SheetNames[0];
       const ws = wb.Sheets[wsname];
@@ -1049,60 +1139,87 @@ export default function TeacherDashboard() {
   const [overviewRefreshTick, setOverviewRefreshTick] = useState(0);
   useEffect(() => {
     if (activeTab !== "OVERVIEW" || !user?.id) return;
-    const interval = setInterval(() => {
+    const refresh = () => {
       fetchTeacherData();
       fetchFreeStudents();
       setOverviewRefreshTick(t => t + 1);
-    }, 30000);
+    };
+    const interval = setInterval(refresh, 30000);
     const onVisible = () => {
-      if (document.visibilityState === 'visible') {
-        fetchTeacherData();
-        fetchFreeStudents();
-        setOverviewRefreshTick(t => t + 1);
-      }
+      if (document.visibilityState === 'visible') refresh();
     };
     document.addEventListener('visibilitychange', onVisible);
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
-  }, [activeTab, user]);
+  }, [activeTab, user?.id]);
 
-  useEffect(() => {
-    if (activeTab !== "OVERVIEW" || !user?.id || !overviewTuitionMonth) return;
-    let cancelled = false;
-    const [year, month] = overviewTuitionMonth.split("-");
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/report/teacher/${user.id}?month=${parseInt(month)}&year=${year}`)
-      .then(res => res.json())
-      .then(data => { if (!cancelled) setOverviewTuitionData(data); })
-      .catch(console.error);
-    // Without this, quickly flipping the month picker (or a 30s poll tick firing mid-request)
-    // can let an older, slower response resolve after a newer one and silently overwrite
-    // overviewTuitionData with the wrong month's numbers.
-    return () => { cancelled = true; };
-  }, [activeTab, user, overviewTuitionMonth, overviewRefreshTick]);
-
-  // ── Revenue trend: last 6 months, for the OVERVIEW "business health" chart ──
+  // ── Tuition report (selected month) + revenue trend (last 6 months) ──
+  // Both read the same /api/attendance/report/teacher/:teacherId endpoint. One "refresh round"
+  // fetches the 6 trend months plus the selected month (only if it isn't already one of those 6 —
+  // by default it is the current month, so that's 6 requests, not 7), all in parallel. Rounds
+  // never overlap: a poll tick that fires while the previous round is still in flight is skipped.
   const [revenueTrend, setRevenueTrend] = useState<any[] | null>(null);
+  const overviewMonthRef = useRef(overviewTuitionMonth);
+  useEffect(() => { overviewMonthRef.current = overviewTuitionMonth; }, [overviewTuitionMonth]);
+  const overviewReportCache = useRef<Record<string, any>>({});
+  const overviewRound = useRef<{ inFlight: boolean; keys: string[] }>({ inFlight: false, keys: [] });
+  const monthKey = (ym: string) => { const [y, m] = ym.split('-').map(Number); return `${y}-${m}`; };
+  const fetchTeacherTuitionReport = (month: number, year: number) =>
+    fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/report/teacher/${user.id}?month=${month}&year=${year}`)
+      .then(res => { if (!res.ok) throw new Error(`HTTP ${res.status}`); return res.json(); });
+
   useEffect(() => {
-    if (activeTab !== "OVERVIEW" || !user?.id) return;
-    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+    if (activeTab !== "OVERVIEW" || !user?.id || overviewRound.current.inFlight) return;
     const now = new Date();
     const months = Array.from({ length: 6 }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
       return { month: d.getMonth() + 1, year: d.getFullYear() };
     });
+    const requests = [...months];
+    if (overviewMonthRef.current) {
+      const [selYear, selMonth] = overviewMonthRef.current.split('-').map(Number);
+      if (!months.some(m => m.month === selMonth && m.year === selYear)) requests.push({ month: selMonth, year: selYear });
+    }
+    overviewRound.current = { inFlight: true, keys: requests.map(r => `${r.year}-${r.month}`) };
+    Promise.all(requests.map(({ month, year }) => fetchTeacherTuitionReport(month, year)))
+      .then(reports => {
+        const cache: Record<string, any> = {};
+        requests.forEach((r, i) => { cache[`${r.year}-${r.month}`] = reports[i]; });
+        overviewReportCache.current = cache;
+        setRevenueTrend(months.map((m, i) => ({
+          name: `T${m.month}/${String(m.year).slice(2)}`,
+          DaThu: reports[i].totalCollected || 0,
+          CanThu: reports[i].totalExpected || 0,
+          HocVienTuDo: reports[i].freeStudentRevenue || 0,
+        })));
+        // Read the month picker's value at resolve time, so a round that started before the
+        // teacher changed months never overwrites the newer month's numbers.
+        const selected = overviewMonthRef.current && cache[monthKey(overviewMonthRef.current)];
+        if (selected) setOverviewTuitionData(selected);
+      })
+      .catch(console.error)
+      .finally(() => { overviewRound.current = { inFlight: false, keys: [] }; });
+  }, [activeTab, user?.id, overviewRefreshTick]);
+
+  // Month picker changes: serve from the latest round's cache when possible, otherwise fetch
+  // just that one month (not the whole 6-month trend again).
+  useEffect(() => {
+    if (activeTab !== "OVERVIEW" || !user?.id || !overviewTuitionMonth) return;
+    const key = monthKey(overviewTuitionMonth);
+    const cached = overviewReportCache.current[key];
+    if (cached) { setOverviewTuitionData(cached); return; }
+    if (overviewRound.current.inFlight && overviewRound.current.keys.includes(key)) return; // the running round will fill it
     let cancelled = false;
-    Promise.all(months.map(({ month, year }) =>
-      fetch(`${API}/api/attendance/report/teacher/${user.id}?month=${month}&year=${year}`).then(res => res.json())
-    )).then(reports => {
-      if (cancelled) return;
-      setRevenueTrend(reports.map((r, i) => ({
-        name: `T${months[i].month}/${String(months[i].year).slice(2)}`,
-        DaThu: r.totalCollected || 0,
-        CanThu: r.totalExpected || 0,
-        HocVienTuDo: r.freeStudentRevenue || 0,
-      })));
-    }).catch(console.error);
+    const [year, month] = overviewTuitionMonth.split("-").map(Number);
+    fetchTeacherTuitionReport(month, year)
+      .then(data => {
+        overviewReportCache.current = { ...overviewReportCache.current, [key]: data };
+        // Without this, quickly flipping the month picker can let an older, slower response
+        // resolve after a newer one and silently overwrite overviewTuitionData with the wrong month.
+        if (!cancelled) setOverviewTuitionData(data);
+      })
+      .catch(console.error);
     return () => { cancelled = true; };
-  }, [activeTab, user, overviewRefreshTick]);
+  }, [activeTab, user?.id, overviewTuitionMonth]);
 
   const fetchAttendance = async () => {
     if (!attMonth || !user?.id) return;
@@ -1115,20 +1232,32 @@ export default function TeacherDashboard() {
     setAttMonthLoading(false);
   };
 
+  const attReportRequestKey = useRef("");
   const fetchAttReport = async () => {
     if (!attClassroomId || !attMonth) return;
+    attReportRequestKey.current = `${attClassroomId}|${attMonth}`;
     try {
       const [year, month] = attMonth.split("-");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/report/${attClassroomId}?month=${month}&year=${year}`);
-      if (res.ok) {
-        setAttReport(await res.json());
-      }
+      const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      // All classroom reports in ONE parallel batch — previously the selected classroom's report
+      // was awaited first and then fetched a second time inside the per-classroom loop.
+      const reportIds = classrooms.some((c: any) => c.id === attClassroomId)
+        ? classrooms.map((c: any) => c.id)
+        : [attClassroomId, ...classrooms.map((c: any) => c.id)];
+      const results = await Promise.all(reportIds.map(async (id: string) => {
+        try {
+          const r = await fetch(`${API}/api/attendance/report/${id}?month=${month}&year=${year}`);
+          return { id, data: r.ok ? await r.json() : null };
+        } catch (err) { console.error(err); return { id, data: null }; }
+      }));
+      // Ignore the response if the teacher switched classroom/month while it was loading.
+      if (attReportRequestKey.current !== `${attClassroomId}|${attMonth}`) return;
+      const selected = results.find(r => r.id === attClassroomId)?.data;
+      if (selected) setAttReport(selected);
 
       const allReports: Record<string, any> = {};
-      await Promise.all(classrooms.map(async (c: any) => {
-        const r = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/attendance/report/${c.id}?month=${month}&year=${year}`);
-        if (r.ok) {
-          const data = await r.json();
+      results.forEach(({ data }) => {
+        if (data?.report) {
           data.report.forEach((sr: any) => {
             if (!allReports[sr.user.id]) {
               allReports[sr.user.id] = { user: sr.user, classes: [], totalAmount: 0 };
@@ -1147,7 +1276,7 @@ export default function TeacherDashboard() {
             }
           });
         }
-      }));
+      });
       setAggregatedReports(allReports);
 
     } catch (err) { console.error(err); }
@@ -1158,8 +1287,8 @@ export default function TeacherDashboard() {
     if (!el) return;
     try {
       setIsExporting(true);
-      // Brief timeout to let any styles settle
-      await new Promise(r => setTimeout(r, 100));
+      // Brief timeout to let any styles settle (the libs load in parallel with it)
+      const [{ jsPDF, toPng }] = await Promise.all([loadPdfExportLibs(), new Promise(r => setTimeout(r, 100))]);
       const imgData = await toPng(el, { pixelRatio: 2, cacheBust: true });
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: [800, 1131] });
       pdf.addImage(imgData, 'PNG', 0, 0, 800, 1131);
@@ -1176,6 +1305,7 @@ export default function TeacherDashboard() {
     if (!attReport?.report?.length) return;
     try {
       setIsExporting(true);
+      const [{ jsPDF, toPng }, { JSZip, saveAs }] = await Promise.all([loadPdfExportLibs(), loadZipLibs()]);
       const zip = new JSZip();
       for (const sr of attReport.report) {
         const el = invoiceRefs.current[sr.user.id];
@@ -1202,7 +1332,7 @@ export default function TeacherDashboard() {
       if (attView === "MARK") fetchAttendance();
       if (attView === "REPORT" && attClassroomId) fetchAttReport();
     }
-  }, [attClassroomId, attMonth, attView, activeTab, user]);
+  }, [attClassroomId, attMonth, attView, activeTab, user?.id]);
 
   // Toggle a single (lớp, học viên, ngày) cell between "Có mặt" and "Vắng không phép". Updates
   // attMonthRecords optimistically first so the running total column reflects it instantly,
@@ -1266,7 +1396,8 @@ export default function TeacherDashboard() {
             ? { ...sr, paymentStatus: 'PAID', paidAt: payment?.paidAt || new Date().toISOString(), paymentId: payment?.id || sr.paymentId }
             : sr)
         } : prev);
-        fetchAttReport();
+        // No full fetchAttReport() re-run here: payment status doesn't change any amounts in the
+        // aggregated invoices, and that refetch re-hit every classroom's report endpoint.
       } else {
         Swal.fire('Lỗi', 'Thất bại', 'error');
       }
@@ -1383,9 +1514,11 @@ export default function TeacherDashboard() {
         try {
           const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/exams/${examId}`, { method: 'DELETE' });
           if (res.ok) {
-            setLocalExams(localExams.filter((e: any) => e.id !== examId));
-            const refreshed = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/classroom/teacher/${user.id}`).then(r => r.json());
-            setClassrooms(refreshed);
+            // Drop it from local state directly — no need to refetch every classroom's roster/results.
+            setLocalExams(prev => prev.filter((e: any) => e.id !== examId));
+            setClassrooms(prev => prev.map(c => c.exams?.some((e: any) => e.id === examId)
+              ? { ...c, exams: c.exams.filter((e: any) => e.id !== examId) }
+              : c));
             Swal.fire('Đã xóa!', 'Đề thi đã được xóa thành công.', 'success');
           } else { 
             Swal.fire('Lỗi', 'Xóa thất bại', 'error'); 
@@ -1433,9 +1566,12 @@ export default function TeacherDashboard() {
       });
       if (res.ok) {
         const updated = await res.json();
-        setLocalExams(localExams.map((e: any) => e.id === updated.id ? updated : e));
-        const refreshed = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/classroom/teacher/${user.id}`).then(r => r.json());
-        setClassrooms(refreshed);
+        setLocalExams(prev => prev.map((e: any) => e.id === updated.id ? updated : e));
+        // Merge the edited fields into the exam inside its classroom, keeping the relations the
+        // PUT response doesn't return (results, _count) — instead of awaiting a full refetch.
+        setClassrooms(prev => prev.map(c => c.exams?.some((e: any) => e.id === updated.id)
+          ? { ...c, exams: c.exams.map((e: any) => e.id === updated.id ? { ...e, ...updated, results: updated.results ?? e.results, _count: updated._count ?? e._count } : e) }
+          : c));
         setEditExam(null);
       } else { Swal.fire('Lỗi', 'Cập nhật thất bại', 'error'); }
     } catch (err) { console.error(err); } finally { setGlobalLoading({ isLoading: false, message: "" }); }
@@ -1513,7 +1649,8 @@ export default function TeacherDashboard() {
     setCreateQuestions(next);
   };
 
-  const handleDownloadExamQuestionTemplate = () => {
+  const handleDownloadExamQuestionTemplate = async () => {
+    const XLSX = await loadXLSX();
     const headers = ["Loại (TN/TL)", "Câu hỏi *", "Đáp án A", "Đáp án B", "Đáp án C", "Đáp án D", "Đáp án đúng", "Giải thích", "Điểm"];
     const sampleRows = [
       ["TN", "What is the capital of Vietnam?", "Hanoi", "Ho Chi Minh City", "Da Nang", "Hue", "A", "Hanoi là thủ đô của Việt Nam.", 1],
@@ -1563,8 +1700,9 @@ export default function TeacherDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       const bstr = evt.target?.result;
+      const XLSX = await loadXLSX();
       const wb = XLSX.read(bstr, { type: 'binary' });
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
@@ -1710,9 +1848,11 @@ export default function TeacherDashboard() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Tạo đề thất bại');
-      const refreshed = await fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/classroom/teacher/${user.id}`).then(r => r.json());
-      setClassrooms(refreshed);
-      setLocalExams([...localExams, data]);
+      // Show the new exam immediately (localExams feeds the EXAMS list), then reconcile the
+      // classroom payload (results/_count used by completion stats) in the background instead
+      // of blocking the save spinner on a full refetch.
+      setLocalExams(prev => [...prev, data]);
+      fetchTeacherData();
       // Reset form
       setCreateTitle(""); setCreateType("ASSIGNMENT"); setCreateClassroomId("");
       setCreateAssignMode("CLASS"); setCreateStudentIds([]); setCreateDuration("45"); setCreateMaxAttempts("1");
@@ -1795,27 +1935,43 @@ export default function TeacherDashboard() {
     { id: "LEADERBOARD", label: "Bảng Xếp Hạng", icon: "🏆" }
   ];
 
-  const allStudents = classrooms.flatMap(c => c.students || []).filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
+  // Derived data below is memoized on its inputs: this component re-renders on every keystroke in
+  // any form, and several of these were O(n^2) dedupes / per-student score reductions over the
+  // whole roster that used to re-run each time.
+  const allStudents = useMemo(() => {
+    // Same result as the old flatMap + findIndex dedupe (first occurrence wins), in O(n).
+    const byId = new Map<string, any>();
+    classrooms.forEach(c => (c.students || []).forEach((s: any) => { if (!byId.has(s.id)) byId.set(s.id, s); }));
+    return Array.from(byId.values());
+  }, [classrooms]);
 
-  const studentAvgScore = (s: any) => {
-    const results = s.examResults || [];
-    const uniqueResults: any[] = Object.values(results.reduce((acc: any, r: any) => {
-      if (!acc[r.examId] || r.score > acc[r.examId].score) acc[r.examId] = r;
-      return acc;
-    }, {}));
-    return uniqueResults.length > 0 ? uniqueResults.reduce((sum: number, r: any) => sum + r.score, 0) / uniqueResults.length : null;
-  };
+  // Average score per student id, computed once per `classrooms` payload (the backend returns the
+  // same examResults for a student in every classroom they belong to, so keying by id is safe).
+  const studentAvgById = useMemo(() => {
+    const m = new Map<string, number | null>();
+    classrooms.forEach(c => (c.students || []).forEach((s: any) => { if (!m.has(s.id)) m.set(s.id, computeStudentAvgScore(s)); }));
+    return m;
+  }, [classrooms]);
+  const studentAvgScore = (s: any): number | null =>
+    studentAvgById.has(s?.id) ? (studentAvgById.get(s.id) as number | null) : computeStudentAvgScore(s);
 
-  const classroomScoreStats = classrooms
+  const classroomScoreStats = useMemo(() => classrooms
     .map(c => {
       const scored = (c.students || []).map(studentAvgScore).filter((v: number | null): v is number => v !== null);
       if (scored.length === 0) return null;
       const avg = scored.reduce((s: number, v: number) => s + v, 0) / scored.length;
       return { name: c.name, DiemTB: Math.round(avg * 10) / 10 };
     })
-    .filter((c): c is { name: string; DiemTB: number } => c !== null);
+    .filter((c): c is { name: string; DiemTB: number } => c !== null),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [classrooms, studentAvgById]);
 
-  const assignmentCompletion = classrooms.reduce((acc, c) => {
+  const classSizeChartData = useMemo(
+    () => classrooms.map(c => ({ name: c.name, HọcSinh: c.students?.length || 0, BàiTập: c.exams?.length || 0 })),
+    [classrooms]
+  );
+
+  const assignmentCompletion = useMemo(() => classrooms.reduce((acc, c) => {
     const studentCount = c.students?.length || 0;
     (c.exams || []).forEach((e: any) => {
       // Prefer the exam's actual assigned-student count ("Giao cá nhân" assigns to a subset,
@@ -1826,49 +1982,57 @@ export default function TeacherDashboard() {
       acc.submitted += Math.min(submitters, expectedCount);
     });
     return acc;
-  }, { expected: 0, submitted: 0 });
+  }, { expected: 0, submitted: 0 }), [classrooms]);
   const completionRate = assignmentCompletion.expected > 0 ? Math.round((assignmentCompletion.submitted / assignmentCompletion.expected) * 100) : null;
 
   // ── EXAMS tab: filter over the full list, then paginate the filtered result (not the raw list) ──
-  const examDbList = classrooms.flatMap(c => c.exams || []).filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
-  const allExamsRaw = [...examDbList, ...localExams];
-  const allExams = allExamsRaw.filter((v, i, a) => a.findIndex((t: any) => t.id === v.id) === i);
+  const allExams = useMemo(() => {
+    // Classroom exams first, then locally-created ones; first occurrence of each id wins (as before).
+    const byId = new Map<string, any>();
+    classrooms.forEach(c => (c.exams || []).forEach((e: any) => { if (!byId.has(e.id)) byId.set(e.id, e); }));
+    localExams.forEach((e: any) => { if (!byId.has(e.id)) byId.set(e.id, e); });
+    return Array.from(byId.values());
+  }, [classrooms, localExams]);
   const examSearchLower = examSearchQuery.trim().toLowerCase();
-  const filteredExams = allExams.filter(e =>
-    (examClassFilter === 'ALL' || e.classroomId === examClassFilter) &&
-    (!examSearchLower || (e.title || '').toLowerCase().includes(examSearchLower))
-  );
-  const sortExamsByDate = (list: any[]) => [...list].sort((a, b) => {
-    const diff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
-    return examSortOrder === 'NEWEST' ? diff : -diff;
-  });
-  const examAssignments = sortExamsByDate(filteredExams.filter(e => e.examType === 'ASSIGNMENT' || e.examType === 'REGULAR'));
-  const examTests = sortExamsByDate(filteredExams.filter(e => e.examType === 'EXAM' || e.examType === 'PLACEMENT'));
+  const { filteredExams, examAssignments, examTests } = useMemo(() => {
+    const filteredExams = allExams.filter(e =>
+      (examClassFilter === 'ALL' || e.classroomId === examClassFilter) &&
+      (!examSearchLower || (e.title || '').toLowerCase().includes(examSearchLower))
+    );
+    const sortExamsByDate = (list: any[]) => [...list].sort((a, b) => {
+      const diff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      return examSortOrder === 'NEWEST' ? diff : -diff;
+    });
+    return {
+      filteredExams,
+      examAssignments: sortExamsByDate(filteredExams.filter(e => e.examType === 'ASSIGNMENT' || e.examType === 'REGULAR')),
+      examTests: sortExamsByDate(filteredExams.filter(e => e.examType === 'EXAM' || e.examType === 'PLACEMENT')),
+    };
+  }, [allExams, examClassFilter, examSearchLower, examSortOrder]);
   const LIST_PAGE_SIZE = 12;
   const examAssignmentsPagination = usePagination(examAssignments, LIST_PAGE_SIZE, `${examSearchQuery}|${examClassFilter}|${examSortOrder}`);
   const examTestsPagination = usePagination(examTests, LIST_PAGE_SIZE, `${examSearchQuery}|${examClassFilter}|${examSortOrder}`);
 
   // ── LESSONS tab: same filter-then-paginate pattern ──
   const lessonSearchLower = lessonSearchQuery.trim().toLowerCase();
-  const filteredLessons = localLessons
+  const filteredLessons = useMemo(() => localLessons
     .filter((l: any) => !lessonClassFilter || l.classroomId === lessonClassFilter)
     .filter((l: any) => !lessonSearchLower || (l.title || '').toLowerCase().includes(lessonSearchLower))
     .sort((a: any, b: any) => {
       const diff = new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
       return lessonSortOrder === 'NEWEST' ? diff : -diff;
-    });
+    }), [localLessons, lessonClassFilter, lessonSearchLower, lessonSortOrder]);
   const lessonsPagination = usePagination(filteredLessons, LIST_PAGE_SIZE, `${lessonSearchQuery}|${lessonClassFilter}|${lessonSortOrder}`);
 
   // ── STUDENTS tab: filter over the full roster, sort, then paginate ──
-  const filteredStudents = allStudents.filter((s: any) =>
-    s.name.toLowerCase().includes(searchStudentQuery.toLowerCase()) ||
-    s.email.toLowerCase().includes(searchStudentQuery.toLowerCase())
-  );
   const studentProgress = (s: any) => {
     const avg = studentAvgScore(s) || 0;
     return s.targetScore > 0 ? Math.min(100, (avg / s.targetScore) * 100) : 0;
   };
-  const sortedStudents = [...filteredStudents].sort((a: any, b: any) => {
+  const sortedStudents = useMemo(() => allStudents.filter((s: any) =>
+    s.name.toLowerCase().includes(searchStudentQuery.toLowerCase()) ||
+    s.email.toLowerCase().includes(searchStudentQuery.toLowerCase())
+  ).sort((a: any, b: any) => {
     switch (studentSortOption) {
       case "NAME_DESC": return b.name.localeCompare(a.name);
       case "XP_DESC": return (b.totalXP || 0) - (a.totalXP || 0);
@@ -1882,7 +2046,9 @@ export default function TeacherDashboard() {
       case "NAME_ASC":
       default: return a.name.localeCompare(b.name);
     }
-  });
+  }),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [allStudents, studentAvgById, searchStudentQuery, studentSortOption]);
   const TABLE_PAGE_SIZE = 15;
   const studentsPagination = usePagination(sortedStudents, TABLE_PAGE_SIZE, `${searchStudentQuery}|${studentSortOption}`);
 
@@ -1928,10 +2094,13 @@ export default function TeacherDashboard() {
   const [attYear, attMonthNum] = attMonth.split('-').map(Number);
   const attDaysInMonth = attMonth ? new Date(attYear, attMonthNum, 0).getDate() : 30;
   const attWeekdayLabel: Record<number, string> = { 0: 'CN', 1: 'T2', 2: 'T3', 3: 'T4', 4: 'T5', 5: 'T6', 6: 'T7' };
-  const attStatusMap = new Map<string, string>();
-  attMonthRecords.forEach((r) => {
-    attStatusMap.set(`${r.classroomId}|${r.userId}|${new Date(r.date).getDate()}`, r.status);
-  });
+  const attStatusMap = useMemo(() => {
+    const m = new Map<string, string>();
+    attMonthRecords.forEach((r) => {
+      m.set(`${r.classroomId}|${r.userId}|${new Date(r.date).getDate()}`, r.status);
+    });
+    return m;
+  }, [attMonthRecords]);
   const attTodayNow = new Date();
   const attTodayDay = (attTodayNow.getFullYear() === attYear && attTodayNow.getMonth() + 1 === attMonthNum) ? attTodayNow.getDate() : null;
 
@@ -1957,7 +2126,9 @@ export default function TeacherDashboard() {
     : null;
 
   // ── Auto-generated business insights (rule-based, computed from live dashboard data) ──
-  const businessInsights: BusinessInsight[] = (() => {
+  // Only the OVERVIEW tab renders these, so skip the work entirely on other tabs.
+  const businessInsights: BusinessInsight[] = useMemo(() => {
+    if (activeTab !== "OVERVIEW") return [];
     const items: BusinessInsight[] = [];
 
     if (revenueMoMPct !== null) {
@@ -2043,7 +2214,9 @@ export default function TeacherDashboard() {
 
     const severityOrder: Record<BusinessInsight['level'], number> = { critical: 0, warning: 1, success: 2, info: 3 };
     return items.sort((a, b) => severityOrder[a.level] - severityOrder[b.level]).slice(0, 6);
-  })();
+  },
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [activeTab, revenueMoMPct, freeStudents, tuitionCollectionRate, overviewTuitionData, overviewTuitionMonth, completionRate, classroomScoreStats, classrooms, allStudents, studentAvgById]);
 
   if (loading) return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden w-full">
@@ -2140,7 +2313,7 @@ export default function TeacherDashboard() {
         </div>
         <div className="mt-auto border-t border-line px-3 py-3">
           <button
-            onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); window.location.href = '/'; }}
+            onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); router.push('/'); }}
             className="flex items-center justify-center gap-2 px-3 py-2.5 font-semibold text-muted border border-line-strong hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors w-full cursor-pointer text-sm rounded-full"
           >
             Đăng xuất
@@ -2209,20 +2382,7 @@ export default function TeacherDashboard() {
               </div>
               {revenueTrend ? (
                 <div className="h-[260px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={revenueTrend} margin={{ top: 10, right: 20, left: 0, bottom: 0 }} barGap={4}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eaecef" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#5b6b82' }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#5b6b82' }} width={56}
-                        tickFormatter={(v) => v >= 1000000 ? `${(v / 1000000).toFixed(0)}tr` : String(v)} />
-                      <Tooltip cursor={{ fill: '#eef2fb' }} formatter={(v: any) => `${Number(v).toLocaleString()} đ`}
-                        contentStyle={{ borderRadius: '12px', border: '1px solid #eaecef', boxShadow: '0 8px 20px rgba(30,58,138,0.08)', fontSize: '13px' }} />
-                      <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px', fontSize: '13px' }} />
-                      <Bar dataKey="CanThu" name="Cần Thu (Lớp)" fill="#d4dae0" radius={[4, 4, 0, 0]} barSize={18} />
-                      <Bar dataKey="DaThu" name="Đã Thu (Lớp)" fill="#1E3A8A" radius={[4, 4, 0, 0]} barSize={18} />
-                      <Bar dataKey="HocVienTuDo" name="Học Viên Tự Do" fill="#f9a95a" radius={[4, 4, 0, 0]} barSize={18} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <RevenueTrendChart data={revenueTrend} />
                 </div>
               ) : (
                 <div className="h-[260px] flex items-center justify-center text-muted text-sm italic">Đang tải dữ liệu doanh thu...</div>
@@ -2239,17 +2399,7 @@ export default function TeacherDashboard() {
                   </div>
                 </div>
                 <div className="h-[280px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={classrooms.map(c => ({ name: c.name, HọcSinh: c.students?.length || 0, BàiTập: c.exams?.length || 0 }))} margin={{ top: 10, right: 20, left: 0, bottom: 0 }} barGap={4}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eaecef" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#5b6b82' }} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#5b6b82' }} allowDecimals={false} width={28} />
-                      <Tooltip cursor={{ fill: '#eef2fb' }} contentStyle={{ borderRadius: '12px', border: '1px solid #eaecef', boxShadow: '0 8px 20px rgba(30,58,138,0.08)', fontSize: '13px' }} />
-                      <Legend iconType="circle" wrapperStyle={{ paddingTop: '16px', fontSize: '13px' }} />
-                      <Bar dataKey="HọcSinh" name="Số Học Viên" fill="#1E3A8A" radius={[4, 4, 0, 0]} barSize={28} />
-                      <Bar dataKey="BàiTập" name="Số Bài Tập" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={28} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <ClassSizeChart data={classSizeChartData} />
                 </div>
               </div>
 
@@ -2261,22 +2411,7 @@ export default function TeacherDashboard() {
                 {overviewTuitionData ? (
                   <>
                     <div className="relative h-[190px] w-full shrink-0">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={[
-                              { name: 'Đã thu', value: overviewTuitionData.totalCollected },
-                              { name: 'Còn thiếu', value: Math.max(overviewTuitionData.totalExpected - overviewTuitionData.totalCollected, 0) },
-                            ]}
-                            dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={78}
-                            paddingAngle={3} stroke="#fff" strokeWidth={2}
-                          >
-                            <Cell fill="#10b981" />
-                            <Cell fill="#ef4444" />
-                          </Pie>
-                          <Tooltip formatter={(v: any) => `${Number(v).toLocaleString()} đ`} contentStyle={{ borderRadius: '12px', border: '1px solid #eaecef', boxShadow: '0 8px 20px rgba(30,58,138,0.08)', fontSize: '13px' }} />
-                        </PieChart>
-                      </ResponsiveContainer>
+                      <TuitionDonutChart collected={overviewTuitionData.totalCollected} expected={overviewTuitionData.totalExpected} />
                       <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                         <span className="text-2xl font-extrabold text-foreground tabular-nums">
                           {overviewTuitionData.totalExpected > 0 ? Math.round((overviewTuitionData.totalCollected / overviewTuitionData.totalExpected) * 100) : 0}%
@@ -2302,17 +2437,7 @@ export default function TeacherDashboard() {
                   <p className="text-xs text-muted mt-0.5">Dựa trên điểm cao nhất mỗi đề của học viên trong lớp</p>
                 </div>
                 <div className="h-[240px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={classroomScoreStats} layout="vertical" margin={{ top: 0, right: 30, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eaecef" />
-                      <XAxis type="number" domain={[0, 10]} axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#5b6b82' }} />
-                      <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} width={160} tick={{ fontSize: 12, fill: '#1f2d3d' }} />
-                      <Tooltip cursor={{ fill: '#eef2fb' }} contentStyle={{ borderRadius: '12px', border: '1px solid #eaecef', boxShadow: '0 8px 20px rgba(30,58,138,0.08)', fontSize: '13px' }} />
-                      <Bar dataKey="DiemTB" name="Điểm trung bình" fill="#1E3A8A" radius={[0, 4, 4, 0]} barSize={22}>
-                        <LabelList dataKey="DiemTB" position="right" style={{ fontSize: 12, fontWeight: 700, fill: '#1f2d3d' }} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <ClassScoreChart data={classroomScoreStats} />
                 </div>
               </div>
             )}
@@ -2437,7 +2562,7 @@ export default function TeacherDashboard() {
             </div>
             {(() => {
               if (allStudents.length === 0) return <div className="ui-card"><EmptyState message="Chưa có học viên nào tham gia lớp." /></div>;
-              if (filteredStudents.length === 0) return <div className="ui-card"><EmptyState message="Không tìm thấy học viên phù hợp." /></div>;
+              if (sortedStudents.length === 0) return <div className="ui-card"><EmptyState message="Không tìm thấy học viên phù hợp." /></div>;
 
               const getTier = (xp: number) => {
                 const level = Math.floor((1 + Math.sqrt(1 + 4 * xp / 50)) / 2);

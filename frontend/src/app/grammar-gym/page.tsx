@@ -1,8 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Swal from 'sweetalert2';
-import confetti from "canvas-confetti";
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 import { cleanString } from '@/lib/textGrading';
 
@@ -129,7 +129,7 @@ export default function GrammarGymPage() {
       setCurrentQIndex(currentQIndex + 1);
       setupQuestion(questions[currentQIndex + 1]);
     } else {
-      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      import("canvas-confetti").then(m => m.default({ particleCount: 150, spread: 80, origin: { y: 0.6 } })).catch(() => {});
       Swal.fire('Tuyệt vời!', 'Bạn đã hoàn thành phiên tập luyện!', 'success').then(() => {
         setActiveTab('STATS');
         fetchNotebooks(userId!);
@@ -170,11 +170,11 @@ export default function GrammarGymPage() {
         <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 flex items-center gap-6">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 text-sm text-muted">
-              <button onClick={() => router.push('/dashboard')} className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full border border-line-strong text-muted hover:border-primary hover:text-primary hover:bg-primary-soft transition-colors" aria-label="Quay lại">
+              <Link href="/dashboard" className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full border border-line-strong text-muted hover:border-primary hover:text-primary hover:bg-primary-soft transition-colors" aria-label="Quay lại">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
-              </button>
+              </Link>
               <span>Trang chủ / Grammar Gym</span>
             </div>
             <h1 className="ui-page-title mt-3 text-2xl sm:text-3xl">
