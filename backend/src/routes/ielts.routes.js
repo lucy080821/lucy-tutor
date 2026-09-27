@@ -5,10 +5,9 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const { PrismaClient } = require('@prisma/client');
 const { createClient } = require('@supabase/supabase-js');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 const { extractTextWithPages } = require('../utils/documentParser');
 const { runBoundaryExtraction, runFullTestExtraction, runSingleSkillExtraction } = require('../utils/ieltsExtraction');
@@ -73,14 +72,17 @@ router.post('/books', upload.single('pdf'), async (req, res) => {
     const sanitizedName = removeVietnameseAccents(file.originalname).replace(/[^a-zA-Z0-9.-]/g, '_');
     const fileName = `ielts-books/${Date.now()}-${sanitizedName}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('documents')
-      .upload(fileName, file.buffer, { contentType: 'application/pdf', upsert: false });
+    // Storage upload (network) and PDF text extraction (local CPU) are independent — overlap them
+    const [{ error: uploadError }, { text: rawText, pages }] = await Promise.all([
+      supabase.storage
+        .from('documents')
+        .upload(fileName, file.buffer, { contentType: 'application/pdf', upsert: false }),
+      extractTextWithPages(file.buffer)
+    ]);
     if (uploadError) throw uploadError;
 
     const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(fileName);
 
-    const { text: rawText, pages } = await extractTextWithPages(file.buffer);
     if (!rawText.trim()) return res.status(400).json({ error: 'Không đọc được nội dung chữ từ file PDF này (có thể là bản scan ảnh)' });
 
     const book = await prisma.ieltsBook.create({
@@ -91,7 +93,9 @@ router.post('/books', upload.single('pdf'), async (req, res) => {
         rawText,
         pagesJson: JSON.stringify(pages),
         extractionStatus: 'PENDING'
-      }
+      },
+      // Don't echo the whole book's rawText/pagesJson (MBs) back over the wire
+      select: { id: true, title: true, extractionStatus: true }
     });
 
     res.json({ message: 'Upload thành công, đang phân tích cấu trúc sách', book: { id: book.id, title: book.title, extractionStatus: book.extractionStatus } });
@@ -140,7 +144,11 @@ router.get('/books/:id', async (req, res) => {
 // 4. Trigger Pass 2+3 (all 4 skills) for a book's tests that still need extracting.
 router.post('/books/:id/extract-tests', async (req, res) => {
   try {
-    const book = await prisma.ieltsBook.findUnique({ where: { id: req.params.id }, include: { tests: true } });
+    // Only the status + test ids/statuses are needed — skip the book's multi-MB rawText/pagesJson
+    const book = await prisma.ieltsBook.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, extractionStatus: true, tests: { select: { id: true, status: true } } }
+    });
     if (!book) return res.status(404).json({ error: 'Không tìm thấy sách' });
     if (book.extractionStatus !== 'BOUNDARIES_EXTRACTED' && book.extractionStatus !== 'EXTRACTED') {
       return res.status(400).json({ error: 'Sách chưa xác định xong cấu trúc (Pass 1) — vui lòng chờ hoặc thử lại upload' });
@@ -417,7 +425,11 @@ router.post('/tests/:id/publish', async (req, res) => {
   try {
     const test = await prisma.ieltsTest.findUnique({
       where: { id: req.params.id },
-      include: { questions: true, listeningSections: true, writingTasks: true, speakingParts: true }
+      // Only the fields the publish gate checks (was: full rows incl. transcripts/prompt text)
+      include: {
+        questions: { select: { skill: true, questionNumber: true, correctIndex: true, correctAnswer: true } },
+        listeningSections: { select: { audioUrl: true } }
+      }
     });
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề' });
     if (!test.testType) return res.status(400).json({ error: 'Vui lòng xác nhận dạng đề (Academic/General Training) trước khi publish' });

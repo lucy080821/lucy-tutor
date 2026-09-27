@@ -1,6 +1,5 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 const { addOneMonth, computeAccessStatus } = require('../utils/freeTrial');
 
@@ -39,7 +38,7 @@ router.post('/confirm-payment', async (req, res) => {
       return res.status(400).json({ error: 'Thiếu thông tin xác nhận thanh toán.' });
     }
 
-    const student = await prisma.user.findUnique({ where: { id: studentId } });
+    const student = await prisma.user.findUnique({ where: { id: studentId }, select: { role: true, managerTeacherId: true } });
     if (!student || student.role !== 'STUDENT') {
       return res.status(404).json({ error: 'Không tìm thấy học viên.' });
     }
@@ -54,7 +53,7 @@ router.post('/confirm-payment', async (req, res) => {
       prisma.freeStudentPayment.create({
         data: { userId: studentId, teacherId, amount: parseInt(amount), paidAt, periodEnd }
       }),
-      prisma.user.update({ where: { id: studentId }, data: { accessExpiresAt: periodEnd } })
+      prisma.user.update({ where: { id: studentId }, data: { accessExpiresAt: periodEnd }, select: { id: true } })
     ]);
 
     res.json({ payment, accessExpiresAt: periodEnd });

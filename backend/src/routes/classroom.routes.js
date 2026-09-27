@@ -1,7 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 const crypto = require('crypto');
 
@@ -43,9 +42,10 @@ router.post('/join', async (req, res) => {
     
     // Joining a classroom hands tuition tracking over to that classroom's own attendance-based
     // billing — a free-standing student's trial/monthly lock (if any) no longer applies.
-    const user = await prisma.user.update({
+    await prisma.user.update({
       where: { id: userId },
-      data: { classroomsJoined: { connect: { id: classroom.id } }, accessExpiresAt: null }
+      data: { classroomsJoined: { connect: { id: classroom.id } }, accessExpiresAt: null },
+      select: { id: true } // result unused — don't pull the user's base64 avatar back
     });
     
     res.json({ message: 'Joined classroom successfully', classroom });
@@ -68,19 +68,20 @@ router.post('/add-student', async (req, res) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const existing = await prisma.user.findFirst({ where: { email: { equals: normalizedEmail, mode: 'insensitive' } } });
-    if (existing) {
-      return res.status(400).json({ error: 'Email đã được sử dụng. Vui lòng chọn email khác.' });
-    }
-
     // Only enroll into classrooms this teacher actually owns — prevents a crafted request
     // from enrolling a manually-added student into another teacher's class.
     const uniqueClassroomIds = [...new Set(classroomIds)];
-    const ownedClassrooms = await prisma.classroom.findMany({
-      where: { id: { in: uniqueClassroomIds }, teacherId },
-      select: { id: true }
-    });
-    if (ownedClassrooms.length !== uniqueClassroomIds.length) {
+
+    // Email check, ownership check and password hashing are independent — run in parallel.
+    const [existing, ownedCount, hashedPassword] = await Promise.all([
+      prisma.user.findFirst({ where: { email: { equals: normalizedEmail, mode: 'insensitive' } }, select: { id: true } }),
+      prisma.classroom.count({ where: { id: { in: uniqueClassroomIds }, teacherId } }),
+      bcrypt.hash(DEFAULT_STUDENT_PASSWORD, BCRYPT_ROUNDS)
+    ]);
+    if (existing) {
+      return res.status(400).json({ error: 'Email đã được sử dụng. Vui lòng chọn email khác.' });
+    }
+    if (ownedCount !== uniqueClassroomIds.length) {
       return res.status(400).json({ error: 'Một hoặc nhiều lớp học không hợp lệ' });
     }
 
@@ -89,7 +90,7 @@ router.post('/add-student', async (req, res) => {
         name,
         email: normalizedEmail,
         phone: phone || null,
-        password: await bcrypt.hash(DEFAULT_STUDENT_PASSWORD, BCRYPT_ROUNDS),
+        password: hashedPassword,
         role: 'STUDENT',
         classroomsJoined: { connect: uniqueClassroomIds.map((id) => ({ id })) }
       }
@@ -146,7 +147,9 @@ router.put('/edit/:id', async (req, res) => {
     const { name, scheduleDays, startTime, endTime, feeType, feePerLesson, feePerMonth, teacherId } = req.body;
     if (!teacherId) return res.status(400).json({ error: 'Thiếu teacherId' });
 
-    const { count } = await prisma.classroom.updateMany({
+    // Single UPDATE ... RETURNING (ownership enforced in the unique filter) instead of
+    // updateMany + a second findUnique round trip. P2025 = no row matched → 404.
+    const classroom = await prisma.classroom.update({
       where: { id: req.params.id, teacherId },
       data: {
         name,
@@ -158,10 +161,9 @@ router.put('/edit/:id', async (req, res) => {
         ...(feePerMonth !== undefined && { feePerMonth: feePerMonth ? parseInt(feePerMonth) : 0 })
       }
     });
-    if (count === 0) return res.status(404).json({ error: 'Không tìm thấy lớp học hoặc bạn không có quyền sửa' });
-    const classroom = await prisma.classroom.findUnique({ where: { id: req.params.id } });
     res.json(classroom);
   } catch (error) {
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Không tìm thấy lớp học hoặc bạn không có quyền sửa' });
     res.status(400).json({ error: error.message });
   }
 });
@@ -172,14 +174,15 @@ router.patch('/:id/features', async (req, res) => {
     const { enabledFeatures, teacherId } = req.body; // array of feature keys
     if (!teacherId) return res.status(400).json({ error: 'Thiếu teacherId' });
 
-    const { count } = await prisma.classroom.updateMany({
+    // Single UPDATE ... RETURNING (ownership enforced in the unique filter) instead of
+    // updateMany + a second findUnique round trip. P2025 = no row matched → 404.
+    const classroom = await prisma.classroom.update({
       where: { id: req.params.id, teacherId },
       data: { enabledFeatures: JSON.stringify(enabledFeatures || []) }
     });
-    if (count === 0) return res.status(404).json({ error: 'Không tìm thấy lớp học hoặc bạn không có quyền sửa' });
-    const classroom = await prisma.classroom.findUnique({ where: { id: req.params.id } });
     res.json(classroom);
   } catch (error) {
+    if (error.code === 'P2025') return res.status(404).json({ error: 'Không tìm thấy lớp học hoặc bạn không có quyền sửa' });
     res.status(400).json({ error: error.message });
   }
 });

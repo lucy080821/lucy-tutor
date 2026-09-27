@@ -1,8 +1,6 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
-
 const router = express.Router();
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const { parseVNDateTime } = require('../utils/vnTime');
 
 // Create a new lesson
@@ -18,11 +16,12 @@ router.post('/create', async (req, res) => {
         uploadedById: uploadedById || null,
         publishTime: parseVNDateTime(publishTime),
         deadline: parseVNDateTime(deadline),
+        // createMany = one bulk INSERT per relation instead of one INSERT per row
         vocabularies: {
-          create: vocabularies || []
+          createMany: { data: vocabularies || [] }
         },
         grammars: {
-          create: grammars || []
+          createMany: { data: grammars || [] }
         }
       },
       include: {
@@ -44,7 +43,13 @@ router.put('/:id', async (req, res) => {
     const { title, description, classroomId, publishTime, deadline, vocabularies, grammars } = req.body;
 
     // Check if lesson exists
-    const existingLesson = await prisma.lesson.findUnique({ where: { id } });
+    // Also load current vocab/grammar rows so unchanged items can be skipped below — each
+    // nested `update` is its own sequential round trip (~340ms), so re-saving a 30-word lesson
+    // without edits used to cost ~10s.
+    const existingLesson = await prisma.lesson.findUnique({
+      where: { id },
+      include: { vocabularies: true, grammars: true }
+    });
     if (!existingLesson) {
       return res.status(404).json({ error: 'Lesson not found' });
     }
@@ -64,6 +69,15 @@ router.put('/:id', async (req, res) => {
     const existingGrammars = incomingGrammars.filter((g) => g && g.id);
     const newGrammars = incomingGrammars.filter((g) => !g || !g.id).map(({ id: _drop, ...rest }) => rest);
 
+    const norm = (v) => (v === null || v === undefined ? null : typeof v === 'object' ? JSON.stringify(v) : String(v));
+    const isChanged = (rows, { id: rowId, ...data }) => {
+      const current = rows.find((r) => r.id === rowId);
+      if (!current) return true; // unknown id — keep previous behaviour (let Prisma decide)
+      return Object.keys(data).some((k) => data[k] !== undefined && norm(data[k]) !== norm(current[k]));
+    };
+    const changedVocabs = existingVocabs.filter((v) => isChanged(existingLesson.vocabularies, v));
+    const changedGrammars = existingGrammars.filter((g) => isChanged(existingLesson.grammars, g));
+
     const updatedLesson = await prisma.lesson.update({
       where: { id },
       data: {
@@ -74,13 +88,13 @@ router.put('/:id', async (req, res) => {
         deadline: parseVNDateTime(deadline),
         vocabularies: {
           deleteMany: { id: { notIn: existingVocabs.map((v) => v.id) } },
-          update: existingVocabs.map(({ id: vId, ...data }) => ({ where: { id: vId }, data })),
-          create: newVocabs
+          update: changedVocabs.map(({ id: vId, ...data }) => ({ where: { id: vId }, data })),
+          createMany: { data: newVocabs }
         },
         grammars: {
           deleteMany: { id: { notIn: existingGrammars.map((g) => g.id) } },
-          update: existingGrammars.map(({ id: gId, ...data }) => ({ where: { id: gId }, data })),
-          create: newGrammars
+          update: changedGrammars.map(({ id: gId, ...data }) => ({ where: { id: gId }, data })),
+          createMany: { data: newGrammars }
         }
       },
       include: {
@@ -170,6 +184,10 @@ router.post('/:id/progress', async (req, res) => {
       return res.status(400).json({ error: 'Missing userId or status' });
     }
 
+    const existing = await prisma.lessonProgress.findUnique({
+      where: { userId_lessonId: { userId, lessonId: id } },
+      select: { status: true }
+    });
     const progress = await prisma.lessonProgress.upsert({
       where: {
         userId_lessonId: {
@@ -187,8 +205,8 @@ router.post('/:id/progress', async (req, res) => {
       }
     });
     
-    // If completed, add some XP (e.g. 5 XP)
-    if (status === 'COMPLETED') {
+    // Award 5 XP only on the first completion — re-clicking "Hoàn thành" must not farm XP.
+    if (status === 'COMPLETED' && existing?.status !== 'COMPLETED') {
       await prisma.user.update({
         where: { id: userId },
         data: { totalXP: { increment: 5 } }

@@ -1,7 +1,5 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
 const SKILLS = ['READING', 'LISTENING', 'SPEAKING', 'WRITING'];
@@ -36,17 +34,22 @@ router.post('/log', async (req, res) => {
 router.get('/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const out = {};
-    for (const skill of SKILLS) {
-      const recent = await prisma.skillPracticeResult.findMany({
+    // One query per skill, run in parallel (was 4 sequential round trips).
+    const perSkill = await Promise.all(SKILLS.map(skill =>
+      prisma.skillPracticeResult.findMany({
         where: { userId, skill },
         orderBy: { createdAt: 'desc' },
-        take: RECENT_WINDOW
-      });
+        take: RECENT_WINDOW,
+        select: { band: true }
+      })
+    ));
+    const out = {};
+    SKILLS.forEach((skill, i) => {
+      const recent = perSkill[i];
       out[skill] = recent.length > 0
         ? { score: Math.round((recent.reduce((s, r) => s + r.band, 0) / recent.length) * 10) / 10, hasData: true }
         : { score: 0, hasData: false };
-    }
+    });
     res.json(out);
   } catch (err) {
     console.error(err);

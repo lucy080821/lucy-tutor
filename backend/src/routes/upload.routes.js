@@ -1,9 +1,9 @@
 const express = require('express');
+const crypto = require('crypto');
 const multer = require('multer');
-const { PrismaClient } = require('@prisma/client');
 const parser = require('../utils/documentParser');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
 // Configure multer for memory storage (used for exams)
@@ -75,7 +75,7 @@ router.post('/exam', upload.fields([
     } else {
       const classroom = await prisma.classroom.findUnique({
         where: { id: classroomId },
-        include: { students: true }
+        select: { students: { select: { id: true } } }
       });
       if (classroom && classroom.students) {
         targetStudentIds = classroom.students.map(s => ({ id: s.id }));
@@ -101,17 +101,12 @@ router.post('/exam', upload.fields([
       }
     });
 
-    // Create Questions & Connect to Exam
-    for (let i = 0; i < finalQuestions.length; i++) {
-      const qData = finalQuestions[i];
-      const createdQuestion = await prisma.question.create({ data: qData });
-      
-      await prisma.examQuestion.create({
-        data: {
-          examId: exam.id,
-          questionId: createdQuestion.id,
-          order: i + 1
-        }
+    // Create Questions & Connect to Exam — 2 bulk INSERTs instead of 2 per question
+    if (finalQuestions.length) {
+      const questionRows = finalQuestions.map((qData) => ({ ...qData, id: crypto.randomUUID() }));
+      await prisma.question.createMany({ data: questionRows });
+      await prisma.examQuestion.createMany({
+        data: questionRows.map((q, i) => ({ examId: exam.id, questionId: q.id, order: i + 1 }))
       });
     }
 

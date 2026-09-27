@@ -1,7 +1,6 @@
 const express = require('express');
 const { Groq } = require('groq-sdk');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
 const groq = new Groq({
@@ -64,35 +63,23 @@ BẮT BUỘC trả về dữ liệu dưới định dạng JSON nguyên chất (
 
     // Save to Database if userId is provided
     if (userId && aiResponse.topic) {
-      // Check if this topic already exists for this user
-      const existingNotebook = await prisma.mistakeNotebook.findUnique({
+      // Single native upsert (INSERT ... ON CONFLICT) instead of findUnique + update/create
+      await prisma.mistakeNotebook.upsert({
         where: {
           userId_topic: {
             userId: userId,
             topic: aiResponse.topic
           }
+        },
+        update: { mistakeCount: { increment: 1 } },
+        create: {
+          userId: userId,
+          topic: aiResponse.topic,
+          category: aiResponse.category || 'GRAMMAR',
+          theoryContent: aiResponse.theoryContent || 'Đang cập nhật...',
+          mistakeCount: 1
         }
       });
-
-      if (existingNotebook) {
-        await prisma.mistakeNotebook.update({
-          where: { id: existingNotebook.id },
-          data: { 
-            mistakeCount: existingNotebook.mistakeCount + 1,
-            // Optionally update the theory if we want the latest explanation
-          }
-        });
-      } else {
-        await prisma.mistakeNotebook.create({
-          data: {
-            userId: userId,
-            topic: aiResponse.topic,
-            category: aiResponse.category || 'GRAMMAR',
-            theoryContent: aiResponse.theoryContent || 'Đang cập nhật...',
-            mistakeCount: 1
-          }
-        });
-      }
     }
 
     res.json(aiResponse);

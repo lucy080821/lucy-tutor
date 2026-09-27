@@ -5,11 +5,10 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const { PrismaClient } = require('@prisma/client');
 const { createClient } = require('@supabase/supabase-js');
 const { Groq, toFile } = require('groq-sdk');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
 const { isIeltsAnswerCorrect } = require('../utils/ieltsAnswerGrading');
@@ -44,22 +43,28 @@ const uploadAudio = multer({
 // A student can see a PUBLISHED test if: LIBRARY mode scoped to a classroom they've joined or
 // to them specifically, OR ASSIGNED mode where they're in assignedStudents. Mirrors
 // ListeningClip's classroom-or-student library scoping + Exam's assignedStudents scoping.
-async function findAccessibleTest(testId, userId) {
-  const user = await prisma.user.findUnique({ where: { id: userId }, include: { classroomsJoined: { select: { id: true } } } });
-  if (!user) return null;
-  const classroomIds = user.classroomsJoined.map((c) => c.id);
+// Visibility filter shared by findAccessibleTest and /available. Classroom membership is
+// resolved via a relation filter inside the same query (was: a separate user+classrooms
+// lookup first, i.e. extra sequential round trips on every student IELTS request).
+function accessibleTestWhere(userId) {
+  return {
+    status: 'PUBLISHED',
+    OR: [
+      { deliveryMode: 'LIBRARY', libraryClassroom: { students: { some: { id: userId } } } },
+      { deliveryMode: 'LIBRARY', libraryStudentId: userId },
+      { deliveryMode: 'ASSIGNED', assignedStudents: { some: { id: userId } } }
+    ]
+  };
+}
 
-  const test = await prisma.ieltsTest.findFirst({
-    where: {
-      id: testId,
-      status: 'PUBLISHED',
-      OR: [
-        { deliveryMode: 'LIBRARY', libraryClassroomId: { in: classroomIds } },
-        { deliveryMode: 'LIBRARY', libraryStudentId: userId },
-        { deliveryMode: 'ASSIGNED', assignedStudents: { some: { id: userId } } }
-      ]
-    }
-  });
+async function findAccessibleTest(testId, userId) {
+  // Guard: an undefined userId inside a relation filter would mean "no filter" in Prisma.
+  if (!userId || !testId) return null;
+  const [user, test] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { id: true } }),
+    prisma.ieltsTest.findFirst({ where: { id: testId, ...accessibleTestWhere(userId) } })
+  ]);
+  if (!user) return null;
   return test;
 }
 
@@ -79,33 +84,33 @@ router.get('/available/:userId', async (req, res) => {
     const { userId } = req.params;
     const { skill } = req.query;
 
-    const user = await prisma.user.findUnique({ where: { id: userId }, include: { classroomsJoined: { select: { id: true } } } });
+    // One parallel round: user check, visible tests, and per-test attempt counts for all 4
+    // skills via groupBy (was: user -> tests -> 4 counts PER TEST, i.e. 4N extra queries).
+    const countBy = (model, extraWhere = {}) => model.groupBy({ by: ['testId'], where: { userId, ...extraWhere }, _count: { _all: true } });
+    const [user, tests, lCounts, rCounts, wCounts, sCounts] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { id: true } }),
+      prisma.ieltsTest.findMany({
+        where: accessibleTestWhere(userId),
+        include: {
+          book: { select: { title: true } },
+          _count: { select: { readingPassages: true, listeningSections: true, writingTasks: true, speakingParts: true } }
+        },
+        orderBy: { createdAt: 'desc' }
+      }),
+      countBy(prisma.ieltsListeningAttempt),
+      countBy(prisma.ieltsReadingAttempt),
+      countBy(prisma.ieltsWritingAttempt),
+      countBy(prisma.ieltsSpeakingAttempt, { overallBand: { not: null } })
+    ]);
     if (!user) return res.status(404).json({ error: 'Không tìm thấy học viên' });
-    const classroomIds = user.classroomsJoined.map((c) => c.id);
+    const toMap = (rows) => new Map(rows.map((r) => [r.testId, r._count._all]));
+    const lMap = toMap(lCounts), rMap = toMap(rCounts), wMap = toMap(wCounts), sMap = toMap(sCounts);
 
-    const tests = await prisma.ieltsTest.findMany({
-      where: {
-        status: 'PUBLISHED',
-        OR: [
-          { deliveryMode: 'LIBRARY', libraryClassroomId: { in: classroomIds } },
-          { deliveryMode: 'LIBRARY', libraryStudentId: userId },
-          { deliveryMode: 'ASSIGNED', assignedStudents: { some: { id: userId } } }
-        ]
-      },
-      include: {
-        book: { select: { title: true } },
-        _count: { select: { readingPassages: true, listeningSections: true, writingTasks: true, speakingParts: true } }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-
-    const out = await Promise.all(tests.map(async (test) => {
-      const [listeningCount, readingCount, writingCount, speakingCount] = await Promise.all([
-        prisma.ieltsListeningAttempt.count({ where: { userId, testId: test.id } }),
-        prisma.ieltsReadingAttempt.count({ where: { userId, testId: test.id } }),
-        prisma.ieltsWritingAttempt.count({ where: { userId, testId: test.id } }),
-        prisma.ieltsSpeakingAttempt.count({ where: { userId, testId: test.id, overallBand: { not: null } } })
-      ]);
+    const out = tests.map((test) => {
+      const listeningCount = lMap.get(test.id) || 0;
+      const readingCount = rMap.get(test.id) || 0;
+      const writingCount = wMap.get(test.id) || 0;
+      const speakingCount = sMap.get(test.id) || 0;
       return {
         id: test.id, title: test.title, testType: test.testType, deliveryMode: test.deliveryMode, deadline: test.deadline, maxAttempts: test.maxAttempts,
         bookTitle: test.book.title,
@@ -116,7 +121,7 @@ router.get('/available/:userId', async (req, res) => {
           SPEAKING: test._count.speakingParts > 0 ? computeCanAttempt(test, speakingCount) : null
         }
       };
-    }));
+    });
 
     res.json(skill ? out.filter((t) => t.skills[skill]) : out);
   } catch (err) {
@@ -131,14 +136,16 @@ router.get('/available/:userId', async (req, res) => {
 router.get('/tests/:id/listening', async (req, res) => {
   try {
     const { userId } = req.query;
-    const test = await findAccessibleTest(req.params.id, userId);
+    // Access check + content fetch concurrently; content is discarded if access is denied.
+    const [test, sections] = await Promise.all([
+      findAccessibleTest(req.params.id, userId),
+      prisma.ieltsListeningSection.findMany({
+        where: { testId: req.params.id },
+        orderBy: { sectionNumber: 'asc' },
+        include: { questions: { orderBy: { questionNumber: 'asc' } } }
+      })
+    ]);
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề hoặc bạn không có quyền truy cập' });
-
-    const sections = await prisma.ieltsListeningSection.findMany({
-      where: { testId: test.id },
-      orderBy: { sectionNumber: 'asc' },
-      include: { questions: { orderBy: { questionNumber: 'asc' } } }
-    });
     const safe = sections.map((s) => ({
       ...s,
       questions: s.questions.map((q) => ({
@@ -156,14 +163,15 @@ router.get('/tests/:id/listening', async (req, res) => {
 router.get('/tests/:id/reading', async (req, res) => {
   try {
     const { userId } = req.query;
-    const test = await findAccessibleTest(req.params.id, userId);
+    const [test, passages] = await Promise.all([
+      findAccessibleTest(req.params.id, userId),
+      prisma.ieltsReadingPassage.findMany({
+        where: { testId: req.params.id },
+        orderBy: [{ sectionNumber: 'asc' }, { passageIndex: 'asc' }],
+        include: { questions: { orderBy: { questionNumber: 'asc' } } }
+      })
+    ]);
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề hoặc bạn không có quyền truy cập' });
-
-    const passages = await prisma.ieltsReadingPassage.findMany({
-      where: { testId: test.id },
-      orderBy: [{ sectionNumber: 'asc' }, { passageIndex: 'asc' }],
-      include: { questions: { orderBy: { questionNumber: 'asc' } } }
-    });
     const safe = passages.map((p) => ({
       id: p.id, sectionNumber: p.sectionNumber, passageIndex: p.passageIndex, title: p.title, bodyText: p.bodyText, imageUrl: p.imageUrl,
       questions: p.questions.map((q) => ({
@@ -181,9 +189,11 @@ router.get('/tests/:id/reading', async (req, res) => {
 router.get('/tests/:id/writing', async (req, res) => {
   try {
     const { userId } = req.query;
-    const test = await findAccessibleTest(req.params.id, userId);
+    const [test, tasks] = await Promise.all([
+      findAccessibleTest(req.params.id, userId),
+      prisma.ieltsWritingTask.findMany({ where: { testId: req.params.id }, orderBy: { taskNumber: 'asc' } })
+    ]);
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề hoặc bạn không có quyền truy cập' });
-    const tasks = await prisma.ieltsWritingTask.findMany({ where: { testId: test.id }, orderBy: { taskNumber: 'asc' } });
     res.json({ testId: test.id, testType: test.testType, tasks });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -194,9 +204,11 @@ router.get('/tests/:id/writing', async (req, res) => {
 router.get('/tests/:id/speaking', async (req, res) => {
   try {
     const { userId } = req.query;
-    const test = await findAccessibleTest(req.params.id, userId);
+    const [test, parts] = await Promise.all([
+      findAccessibleTest(req.params.id, userId),
+      prisma.ieltsSpeakingPart.findMany({ where: { testId: req.params.id }, orderBy: { partNumber: 'asc' } })
+    ]);
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề hoặc bạn không có quyền truy cập' });
-    const parts = await prisma.ieltsSpeakingPart.findMany({ where: { testId: test.id }, orderBy: { partNumber: 'asc' } });
     res.json({ testId: test.id, testType: test.testType, parts: parts.map((p) => ({ ...p, questions: JSON.parse(p.questions || '[]') })) });
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -225,9 +237,11 @@ router.post('/tests/:id/listening/submit', async (req, res) => {
     const test = await findAccessibleTest(req.params.id, userId);
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề hoặc bạn không có quyền truy cập' });
 
-    const attemptsCount = await assertCanAttempt(test, prisma.ieltsListeningAttempt, userId);
-
-    const questions = await prisma.ieltsQuestion.findMany({ where: { testId: test.id, skill: 'LISTENING' }, orderBy: { questionNumber: 'asc' } });
+    // Attempt-limit check + answer key fetch concurrently
+    const [attemptsCount, questions] = await Promise.all([
+      assertCanAttempt(test, prisma.ieltsListeningAttempt, userId),
+      prisma.ieltsQuestion.findMany({ where: { testId: test.id, skill: 'LISTENING' }, orderBy: { questionNumber: 'asc' } })
+    ]);
     const review = questions.map((q) => ({
       questionNumber: q.questionNumber,
       userAnswer: answers?.[q.questionNumber] ?? null,
@@ -237,10 +251,13 @@ router.post('/tests/:id/listening/submit', async (req, res) => {
     const rawScore = review.filter((r) => r.correct).length;
     const band = rawScoreToBand(rawScore, LISTENING_BAND_TABLE);
 
-    const attempt = await prisma.ieltsListeningAttempt.create({
-      data: { userId, testId: test.id, answers: JSON.stringify(answers || {}), rawScore, band, timeSpentSec: timeSpentSec || null, attemptNumber: attemptsCount + 1 }
-    });
-    await logSkillProgress(userId, 'LISTENING', (band / 9) * 10, 'IELTS_LISTENING');
+    // Attempt insert + skill-progress log are independent (logSkillProgress never throws)
+    const [attempt] = await Promise.all([
+      prisma.ieltsListeningAttempt.create({
+        data: { userId, testId: test.id, answers: JSON.stringify(answers || {}), rawScore, band, timeSpentSec: timeSpentSec || null, attemptNumber: attemptsCount + 1 }
+      }),
+      logSkillProgress(userId, 'LISTENING', (band / 9) * 10, 'IELTS_LISTENING')
+    ]);
     res.json({ ...attempt, review });
   } catch (err) {
     res.status(err.status || 400).json({ error: err.message });
@@ -255,9 +272,11 @@ router.post('/tests/:id/reading/submit', async (req, res) => {
     const test = await findAccessibleTest(req.params.id, userId);
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề hoặc bạn không có quyền truy cập' });
 
-    const attemptsCount = await assertCanAttempt(test, prisma.ieltsReadingAttempt, userId);
-
-    const questions = await prisma.ieltsQuestion.findMany({ where: { testId: test.id, skill: 'READING' }, orderBy: { questionNumber: 'asc' } });
+    // Attempt-limit check + answer key fetch concurrently
+    const [attemptsCount, questions] = await Promise.all([
+      assertCanAttempt(test, prisma.ieltsReadingAttempt, userId),
+      prisma.ieltsQuestion.findMany({ where: { testId: test.id, skill: 'READING' }, orderBy: { questionNumber: 'asc' } })
+    ]);
     const review = questions.map((q) => ({
       questionNumber: q.questionNumber,
       userAnswer: answers?.[q.questionNumber] ?? null,
@@ -268,10 +287,13 @@ router.post('/tests/:id/reading/submit', async (req, res) => {
     const table = test.testType === 'GENERAL_TRAINING' ? READING_BAND_TABLE_GT : READING_BAND_TABLE_ACADEMIC;
     const band = rawScoreToBand(rawScore, table);
 
-    const attempt = await prisma.ieltsReadingAttempt.create({
-      data: { userId, testId: test.id, answers: JSON.stringify(answers || {}), rawScore, band, timeSpentSec: timeSpentSec || null, attemptNumber: attemptsCount + 1 }
-    });
-    await logSkillProgress(userId, 'READING', (band / 9) * 10, 'IELTS_READING');
+    // Attempt insert + skill-progress log are independent (logSkillProgress never throws)
+    const [attempt] = await Promise.all([
+      prisma.ieltsReadingAttempt.create({
+        data: { userId, testId: test.id, answers: JSON.stringify(answers || {}), rawScore, band, timeSpentSec: timeSpentSec || null, attemptNumber: attemptsCount + 1 }
+      }),
+      logSkillProgress(userId, 'READING', (band / 9) * 10, 'IELTS_READING')
+    ]);
     res.json({ ...attempt, review });
   } catch (err) {
     res.status(err.status || 400).json({ error: err.message });
@@ -344,9 +366,10 @@ router.post('/tests/:id/writing/submit', async (req, res) => {
     const test = await findAccessibleTest(req.params.id, userId);
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề hoặc bạn không có quyền truy cập' });
 
-    const attemptsCount = await assertCanAttempt(test, prisma.ieltsWritingAttempt, userId);
-
-    const tasks = await prisma.ieltsWritingTask.findMany({ where: { testId: test.id }, orderBy: { taskNumber: 'asc' } });
+    const [attemptsCount, tasks] = await Promise.all([
+      assertCanAttempt(test, prisma.ieltsWritingAttempt, userId),
+      prisma.ieltsWritingTask.findMany({ where: { testId: test.id }, orderBy: { taskNumber: 'asc' } })
+    ]);
     const task1 = tasks.find((t) => t.taskNumber === 1);
     const task2 = tasks.find((t) => t.taskNumber === 2);
     if (!task1 || !task2) return res.status(400).json({ error: 'Đề này chưa có đủ Task 1 và Task 2' });
@@ -357,15 +380,17 @@ router.post('/tests/:id/writing/submit', async (req, res) => {
     ]);
     const overallBand = combineWritingBand(feedback1.taskBand, feedback2.taskBand);
 
-    const attempt = await prisma.ieltsWritingAttempt.create({
-      data: {
-        userId, testId: test.id,
-        task1Text, task1Feedback: JSON.stringify(feedback1),
-        task2Text, task2Feedback: JSON.stringify(feedback2),
-        overallBand, attemptNumber: attemptsCount + 1
-      }
-    });
-    await logSkillProgress(userId, 'WRITING', (overallBand / 9) * 10, 'IELTS_WRITING');
+    const [attempt] = await Promise.all([
+      prisma.ieltsWritingAttempt.create({
+        data: {
+          userId, testId: test.id,
+          task1Text, task1Feedback: JSON.stringify(feedback1),
+          task2Text, task2Feedback: JSON.stringify(feedback2),
+          overallBand, attemptNumber: attemptsCount + 1
+        }
+      }),
+      logSkillProgress(userId, 'WRITING', (overallBand / 9) * 10, 'IELTS_WRITING')
+    ]);
     res.json(attempt);
   } catch (err) {
     console.error(err);
@@ -445,31 +470,36 @@ router.post('/tests/:id/speaking/submit-part', uploadAudio.single('audio'), asyn
     const test = await findAccessibleTest(req.params.id, userId);
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề hoặc bạn không có quyền truy cập' });
 
-    const part = await prisma.ieltsSpeakingPart.findFirst({ where: { testId: test.id, partNumber: partNum } });
+    // Part lookup + in-progress attempt lookup are independent
+    let [part, attempt] = await Promise.all([
+      prisma.ieltsSpeakingPart.findFirst({ where: { testId: test.id, partNumber: partNum } }),
+      prisma.ieltsSpeakingAttempt.findFirst({
+        where: { userId, testId: test.id, overallBand: null },
+        orderBy: { createdAt: 'desc' }
+      })
+    ]);
     if (!part) return res.status(400).json({ error: `Đề này chưa có Speaking Part ${partNum}` });
-
-    let attempt = await prisma.ieltsSpeakingAttempt.findFirst({
-      where: { userId, testId: test.id, overallBand: null },
-      orderBy: { createdAt: 'desc' }
-    });
     if (!attempt) {
       // Starting mid-way (part 2/3 with no in-progress attempt) still works — creates a fresh
       // attempt missing the earlier part(s), which stays incomplete (no overallBand) until the
       // student submits those too. Not blocked, just won't complete without all 3.
-      const priorCount = await prisma.ieltsSpeakingAttempt.count({ where: { userId, testId: test.id, overallBand: { not: null } } });
-      await assertCanAttempt(test, prisma.ieltsSpeakingAttempt, userId);
+      // assertCanAttempt runs the exact same count (completed attempts) — reuse its result
+      const priorCount = await assertCanAttempt(test, prisma.ieltsSpeakingAttempt, userId);
       attempt = await prisma.ieltsSpeakingAttempt.create({ data: { userId, testId: test.id, attemptNumber: priorCount + 1 } });
     }
 
     const sanitizedName = removeVietnameseAccents(req.file.originalname || `part${partNum}.webm`).replace(/[^a-zA-Z0-9.-]/g, '_');
     const fileName = `ielts-speaking/${Date.now()}-${sanitizedName}`;
-    const { error: uploadError } = await supabase.storage.from('documents').upload(fileName, req.file.buffer, { contentType: req.file.mimetype || 'audio/webm', upsert: false });
+    // Storage upload and Whisper transcription both only need the in-memory buffer — run them
+    // concurrently instead of upload-then-transcribe.
+    const [{ error: uploadError }, transcription] = await Promise.all([
+      supabase.storage.from('documents').upload(fileName, req.file.buffer, { contentType: req.file.mimetype || 'audio/webm', upsert: false }),
+      toFile(req.file.buffer, sanitizedName, { type: req.file.mimetype || 'audio/webm' })
+        .then((whisperFile) => groq.audio.transcriptions.create({ file: whisperFile, model: 'whisper-large-v3', response_format: 'json' }))
+    ]);
     if (uploadError) throw uploadError;
     const { data: publicUrlData } = supabase.storage.from('documents').getPublicUrl(fileName);
     const audioUrl = publicUrlData.publicUrl;
-
-    const whisperFile = await toFile(req.file.buffer, sanitizedName, { type: req.file.mimetype || 'audio/webm' });
-    const transcription = await groq.audio.transcriptions.create({ file: whisperFile, model: 'whisper-large-v3', response_format: 'json' });
     const transcript = transcription.text || '';
 
     const questions = JSON.parse(part.questions || '[]');

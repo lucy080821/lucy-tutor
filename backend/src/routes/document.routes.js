@@ -1,10 +1,9 @@
 const express = require('express');
 const multer = require('multer');
-const { PrismaClient } = require('@prisma/client');
 const { createClient } = require('@supabase/supabase-js');
 const path = require('path');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
 const storage = multer.memoryStorage();
@@ -113,14 +112,12 @@ router.delete('/:id', async (req, res) => {
     const doc = await prisma.document.findUnique({ where: { id } });
     if (!doc) return res.status(404).json({ error: 'Not found' });
     
-    if (supabase) {
-       const fileName = doc.fileUrl.split('/').pop();
-       if (fileName) {
-          await supabase.storage.from('documents').remove([fileName]);
-       }
-    }
-    
-    await prisma.document.delete({ where: { id } });
+    // Storage removal and DB delete are independent — run concurrently
+    const fileName = doc.fileUrl.split('/').pop();
+    await Promise.all([
+      supabase && fileName ? supabase.storage.from('documents').remove([fileName]) : null,
+      prisma.document.delete({ where: { id } })
+    ]);
     res.json({ message: 'Xóa thành công' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -131,9 +128,7 @@ router.patch('/:id', async (req, res) => {
     const { id } = req.params;
     const { visibility, classroomId } = req.body;
     
-    const doc = await prisma.document.findUnique({ where: { id } });
-    if (!doc) return res.status(404).json({ error: 'Not found' });
-    
+    // Single UPDATE; a missing row surfaces as P2025 (was findUnique + update = 2 round trips)
     const updatedDoc = await prisma.document.update({
       where: { id },
       data: {
@@ -144,6 +139,7 @@ router.patch('/:id', async (req, res) => {
     
     res.json({ message: 'Cập nhật thành công', document: updatedDoc });
   } catch (err) {
+    if (err && err.code === 'P2025') return res.status(404).json({ error: 'Not found' });
     res.status(500).json({ error: err.message });
   }
 });

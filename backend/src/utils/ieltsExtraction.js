@@ -10,9 +10,7 @@
 // it's the largest/riskiest content). Pass 3 matches each Test's Listening/Reading questions
 // against the book's own Answer Key text (Writing/Speaking have no fixed answer key).
 const { Groq } = require('groq-sdk');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'fake_key_for_now' });
 
 const MODEL = 'llama-3.3-70b-versatile';

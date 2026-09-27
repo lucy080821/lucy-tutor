@@ -81,4 +81,6 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  // Open the DB connection at boot so the first user request doesn't pay the ~1.5s cold connect.
+  require('./lib/prisma').$connect().catch(err => console.error('Prisma warm-up failed:', err.message));
 });

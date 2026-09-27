@@ -1,6 +1,5 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
 // Standard number of scheduled lesson-days a class has within a given calendar month,
@@ -86,18 +85,14 @@ router.get('/month/teacher/:teacherId', async (req, res) => {
     const startDate = new Date(y, m - 1, 1);
     const endDate = new Date(y, m, 1);
 
-    const classroomIds = (await prisma.classroom.findMany({
-      where: { teacherId },
-      select: { id: true }
-    })).map(c => c.id);
-
-    const attendances = classroomIds.length ? await prisma.attendance.findMany({
+    // Single query via relation filter (was: fetch teacher's classroom ids, then attendance).
+    const attendances = await prisma.attendance.findMany({
       where: {
-        classroomId: { in: classroomIds },
+        classroom: { teacherId },
         date: { gte: startDate, lt: endDate }
       },
       select: { classroomId: true, userId: true, date: true, status: true }
-    }) : [];
+    });
 
     res.json(attendances);
   } catch (error) {
@@ -118,14 +113,13 @@ router.post('/mark', async (req, res) => {
     const targetDate = new Date(date);
     targetDate.setHours(0, 0, 0, 0);
 
-    const results = [];
-
     // Upsert each record — skip entries with no status yet (student not marked in this
     // save), since `status` is a required column and one bad record would otherwise abort
     // the whole batch and report failure even for students that were marked correctly.
-    for (const record of records) {
-      if (record.status !== 'PRESENT' && record.status !== 'UNEXCUSED') continue;
-      const attendance = await prisma.attendance.upsert({
+    // Upserts run concurrently instead of one awaited round trip per student.
+    const validRecords = records.filter(r => r.status === 'PRESENT' || r.status === 'UNEXCUSED');
+    const results = await Promise.all(validRecords.map(record =>
+      prisma.attendance.upsert({
         where: {
           classroomId_userId_date: {
             classroomId,
@@ -144,10 +138,10 @@ router.post('/mark', async (req, res) => {
           date: targetDate,
           status: record.status,
           notes: record.notes || null
-        }
-      });
-      results.push(attendance);
-    }
+        },
+        select: { id: true }
+      })
+    ));
 
     res.json({ message: 'Lưu điểm danh thành công', count: results.length });
   } catch (error) {
@@ -192,31 +186,26 @@ router.get('/report/:classroomId', async (req, res) => {
     const startDate = new Date(y, m - 1, 1);
     const endDate = new Date(y, m, 1);
 
-    const classroom = await prisma.classroom.findUnique({
-      where: { id: classroomId },
-      include: {
-        students: {
-          select: { id: true, name: true, email: true }
+    // Classroom, attendance and payments are independent — fetch in parallel.
+    const [classroom, attendances, payments] = await Promise.all([
+      prisma.classroom.findUnique({
+        where: { id: classroomId },
+        select: {
+          name: true, feeType: true, feePerLesson: true, feePerMonth: true, scheduleDays: true,
+          students: { select: { id: true, name: true, email: true } }
         }
-      }
-    });
+      }),
+      prisma.attendance.findMany({
+        where: { classroomId, date: { gte: startDate, lt: endDate } },
+        select: { userId: true, status: true }
+      }),
+      prisma.tuitionPayment.findMany({
+        where: { classroomId, month: m, year: y },
+        select: { id: true, userId: true, status: true, paidAt: true }
+      })
+    ]);
 
     if (!classroom) return res.status(404).json({ error: 'Classroom not found' });
-
-    const attendances = await prisma.attendance.findMany({
-      where: {
-        classroomId,
-        date: {
-          gte: startDate,
-          lt: endDate
-        }
-      }
-    });
-
-    // Also fetch any existing payment records
-    const payments = await prisma.tuitionPayment.findMany({
-      where: { classroomId, month: m, year: y }
-    });
 
     // Calculate per student
     const report = classroom.students.map(student => {
@@ -271,42 +260,53 @@ router.get('/report/teacher/:teacherId', async (req, res) => {
     const startDate = new Date(y, m - 1, 1);
     const endDate = new Date(y, m, 1);
 
-    const classrooms = await prisma.classroom.findMany({
-      where: { teacherId },
-      select: {
-        id: true,
-        name: true,
-        feeType: true,
-        feePerLesson: true,
-        feePerMonth: true,
-        scheduleDays: true,
-        students: { select: { id: true, name: true, email: true } }
-      }
-    });
-
-    const classroomIds = classrooms.map(c => c.id);
-
-    const attendances = classroomIds.length ? await prisma.attendance.findMany({
-      where: {
-        classroomId: { in: classroomIds },
-        date: { gte: startDate, lt: endDate }
-      }
-    }) : [];
-
-    const payments = classroomIds.length ? await prisma.tuitionPayment.findMany({
-      where: { classroomId: { in: classroomIds }, month: m, year: y }
-    }) : [];
-
+    // All 4 queries are independent (attendance/payments filter through the classroom
+    // relation instead of a pre-fetched id list), so they run in parallel: 1 round trip, not 4.
     // Free-standing (classless) students pay through a separate flow (FreeStudentPayment,
     // see freeStudent.routes.js) — not tied to any classroom/attendance, so it can't be folded
-    // into totalCollected/totalExpected above without corrupting the classroom collection-rate
+    // into totalCollected/totalExpected below without corrupting the classroom collection-rate
     // math (paidCount/unpaidCount/donut chart). Reported as its own field instead; the frontend
     // adds it on top only where "revenue this month" is the actual intent (KPI + trend chart).
-    const freeStudentPayments = await prisma.freeStudentPayment.findMany({
-      where: { teacherId, paidAt: { gte: startDate, lt: endDate } },
-      select: { amount: true }
-    });
-    const freeStudentRevenue = freeStudentPayments.reduce((sum, p) => sum + p.amount, 0);
+    const [classrooms, presentRows, payments, freeStudentAgg] = await Promise.all([
+      prisma.classroom.findMany({
+        where: { teacherId },
+        select: {
+          id: true,
+          name: true,
+          feeType: true,
+          feePerLesson: true,
+          feePerMonth: true,
+          scheduleDays: true,
+          students: { select: { id: true, name: true, email: true } }
+        }
+      }),
+      prisma.attendance.findMany({
+        where: {
+          classroom: { teacherId },
+          date: { gte: startDate, lt: endDate },
+          status: 'PRESENT'
+        },
+        select: { classroomId: true, userId: true }
+      }),
+      prisma.tuitionPayment.findMany({
+        where: { classroom: { teacherId }, month: m, year: y },
+        select: { classroomId: true, userId: true, status: true, paidAt: true, totalAmount: true }
+      }),
+      prisma.freeStudentPayment.aggregate({
+        where: { teacherId, paidAt: { gte: startDate, lt: endDate } },
+        _sum: { amount: true }
+      })
+    ]);
+    const freeStudentRevenue = freeStudentAgg._sum.amount || 0;
+
+    // Index by "classroomId|userId" so the per-student loop is O(1) instead of re-scanning
+    // every attendance/payment row for every student.
+    const presentByKey = new Map();
+    for (const a of presentRows) {
+      const key = `${a.classroomId}|${a.userId}`;
+      presentByKey.set(key, (presentByKey.get(key) || 0) + 1);
+    }
+    const paymentByKey = new Map(payments.map(p => [`${p.classroomId}|${p.userId}`, p]));
 
     let totalCollected = 0;
     let totalExpected = 0;
@@ -315,10 +315,10 @@ router.get('/report/teacher/:teacherId', async (req, res) => {
 
     for (const classroom of classrooms) {
       for (const student of classroom.students) {
-        const studentAttendances = attendances.filter(a => a.classroomId === classroom.id && a.userId === student.id);
-        const presentCount = studentAttendances.filter(a => a.status === 'PRESENT').length;
+        const key = `${classroom.id}|${student.id}`;
+        const presentCount = presentByKey.get(key) || 0;
         const totalAmount = calcTuitionAmount(classroom, presentCount, m, y);
-        const payment = payments.find(p => p.classroomId === classroom.id && p.userId === student.id);
+        const payment = paymentByKey.get(key);
 
         const entry = {
           user: student,
@@ -416,32 +416,25 @@ router.get('/my-tuition/:userId', async (req, res) => {
 
     const CLASSROOM_FIELDS = { id: true, name: true, feeType: true, feePerLesson: true, feePerMonth: true, scheduleDays: true };
 
-    const attendances = await prisma.attendance.findMany({
-      where: {
-        userId,
-        date: {
-          gte: startDate,
-          lt: endDate
-        }
-      },
-      include: {
-        classroom: { select: CLASSROOM_FIELDS }
-      },
-      orderBy: { date: 'asc' }
-    });
-
-    const payments = await prisma.tuitionPayment.findMany({
-      where: { userId, month: m, year: y }
-    });
-
-    // Seed one entry per classroom the student is currently enrolled in — a MONTHLY class
-    // still owes its flat fee even with zero attendance rows this month (e.g. the teacher
-    // hasn't taken attendance yet at the start of a new month), so this can't be derived
-    // purely from the attendance rows below like it used to be.
-    const joinedClassrooms = await prisma.classroom.findMany({
-      where: { students: { some: { id: userId } } },
-      select: CLASSROOM_FIELDS
-    });
+    // Seed one entry per classroom the student is currently enrolled in (joinedClassrooms) —
+    // a MONTHLY class still owes its flat fee even with zero attendance rows this month (e.g.
+    // the teacher hasn't taken attendance yet at the start of a new month), so this can't be
+    // derived purely from the attendance rows below like it used to be.
+    // The 3 queries are independent — run in parallel (1 round trip instead of 3).
+    const [attendances, payments, joinedClassrooms] = await Promise.all([
+      prisma.attendance.findMany({
+        where: { userId, date: { gte: startDate, lt: endDate } },
+        include: { classroom: { select: CLASSROOM_FIELDS } },
+        orderBy: { date: 'asc' }
+      }),
+      prisma.tuitionPayment.findMany({
+        where: { userId, month: m, year: y }
+      }),
+      prisma.classroom.findMany({
+        where: { students: { some: { id: userId } } },
+        select: CLASSROOM_FIELDS
+      })
+    ]);
 
     const classroomData = {};
     joinedClassrooms.forEach(classroom => {

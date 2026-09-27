@@ -1,9 +1,8 @@
 const express = require('express');
 const multer = require('multer');
-const { PrismaClient } = require('@prisma/client');
 const { Groq, toFile } = require('groq-sdk');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // short clips only
@@ -19,7 +18,7 @@ router.get('/practice-set/:userId', async (req, res) => {
     const { userId } = req.params;
     const deck = await prisma.userVocabProgress.findMany({
       where: { userId },
-      include: { vocab: true },
+      select: { vocabId: true, vocab: { select: { word: true, phonetic: true, example: true, meaning: true } } },
       orderBy: { nextReviewDate: 'asc' },
       take: 200
     });

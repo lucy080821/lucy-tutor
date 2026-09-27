@@ -1,8 +1,6 @@
 const express = require('express');
 const { Groq } = require('groq-sdk');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'fake_key_for_now' });

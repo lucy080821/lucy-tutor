@@ -1,8 +1,6 @@
 const express = require('express');
 const { Groq } = require('groq-sdk');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'fake_key_for_now' });
@@ -135,23 +133,21 @@ router.delete('/topics/:id', async (req, res) => {
 router.get('/topics/available/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { classroomsJoined: { select: { id: true } } }
-    });
+    // User check + topics lookup concurrently; classroom membership resolved via relation
+    // filter inside the topic query (was 2-3 sequential round trips).
+    const [user, topics] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { id: true } }),
+      prisma.speakingTopic.findMany({
+        where: {
+          OR: [
+            { studentId: userId },
+            { classroom: { students: { some: { id: userId } } } }
+          ]
+        },
+        orderBy: { createdAt: 'desc' }
+      })
+    ]);
     if (!user) return res.status(404).json({ error: 'User not found' });
-
-    const classroomIds = user.classroomsJoined.map((c) => c.id);
-
-    const topics = await prisma.speakingTopic.findMany({
-      where: {
-        OR: [
-          { studentId: userId },
-          ...(classroomIds.length ? [{ classroomId: { in: classroomIds } }] : [])
-        ]
-      },
-      orderBy: { createdAt: 'desc' }
-    });
     res.json(topics);
   } catch (err) {
     console.error(err);

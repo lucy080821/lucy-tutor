@@ -1,8 +1,13 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 const { parseVNDateTime: parseVNTime } = require('../utils/vnTime');
+
+const CALENDAR_CLASSROOM_SELECT = {
+  id: true, name: true, scheduleDays: true, startTime: true, endTime: true,
+  classSessions: true
+};
+const CALENDAR_EXAM_SELECT = { id: true, title: true, deadline: true };
 
 // GET /api/calendar/events?userId=xyz&role=STUDENT|TEACHER
 router.get('/events', async (req, res) => {
@@ -17,10 +22,19 @@ router.get('/events', async (req, res) => {
 
     if (role === 'TEACHER') {
       // Teacher sees sessions of classrooms they own
-      const classrooms = await prisma.classroom.findMany({
-        where: { teacherId: userId },
-        include: { classSessions: true }
-      });
+      // Classrooms and exams are independent — fetch in parallel. Only the fields the
+      // calendar actually renders are selected (exams: id/title/deadline).
+      const [classrooms, teacherExams] = await Promise.all([
+        prisma.classroom.findMany({
+          where: { teacherId: userId },
+          select: CALENDAR_CLASSROOM_SELECT
+        }),
+        prisma.exam.findMany({
+          where: { uploadedById: userId },
+          select: CALENDAR_EXAM_SELECT
+        })
+      ]);
+      exams = teacherExams;
       classSessions = classrooms.flatMap(c => {
         const sessions = [...c.classSessions];
         if (c.scheduleDays && c.startTime && c.endTime) {
@@ -41,20 +55,13 @@ router.get('/events', async (req, res) => {
         }
         return sessions;
       });
-      
-      // Teacher sees exams they uploaded
-      exams = await prisma.exam.findMany({
-        where: { uploadedById: userId }
-      });
     } else {
       // Student sees sessions of classrooms they joined
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        include: {
-          classroomsJoined: {
-            include: { classSessions: true }
-          },
-          assignedExams: true
+        select: {
+          classroomsJoined: { select: CALENDAR_CLASSROOM_SELECT },
+          assignedExams: { select: CALENDAR_EXAM_SELECT }
         }
       });
       if (user) {

@@ -1,11 +1,10 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const { PrismaClient } = require('@prisma/client');
 const { createClient } = require('@supabase/supabase-js');
 const { Groq } = require('groq-sdk');
 
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
 const storage = multer.memoryStorage();
@@ -132,23 +131,23 @@ function pickFreeListeningMatch(clip, accent) {
 }
 
 async function findAccessibleReadyClips(userId) {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    include: { classroomsJoined: { select: { id: true } } }
-  });
+  // User existence check and clip lookup run concurrently (was: user+classrooms first, then
+  // clips — 2-3 sequential round trips). Classroom membership is resolved inside the clip
+  // query via the relation filter instead of a separate prior query.
+  const [user, clips] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { id: true } }),
+    prisma.listeningClip.findMany({
+      where: {
+        status: 'READY',
+        OR: [
+          { studentId: userId },
+          { classroom: { students: { some: { id: userId } } } }
+        ]
+      }
+    })
+  ]);
   if (!user) return null;
-
-  const classroomIds = user.classroomsJoined.map((c) => c.id);
-
-  return prisma.listeningClip.findMany({
-    where: {
-      status: 'READY',
-      OR: [
-        { studentId: userId },
-        ...(classroomIds.length ? [{ classroomId: { in: classroomIds } }] : [])
-      ]
-    }
-  });
+  return clips;
 }
 
 // Run Whisper word-level alignment in the background and persist the result.
@@ -242,6 +241,9 @@ router.get('/', async (req, res) => {
 
     const clips = await prisma.listeningClip.findMany({
       where: { teacherId },
+      // alignment = full Whisper word-timestamp JSON (can be tens of KB per clip); the Studio
+      // list never reads it.
+      omit: { alignment: true },
       include: {
         classroom: { select: { name: true } },
         student: { select: { name: true } }
@@ -262,20 +264,18 @@ router.patch('/:id', async (req, res) => {
     const { id } = req.params;
     const { title, accent, level, classroomId, studentId } = req.body;
 
-    const clip = await prisma.listeningClip.findUnique({ where: { id } });
-    if (!clip) return res.status(404).json({ error: 'Not found' });
-
     if (accent && !ALLOWED_ACCENTS.includes(accent)) return res.status(400).json({ error: 'Giọng đọc không hợp lệ. Chọn UK, US hoặc AUS' });
     if (level && !ALLOWED_LEVELS.includes(level)) return res.status(400).json({ error: 'Cấp độ không hợp lệ. Chọn A1, A2, B1, B2 hoặc C1' });
     if (!classroomId && !studentId) return res.status(400).json({ error: 'Phải chọn lớp học hoặc học sinh cụ thể' });
     if (classroomId && studentId) return res.status(400).json({ error: 'Chỉ được chọn 1 trong 2: lớp học hoặc học sinh' });
 
+    // Single UPDATE (undefined = keep current value); missing row -> P2025 -> 404 below.
     const updated = await prisma.listeningClip.update({
       where: { id },
       data: {
-        title: title || clip.title,
-        accent: accent || clip.accent,
-        level: level || clip.level,
+        title: title || undefined,
+        accent: accent || undefined,
+        level: level || undefined,
         classroomId: classroomId || null,
         studentId: studentId || null
       }
@@ -283,6 +283,7 @@ router.patch('/:id', async (req, res) => {
 
     res.json({ message: 'Cập nhật thành công', clip: updated });
   } catch (err) {
+    if (err && err.code === 'P2025') return res.status(404).json({ error: 'Not found' });
     console.error(err);
     res.status(500).json({ error: err.message });
   }
@@ -294,12 +295,12 @@ router.delete('/:id', async (req, res) => {
     const clip = await prisma.listeningClip.findUnique({ where: { id } });
     if (!clip) return res.status(404).json({ error: 'Not found' });
 
-    if (supabase) {
-      const key = clip.audioUrl.split('/documents/')[1];
-      if (key) await supabase.storage.from('documents').remove([key]);
-    }
-
-    await prisma.listeningClip.delete({ where: { id } });
+    // Storage removal and DB delete are independent — run concurrently
+    const key = clip.audioUrl.split('/documents/')[1];
+    await Promise.all([
+      supabase && key ? supabase.storage.from('documents').remove([key]) : null,
+      prisma.listeningClip.delete({ where: { id } })
+    ]);
     res.json({ message: 'Xóa thành công' });
   } catch (err) {
     console.error(err);
@@ -344,14 +345,16 @@ router.get('/queue/:userId', async (req, res) => {
     // won't have a matching clip, so capping at the batch size here would starve the queue
     // even when plenty of other words do have matching audio. Soonest-due first so words
     // actually due for review are still prioritized when there's more than enough audio.
-    const deckProgress = await prisma.userVocabProgress.findMany({
-      where: { userId },
-      include: { vocab: true },
-      orderBy: { nextReviewDate: 'asc' },
-      take: 200
-    });
-
-    const clips = await findAccessibleReadyClips(userId);
+    // Deck + accessible clips are independent — fetch concurrently
+    const [deckProgress, clips] = await Promise.all([
+      prisma.userVocabProgress.findMany({
+        where: { userId },
+        include: { vocab: true },
+        orderBy: { nextReviewDate: 'asc' },
+        take: 200
+      }),
+      findAccessibleReadyClips(userId)
+    ]);
     if (clips === null) return res.status(404).json({ error: 'User not found' });
 
     const BATCH_SIZE = 10;

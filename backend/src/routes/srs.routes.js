@@ -1,7 +1,5 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
-
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
 // Calculate next review date and SM-2 parameters
@@ -48,32 +46,23 @@ router.post('/add-from-lesson', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields' });
     }
 
-    const created = [];
-    for (const vocabId of vocabIds) {
-      // Upsert: Add if not exists, do nothing if already exists
-      const existing = await prisma.userVocabProgress.findUnique({
-        where: {
-          userId_vocabId: { userId, vocabId }
-        }
-      });
+    // One INSERT for the whole batch; skipDuplicates keeps already-added words untouched.
+    // (Was a findUnique+create loop per word — 2 sequential DB round trips each, ~10s for a lesson.)
+    const now = new Date();
+    const { count } = await prisma.userVocabProgress.createMany({
+      data: [...new Set(vocabIds)].map(vocabId => ({
+        userId,
+        vocabId,
+        status: 'LEARNING',
+        nextReviewDate: now, // Due immediately
+        interval: 0,
+        easeFactor: 2.5,
+        repetitions: 0
+      })),
+      skipDuplicates: true
+    });
 
-      if (!existing) {
-        const progress = await prisma.userVocabProgress.create({
-          data: {
-            userId,
-            vocabId,
-            status: 'LEARNING',
-            nextReviewDate: new Date(), // Due immediately
-            interval: 0,
-            easeFactor: 2.5,
-            repetitions: 0
-          }
-        });
-        created.push(progress);
-      }
-    }
-
-    res.json({ message: 'Added to SRS successfully', count: created.length });
+    res.json({ message: 'Added to SRS successfully', count });
   } catch (error) {
     console.error('Error adding to SRS:', error);
     res.status(500).json({ error: 'Failed to add to SRS' });
@@ -212,11 +201,13 @@ router.delete('/vocab/custom/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { userId } = req.query;
-    const vocab = await prisma.vocabItem.findUnique({ where: { id } });
-    if (!vocab || vocab.addedByUserId !== userId) {
+    // Ownership check + delete in a single statement (cascades to UserVocabProgress)
+    const { count } = userId
+      ? await prisma.vocabItem.deleteMany({ where: { id, addedByUserId: userId } })
+      : { count: 0 };
+    if (count === 0) {
       return res.status(403).json({ error: 'Không thể xóa từ này.' });
     }
-    await prisma.vocabItem.delete({ where: { id } }); // cascades to UserVocabProgress
     res.json({ message: 'Đã xóa từ' });
   } catch (error) {
     console.error('Error deleting custom vocab:', error);
@@ -229,54 +220,53 @@ router.get('/stats/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
 
-    // Pie chart: Status distribution
-    const statusCounts = await prisma.userVocabProgress.groupBy({
-      by: ['status'],
-      where: { userId },
-      _count: { id: true }
-    });
+    // Bar chart window: next 7 days
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const windowEnd = new Date(today);
+    windowEnd.setDate(windowEnd.getDate() + 7);
+
+    // All 3 queries are independent — one parallel round instead of 9 sequential ones
+    // (was: groupBy + 7 per-day counts in a loop + due count).
+    const [statusCounts, upcoming, dueTodayCount] = await Promise.all([
+      prisma.userVocabProgress.groupBy({
+        by: ['status'],
+        where: { userId },
+        _count: { id: true }
+      }),
+      prisma.userVocabProgress.findMany({
+        where: { userId, nextReviewDate: { gte: today, lt: windowEnd } },
+        select: { nextReviewDate: true }
+      }),
+      prisma.userVocabProgress.count({
+        where: {
+          userId,
+          nextReviewDate: {
+            lte: new Date()
+          }
+        }
+      }),
+    ]);
 
     const statusMap = { LEARNING: 0, REVIEWING: 0, MASTERED: 0 };
     statusCounts.forEach(s => {
       statusMap[s.status] = s._count.id;
     });
 
-    // Bar chart: Future workload (next 7 days)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     const workloads = [];
-    
     for (let i = 0; i < 7; i++) {
       const targetDate = new Date(today);
       targetDate.setDate(targetDate.getDate() + i);
       const nextDate = new Date(targetDate);
       nextDate.setDate(nextDate.getDate() + 1);
 
-      const count = await prisma.userVocabProgress.count({
-        where: {
-          userId,
-          nextReviewDate: {
-            gte: targetDate,
-            lt: nextDate
-          }
-        }
-      });
+      const count = upcoming.filter(p => p.nextReviewDate >= targetDate && p.nextReviewDate < nextDate).length;
 
       workloads.push({
         date: targetDate.toLocaleDateString('vi-VN', { month: '2-digit', day: '2-digit' }),
         count
       });
     }
-
-    // Due Today Total
-    const dueTodayCount = await prisma.userVocabProgress.count({
-      where: {
-        userId,
-        nextReviewDate: {
-          lte: new Date()
-        }
-      }
-    });
 
     res.json({
       statusCounts: [

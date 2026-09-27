@@ -1,6 +1,5 @@
 const express = require('express');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 
 // Get mistake bank for a user
@@ -24,7 +23,8 @@ router.get('/weakness/:userId', async (req, res) => {
     // Here we just count which topics have the most mistakes in the bank.
     const mistakes = await prisma.mistakeBank.findMany({
       where: { userId: req.params.userId },
-      include: { question: true }
+      // Only the question type + count are aggregated — don't pull full question rows.
+      select: { wrongAnswerCount: true, question: { select: { type: true } } }
     });
     
     const topicCounts = {};

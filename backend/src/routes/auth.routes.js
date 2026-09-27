@@ -1,7 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../lib/prisma');
 const router = express.Router();
 const { isCutoffReached, addDays, TRIAL_DAYS, computeAccessStatus } = require('../utils/freeTrial');
 
@@ -14,7 +13,21 @@ router.post('/signup', async (req, res) => {
     // treated as the same account (also catches legacy mixed-case rows created before
     // this normalization existed).
     const normalizedEmail = (email || '').trim().toLowerCase();
-    const existing = await prisma.user.findFirst({ where: { email: { equals: normalizedEmail, mode: 'insensitive' } } });
+
+    const trimmedCode = (classCode || '').trim().toUpperCase();
+
+    // Duplicate-email check, join-code/teacher lookup and password hashing are independent —
+    // run them in parallel (1 DB round trip instead of 2 sequential ones). Validation order
+    // of the error responses below is unchanged.
+    const [existing, lookedUpClassroom, lookedUpTeacher, hashedPassword] = await Promise.all([
+      prisma.user.findFirst({ where: { email: { equals: normalizedEmail, mode: 'insensitive' } }, select: { id: true } }),
+      trimmedCode ? prisma.classroom.findUnique({ where: { joinCode: trimmedCode }, select: { id: true } }) : null,
+      !trimmedCode && managerTeacherId
+        ? prisma.user.findUnique({ where: { id: managerTeacherId }, select: { role: true } })
+        : null,
+      bcrypt.hash(password, BCRYPT_ROUNDS)
+    ]);
+
     if (existing) {
       return res.status(400).json({ error: 'Email đã được sử dụng. Vui lòng chọn email khác.' });
     }
@@ -24,14 +37,13 @@ router.post('/signup', async (req, res) => {
       return res.status(403).json({ error: 'Không thể tự đăng ký tài khoản Giáo Viên. Vui lòng liên hệ quản trị viên để được cấp tài khoản.' });
     }
 
-    const data = { name, email: normalizedEmail, password: await bcrypt.hash(password, BCRYPT_ROUNDS), role: 'STUDENT' };
+    const data = { name, email: normalizedEmail, password: hashedPassword, role: 'STUDENT' };
 
     // Only STUDENT signups branch into "joined a class" vs "free-standing student".
     // Teachers, and students who supply a valid join code, never get a trial lock.
     if (data.role === 'STUDENT') {
-      const trimmedCode = (classCode || '').trim().toUpperCase();
       if (trimmedCode) {
-        const classroom = await prisma.classroom.findUnique({ where: { joinCode: trimmedCode } });
+        const classroom = lookedUpClassroom;
         if (!classroom) {
           return res.status(400).json({ error: 'Mã lớp học không hợp lệ.' });
         }
@@ -40,7 +52,7 @@ router.post('/signup', async (req, res) => {
         if (!managerTeacherId) {
           return res.status(400).json({ error: 'Vui lòng chọn giáo viên phụ trách hoặc nhập mã lớp học.' });
         }
-        const teacher = await prisma.user.findUnique({ where: { id: managerTeacherId } });
+        const teacher = lookedUpTeacher;
         if (!teacher || teacher.role !== 'TEACHER') {
           return res.status(400).json({ error: 'Giáo viên phụ trách không hợp lệ.' });
         }
@@ -78,7 +90,7 @@ router.post('/signin', async (req, res) => {
     const { email, password, role } = req.body;
     // Case-insensitive lookup — an account created with e.g. "Test@Example.com" must still
     // be reachable when the user types "test@example.com" (or vice versa) at login.
-    const user = await prisma.user.findFirst({ where: { email: { equals: (email || '').trim(), mode: 'insensitive' } } });
+    const user = await prisma.user.findFirst({ where: { email: { equals: (email || '').trim(), mode: 'insensitive' } }, omit: { password: false } });
     if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -88,7 +100,8 @@ router.post('/signin', async (req, res) => {
       const actualLabel = user.role === 'TEACHER' ? 'Giáo Viên' : 'Học Viên';
       return res.status(403).json({ error: `Tài khoản này đã đăng ký với vai trò ${actualLabel}. Vui lòng chọn đúng vai trò để đăng nhập.` });
     }
-    res.json(user);
+    const { password: _hash, ...safeUser } = user;
+    res.json(safeUser);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
@@ -105,7 +118,7 @@ router.put('/change-password', async (req, res) => {
       return res.status(400).json({ error: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
     }
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: { password: true } });
     if (!user || !user.password) return res.status(404).json({ error: 'Không tìm thấy tài khoản' });
 
     const matches = await bcrypt.compare(currentPassword, user.password);
