@@ -37,8 +37,8 @@ router.post('/create', async (req, res) => {
 router.post('/join', async (req, res) => {
   try {
     const { userId, joinCode } = req.body;
-    
-    const classroom = await prisma.classroom.findUnique({ where: { joinCode } });
+
+    const classroom = await prisma.classroom.findUnique({ where: { joinCode: (joinCode || '').trim().toUpperCase() } });
     if (!classroom) return res.status(404).json({ error: 'Mã lớp không hợp lệ' });
     
     // Joining a classroom hands tuition tracking over to that classroom's own attendance-based
@@ -67,29 +67,31 @@ router.post('/add-student', async (req, res) => {
       return res.status(400).json({ error: 'Vui lòng chọn ít nhất 1 lớp học' });
     }
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existing = await prisma.user.findFirst({ where: { email: { equals: normalizedEmail, mode: 'insensitive' } } });
     if (existing) {
       return res.status(400).json({ error: 'Email đã được sử dụng. Vui lòng chọn email khác.' });
     }
 
     // Only enroll into classrooms this teacher actually owns — prevents a crafted request
     // from enrolling a manually-added student into another teacher's class.
+    const uniqueClassroomIds = [...new Set(classroomIds)];
     const ownedClassrooms = await prisma.classroom.findMany({
-      where: { id: { in: classroomIds }, teacherId },
+      where: { id: { in: uniqueClassroomIds }, teacherId },
       select: { id: true }
     });
-    if (ownedClassrooms.length !== classroomIds.length) {
+    if (ownedClassrooms.length !== uniqueClassroomIds.length) {
       return res.status(400).json({ error: 'Một hoặc nhiều lớp học không hợp lệ' });
     }
 
     const student = await prisma.user.create({
       data: {
         name,
-        email,
+        email: normalizedEmail,
         phone: phone || null,
         password: await bcrypt.hash(DEFAULT_STUDENT_PASSWORD, BCRYPT_ROUNDS),
         role: 'STUDENT',
-        classroomsJoined: { connect: classroomIds.map((id) => ({ id })) }
+        classroomsJoined: { connect: uniqueClassroomIds.map((id) => ({ id })) }
       }
     });
 
@@ -122,7 +124,12 @@ router.get('/teacher/:teacherId', async (req, res) => {
             // the `students` list above), ballooning this endpoint's payload by tens of MB.
             results: {
               select: { score: true, userId: true, createdAt: true, timeSpent: true }
-            }
+            },
+            // How many students this exam was actually assigned to — an exam created with
+            // "Giao cá nhân" (a subset of the class) has fewer assignedStudents than the full
+            // classroom roster, so the frontend's completion-rate math needs this count instead
+            // of always assuming every exam went to the whole class.
+            _count: { select: { assignedStudents: true } }
           }
         }
       }
@@ -133,49 +140,60 @@ router.get('/teacher/:teacherId', async (req, res) => {
   }
 });
 
-// Edit a classroom
+// Edit a classroom — only the owning teacher may edit it.
 router.put('/edit/:id', async (req, res) => {
   try {
-    const { name, scheduleDays, startTime, endTime, feeType, feePerLesson, feePerMonth } = req.body;
-    const classroom = await prisma.classroom.update({
-      where: { id: req.params.id },
+    const { name, scheduleDays, startTime, endTime, feeType, feePerLesson, feePerMonth, teacherId } = req.body;
+    if (!teacherId) return res.status(400).json({ error: 'Thiếu teacherId' });
+
+    const { count } = await prisma.classroom.updateMany({
+      where: { id: req.params.id, teacherId },
       data: {
         name,
         scheduleDays: scheduleDays || null,
         startTime: startTime || null,
         endTime: endTime || null,
         ...(feeType !== undefined && { feeType: feeType === 'MONTHLY' ? 'MONTHLY' : 'PER_LESSON' }),
-        ...(feePerLesson !== undefined && { feePerLesson: parseInt(feePerLesson) }),
-        ...(feePerMonth !== undefined && { feePerMonth: parseInt(feePerMonth) })
+        ...(feePerLesson !== undefined && { feePerLesson: feePerLesson ? parseInt(feePerLesson) : 0 }),
+        ...(feePerMonth !== undefined && { feePerMonth: feePerMonth ? parseInt(feePerMonth) : 0 })
       }
     });
+    if (count === 0) return res.status(404).json({ error: 'Không tìm thấy lớp học hoặc bạn không có quyền sửa' });
+    const classroom = await prisma.classroom.findUnique({ where: { id: req.params.id } });
     res.json(classroom);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
 
-// Update enabled features for a classroom
+// Update enabled features for a classroom — only the owning teacher may edit it.
 router.patch('/:id/features', async (req, res) => {
   try {
-    const { enabledFeatures } = req.body; // array of feature keys
-    const classroom = await prisma.classroom.update({
-      where: { id: req.params.id },
+    const { enabledFeatures, teacherId } = req.body; // array of feature keys
+    if (!teacherId) return res.status(400).json({ error: 'Thiếu teacherId' });
+
+    const { count } = await prisma.classroom.updateMany({
+      where: { id: req.params.id, teacherId },
       data: { enabledFeatures: JSON.stringify(enabledFeatures || []) }
     });
+    if (count === 0) return res.status(404).json({ error: 'Không tìm thấy lớp học hoặc bạn không có quyền sửa' });
+    const classroom = await prisma.classroom.findUnique({ where: { id: req.params.id } });
     res.json(classroom);
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
 });
 
-// Delete a classroom
+// Delete a classroom — only the owning teacher may delete it.
 router.delete('/:id', async (req, res) => {
   try {
-    await prisma.classroom.delete({ where: { id: req.params.id } });
+    const { teacherId } = req.query;
+    if (!teacherId) return res.status(400).json({ error: 'Thiếu teacherId' });
+
+    const { count } = await prisma.classroom.deleteMany({ where: { id: req.params.id, teacherId } });
+    if (count === 0) return res.status(404).json({ error: 'Không tìm thấy lớp học hoặc bạn không có quyền xóa' });
     res.json({ message: 'Đã xóa lớp học thành công' });
   } catch (error) {
-    if (error.code === 'P2025') return res.status(404).json({ error: 'Không tìm thấy lớp học' });
     res.status(400).json({ error: error.message });
   }
 });

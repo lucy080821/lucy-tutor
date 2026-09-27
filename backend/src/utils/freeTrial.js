@@ -15,7 +15,14 @@ function addDays(date, days) {
 
 function addOneMonth(date) {
   const d = new Date(date);
+  const day = d.getDate();
   d.setMonth(d.getMonth() + 1);
+  // setMonth overflows into a later month when the target month is shorter than `day`
+  // (e.g. Jan 31 -> Mar 3, skipping February entirely). Clamp back to the last day of the
+  // intended month so "1 tháng" is always a real calendar month, not up to 2 days longer.
+  if (d.getDate() !== day) {
+    d.setDate(0);
+  }
   return d;
 }
 

@@ -7,7 +7,8 @@ const router = express.Router();
 // derived from classroom.scheduleDays (day-of-week list, e.g. "[1,4]" = Mon/Thu). Walks
 // the real calendar rather than a flat weeks*sessionsPerWeek estimate, so a month that
 // happens to contain an extra Monday naturally counts 1 more lesson than a typical one.
-// Returns null when the class has no schedule set — nothing to prorate against.
+// Returns null when the class has no schedule set. Purely informational now (shown as
+// "X/Y buổi" next to the flat fee) — no longer feeds into calcTuitionAmount below.
 function getStandardLessonsInMonth(classroom, month, year) {
   if (!classroom.scheduleDays) return null;
   let days;
@@ -24,17 +25,15 @@ function getStandardLessonsInMonth(classroom, month, year) {
   return count;
 }
 
-// MONTHLY classes prorate the flat monthly fee by attendance: divide feePerMonth by the
-// standard number of lessons that calendar month has (per the class's weekly schedule),
-// then multiply by the sessions the student actually attended. Falls back to the flat fee
-// when month/year aren't supplied or the class has no schedule set (can't derive a
-// per-lesson rate without one) — same behavior as before this feature existed.
+// MONTHLY classes are billed a flat feePerMonth collected upfront at the start of the
+// month, regardless of how many sessions the student ends up attending — tuition no
+// longer prorates against attendance (that used to divide feePerMonth by the standard
+// lesson count and multiply by presentCount). Attendance is still tracked in full
+// (see getStandardLessonsInMonth above) for chuyên cần/insight purposes, just no longer
+// drives the amount owed. PER_LESSON classes (e.g. lớp Giao Tiếp) are unaffected — those
+// were always billed per session actually attended and stay that way.
 function calcTuitionAmount(classroom, presentCount, month, year) {
   if (classroom.feeType === 'MONTHLY') {
-    const standardLessons = (month && year) ? getStandardLessonsInMonth(classroom, month, year) : null;
-    if (standardLessons) {
-      return Math.round((classroom.feePerMonth || 0) / standardLessons * presentCount);
-    }
     return classroom.feePerMonth || 0;
   }
   return presentCount * (classroom.feePerLesson || 0);
@@ -125,7 +124,7 @@ router.post('/mark', async (req, res) => {
     // save), since `status` is a required column and one bad record would otherwise abort
     // the whole batch and report failure even for students that were marked correctly.
     for (const record of records) {
-      if (!record.status) continue;
+      if (record.status !== 'PRESENT' && record.status !== 'UNEXCUSED') continue;
       const attendance = await prisma.attendance.upsert({
         where: {
           classroomId_userId_date: {
@@ -415,6 +414,8 @@ router.get('/my-tuition/:userId', async (req, res) => {
     const startDate = new Date(y, m - 1, 1);
     const endDate = new Date(y, m, 1);
 
+    const CLASSROOM_FIELDS = { id: true, name: true, feeType: true, feePerLesson: true, feePerMonth: true, scheduleDays: true };
+
     const attendances = await prisma.attendance.findMany({
       where: {
         userId,
@@ -424,9 +425,7 @@ router.get('/my-tuition/:userId', async (req, res) => {
         }
       },
       include: {
-        classroom: {
-          select: { id: true, name: true, feeType: true, feePerLesson: true, feePerMonth: true, scheduleDays: true }
-        }
+        classroom: { select: CLASSROOM_FIELDS }
       },
       orderBy: { date: 'asc' }
     });
@@ -435,9 +434,26 @@ router.get('/my-tuition/:userId', async (req, res) => {
       where: { userId, month: m, year: y }
     });
 
-    // Group by classroom
+    // Seed one entry per classroom the student is currently enrolled in — a MONTHLY class
+    // still owes its flat fee even with zero attendance rows this month (e.g. the teacher
+    // hasn't taken attendance yet at the start of a new month), so this can't be derived
+    // purely from the attendance rows below like it used to be.
+    const joinedClassrooms = await prisma.classroom.findMany({
+      where: { students: { some: { id: userId } } },
+      select: CLASSROOM_FIELDS
+    });
+
     const classroomData = {};
-    
+    joinedClassrooms.forEach(classroom => {
+      classroomData[classroom.id] = {
+        classroom,
+        attendances: [],
+        presentCount: 0,
+        unexcusedCount: 0,
+        excusedCount: 0
+      };
+    });
+
     attendances.forEach(a => {
       if (!classroomData[a.classroomId]) {
         classroomData[a.classroomId] = {

@@ -10,17 +10,26 @@ const BCRYPT_ROUNDS = 10;
 router.post('/signup', async (req, res) => {
   try {
     const { name, email, password, role, classCode, managerTeacherId } = req.body;
-    const existing = await prisma.user.findUnique({ where: { email } });
+    // Case-insensitive duplicate check so "Test@Example.com" and "test@example.com" are
+    // treated as the same account (also catches legacy mixed-case rows created before
+    // this normalization existed).
+    const normalizedEmail = (email || '').trim().toLowerCase();
+    const existing = await prisma.user.findFirst({ where: { email: { equals: normalizedEmail, mode: 'insensitive' } } });
     if (existing) {
       return res.status(400).json({ error: 'Email đã được sử dụng. Vui lòng chọn email khác.' });
     }
 
-    const data = { name, email, password: await bcrypt.hash(password, BCRYPT_ROUNDS), role: role || 'STUDENT' };
+    // Public signup is student-only — teacher accounts are provisioned by an admin, never self-registered.
+    if (role && role !== 'STUDENT') {
+      return res.status(403).json({ error: 'Không thể tự đăng ký tài khoản Giáo Viên. Vui lòng liên hệ quản trị viên để được cấp tài khoản.' });
+    }
+
+    const data = { name, email: normalizedEmail, password: await bcrypt.hash(password, BCRYPT_ROUNDS), role: 'STUDENT' };
 
     // Only STUDENT signups branch into "joined a class" vs "free-standing student".
     // Teachers, and students who supply a valid join code, never get a trial lock.
     if (data.role === 'STUDENT') {
-      const trimmedCode = (classCode || '').trim();
+      const trimmedCode = (classCode || '').trim().toUpperCase();
       if (trimmedCode) {
         const classroom = await prisma.classroom.findUnique({ where: { joinCode: trimmedCode } });
         if (!classroom) {
@@ -67,7 +76,9 @@ router.get('/teachers', async (req, res) => {
 router.post('/signin', async (req, res) => {
   try {
     const { email, password, role } = req.body;
-    const user = await prisma.user.findUnique({ where: { email } });
+    // Case-insensitive lookup — an account created with e.g. "Test@Example.com" must still
+    // be reachable when the user types "test@example.com" (or vice versa) at login.
+    const user = await prisma.user.findFirst({ where: { email: { equals: (email || '').trim(), mode: 'insensitive' } } });
     if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
@@ -160,12 +171,10 @@ const USER_SELECT = {
 router.get('/me', async (req, res) => {
   try {
     const { userId } = req.query;
-    let user;
-    if (userId) {
-      user = await prisma.user.findUnique({ where: { id: userId }, select: USER_SELECT });
-    } else {
-      user = await prisma.user.findFirst({ where: { role: 'STUDENT' }, select: USER_SELECT });
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' });
     }
+    const user = await prisma.user.findUnique({ where: { id: userId }, select: USER_SELECT });
 
     if (!user) {
       return res.status(404).json({ error: 'User not found' });

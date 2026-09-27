@@ -332,7 +332,13 @@ router.get('/search', async (req, res) => {
 router.get('/queue/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const { accent } = req.query;
+    const { accent, excludeClipIds } = req.query;
+    // "Free listen" items (no SRS review ever fires for them, since they don't match a due
+    // vocab word) never change server-side state — without this, refetching at the end of a
+    // batch would return the exact same deterministic first-N free clips forever whenever the
+    // queue is mostly/entirely free-listen content. The client accumulates ids it has already
+    // been served this session and asks to skip them so the batch actually rotates.
+    const excludedClipIdSet = new Set((excludeClipIds || '').split(',').filter(Boolean));
 
     // Cap the candidate pool generously (not to the final batch size) — most studied words
     // won't have a matching clip, so capping at the batch size here would starve the queue
@@ -362,7 +368,7 @@ router.get('/queue/:userId', async (req, res) => {
 
     for (const clip of clips) {
       if (queue.length >= BATCH_SIZE) break;
-      if (matchedClipIds.has(clip.id)) continue;
+      if (matchedClipIds.has(clip.id) || excludedClipIdSet.has(clip.id)) continue;
       const freeMatches = pickFreeListeningMatch(clip, accent);
       if (freeMatches) {
         queue.push({
@@ -414,7 +420,8 @@ router.post('/exam/generate', async (req, res) => {
     const clip = clips.find((c) => c.id === clipId);
     if (!clip) return res.status(404).json({ error: 'Không tìm thấy hoặc không có quyền truy cập audio này' });
 
-    const count = Math.min(10, Math.max(3, parseInt(numQuestions, 10) || 5));
+    const parsedCount = parseInt(numQuestions, 10);
+    const count = Math.min(10, Math.max(3, Number.isNaN(parsedCount) ? 5 : parsedCount));
     const levelLabel = LISTENING_LEVEL_LABELS[level] || LISTENING_LEVEL_LABELS.B1;
     const purposeLabel = purpose === 'IELTS'
       ? 'Đây là bài luyện nghe theo định hướng thi IELTS Listening — câu hỏi theo phong cách điền từ/trắc nghiệm như đề thi thật.'

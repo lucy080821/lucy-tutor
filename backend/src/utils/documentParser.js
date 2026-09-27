@@ -1,15 +1,38 @@
-const pdfParse = require('pdf-parse');
+const { PDFParse } = require('pdf-parse');
 const mammoth = require('mammoth');
 
+// pdf-parse v2 exports a class, not a callable function (`require('pdf-parse')(buffer)` — the
+// old v1-style call this file used to make — throws `TypeError: pdfParse is not a function`
+// against the installed v2.4.5). This was never actually exercised in production: the only
+// caller, upload.routes.js's POST /exam, is confirmed unused anywhere in the frontend.
 async function extractTextFromFile(buffer, mimetype) {
   if (mimetype === 'application/pdf') {
-    const data = await pdfParse(buffer);
-    return data.text;
+    const parser = new PDFParse({ data: buffer });
+    try {
+      const result = await parser.getText();
+      return result.text;
+    } finally {
+      await parser.destroy();
+    }
   } else if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
     const data = await mammoth.extractRawText({ buffer });
     return data.value;
   } else {
     throw new Error('Unsupported file type');
+  }
+}
+
+// Same as extractTextFromFile's PDF branch, but also returns pdf-parse v2's per-page text
+// breakdown (`result.pages: [{num, text}]`) in the same call — used by the IELTS book
+// extraction pipeline to anchor test/section boundaries to real page numbers instead of
+// guessing offsets in one flat string.
+async function extractTextWithPages(buffer) {
+  const parser = new PDFParse({ data: buffer });
+  try {
+    const result = await parser.getText();
+    return { text: result.text, pages: result.pages.map((p) => ({ num: p.num, text: p.text })) };
+  } finally {
+    await parser.destroy();
   }
 }
 
@@ -126,6 +149,7 @@ function combineExamAndAnswers(examQuestions, answerData) {
 
 module.exports = {
   extractTextFromFile,
+  extractTextWithPages,
   parseExamText,
   parseAnswerText,
   combineExamAndAnswers

@@ -69,6 +69,14 @@ model User {
   pronunciationAttempts PronunciationAttempt[]
   mockTestAttempts      MockTestAttempt[]
 
+  uploadedIeltsBooks     IeltsBook[]
+  ieltsLibraryTests      IeltsTest[]             @relation("IeltsTestLibraryStudent")
+  ieltsAssignedTests     IeltsTest[]             @relation("IeltsTestAssignedStudents")
+  ieltsListeningAttempts IeltsListeningAttempt[]
+  ieltsReadingAttempts   IeltsReadingAttempt[]
+  ieltsWritingAttempts   IeltsWritingAttempt[]
+  ieltsSpeakingAttempts  IeltsSpeakingAttempt[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -217,6 +225,9 @@ model Classroom {
   documents       Document[]
   listeningClips  ListeningClip[]
   speakingTopics  SpeakingTopic[]
+
+  ieltsLibraryTests  IeltsTest[] @relation("IeltsTestLibraryClassroom")
+  ieltsAssignedTests IeltsTest[] @relation("IeltsTestAssignedClassroom")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -573,4 +584,269 @@ model UserVocabProgress {
   vocab VocabItem @relation(fields: [vocabId], references: [id], onDelete: Cascade)
 
   @@unique([userId, vocabId])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// IELTS Cambridge module — teacher uploads a whole Cambridge book PDF (+ audio),
+// AI extracts it into reusable IeltsTest records (Listening/Reading/Writing/Speaking),
+// teacher reviews/edits before publishing, students take it (LIBRARY = self-practice
+// any time, ASSIGNED = deadline + maxAttempts like Exam) and get graded: Listening/
+// Reading against the book's own answer key (deterministic), Writing/Speaking against
+// real IELTS band descriptors (AI). See CLAUDE.md for the full feature writeup.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model IeltsBook {
+  id    String @id @default(uuid())
+  title String // e.g. "Cambridge IELTS 18"
+
+  sourcePdfUrl String // Supabase URL of the originally uploaded book PDF (kept for teacher reference/re-extraction)
+  rawText      String // full pdf-parse flat text — persisted so re-running extraction never re-parses the PDF
+  pagesJson    String? // JSON string: [{num, text}] — per-page text from pdf-parse v2's getText(), powers page-anchored boundary detection
+
+  boundariesJson  String? // Pass-1 AI output: {tests:[{testNumber,startPage,listening?,reading?,writing?,speaking?}], answerKey:{startPage,endPage}, audioscript:{startPage,endPage}}
+  answerKeyText   String? // sliced (pure string-slice, no AI) from pagesJson using boundariesJson
+  audioscriptText String? // same, for the Audioscript section
+
+  extractionStatus String  @default("PENDING") // "PENDING" | "BOUNDARIES_EXTRACTED" | "EXTRACTING" | "EXTRACTED" | "FAILED"
+  errorMessage     String?
+
+  teacherId String
+  teacher   User        @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  tests     IeltsTest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model IeltsTest {
+  id         String  @id @default(uuid())
+  bookId     String
+  testNumber Int // 1-4+ within the book
+  title      String  @default("Test")
+  testType   String? // "ACADEMIC" | "GENERAL_TRAINING" — AI proposes, teacher must confirm before publish (null until confirmed)
+
+  status String @default("PENDING_EXTRACTION")
+  // "PENDING_EXTRACTION" -> "EXTRACTED_DRAFT" (AI done, awaiting review) -> "NEEDS_ATTENTION"
+  // (a skill's extraction failed / answer-key match incomplete) -> "REVIEWED" -> "PUBLISHED"
+
+  // Delivery mode — configurable per test (not a global app setting). Exactly one group of
+  // fields below is meaningful depending on deliveryMode, enforced at the API level (same
+  // "exactly one, enforced at API level" convention as ListeningClip.classroomId/studentId).
+  deliveryMode String @default("LIBRARY") // "LIBRARY" | "ASSIGNED"
+
+  // LIBRARY mode: scoped like ListeningClip — visible to one classroom or one student, no deadline/limit.
+  libraryClassroomId String?
+  libraryClassroom   Classroom? @relation("IeltsTestLibraryClassroom", fields: [libraryClassroomId], references: [id], onDelete: SetNull)
+  libraryStudentId   String?
+  libraryStudent     User?      @relation("IeltsTestLibraryStudent", fields: [libraryStudentId], references: [id], onDelete: SetNull)
+
+  // ASSIGNED mode: scoped like Exam — a classroom (bookkeeping) + explicit assigned students + deadline/maxAttempts.
+  assignedClassroomId String?
+  assignedClassroom   Classroom? @relation("IeltsTestAssignedClassroom", fields: [assignedClassroomId], references: [id], onDelete: SetNull)
+  assignedStudents    User[]     @relation("IeltsTestAssignedStudents")
+  publishTime         DateTime?
+  deadline            DateTime?
+  maxAttempts         Int        @default(1)
+
+  book              IeltsBook               @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  listeningSections IeltsListeningSection[]
+  readingPassages   IeltsReadingPassage[]
+  questions         IeltsQuestion[]
+  writingTasks      IeltsWritingTask[]
+  speakingParts     IeltsSpeakingPart[]
+
+  listeningAttempts IeltsListeningAttempt[]
+  readingAttempts   IeltsReadingAttempt[]
+  writingAttempts   IeltsWritingAttempt[]
+  speakingAttempts  IeltsSpeakingAttempt[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([bookId, testNumber])
+}
+
+model IeltsListeningSection {
+  id            String  @id @default(uuid())
+  testId        String
+  sectionNumber Int // 1-4
+  instructions  String?
+  audioUrl      String? // null until teacher manually tags it in review (not auto-detected from filename)
+
+  test      IeltsTest       @relation(fields: [testId], references: [id], onDelete: Cascade)
+  questions IeltsQuestion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([testId, sectionNumber])
+}
+
+model IeltsReadingPassage {
+  id            String  @id @default(uuid())
+  testId        String
+  sectionNumber Int // which of the 3 Reading sections (Academic: 1 passage each; GT Section 1-2 may hold several short texts)
+  passageIndex  Int     @default(1) // which sub-text within that section (GT Section 1-2 only, otherwise always 1)
+  title         String?
+  bodyText      String // extracted passage text — highest-risk field for multi-column reordering, always teacher-editable
+  imageUrl      String? // optional accompanying diagram (e.g. a map/plan-labeling question's image) — manually attached
+
+  test      IeltsTest       @relation(fields: [testId], references: [id], onDelete: Cascade)
+  questions IeltsQuestion[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([testId, sectionNumber, passageIndex])
+}
+
+// Shared question shape for Listening + Reading — mirrors frontend/src/lib/readingGrading.ts's
+// ReadingQuestion (type/question/options/correctIndex/correctAnswer/wordLimit/explanation) so
+// the same 10 IELTS-shaped question types and the same grading logic can be reused/ported.
+model IeltsQuestion {
+  id             String @id @default(uuid())
+  testId         String // denormalized alongside the FK below purely so raw-score queries don't need a deep join
+  skill          String // "LISTENING" | "READING"
+  questionNumber Int // global 1-40 within (testId, skill) — matches the book's own numbering & the answer key
+
+  listeningSectionId String?
+  listeningSection   IeltsListeningSection? @relation(fields: [listeningSectionId], references: [id], onDelete: Cascade)
+  readingPassageId   String?
+  readingPassage     IeltsReadingPassage?   @relation(fields: [readingPassageId], references: [id], onDelete: Cascade)
+  // Exactly one of listeningSectionId / readingPassageId is set, matching `skill` (same
+  // "exactly one, enforced at API level" convention as ListeningClip.classroomId/studentId).
+
+  type              String // one of readingGrading.ts's QuestionType values, reused as-is for BOTH skills
+  groupInstruction  String? // shared instruction spanning several questions (e.g. "Questions 14-18: Complete the summary below")
+  promptText        String
+  options           String? // JSON string array — for MULTIPLE_CHOICE/MATCHING_* types
+  correctIndex      Int?
+  correctAnswer     String? // for FILL_TYPES (readingGrading.ts's FILL_TYPES)
+  acceptableAnswers String? // JSON string array of alternate accepted spellings/forms (e.g. "colour"/"color")
+  wordLimit         String? // e.g. "NO MORE THAN TWO WORDS"
+  explanation       String?
+  imageUrl          String? // for diagram/map/plan-labeling questions (modeled as MATCHING_FEATURES-style index selection against this image)
+
+  test IeltsTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([testId, skill, questionNumber])
+}
+
+model IeltsWritingTask {
+  id          String  @id @default(uuid())
+  testId      String
+  taskNumber  Int // 1 | 2
+  promptText  String
+  imageUrl    String? // Academic Task 1's chart/graph/diagram — a real image the book contains; AI can't see it, teacher attaches manually in review. Null for GT Task 1 (a letter) and always for Task 2.
+  minWords    Int     @default(150) // 150 for Task 1, 250 for Task 2 — structural IELTS convention, not a scoring number
+  timeMinutes Int     @default(20) // 20 for Task 1, 40 for Task 2
+
+  test IeltsTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([testId, taskNumber])
+}
+
+model IeltsSpeakingPart {
+  id           String  @id @default(uuid())
+  testId       String
+  partNumber   Int // 1 | 2 | 3
+  instructions String?
+  questions    String // JSON string array of prompt lines (Part 1/3: several short questions; Part 2: cue-card topic + bullet points)
+  prepSeconds  Int? // 60 for Part 2's 1-minute prep; null for Part 1/3 (no fixed prep)
+  speakSeconds Int? // 120 for Part 2's 2-minute talk; null for Part 1/3 (per-question, not fixed)
+
+  test IeltsTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([testId, partNumber])
+}
+
+// One row per attempt, FK'd to the reusable IeltsTest content (unlike MockTestAttempt/
+// ReadingAttempt/WritingSubmission/SpeakingSession, which embed AI-generated content inline
+// as JSON since it's fresh per attempt and never reused — many students take the *same*
+// extracted Cambridge test over time, so the content itself must live independently of any
+// one student's attempt).
+model IeltsListeningAttempt {
+  id            String   @id @default(uuid())
+  userId        String
+  testId        String
+  answers       String // JSON: { [questionNumber]: number|string }
+  rawScore      Int // 0-40
+  band          Float // 0-9, .5 increments — via ieltsBandTables.js's LISTENING_BAND_TABLE
+  timeSpentSec  Int?
+  attemptNumber Int // 1st/2nd/... attempt by this user on this test, for maxAttempts enforcement in ASSIGNED mode
+  practicedAt   DateTime @default(now())
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test IeltsTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model IeltsReadingAttempt {
+  id            String   @id @default(uuid())
+  userId        String
+  testId        String
+  answers       String
+  rawScore      Int
+  band          Float // via READING_BAND_TABLE_ACADEMIC or _GT, chosen by test.testType
+  timeSpentSec  Int?
+  attemptNumber Int
+  practicedAt   DateTime @default(now())
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test IeltsTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model IeltsWritingAttempt {
+  id            String   @id @default(uuid())
+  userId        String
+  testId        String
+  task1Text     String
+  task1Feedback String // JSON: {taskAchievement,coherenceCohesion,lexicalResource,grammaticalRangeAccuracy} each {band,comment}, + taskBand
+  task2Text     String
+  task2Feedback String // same shape (Task 2's first criterion is "Task Response", not "Task Achievement" — relabeled in the prompt only)
+  overallBand   Float // (task1Band*1 + task2Band*2)/3, rounded per ieltsRounding.js
+  attemptNumber Int
+  practicedAt   DateTime @default(now())
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test IeltsTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+model IeltsSpeakingAttempt {
+  id     String @id @default(uuid())
+  userId String
+  testId String
+
+  part1AudioUrl   String?
+  part1Transcript String?
+  part1Feedback   String? // JSON: {fluencyCoherence,lexicalResource,grammaticalRangeAccuracy,pronunciation} each {band,comment}, + overallBand
+  part2AudioUrl   String?
+  part2Transcript String?
+  part2Feedback   String?
+  part3AudioUrl   String?
+  part3Transcript String?
+  part3Feedback   String?
+
+  overallBand   Float? // simple average of the 3 parts' overallBand — set once all 3 parts are submitted
+  attemptNumber Int
+  practicedAt   DateTime @default(now())
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test IeltsTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
 }

@@ -2,6 +2,7 @@ const express = require('express');
 const { PrismaClient, Prisma } = require('@prisma/client');
 const prisma = new PrismaClient();
 const router = express.Router();
+const { parseVNDateTime } = require('../utils/vnTime');
 
 // Create exam manually with questions
 router.post('/create', async (req, res) => {
@@ -33,8 +34,8 @@ router.post('/create', async (req, res) => {
         uploadedById: uploadedById || null,
         duration: parseInt(duration) || 45,
         totalQuestions: questions.length,
-        publishTime: publishTime ? new Date(publishTime) : null,
-        deadline: deadline ? new Date(deadline) : null,
+        publishTime: parseVNDateTime(publishTime),
+        deadline: parseVNDateTime(deadline),
         notes: notes || null,
         maxAttempts: maxAttempts !== undefined ? parseInt(maxAttempts) : 1,
         assignedStudents: { connect: targetStudentIds }
@@ -83,14 +84,14 @@ router.post('/cheat', async (req, res) => {
     const log = await prisma.cheatLog.upsert({
       where: { userId_examId: { userId, examId } },
       update: {
-        cheatCount: cheatCount || 1,
+        cheatCount: cheatCount ?? 1,
         isAutoSubmitted: isAutoSubmitted || false,
         updatedAt: new Date()
       },
       create: {
         userId,
         examId,
-        cheatCount: cheatCount || 1,
+        cheatCount: cheatCount ?? 1,
         isAutoSubmitted: isAutoSubmitted || false
       }
     });
@@ -116,7 +117,11 @@ router.get('/cheat-logs/:teacherId', async (req, res) => {
         isAutoSubmitted: true,
         createdAt: true,
         updatedAt: true,
-        user: { select: { id: true, name: true, email: true, avatar: true } },
+        // No `avatar` here — a user with cheat logs across several exams would otherwise get
+        // their full base64 avatar re-embedded once per log row, the exact anti-pattern already
+        // fixed in classroom.routes.js's teacher-classrooms endpoint. The frontend already has
+        // every real user's avatar exactly once via the STUDENTS list; it looks it up from there.
+        user: { select: { id: true, name: true, email: true } },
         exam: {
           select: {
             id: true,
@@ -140,7 +145,10 @@ router.get('/:id', async (req, res) => {
       where: { id: req.params.id },
       include: {
         assignedStudents: true,
-        results: true,
+        // No `results` here — this returns every student's answers/score/gradingDetails/
+        // cheatLogs for the exam to anyone who can call this route with just the exam id, and
+        // nothing in the frontend actually reads `exam.results` from this endpoint (canAttempt
+        // below is computed from a separately-scoped, per-requesting-user query instead).
         questions: {
           include: { question: true },
           orderBy: { order: 'asc' }
@@ -202,22 +210,23 @@ router.post('/submit', async (req, res) => {
       const q = eq.question;
       const userAnswer = selectedAnswers[q.id];
       const qPoints = q.points !== undefined ? parseFloat(q.points) : 1.0;
-      totalPossiblePoints += qPoints;
-      
+
       if (q.type === 'MULTIPLE_CHOICE') {
+        totalPossiblePoints += qPoints;
         if (userAnswer === q.correctOption) {
           earnedPoints += qPoints;
         } else if (userAnswer) {
           mistakeData.push({ userId, questionId: q.id });
         }
-      } else if (q.type === 'ESSAY' && userAnswer) {
-        const cleanAnswer = userAnswer.trim().toLowerCase();
+      } else if (q.type === 'ESSAY') {
         // Only grade if teacher provided a correct answer (not the default empty/"a" value)
         const rawCorrectOpt = q.correctOption ? q.correctOption.trim() : '';
         const hasCorrectAnswer = rawCorrectOpt && rawCorrectOpt.toLowerCase() !== 'a';
 
         if (hasCorrectAnswer) {
-          const isCorrect = cleanAnswer === rawCorrectOpt.toLowerCase();
+          totalPossiblePoints += qPoints;
+          const cleanAnswer = (userAnswer || '').trim().toLowerCase();
+          const isCorrect = !!userAnswer && cleanAnswer === rawCorrectOpt.toLowerCase();
           if (isCorrect) {
             earnedPoints += qPoints;
             gradingDetails.push({
@@ -235,13 +244,15 @@ router.post('/submit', async (req, res) => {
             });
             mistakeData.push({ userId, questionId: q.id });
           }
-        } else {
-          // No correct answer provided by teacher - give 0, pending manual grading
+        } else if (userAnswer) {
+          // No correct answer provided by teacher and there's no manual-grading workflow in
+          // this app — exclude from both earnedPoints and totalPossiblePoints so this câu tự
+          // luận never counts against the student's score (previously counted as wrong forever).
           gradingDetails.push({
             questionId: q.id,
-            pointsEarned: 0,
+            pointsEarned: null,
             maxPoints: qPoints,
-            feedback: 'Chờ giáo viên chấm thủ công.'
+            feedback: 'Câu này không có đáp án chấm tự động, không tính vào điểm.'
           });
         }
       }
@@ -359,8 +370,8 @@ router.put('/:id', async (req, res) => {
         title,
         examType,
         duration: duration ? parseInt(duration) : undefined,
-        publishTime: publishTime ? new Date(publishTime) : null,
-        deadline: deadline ? new Date(deadline) : null,
+        publishTime: parseVNDateTime(publishTime),
+        deadline: parseVNDateTime(deadline),
         notes
       }
     });

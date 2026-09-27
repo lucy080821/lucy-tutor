@@ -40,6 +40,8 @@ const skillProgressRoutes = require('./routes/skill-progress.routes');
 const freeStudentRoutes = require('./routes/freeStudent.routes');
 const pronunciationRoutes = require('./routes/pronunciation.routes');
 const mockTestRoutes = require('./routes/mockTest.routes');
+const ieltsRoutes = require('./routes/ielts.routes');
+const ieltsAttemptsRoutes = require('./routes/ieltsAttempts.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
@@ -61,6 +63,19 @@ app.use('/api/skill-progress', skillProgressRoutes);
 app.use('/api/free-students', freeStudentRoutes);
 app.use('/api/pronunciation', pronunciationRoutes);
 app.use('/api/mock-test', mockTestRoutes);
+app.use('/api/ielts', ieltsRoutes);
+app.use('/api/ielts-attempts', ieltsAttemptsRoutes);
+
+// Every route in this app returns JSON errors as { error: '...' } — but multer's fileFilter/
+// limits errors (bad file type, file too large) and malformed-JSON body-parser errors are
+// thrown BEFORE any route handler's own try/catch runs, so without this they fall through to
+// Express's default error handler, which returns an HTML stack-trace page instead. The
+// frontend always does `await res.json()` on a failed response, which then throws and shows a
+// generic "network error" instead of the real, more useful validation message.
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(err.status || 400).json({ error: err.message || 'Đã xảy ra lỗi không xác định' });
+});
 
 const PORT = process.env.PORT || 5000;
 

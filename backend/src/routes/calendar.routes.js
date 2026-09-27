@@ -2,13 +2,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const router = express.Router();
-
-const parseVNTime = (timeStr) => {
-  if (!timeStr) return null;
-  // If it's just "YYYY-MM-DDTHH:mm", append seconds and timezone
-  if (timeStr.length === 16) return new Date(`${timeStr}:00+07:00`);
-  return new Date(timeStr);
-};
+const { parseVNDateTime: parseVNTime } = require('../utils/vnTime');
 
 // GET /api/calendar/events?userId=xyz&role=STUDENT|TEACHER
 router.get('/events', async (req, res) => {

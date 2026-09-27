@@ -125,6 +125,9 @@ router.post('/solve-question', async (req, res) => {
     if (!content) {
       return res.status(400).json({ error: 'Missing question content' });
     }
+    if (type === 'MULTIPLE_CHOICE' && (!Array.isArray(options) || options.length !== 4)) {
+      return res.status(400).json({ error: 'Multiple-choice questions require exactly 4 options' });
+    }
 
     const prompt = `
 Bạn là một chuyên gia giáo dục Tiếng Anh.
@@ -331,7 +334,8 @@ router.post('/generate-reading-passage', async (req, res) => {
     const { topic, level, purpose, length, questionTypes, numQuestions } = req.body;
 
     const lengthLabel = { SHORT: 'ngắn (100-150 từ)', MEDIUM: 'trung bình (200-250 từ)', LONG: 'dài (300-380 từ)' }[length] || 'trung bình (200-250 từ)';
-    const count = Math.min(15, Math.max(1, parseInt(numQuestions, 10) || 4));
+    const parsedCount = parseInt(numQuestions, 10);
+    const count = Math.min(15, Math.max(1, Number.isNaN(parsedCount) ? 4 : parsedCount));
     const levelLabel = READING_LEVEL_LABELS[level] || READING_LEVEL_LABELS.B1;
     const purposeLabel = purpose === 'IELTS'
       ? 'Đây là bài luyện đọc theo định hướng thi IELTS Reading — văn phong học thuật/trang trọng, chủ đề mang tính thông tin/khoa học/xã hội như đề thi IELTS thật.'

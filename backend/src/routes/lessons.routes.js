@@ -3,6 +3,7 @@ const { PrismaClient } = require('@prisma/client');
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const { parseVNDateTime } = require('../utils/vnTime');
 
 // Create a new lesson
 router.post('/create', async (req, res) => {
@@ -15,8 +16,8 @@ router.post('/create', async (req, res) => {
         description,
         classroomId: classroomId || null,
         uploadedById: uploadedById || null,
-        publishTime: publishTime ? new Date(publishTime) : null,
-        deadline: deadline ? new Date(deadline) : null,
+        publishTime: parseVNDateTime(publishTime),
+        deadline: parseVNDateTime(deadline),
         vocabularies: {
           create: vocabularies || []
         },
@@ -48,22 +49,38 @@ router.put('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Lesson not found' });
     }
 
-    // Update the lesson fields and completely replace vocabularies and grammars
+    // Update the lesson fields. Vocab/grammar items that came back with their original `id`
+    // (i.e. untouched or just edited in place) are updated, not recreated — recreating them
+    // via deleteMany+create would cascade-delete each student's UserVocabProgress (SRS state:
+    // repetitions/interval/easeFactor) for that word, wiping their review history just because
+    // the teacher re-saved the lesson. Items with no `id` (new rows, or a full duplicate via
+    // "Nhân bản bài học" which intentionally starts fresh) are created; any existing row whose
+    // id is no longer present in the incoming list was removed by the teacher and gets deleted.
+    const incomingVocabs = vocabularies || [];
+    const existingVocabs = incomingVocabs.filter((v) => v && v.id);
+    const newVocabs = incomingVocabs.filter((v) => !v || !v.id).map(({ id: _drop, ...rest }) => rest);
+
+    const incomingGrammars = grammars || [];
+    const existingGrammars = incomingGrammars.filter((g) => g && g.id);
+    const newGrammars = incomingGrammars.filter((g) => !g || !g.id).map(({ id: _drop, ...rest }) => rest);
+
     const updatedLesson = await prisma.lesson.update({
       where: { id },
       data: {
         title,
         description,
         classroomId: classroomId || null,
-        publishTime: publishTime ? new Date(publishTime) : null,
-        deadline: deadline ? new Date(deadline) : null,
+        publishTime: parseVNDateTime(publishTime),
+        deadline: parseVNDateTime(deadline),
         vocabularies: {
-          deleteMany: {}, // delete all old ones
-          create: vocabularies || [] // create new ones
+          deleteMany: { id: { notIn: existingVocabs.map((v) => v.id) } },
+          update: existingVocabs.map(({ id: vId, ...data }) => ({ where: { id: vId }, data })),
+          create: newVocabs
         },
         grammars: {
-          deleteMany: {}, // delete all old ones
-          create: grammars || [] // create new ones
+          deleteMany: { id: { notIn: existingGrammars.map((g) => g.id) } },
+          update: existingGrammars.map(({ id: gId, ...data }) => ({ where: { id: gId }, data })),
+          create: newGrammars
         }
       },
       include: {

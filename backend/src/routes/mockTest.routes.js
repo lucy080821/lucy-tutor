@@ -95,12 +95,19 @@ Số câu hỏi phải đúng chính xác: cloze ${counts.cloze} câu (khớp đ
       return res.status(500).json({ error: 'AI response was not valid JSON' });
     }
 
+    // The prompts ask Groq for an exact count per section, but nothing enforces it actually
+    // complied — cap each section at its declared count so an over-generating response can't
+    // silently make the exam longer than its advertised structure (durationSec is fixed per
+    // variant and would no longer match a bloated question count). Under-generation is left
+    // as-is rather than padded — there's no real content to invent to make up the shortfall.
+    const capped = (questions, max) => questions.slice(0, max);
+
     const sections = [
-      { section: 'PHONETICS', questions: tagSection(discrete.phonetics, 'PHONETICS') },
-      { section: 'GRAMMAR_VOCAB', questions: tagSection(discrete.grammarVocab, 'GRAMMAR_VOCAB') },
-      { section: 'COMMUNICATION', questions: tagSection(discrete.communication, 'COMMUNICATION') },
-      { section: 'CLOZE', passage: passages.cloze?.passage || '', questions: tagSection(passages.cloze?.questions, 'CLOZE') },
-      { section: 'READING', passage: passages.reading?.passage || '', questions: tagSection(passages.reading?.questions, 'READING') }
+      { section: 'PHONETICS', questions: capped(tagSection(discrete.phonetics, 'PHONETICS'), counts.phonetics) },
+      { section: 'GRAMMAR_VOCAB', questions: capped(tagSection(discrete.grammarVocab, 'GRAMMAR_VOCAB'), counts.grammarVocab) },
+      { section: 'COMMUNICATION', questions: capped(tagSection(discrete.communication, 'COMMUNICATION'), counts.communication) },
+      { section: 'CLOZE', passage: passages.cloze?.passage || '', questions: capped(tagSection(passages.cloze?.questions, 'CLOZE'), counts.cloze) },
+      { section: 'READING', passage: passages.reading?.passage || '', questions: capped(tagSection(passages.reading?.questions, 'READING'), counts.reading) }
     ];
 
     res.json({ variant: variantKey, durationSec: counts.durationSec, sections });
