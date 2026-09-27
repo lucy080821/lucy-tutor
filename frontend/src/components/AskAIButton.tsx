@@ -25,16 +25,16 @@ export default function AskAIButton({
       setIsLoading(true);
       setError(null);
       try {
-        // In a real app, this hits the backend: 
-        // const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/ai/explain`, ...)
-        
-        // Simulating API call for MVP since backend might not have the API KEY yet
-        setTimeout(() => {
-          if (!isMounted) return;
-          setExplanation(`Chào bạn, mình là Lucy đây! 👋\n\nBạn đã chọn đáp án "${studentAnswer}", tuy nhiên đáp án đúng là "${correctAnswer}".\n\nTrong câu hỏi này, chúng ta cần để ý đến cấu trúc ngữ pháp đặc biệt liên quan đến cụm từ "Neither... nor...". Động từ sẽ được chia theo chủ ngữ gần nhất với nó, trong trường hợp này là "the students" (số nhiều). Vì câu có chữ "yesterday" (quá khứ), nên đáp án chính xác phải là "were".\n\n💡 Mẹo nhỏ: Cứ thấy Neither A nor B thì động từ chia theo B nhé!`);
-          setIsLoading(false);
-        }, 1500);
-
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/ai/explain`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ questionContent, options, studentAnswer, correctAnswer })
+        });
+        const data = await res.json();
+        if (!isMounted) return;
+        if (!res.ok || !data.explanation) throw new Error(data.error || 'No explanation returned');
+        setExplanation(data.explanation);
+        setIsLoading(false);
       } catch (err: any) {
         if (!isMounted) return;
         setError("Không thể kết nối tới Lucy lúc này. Vui lòng thử lại sau.");
@@ -52,23 +52,23 @@ export default function AskAIButton({
   return (
     <div className="mt-4">
       {isLoading && (
-        <div className="flex items-center gap-3 px-5 py-4 bg-primary/5 border border-primary/20 rounded-2xl text-primary font-medium w-fit shadow-inner">
-          <span className="text-2xl animate-bounce">👩‍🏫</span> Lucy đang xem xét câu trả lời của bạn...
+        <div className="flex items-center gap-3 px-5 py-3.5 bg-primary-soft border border-primary/15 rounded-full text-primary font-semibold w-fit">
+          <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin shrink-0" aria-hidden="true" /> Lucy đang xem xét câu trả lời của bạn...
         </div>
       )}
 
       {error && (
-        <div className="p-4 bg-red-500/10 text-red-500 rounded-xl border border-red-500/20 text-sm">
+        <div className="p-4 bg-red-50 text-red-700 rounded-xl border border-red-100 text-sm">
           {error}
         </div>
       )}
 
       {explanation && (
-        <div className="relative p-6 bg-surface border border-primary/20 rounded-3xl shadow-lg mt-4 animate-in fade-in zoom-in-95 duration-300">
-          <div className="absolute -top-4 left-6 bg-primary text-white text-sm font-bold px-4 py-1.5 rounded-full flex items-center gap-2 shadow-[0_4px_10px_rgba(99,102,241,0.4)]">
-            👩‍🏫 Gia sư Lucy (Groq AI)
+        <div className="relative p-6 pt-7 bg-surface border border-line rounded-2xl shadow-card mt-6 animate-in fade-in zoom-in-95 duration-300">
+          <div className="absolute -top-4 left-6 bg-primary text-white text-sm font-bold px-4 py-1.5 rounded-full flex items-center gap-2 shadow-[0_4px_12px_rgba(30,58,138,0.25)]">
+            Gia sư Lucy (Groq AI)
           </div>
-          <div className="text-foreground/90 leading-relaxed whitespace-pre-wrap text-[15px] pt-3 font-medium">
+          <div className="text-foreground leading-relaxed whitespace-pre-wrap text-[15px] pt-3 font-medium">
             {explanation}
           </div>
         </div>

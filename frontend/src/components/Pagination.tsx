@@ -25,14 +25,14 @@ export default function Pagination({ page, totalPages, onPageChange, totalItems,
 
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-      <p className="text-xs text-foreground/40 font-medium">
+      <p className="text-xs text-foreground/50 font-medium">
         Hiển thị {startItem}-{endItem} / {totalItems}
       </p>
       <div className="flex flex-wrap items-center gap-1.5">
         <button
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          className="px-3 py-2 text-xs font-bold rounded-lg bg-foreground/5 text-foreground/50 hover:bg-foreground/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="px-4 py-2 text-xs font-bold rounded-full border border-foreground/15 text-foreground/60 hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-foreground/15 disabled:hover:text-foreground/60 cursor-pointer transition-colors"
         >
           ← Trước
         </button>
@@ -43,8 +43,8 @@ export default function Pagination({ page, totalPages, onPageChange, totalItems,
             <button
               key={p}
               onClick={() => onPageChange(p)}
-              className={`w-9 h-9 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                p === page ? "bg-primary text-white" : "bg-foreground/5 text-foreground/50 hover:bg-foreground/10"
+              className={`w-9 h-9 text-xs font-bold rounded-full border transition-colors cursor-pointer ${
+                p === page ? "bg-primary border-primary text-white shadow-sm" : "border-foreground/15 text-foreground/60 hover:border-primary hover:text-primary"
               }`}
             >
               {p}
@@ -54,7 +54,7 @@ export default function Pagination({ page, totalPages, onPageChange, totalItems,
         <button
           onClick={() => onPageChange(page + 1)}
           disabled={page >= totalPages}
-          className="px-3 py-2 text-xs font-bold rounded-lg bg-foreground/5 text-foreground/50 hover:bg-foreground/10 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+          className="px-4 py-2 text-xs font-bold rounded-full border border-foreground/15 text-foreground/60 hover:border-primary hover:text-primary disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-foreground/15 disabled:hover:text-foreground/60 cursor-pointer transition-colors"
         >
           Sau →
         </button>

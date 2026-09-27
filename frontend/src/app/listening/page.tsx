@@ -84,6 +84,11 @@ export default function ListeningPracticePage() {
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playingFullRef = useRef(false);
+  // "Free listen" clips (progressId === null) never change server-side state — nothing marks
+  // them as "already served", so without tracking this client-side, refilling the queue would
+  // return the exact same deterministic clips forever whenever the queue is mostly/entirely
+  // free-listen content. Persists for the whole session (not reset per accent change).
+  const seenFreeClipIdsRef = useRef<Set<string>>(new Set());
 
   // ── Đề Luyện Nghe (exam-style listening practice) ──
   const [pageMode, setPageMode] = useState<"VOCAB" | "EXAM" | "HISTORY">("VOCAB");
@@ -214,17 +219,30 @@ export default function ListeningPracticePage() {
     fetchQueue(uid, accentFilter);
   }, [router]);
 
-  const fetchQueue = async (uid: string, accent: string) => {
-    setLoading(true);
+  // `useLocalSpinner` picks which loading flag gates the fetch: the page-gating `loading`
+  // state (used on first mount, before the entire page below it can even render) vs the
+  // localized `loadingMore` flag (used when the page is already showing content and only the
+  // vocab card itself should show a spinner — an accent-filter change shouldn't blank out the
+  // header/tabs along with it).
+  const fetchQueue = async (uid: string, accent: string, useLocalSpinner = false) => {
+    const setSpinner = useLocalSpinner ? setLoadingMore : setLoading;
+    setSpinner(true);
     try {
-      const accentParam = accent !== "ALL" ? `?accent=${accent}` : "";
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/listening/queue/${uid}${accentParam}`);
-      if (res.ok) setQueue(await res.json());
+      const params = new URLSearchParams();
+      if (accent !== "ALL") params.set("accent", accent);
+      if (seenFreeClipIdsRef.current.size > 0) params.set("excludeClipIds", [...seenFreeClipIdsRef.current].join(","));
+      const qs = params.toString();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/listening/queue/${uid}${qs ? `?${qs}` : ""}`);
+      if (res.ok) {
+        const data: QueueItem[] = await res.json();
+        data.forEach((item) => { if (item.free && item.clips[0]) seenFreeClipIdsRef.current.add(item.clips[0].clipId); });
+        setQueue(data);
+      }
     } catch (err) {
       console.error(err);
       Swal.fire("Lỗi", "Không thể tải dữ liệu luyện nghe", "error");
     }
-    setLoading(false);
+    setSpinner(false);
   };
 
   const changeAccentFilter = (accent: string) => {
@@ -232,7 +250,7 @@ export default function ListeningPracticePage() {
     setAccentFilter(accent);
     setCurrentIndex(0);
     resetCardState();
-    fetchQueue(userId, accent);
+    fetchQueue(userId, accent, true);
   };
 
   const currentItem = queue[currentIndex];
@@ -348,18 +366,11 @@ export default function ListeningPracticePage() {
     }
 
     // Ran through the current batch — silently pull in the next batch of due words
-    // and keep going rather than interrupting with a "session complete" screen.
-    setLoadingMore(true);
-    try {
-      const accentParam = accentFilter !== "ALL" ? `?accent=${accentFilter}` : "";
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/listening/queue/${userId}${accentParam}`);
-      setQueue(res.ok ? await res.json() : []);
-      setCurrentIndex(0);
-    } catch (err) {
-      console.error(err);
-      Swal.fire("Lỗi", "Không thể tải thêm từ vựng", "error");
-    }
-    setLoadingMore(false);
+    // and keep going rather than interrupting with a "session complete" screen. Routed through
+    // fetchQueue (not a duplicate inline fetch) so the excludeClipIds rotation for free-listen
+    // items applies here too, not just on the initial load/accent-filter change.
+    await fetchQueue(userId, accentFilter, true);
+    setCurrentIndex(0);
   };
 
   if (loading) {
@@ -368,40 +379,61 @@ export default function ListeningPracticePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-surface border-b border-foreground/10 px-4 sm:px-6 py-3 sm:py-4 flex items-center gap-2 sm:gap-4 flex-wrap">
-        <button onClick={() => router.push("/dashboard")} className="text-foreground/50 hover:text-foreground transition-colors text-sm font-medium shrink-0">
-          ← Dashboard
-        </button>
-        <span className="text-foreground/20 hidden sm:inline">/</span>
-        <h1 className="font-bold text-primary text-sm sm:text-base">🎧 Studio Luyện Nghe</h1>
-        <div className="flex bg-foreground/5 p-1 rounded-xl ml-auto">
-          {[
-            { key: "VOCAB", label: "🔤 Tra Từ Vựng" },
-            { key: "EXAM", label: "🎧 Đề Luyện Nghe" },
-            { key: "HISTORY", label: `📜 Lịch Sử (${examHistory.length})` }
-          ].map(v => (
-            <button
-              key={v.key}
-              onClick={() => { setPageMode(v.key as any); setViewingExamHistoryItem(null); }}
-              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${pageMode === v.key ? "bg-primary text-white shadow-sm" : "text-foreground/50 hover:text-foreground"}`}
-            >
-              {v.label}
+      {/* Page banner */}
+      <div className="bg-primary-soft border-b border-line">
+        <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 flex items-center gap-6">
+          <div className="flex-1 min-w-0">
+            <nav aria-label="Breadcrumb" className="text-xs text-muted mb-2 flex flex-wrap items-center gap-1.5">
+              <button onClick={() => router.push("/dashboard")} className="hover:text-primary">Trang chủ</button>
+              <span aria-hidden>/</span>
+              <span className="text-foreground font-semibold">Luyện Nghe</span>
+            </nav>
+            <h1 className="ui-page-title">Studio Luyện Nghe</h1>
+            <p className="ui-page-subtitle max-w-2xl leading-relaxed">
+              Nghe từ vựng trong ngữ cảnh audio thật do giáo viên giao, luyện chép chính tả và làm đề luyện nghe do AI tạo từ script gốc.
+            </p>
+            <button onClick={() => router.push("/dashboard")} className="btn-ghost px-3 py-2 text-sm mt-3 -ml-3">
+              ← Dashboard
             </button>
-          ))}
+          </div>
+          <img
+            src="/images/thumbs/listening.svg"
+            alt="Minh hoạ luyện nghe tiếng Anh"
+            width={640}
+            height={360}
+            loading="eager"
+            className="hidden md:block w-60 lg:w-72 h-auto rounded-2xl shrink-0"
+          />
         </div>
       </div>
 
+      <div className="max-w-4xl mx-auto px-4 pt-6 flex flex-wrap gap-2">
+        {[
+          { key: "VOCAB", label: "Tra Từ Vựng" },
+          { key: "EXAM", label: "Đề Luyện Nghe" },
+          { key: "HISTORY", label: `Lịch Sử (${examHistory.length})` }
+        ].map(v => (
+          <button
+            key={v.key}
+            onClick={() => { setPageMode(v.key as any); setViewingExamHistoryItem(null); }}
+            className={`ui-chip ${pageMode === v.key ? "ui-chip-active" : ""}`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+
       {pageMode === "VOCAB" && (
-      <div className="max-w-2xl mx-auto px-3 sm:px-4 py-5 sm:py-8">
+      <div className="max-w-2xl mx-auto px-4 py-6 sm:py-8">
         <div className="flex justify-center gap-2 mb-6 flex-wrap">
           {ACCENT_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => changeAccentFilter(opt.value)}
-              className={`px-4 py-1.5 rounded-full text-sm font-bold border transition-colors ${
+              className={`ui-chip font-bold ${
                 accentFilter === opt.value
-                  ? "bg-primary text-white border-primary"
-                  : "border-foreground/15 text-foreground/50 hover:border-primary/40"
+                  ? "ui-chip-active"
+                  : ""
               }`}
             >
               {opt.label}
@@ -411,25 +443,25 @@ export default function ListeningPracticePage() {
 
         {loadingMore ? (
           <div className="flex flex-col items-center justify-center text-center py-20">
-            <div className="text-4xl mb-4 animate-pulse">🎧</div>
-            <p className="text-foreground/50 font-bold">Đang nạp thêm từ vựng...</p>
+            <span className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-4" aria-hidden />
+            <p className="text-muted font-bold">Đang nạp thêm từ vựng...</p>
           </div>
         ) : queue.length === 0 ? (
-          <div className="flex flex-col items-center justify-center text-center py-20">
-            <div className="text-6xl mb-4">🎧</div>
-            <h2 className="text-2xl font-bold mb-2">Chưa có audio để luyện nghe</h2>
-            <p className="text-foreground/50">
+          <div className="ui-card flex flex-col items-center justify-center text-center py-16 px-6">
+            <img src="/images/illustrations/empty-state.svg" alt="Chưa có audio luyện nghe" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mb-4" />
+            <h2 className="text-2xl font-bold text-primary mb-2">Chưa có audio để luyện nghe</h2>
+            <p className="text-muted">
               Giáo viên chưa gán audio nào cho bạn hoặc lớp của bạn. Hãy quay lại sau khi giáo viên cập nhật thêm nội dung ở Studio Luyện Nghe.
             </p>
           </div>
         ) : currentItem && currentClip ? (
           <div className="space-y-6">
             <div className="w-full mb-2">
-              <div className="flex justify-between text-xs font-bold text-foreground/50 mb-2">
+              <div className="flex justify-between text-xs font-bold text-muted mb-2">
                 <span>Tiến độ</span>
                 <span>Còn lại {queue.length - currentIndex} từ</span>
               </div>
-              <div className="h-2 w-full bg-foreground/10 rounded-full overflow-hidden">
+              <div className="h-2 w-full bg-line rounded-full overflow-hidden">
                 <div
                   className="h-full bg-primary transition-all duration-300"
                   style={{ width: `${(currentIndex / queue.length) * 100}%` }}
@@ -437,19 +469,19 @@ export default function ListeningPracticePage() {
               </div>
             </div>
 
-            <div className="bg-surface border border-foreground/10 rounded-[2rem] p-5 sm:p-8 text-center shadow-xl">
-              <p className="text-xs sm:text-sm font-bold text-foreground/40 uppercase tracking-widest mb-1">
+            <div className="ui-card p-5 sm:p-8 text-center">
+              <p className="text-xs sm:text-sm font-bold text-muted uppercase tracking-widest mb-1">
                 {phase === "EXPLORE" ? "Xem & Nghe Từ Trong Câu" : "Nghe Và Điền Từ"}
               </p>
               {currentItem.free && (
-                <span className="inline-block mb-1 px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 text-[10px] font-bold uppercase tracking-wide">
-                  🎧 Nghe tự do
+                <span className="inline-block mb-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold uppercase tracking-wide">
+                  Nghe tự do
                 </span>
               )}
               <h2 className="text-2xl sm:text-3xl font-bold text-primary mb-1 break-words">{currentItem.vocab.meaning}</h2>
-              {currentItem.vocab.phonetic && <p className="text-foreground/50 font-mono">{currentItem.vocab.phonetic}</p>}
+              {currentItem.vocab.phonetic && <p className="text-muted font-mono">{currentItem.vocab.phonetic}</p>}
               {currentItem.clips.length === 1 && (
-                <p className="text-xs text-foreground/40 font-bold mt-1">
+                <p className="ui-badge mt-2">
                   {ACCENT_OPTIONS.find((o) => o.value === currentClip.accent)?.label || currentClip.accent}
                 </p>
               )}
@@ -460,10 +492,10 @@ export default function ListeningPracticePage() {
                     <button
                       key={clip.clipId}
                       onClick={() => setSelectedClipIndex(idx)}
-                      className={`px-3 py-1 rounded-full text-xs font-bold border transition-colors max-w-[70vw] sm:max-w-[220px] truncate ${
+                      className={`ui-chip px-3.5 py-2 text-xs font-bold max-w-[70vw] sm:max-w-[220px] truncate block ${
                         idx === selectedClipIndex
-                          ? "bg-primary text-white border-primary"
-                          : "border-foreground/15 text-foreground/50 hover:border-primary/40"
+                          ? "ui-chip-active"
+                          : ""
                       }`}
                     >
                       {ACCENT_OPTIONS.find((o) => o.value === clip.accent)?.label || clip.accent} · Ví dụ {idx + 1}: {clip.title}
@@ -476,7 +508,7 @@ export default function ListeningPracticePage() {
 
               <button
                 onClick={replay}
-                className="mt-6 w-16 h-16 mx-auto rounded-full bg-primary text-white flex items-center justify-center text-2xl shadow-md hover:opacity-90 transition-opacity"
+                className="mt-6 w-16 h-16 mx-auto rounded-full bg-primary text-white flex items-center justify-center text-2xl shadow-card hover:bg-[#172e6e] hover:shadow-card-hover transition-all"
                 aria-label="Nghe lại"
               >
                 ▶
@@ -490,7 +522,7 @@ export default function ListeningPracticePage() {
                         <button
                           key={idx}
                           onClick={replay}
-                          className="font-black text-primary underline decoration-dotted decoration-2 underline-offset-4 hover:bg-primary/10 rounded px-0.5 cursor-pointer"
+                          className="font-black text-primary underline decoration-dotted decoration-2 underline-offset-4 hover:bg-primary-soft rounded px-0.5 cursor-pointer"
                           title="Bấm để nghe lại từ này"
                         >
                           {token}{" "}
@@ -500,10 +532,10 @@ export default function ListeningPracticePage() {
                       )
                     )}
                   </p>
-                  <p className="text-xs text-foreground/40 mt-2">Bấm vào từ được bôi đậm để nghe lại</p>
+                  <p className="text-xs text-muted mt-2">Bấm vào từ được bôi đậm để nghe lại</p>
                   <button
                     onClick={() => setPhase("TEST")}
-                    className="mt-6 w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-md hover:opacity-90 transition-opacity"
+                    className="btn-primary mt-6 w-full py-3.5"
                   >
                     Bắt Đầu Kiểm Tra →
                   </button>
@@ -530,10 +562,10 @@ export default function ListeningPracticePage() {
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck={false}
-                    className="w-full max-w-xs text-center text-xl font-bold border-2 border-foreground/10 focus:border-primary rounded-2xl px-4 py-3 outline-none transition-colors bg-background text-foreground"
+                    className="w-full max-w-xs text-center text-xl font-bold border border-line-strong focus:border-primary focus:ring-[3px] focus:ring-primary/10 rounded-xl px-4 py-3 outline-none transition-colors bg-surface text-foreground"
                   />
                   {usedHint && (
-                    <p className="mt-4 font-mono text-lg tracking-widest text-foreground/50">
+                    <p className="mt-4 font-mono text-lg tracking-widest text-muted">
                       {getHintMask(currentClip.tokens[currentClip.targetTokenIndex])}
                     </p>
                   )}
@@ -541,13 +573,13 @@ export default function ListeningPracticePage() {
                     <button
                       onClick={() => setUsedHint(true)}
                       disabled={usedHint}
-                      className="flex-1 min-w-[120px] px-4 py-2 bg-amber-500/10 text-amber-600 font-bold rounded-xl hover:bg-amber-500 hover:text-white transition-colors disabled:opacity-50"
+                      className="flex-1 min-w-[120px] px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 font-bold rounded-full hover:bg-amber-100 transition-colors disabled:opacity-50"
                     >
-                      💡 Gợi Ý
+                      Gợi Ý
                     </button>
                     <button
                       onClick={submitTypedAnswer}
-                      className="flex-1 min-w-[120px] px-4 py-2 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity"
+                      className="btn-primary flex-1 min-w-[120px] px-4 py-2.5"
                     >
                       Kiểm Tra
                     </button>
@@ -555,7 +587,7 @@ export default function ListeningPracticePage() {
                 </div>
               ) : (
                 <div className="mt-6">
-                  <div className={`inline-block mb-4 px-4 py-2 rounded-xl font-bold ${isCorrect ? "bg-green-500/10 text-green-600" : "bg-rose-500/10 text-rose-600"}`}>
+                  <div className={`inline-block mb-4 px-5 py-2 rounded-full font-bold border ${isCorrect ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-red-50 text-red-700 border-red-200"}`}>
                     {isCorrect ? (computedQuality === 3 ? "Gần đúng!" : "Chính xác!") : "Chưa đúng"}
                   </div>
                   <p className="text-lg leading-relaxed">
@@ -566,17 +598,17 @@ export default function ListeningPracticePage() {
                     ))}
                   </p>
                   {!isCorrect && typedAnswer && (
-                    <p className="text-foreground/50 mt-3 text-sm">Bạn đã gõ: <span className="line-through">{typedAnswer}</span></p>
+                    <p className="text-muted mt-3 text-sm">Bạn đã gõ: <span className="line-through">{typedAnswer}</span></p>
                   )}
 
-                  <div className="mt-6 pt-6 border-t border-foreground/10 text-left">
-                    <p className="text-xs font-bold text-foreground/40 uppercase tracking-widest mb-2 text-center">Toàn Bộ Transcript</p>
-                    <p className="text-sm text-foreground/70 leading-relaxed whitespace-pre-wrap">
+                  <div className="mt-6 pt-6 border-t border-line text-left">
+                    <p className="text-xs font-bold text-muted uppercase tracking-widest mb-2 text-center">Toàn Bộ Transcript</p>
+                    <p className="text-sm text-foreground leading-7 whitespace-pre-wrap bg-[#f7f9fc] border border-line rounded-xl p-4">
                       {highlightWords(currentClip.fullScript, [currentClip.tokens[currentClip.targetTokenIndex]])}
                     </p>
                     <button
                       onClick={playFullTranscript}
-                      className="mt-4 mx-auto flex items-center gap-2 px-5 py-2 bg-primary/10 text-primary font-bold rounded-xl hover:bg-primary hover:text-white transition-colors"
+                      className="btn-outline mt-4 mx-auto flex px-5 py-2"
                     >
                       ▶ Nghe Toàn Bộ
                     </button>
@@ -588,7 +620,7 @@ export default function ListeningPracticePage() {
             <div className={`transition-opacity duration-300 ${submitted ? "opacity-100" : "opacity-0 pointer-events-none"}`}>
               <button
                 onClick={goNext}
-                className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-md hover:opacity-90 transition-opacity"
+                className="btn-primary w-full py-3.5"
               >
                 Tiếp Tục →
               </button>
@@ -599,67 +631,67 @@ export default function ListeningPracticePage() {
       )}
 
       {pageMode === "EXAM" && (
-        <div className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-6">
+        <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-6">
           {!examData ? (
-            <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-5 shadow-sm">
-              <h2 className="font-bold text-foreground flex items-center gap-2">
-                <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-base">🎧</span>
-                Tạo Đề Luyện Nghe
-              </h2>
+            <div className="ui-card p-5 sm:p-6 space-y-5">
+              <h2 className="ui-section-title">Tạo Đề Luyện Nghe</h2>
               {examClips.length === 0 ? (
-                <p className="text-sm text-foreground/50">Chưa có audio nào khả dụng để tạo đề. Hãy đợi giáo viên giao thêm audio luyện nghe cho bạn.</p>
+                <div className="text-center py-4">
+                  <img src="/images/illustrations/empty-state.svg" alt="Chưa có audio để tạo đề" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
+                  <p className="text-sm text-muted">Chưa có audio nào khả dụng để tạo đề. Hãy đợi giáo viên giao thêm audio luyện nghe cho bạn.</p>
+                </div>
               ) : (
                 <>
                   <div>
-                    <label className="block text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">Chọn audio</label>
-                    <select value={examClipId} onChange={(e) => setExamClipId(e.target.value)} className="w-full p-3 border border-foreground/15 bg-background rounded-xl font-semibold">
+                    <label className="ui-label">Chọn audio</label>
+                    <select value={examClipId} onChange={(e) => setExamClipId(e.target.value)} className="ui-input font-semibold">
                       <option value="">-- Chọn audio --</option>
                       {examClips.map((c) => <option key={c.id} value={c.id}>{c.title} ({c.accent})</option>)}
                     </select>
                   </div>
                   <div className="flex flex-wrap gap-4">
                     <div className="min-w-[150px]">
-                      <label className="block text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">Cấp độ (CEFR)</label>
-                      <select value={examLevel} onChange={(e) => setExamLevel(e.target.value as CefrLevel)} className="w-full p-3 border border-foreground/15 bg-background rounded-xl font-semibold">
+                      <label className="ui-label">Cấp độ (CEFR)</label>
+                      <select value={examLevel} onChange={(e) => setExamLevel(e.target.value as CefrLevel)} className="ui-input font-semibold">
                         {CEFR_LEVELS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
                       </select>
                     </div>
                     <div className="min-w-[190px]">
-                      <label className="block text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">Mục đích luyện tập</label>
-                      <select value={examPurpose} onChange={(e) => setExamPurpose(e.target.value as PracticePurpose)} className="w-full p-3 border border-foreground/15 bg-background rounded-xl font-semibold">
+                      <label className="ui-label">Mục đích luyện tập</label>
+                      <select value={examPurpose} onChange={(e) => setExamPurpose(e.target.value as PracticePurpose)} className="ui-input font-semibold">
                         {PRACTICE_PURPOSES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                       </select>
                     </div>
                     <div className="min-w-[130px]">
-                      <label className="block text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">Số câu hỏi</label>
-                      <input type="number" min={3} max={10} value={examNumQuestions} onChange={(e) => setExamNumQuestions(Number(e.target.value) || 5)} className="w-full p-3 border border-foreground/15 bg-background rounded-xl font-semibold" />
+                      <label className="ui-label">Số câu hỏi</label>
+                      <input type="number" min={3} max={10} value={examNumQuestions} onChange={(e) => setExamNumQuestions(Number(e.target.value) || 5)} className="ui-input font-semibold" />
                     </div>
                   </div>
                   <button
                     onClick={generateExam}
                     disabled={generatingExam}
-                    className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+                    className="btn-primary w-full py-3"
                   >
                     {generatingExam ? (
                       <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang tạo đề...</>
                     ) : (
-                      <>🎧 Tạo Đề Luyện Nghe</>
+                      <>Tạo Đề Luyện Nghe</>
                     )}
                   </button>
                 </>
               )}
             </div>
           ) : (
-            <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-5 shadow-sm">
+            <div className="ui-card p-5 sm:p-7 space-y-5">
               <div className="flex items-center justify-between gap-3 flex-wrap">
-                <h2 className="text-xl font-bold text-foreground">{examData.clip.title}</h2>
-                <button onClick={() => setExamData(null)} className="text-xs font-bold text-foreground/40 hover:text-primary transition-colors">↺ Tạo đề khác</button>
+                <h2 className="ui-section-title">{examData.clip.title}</h2>
+                <button onClick={() => setExamData(null)} className="btn-outline px-4 py-2 text-xs">↺ Tạo đề khác</button>
               </div>
-              <audio controls src={examData.clip.audioUrl} className="w-full" />
+              <audio controls src={examData.clip.audioUrl} className="w-full rounded-full bg-[#f7f9fc]" />
 
               <div className="space-y-4">
                 {examData.questions.map((q, qi) => (
-                  <div key={qi} className="bg-background/50 border border-foreground/5 rounded-xl p-4">
+                  <div key={qi} className="border border-line rounded-xl p-4 sm:p-5 bg-surface">
                     <div className="flex items-start gap-3 mb-3">
                       <span className="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{qi + 1}</span>
                       <p className="font-semibold flex-1">{q.question}</p>
@@ -672,14 +704,14 @@ export default function ListeningPracticePage() {
                           onChange={(e) => selectExamAnswer(qi, e.target.value)}
                           disabled={examSubmitted}
                           placeholder="Gõ từ/cụm từ cần điền..."
-                          className={`w-full p-3 border rounded-xl text-sm transition-colors ${
+                          className={`w-full p-3 border rounded-lg text-sm transition-colors ${
                             examSubmitted
-                              ? isReadingAnswerCorrect(q, examAnswers[qi]) ? "border-green-400 bg-green-50 text-green-800" : "border-red-400 bg-red-50 text-red-800"
-                              : "border-foreground/15 bg-surface focus:border-primary/50 focus:ring-2 focus:ring-primary/10 outline-none"
+                              ? isReadingAnswerCorrect(q, examAnswers[qi]) ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-red-300 bg-red-50 text-red-800"
+                              : "border-line-strong bg-surface focus:border-primary focus:ring-[3px] focus:ring-primary/10 outline-none"
                           }`}
                         />
                         {examSubmitted && !isReadingAnswerCorrect(q, examAnswers[qi]) && (
-                          <p className="text-xs text-green-700 mt-1.5">Đáp án đúng: <strong>{q.correctAnswer}</strong></p>
+                          <p className="text-xs text-emerald-700 mt-1.5">Đáp án đúng: <strong>{q.correctAnswer}</strong></p>
                         )}
                       </div>
                     ) : (
@@ -687,15 +719,15 @@ export default function ListeningPracticePage() {
                         {(q.options || []).map((opt, oi) => {
                           const isSelected = examAnswers[qi] === oi;
                           const isCorrectOpt = oi === q.correctIndex;
-                          let stateClass = "border-foreground/15 bg-surface hover:border-primary/40";
+                          let stateClass = "border-line-strong bg-surface hover:border-primary hover:bg-primary-soft/50";
                           if (examSubmitted) {
-                            if (isCorrectOpt) stateClass = "border-green-400 bg-green-50 text-green-800";
-                            else if (isSelected) stateClass = "border-red-400 bg-red-50 text-red-800";
+                            if (isCorrectOpt) stateClass = "border-emerald-300 bg-emerald-50 text-emerald-800";
+                            else if (isSelected) stateClass = "border-red-300 bg-red-50 text-red-800";
                           } else if (isSelected) {
-                            stateClass = "border-primary bg-primary/5";
+                            stateClass = "border-primary bg-primary-soft text-primary font-semibold";
                           }
                           return (
-                            <button key={oi} onClick={() => selectExamAnswer(qi, oi)} disabled={examSubmitted} className={`w-full text-left p-3 border rounded-xl text-sm transition-colors ${stateClass}`}>
+                            <button key={oi} onClick={() => selectExamAnswer(qi, oi)} disabled={examSubmitted} className={`w-full text-left p-3 border rounded-lg text-sm transition-colors ${stateClass}`}>
                               {opt}
                             </button>
                           );
@@ -703,29 +735,30 @@ export default function ListeningPracticePage() {
                       </div>
                     )}
                     {examSubmitted && (
-                      <p className="text-xs text-foreground/60 mt-3 ml-9 bg-foreground/5 p-2.5 rounded-lg leading-relaxed">💡 {q.explanation}</p>
+                      <p className="text-xs text-muted mt-3 ml-9 bg-primary-soft/60 border border-line p-3 rounded-lg leading-relaxed">{q.explanation}</p>
                     )}
                   </div>
                 ))}
               </div>
 
               {!examSubmitted ? (
-                <button onClick={submitExam} className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity shadow-sm">Nộp bài</button>
+                <button onClick={submitExam} className="btn-primary w-full py-3">Nộp bài</button>
               ) : (
                 <div className="space-y-4">
-                  <div className="bg-primary/5 border border-primary/15 rounded-2xl p-5 flex items-center justify-between flex-wrap gap-3">
-                    <div>
-                      <p className="text-lg font-bold text-primary">
+                  <div className="ui-card p-5 flex items-center justify-between flex-wrap gap-3">
+                    <img src="/images/illustrations/exam-result.svg" alt="Minh hoạ kết quả bài làm" width={800} height={600} loading="lazy" className="hidden sm:block w-24 h-auto shrink-0" />
+                    <div className="flex-1 min-w-[180px]">
+                      <p className="text-xl font-extrabold text-primary">
                         Kết quả: {examData.questions.reduce((s, q, i) => s + (isReadingAnswerCorrect(q, examAnswers[i]) ? 1 : 0), 0)}/{examData.questions.length} câu đúng
                       </p>
-                      {examPracticedAt && <p className="text-xs text-foreground/40 mt-1">🕓 {formatPracticedAt(examPracticedAt)}</p>}
+                      {examPracticedAt && <p className="text-xs text-muted mt-1">{formatPracticedAt(examPracticedAt)}</p>}
                     </div>
                     <button
                       onClick={() => downloadExamPdf(examPdfRef.current)}
                       disabled={exportingPdf}
-                      className="text-xs font-bold px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                      className="btn-outline px-4 py-2 text-xs"
                     >
-                      🖨️ {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                      {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
                     </button>
                   </div>
 
@@ -755,10 +788,13 @@ export default function ListeningPracticePage() {
       )}
 
       {pageMode === "HISTORY" && !viewingExamHistoryItem && (
-        <div className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-3">
-          <h1 className="text-2xl font-black">📜 Lịch Sử Luyện Nghe</h1>
+        <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-3">
+          <h2 className="ui-section-title mb-2">Lịch Sử Luyện Nghe</h2>
           {examHistory.length === 0 ? (
-            <p className="text-foreground/50 text-sm">Bạn chưa làm đề luyện nghe nào. Đề sau khi nộp sẽ tự động lưu tại đây.</p>
+            <div className="ui-card p-8 text-center">
+              <img src="/images/illustrations/empty-state.svg" alt="Chưa có lịch sử luyện nghe" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
+              <p className="text-muted text-sm">Bạn chưa làm đề luyện nghe nào. Đề sau khi nộp sẽ tự động lưu tại đây.</p>
+            </div>
           ) : (
             <>
               {examHistoryPagination.pageItems.map((h) => {
@@ -769,13 +805,14 @@ export default function ListeningPracticePage() {
                   <button
                     key={h.id}
                     onClick={() => setViewingExamHistoryItem(h)}
-                    className="w-full text-left bg-surface border border-foreground/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between gap-3"
+                    className="ui-card ui-card-hover w-full text-left p-3 sm:p-4 flex items-center justify-between gap-4"
                   >
-                    <div className="min-w-0">
-                      <p className="text-sm font-bold text-foreground/80 line-clamp-1">{h.title}</p>
-                      <p className="text-xs text-foreground/50 mt-1">🕓 {formatPracticedAt(h.practicedAt)} · {h.level} · {h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</p>
+                    <img src="/images/thumbs/listening.svg" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-primary line-clamp-1">{h.title}</p>
+                      <p className="text-xs text-muted mt-1">{formatPracticedAt(h.practicedAt)} · {h.level} · {h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</p>
                     </div>
-                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-primary/10 text-primary shrink-0">{correct}/{qs.length}</span>
+                    <span className="ui-badge px-3 py-1 shrink-0">{correct}/{qs.length}</span>
                   </button>
                 );
               })}
@@ -790,27 +827,28 @@ export default function ListeningPracticePage() {
         const ans: Record<number, number | string> = JSON.parse(viewingExamHistoryItem.answers);
         const correct = qs.reduce((s, q, i) => s + (isReadingAnswerCorrect(q, ans[i]) ? 1 : 0), 0);
         return (
-          <div className="max-w-3xl mx-auto px-3 sm:px-4 py-5 sm:py-8 space-y-4">
-            <button onClick={() => setViewingExamHistoryItem(null)} className="text-xs font-bold text-foreground/40 hover:text-primary transition-colors">← Quay lại danh sách</button>
-            <h2 className="text-xl font-bold text-foreground">{viewingExamHistoryItem.title}</h2>
-            <div className="bg-primary/5 border border-primary/15 rounded-2xl p-5 flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <p className="text-lg font-bold text-primary">Kết quả: {correct}/{qs.length} câu đúng</p>
-                <p className="text-xs text-foreground/40 mt-1">🕓 {formatPracticedAt(viewingExamHistoryItem.practicedAt)}</p>
+          <div className="max-w-4xl mx-auto px-4 py-6 sm:py-8 space-y-4">
+            <button onClick={() => setViewingExamHistoryItem(null)} className="btn-ghost px-3 py-2 text-sm">← Quay lại danh sách</button>
+            <h2 className="ui-section-title">{viewingExamHistoryItem.title}</h2>
+            <div className="ui-card p-5 flex items-center justify-between flex-wrap gap-3">
+              <img src="/images/illustrations/exam-result.svg" alt="Minh hoạ kết quả bài làm" width={800} height={600} loading="lazy" className="hidden sm:block w-24 h-auto shrink-0" />
+              <div className="flex-1 min-w-[180px]">
+                <p className="text-xl font-extrabold text-primary">Kết quả: {correct}/{qs.length} câu đúng</p>
+                <p className="text-xs text-muted mt-1">{formatPracticedAt(viewingExamHistoryItem.practicedAt)}</p>
               </div>
               <button
                 onClick={() => downloadExamPdf(examHistoryPdfRef.current)}
                 disabled={exportingPdf}
-                className="text-xs font-bold px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                className="btn-outline px-4 py-2 text-xs"
               >
-                🖨️ {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
               </button>
             </div>
             <div className="space-y-3">
               {qs.map((q, i) => (
-                <div key={i} className="bg-foreground/[0.03] border border-foreground/10 rounded-xl p-4">
-                  <p className="text-sm font-semibold">{i + 1}. {q.question}</p>
-                  <p className="text-xs text-foreground/60 mt-2">{isReadingAnswerCorrect(q, ans[i]) ? "✅ Đúng" : "❌ Sai"} — {q.explanation}</p>
+                <div key={i} className="bg-surface border border-line rounded-xl p-4">
+                  <p className="text-sm font-semibold text-foreground">{i + 1}. {q.question}</p>
+                  <p className="text-xs text-muted mt-2">{isReadingAnswerCorrect(q, ans[i]) ? "✅ Đúng" : "❌ Sai"} — {q.explanation}</p>
                 </div>
               ))}
             </div>

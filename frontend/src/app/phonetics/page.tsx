@@ -357,9 +357,9 @@ const CONSONANTS: Phoneme[] = [
 ];
 
 const DIFF_STYLE: Record<Difficulty, { badge: string; dot: string }> = {
-  easy: { badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30", dot: "bg-emerald-400" },
-  medium: { badge: "bg-amber-500/15 text-amber-400 border-amber-500/30", dot: "bg-amber-400" },
-  hard: { badge: "bg-rose-500/15 text-rose-400 border-rose-500/30", dot: "bg-rose-400" },
+  easy: { badge: "bg-emerald-50 text-emerald-700 border-emerald-200", dot: "bg-emerald-500" },
+  medium: { badge: "bg-amber-50 text-amber-700 border-amber-200", dot: "bg-amber-500" },
+  hard: { badge: "bg-red-50 text-red-700 border-red-200", dot: "bg-red-500" },
 };
 
 // ── MAIN COMPONENT ───────────────────────────────────────────────────────────
@@ -406,36 +406,47 @@ export default function PhoneticsPage() {
   const diffStyle = DIFF_STYLE[selected.difficultyLevel];
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: "#0f1117", color: "#e2e8f0" }}>
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
 
-      {/* ── Top bar ── */}
-      <div style={{ background: "#1a1d27", borderBottom: "1px solid #2d3148" }} className="px-4 sm:px-5 py-3 flex flex-wrap items-center gap-2 sm:gap-4">
-        <Link href="/dashboard" className="text-sm font-medium hover:opacity-80 transition-opacity" style={{ color: "#94a3b8" }}>
-          ← Dashboard
-        </Link>
-        <span style={{ color: "#2d3148" }} className="hidden sm:inline">/</span>
-        <h1 className="font-bold" style={{ color: "#e2e8f0" }}>Bảng Âm IPA</h1>
-        <span className="ml-auto text-xs font-bold px-3 py-1 hidden sm:inline-block" style={{ background: "#1e3a8a33", color: "#60a5fa", border: "1px solid #1e3a8a88" }}>
-          44 âm · British English
-        </span>
+      {/* ── Page banner (IOT style) ── */}
+      <div className="bg-surface border-b border-line">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex items-center gap-6">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+              <Link href="/dashboard" className="font-semibold text-muted hover:text-primary transition-colors py-2">
+                ← Dashboard
+              </Link>
+              <span className="text-line-strong">/</span>
+              <span>Bảng Âm IPA</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 mt-2">
+              <h1 className="ui-page-title text-2xl sm:text-3xl">Bảng Âm IPA</h1>
+              <span className="ui-badge px-3 py-1">
+                44 âm · British English
+              </span>
+            </div>
+            <p className="ui-page-subtitle">Bấm vào từng âm để nghe mẫu và xem cách phát âm, so sánh với tiếng Việt.</p>
+          </div>
+          <img src="/images/thumbs/phonetics.svg" alt="Minh hoạ bảng âm IPA" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
+        </div>
       </div>
 
-      <div className="flex-1 flex flex-col lg:flex-row gap-0">
+      <div className="flex-1 flex flex-col lg:flex-row gap-0 lg:gap-6 w-full max-w-7xl mx-auto lg:px-6 lg:py-6">
 
         {/* ── Detail Panel (left/top) ── */}
         {/* sticky/max-height only apply on lg+ (side-by-side layout) — on mobile the panel is
             stacked above the phoneme grid in normal flow, so pinning it would trap most of the
             viewport and block scrolling down to the grid. */}
-        <div className="lg:w-80 shrink-0 p-5 flex flex-col gap-4 lg:sticky lg:top-0 lg:max-h-[calc(100vh-52px)] lg:overflow-y-auto" style={{ background: "#1a1d27", borderRight: "1px solid #2d3148" }}>
+        <div className="lg:w-80 shrink-0 p-5 flex flex-col gap-4 lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-52px)] lg:overflow-y-auto bg-surface border-b border-line lg:border lg:rounded-2xl lg:shadow-card">
 
           {/* Symbol */}
           <div className="flex items-center gap-4">
-            <div className="text-5xl font-black tracking-tight" style={{ color: "#60a5fa", fontFamily: "serif" }}>
+            <div className="text-5xl font-black tracking-tight text-primary" style={{ fontFamily: "serif" }}>
               {selected.symbol}
             </div>
             <div>
-              <div className="text-lg font-bold" style={{ color: "#cbd5e1" }}>{selected.keyword}</div>
-              <span className={`text-xs font-bold px-2 py-0.5 border ${diffStyle.badge} mt-1 inline-block`}>
+              <div className="text-lg font-bold text-foreground">{selected.keyword}</div>
+              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${diffStyle.badge} mt-1 inline-block`}>
                 {selected.difficulty}
               </span>
             </div>
@@ -445,17 +456,17 @@ export default function PhoneticsPage() {
           <button
             onClick={() => speak(selected.speakWord)}
             disabled={!hasTTS}
-            className="flex items-center gap-3 w-full px-4 py-3 font-bold transition-all"
+            className="flex items-center justify-center gap-3 w-full px-4 py-3 font-bold rounded-full transition-all disabled:opacity-50"
             style={{
-              background: speaking ? "#1e3a8a" : "#1e3a8a44",
-              border: "1px solid #3b82f688",
-              color: "#60a5fa",
+              background: speaking ? "#172e6e" : "#1e3a8a",
+              border: "1px solid #1e3a8a",
+              color: "#ffffff",
             }}
           >
             {speaking ? (
               <span className="flex gap-0.5 items-end h-5">
                 {[1,2,3,4].map(i => (
-                  <span key={i} className="w-1 animate-bounce rounded-full" style={{ height: `${8 + i * 4}px`, background: "#60a5fa", animationDelay: `${i * 0.1}s` }} />
+                  <span key={i} className="w-1 animate-bounce rounded-full" style={{ height: `${8 + i * 4}px`, background: "#ffffff", animationDelay: `${i * 0.1}s` }} />
                 ))}
               </span>
             ) : (
@@ -468,33 +479,33 @@ export default function PhoneticsPage() {
 
           {/* Info blocks */}
           <div className="space-y-3">
-            <InfoBlock label="CÁCH PHÁT ÂM" value={selected.howTo} color="#60a5fa" />
-            <InfoBlock label="SO VỚI TIẾNG VIỆT" value={selected.vsVietnamese} color="#34d399" />
+            <InfoBlock label="CÁCH PHÁT ÂM" value={selected.howTo} color="#1e3a8a" />
+            <InfoBlock label="SO VỚI TIẾNG VIỆT" value={selected.vsVietnamese} color="#10b981" />
           </div>
 
           {/* Tip */}
           {selected.tip && (
-            <div className="p-3 text-sm" style={{ background: "#f59e0b11", border: "1px solid #f59e0b33", color: "#fcd34d" }}>
-              <span className="font-bold">💡 </span>{selected.tip}
+            <div className="p-3 text-sm rounded-xl bg-amber-50 border border-amber-200 text-amber-800">
+              <span className="font-bold">Mẹo: </span>{selected.tip}
             </div>
           )}
 
           {/* Example words */}
           <div>
-            <div className="text-xs font-bold uppercase tracking-widest mb-2" style={{ color: "#64748b" }}>Từ ví dụ</div>
+            <div className="text-xs font-bold uppercase tracking-widest mb-2 text-muted">Từ ví dụ</div>
             <div className="flex flex-wrap gap-2">
               {selected.examples.map(ex => (
                 <button
                   key={ex}
                   onClick={() => speak(ex, true)}
-                  className="px-3 py-1.5 text-sm font-bold transition-all flex items-center gap-1.5"
+                  className="px-3.5 py-2 text-sm font-bold rounded-full transition-all flex items-center gap-1.5"
                   style={{
-                    background: speakingExample === ex ? "#1e3a8a" : "#1e293b",
-                    border: `1px solid ${speakingExample === ex ? "#3b82f6" : "#2d3148"}`,
-                    color: speakingExample === ex ? "#60a5fa" : "#94a3b8",
+                    background: speakingExample === ex ? "#1e3a8a" : "#ffffff",
+                    border: `1px solid ${speakingExample === ex ? "#1e3a8a" : "#d4dae0"}`,
+                    color: speakingExample === ex ? "#ffffff" : "#1e3a8a",
                   }}
                 >
-                  {speakingExample === ex && <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />}
+                  {speakingExample === ex && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
                   {ex}
                 </button>
               ))}
@@ -503,7 +514,7 @@ export default function PhoneticsPage() {
         </div>
 
         {/* ── Phoneme Grid (right/bottom) ── */}
-        <div className="flex-1 p-5 space-y-8 overflow-y-auto">
+        <div className="flex-1 min-w-0 p-5 lg:p-6 space-y-8 overflow-y-auto bg-surface lg:border lg:border-line lg:rounded-2xl lg:shadow-card">
 
           <PhonemeGroup
             title="NGUYÊN ÂM ĐƠN"
@@ -542,25 +553,25 @@ export default function PhoneticsPage() {
 
           {/* Legend */}
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-2 pb-6">
-            <span className="text-xs font-bold uppercase tracking-widest" style={{ color: "#475569" }}>Độ khó:</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-muted">Độ khó:</span>
             {[
-              { dot: "bg-emerald-400", label: "Tương đối dễ" },
-              { dot: "bg-amber-400", label: "Khó hơn" },
-              { dot: "bg-rose-400", label: "Khó" },
+              { dot: "bg-emerald-500", label: "Tương đối dễ" },
+              { dot: "bg-amber-500", label: "Khó hơn" },
+              { dot: "bg-red-500", label: "Khó" },
             ].map(d => (
               <div key={d.label} className="flex items-center gap-1.5">
                 <span className={`w-2 h-2 rounded-full ${d.dot}`} />
-                <span className="text-xs" style={{ color: "#64748b" }}>{d.label}</span>
+                <span className="text-xs text-muted">{d.label}</span>
               </div>
             ))}
-            <span className="text-xs font-bold uppercase tracking-widest ml-2" style={{ color: "#475569" }}>Phụ âm:</span>
+            <span className="text-xs font-bold uppercase tracking-widest ml-2 text-muted">Phụ âm:</span>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm" style={{ background: "#14b8a655", border: "1px solid #14b8a6" }} />
-              <span className="text-xs" style={{ color: "#64748b" }}>Hữu thanh (voiced)</span>
+              <span className="w-3 h-3 rounded-sm" style={{ background: "#f0fdfa", border: "1px solid #14b8a6" }} />
+              <span className="text-xs text-muted">Hữu thanh (voiced)</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm" style={{ background: "#1e293b", border: "1px solid #2d3148" }} />
-              <span className="text-xs" style={{ color: "#64748b" }}>Vô thanh (unvoiced)</span>
+              <span className="w-3 h-3 rounded-sm" style={{ background: "#f7f9fc", border: "1px solid #d4dae0" }} />
+              <span className="text-xs text-muted">Vô thanh (unvoiced)</span>
             </div>
           </div>
         </div>
@@ -573,8 +584,8 @@ export default function PhoneticsPage() {
 function InfoBlock({ label, value, color }: { label: string; value: string; color: string }) {
   return (
     <div>
-      <div className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "#475569" }}>{label}</div>
-      <div className="text-sm leading-relaxed" style={{ color: "#cbd5e1" }}>{value}</div>
+      <div className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color }}>{label}</div>
+      <div className="text-sm leading-relaxed text-foreground/85">{value}</div>
     </div>
   );
 }
@@ -609,10 +620,10 @@ function PhonemeGroup({
   return (
     <div>
       <div className="flex items-baseline gap-3 mb-4">
-        <h2 className="text-sm font-black uppercase tracking-widest" style={{ color: "#94a3b8" }}>
+        <h2 className="text-sm font-black uppercase tracking-widest text-primary">
           {title} — {subtitle}
         </h2>
-        <span className="text-xs font-bold" style={{ color: "#475569" }}>({count})</span>
+        <span className="text-xs font-bold text-muted">({count})</span>
       </div>
       <div className="overflow-x-auto">
         <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${cols}, minmax(70px, 1fr))` }}>
@@ -622,18 +633,18 @@ function PhonemeGroup({
             const dotColor = DIFF_STYLE[ph.difficultyLevel].dot;
             const voicing = showVoicing
               ? ph.voiced
-                ? { bg: "#0f766e22", border: "#14b8a6", text: "#2dd4bf" }
-                : { bg: "#1e293b", border: "#2d3148", text: "#94a3b8" }
+                ? { bg: "#f0fdfa", border: "#5eead4", text: "#0f766e" }
+                : { bg: "#f7f9fc", border: "#d4dae0", text: "#475569" }
               : null;
             return (
               <button
                 key={ph.symbol}
                 onClick={() => onSelect(ph)}
-                className="flex flex-col items-center justify-center py-4 px-2 transition-all group relative"
+                className="flex flex-col items-center justify-center py-4 px-2 rounded-xl transition-all group relative hover:-translate-y-0.5 hover:shadow-card"
                 style={{
-                  background: isActive ? "#1e3a8a44" : voicing ? voicing.bg : "#1e293b",
-                  border: `1px solid ${isActive ? "#3b82f6" : voicing ? voicing.border : "#2d3148"}`,
-                  borderLeft: isActive ? "3px solid #3b82f6" : `1px solid ${voicing ? voicing.border : "#2d3148"}`,
+                  background: isActive ? "#eef2fb" : voicing ? voicing.bg : "#ffffff",
+                  border: `1px solid ${isActive ? "#1e3a8a" : voicing ? voicing.border : "#eaecef"}`,
+                  borderLeft: isActive ? "3px solid #1e3a8a" : `1px solid ${voicing ? voicing.border : "#eaecef"}`,
                 }}
               >
                 <span
@@ -642,7 +653,7 @@ function PhonemeGroup({
                 <span
                   className="text-xl font-black mb-1"
                   style={{
-                    color: isActive ? "#60a5fa" : voicing ? voicing.text : "#94a3b8",
+                    color: isActive ? "#1e3a8a" : voicing ? voicing.text : "#1e3a8a",
                     fontFamily: "serif",
                   }}
                 >
@@ -650,7 +661,7 @@ function PhonemeGroup({
                 </span>
                 <span
                   className="text-xs font-medium"
-                  style={{ color: isActive ? "#60a5fa88" : "#475569" }}
+                  style={{ color: isActive ? "#1e3a8a" : "#5b6b82" }}
                 >
                   {ph.keyword}
                 </span>

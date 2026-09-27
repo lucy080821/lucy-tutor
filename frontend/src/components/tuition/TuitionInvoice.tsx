@@ -21,7 +21,7 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
   studentName, month, year, classes, totalAmount
 }, ref) => {
   return (
-    <div ref={ref} className="bg-white text-slate-800 p-10 font-sans mx-auto" style={{ width: '800px', height: '1131px', boxSizing: 'border-box', position: 'relative' }}>
+    <div ref={ref} className="bg-white text-[#1f2d3d] p-10 font-sans mx-auto" style={{ width: '800px', height: '1131px', boxSizing: 'border-box', position: 'relative' }}>
       
       {/* Header */}
       <div className="flex justify-between items-start mb-12 border-b-2 border-primary pb-8">
@@ -29,18 +29,18 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
           <img src="/logo.png" alt="LucyTutor Logo" className="w-16 h-16 object-contain" />
           <div>
             <h1 className="text-3xl font-black text-primary tracking-tight">LUCYTUTOR</h1>
-            <p className="text-sm font-medium text-slate-500 mt-1">Học tập không ngừng, vươn tới thành công</p>
+            <p className="text-sm font-medium text-[#5b6b82] mt-1">Học tập không ngừng, vươn tới thành công</p>
           </div>
         </div>
         <div className="text-right">
-          <h2 className="text-4xl font-black text-slate-800 mb-2 tracking-tighter">THÔNG BÁO HỌC PHÍ</h2>
-          <p className="text-slate-500 font-medium">Tháng {month} / {year}</p>
+          <h2 className="text-4xl font-black text-primary mb-2 tracking-tighter">THÔNG BÁO HỌC PHÍ</h2>
+          <p className="text-[#5b6b82] font-medium">Tháng {month} / {year}</p>
         </div>
       </div>
 
       {/* Info Section */}
-      <div className="mb-6 bg-slate-50 p-6 rounded-2xl border border-slate-100">
-        <p className="text-sm font-semibold text-slate-500 mb-1">Kính gửi Phụ huynh bé</p>
+      <div className="mb-6 bg-[#f7f9fc] p-6 rounded-2xl border border-[#eaecef]">
+        <p className="text-sm font-semibold text-[#5b6b82] mb-1">Kính gửi Phụ huynh bé</p>
         <h3 className="text-2xl font-bold text-primary mb-1">{studentName}</h3>
         <p className="text-sm font-medium text-slate-600">Lớp: {classes.map(c => c.classroomName).join(', ')}</p>
       </div>
@@ -53,34 +53,31 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
       <div className="mb-12">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-primary/5">
-              <th className="py-4 px-6 font-bold text-slate-600 border-b-2 border-primary/20 rounded-tl-xl whitespace-nowrap">Mô tả chi tiết</th>
-              <th className="py-4 px-6 font-bold text-slate-600 border-b-2 border-primary/20 text-center whitespace-nowrap">Số lượng</th>
-              <th className="py-4 px-6 font-bold text-slate-600 border-b-2 border-primary/20 text-right whitespace-nowrap">Đơn giá</th>
+            <tr className="bg-primary-soft">
+              <th className="py-4 px-6 font-bold text-[#5b6b82] border-b-2 border-primary/20 rounded-tl-xl whitespace-nowrap">Mô tả chi tiết</th>
+              <th className="py-4 px-6 font-bold text-[#5b6b82] border-b-2 border-primary/20 text-center whitespace-nowrap">Số lượng</th>
+              <th className="py-4 px-6 font-bold text-[#5b6b82] border-b-2 border-primary/20 text-right whitespace-nowrap">Đơn giá</th>
               <th className="py-4 px-6 font-bold text-primary border-b-2 border-primary/20 text-right rounded-tr-xl whitespace-nowrap">Thành tiền</th>
             </tr>
           </thead>
           <tbody>
             {classes.map((cls, idx) => {
               const isMonthly = cls.feeType === 'MONTHLY';
-              // MONTHLY classes with a set weekly schedule prorate feePerMonth by attendance
-              // (feePerMonth ÷ standard lessons that month × sessions actually attended)
-              // instead of always charging the flat fee — reflect that rate here instead of
-              // showing a misleading "1 tháng @ feePerMonth" when totalAmount is actually less/more.
-              const isProrated = isMonthly && !!cls.standardLessons;
-              const unitPrice = isProrated ? Math.round((cls.feePerMonth || 0) / (cls.standardLessons as number)) : (isMonthly ? (cls.feePerMonth || 0) : cls.feePerLesson);
+              // MONTHLY classes are billed a flat feePerMonth upfront at the start of the month —
+              // attendance (presentCount/standardLessons) is shown for tracking only, it no longer
+              // changes the unit price or totalAmount.
+              const unitPrice = isMonthly ? (cls.feePerMonth || 0) : cls.feePerLesson;
+              const attendanceLabel = cls.standardLessons ? `${cls.presentCount}/${cls.standardLessons} buổi` : `${cls.presentCount} buổi`;
               return (
-                <tr key={idx} className="border-b border-slate-100">
+                <tr key={idx} className="border-b border-[#eaecef]">
                   <td className="py-6 px-6">
                     <p className="font-bold text-slate-800">Học phí tháng {month}/{year}</p>
-                    <p className="text-sm text-slate-500 mt-1">
-                      Lớp {cls.classroomName} {isProrated
-                        ? `(Theo tháng, quy đổi ${cls.standardLessons} buổi chuẩn — đã học ${cls.presentCount} buổi)`
-                        : isMonthly ? `(Trọn gói theo tháng, đã học ${cls.presentCount} buổi)` : '(Tính theo số buổi đi học thực tế)'}
+                    <p className="text-sm text-[#5b6b82] mt-1">
+                      Lớp {cls.classroomName} {isMonthly ? `(Trọn gói theo tháng, đã học ${attendanceLabel})` : '(Tính theo số buổi đi học thực tế)'}
                     </p>
                   </td>
-                  <td className="py-6 px-6 text-center font-semibold text-slate-700 whitespace-nowrap">{isProrated ? `${cls.presentCount}/${cls.standardLessons} buổi` : isMonthly ? '1 tháng' : `${cls.presentCount} buổi`}</td>
-                  <td className="py-6 px-6 text-right font-semibold text-slate-700 whitespace-nowrap">{unitPrice.toLocaleString('vi-VN')} đ{isProrated ? '/buổi' : ''}</td>
+                  <td className="py-6 px-6 text-center font-semibold text-slate-700 whitespace-nowrap">{isMonthly ? '1 tháng' : `${cls.presentCount} buổi`}</td>
+                  <td className="py-6 px-6 text-right font-semibold text-slate-700 whitespace-nowrap">{unitPrice.toLocaleString('vi-VN')} đ</td>
                   <td className="py-6 px-6 text-right font-black text-primary text-lg whitespace-nowrap">{cls.totalAmount.toLocaleString('vi-VN')} đ</td>
                 </tr>
               );
@@ -90,18 +87,18 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
       </div>
 
       {/* Total & Payment Info */}
-      <div className="flex justify-between items-end bg-primary/5 p-8 rounded-3xl border border-primary/10 mb-12">
+      <div className="flex justify-between items-end bg-primary-soft p-8 rounded-3xl border border-primary/10 mb-12">
         <div className="w-1/2">
           {totalAmount > 0 && (
             <>
               <p className="text-xs font-bold text-primary uppercase tracking-wider mb-3">Thông tin chuyển khoản</p>
-              <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-start gap-4">
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-[#eaecef] flex items-start gap-4">
                 <div className="flex-1">
-                  <p className="text-sm font-semibold mb-1"><span className="text-slate-500">Ngân hàng:</span> TPBank</p>
-                  <p className="text-sm font-semibold mb-1"><span className="text-slate-500">Chủ TK:</span> TA HOANG ANH TUAN</p>
-                  <p className="text-sm font-semibold mb-1"><span className="text-slate-500">Số TK:</span> 86812121993</p>
-                  <p className="text-sm font-semibold mt-3 pt-3 border-t border-slate-100 text-primary">
-                    <span className="text-slate-500">Nội dung:</span> {studentName} HP T{month}
+                  <p className="text-sm font-semibold mb-1"><span className="text-[#5b6b82]">Ngân hàng:</span> TPBank</p>
+                  <p className="text-sm font-semibold mb-1"><span className="text-[#5b6b82]">Chủ TK:</span> TA HOANG ANH TUAN</p>
+                  <p className="text-sm font-semibold mb-1"><span className="text-[#5b6b82]">Số TK:</span> 86812121993</p>
+                  <p className="text-sm font-semibold mt-3 pt-3 border-t border-[#eaecef] text-primary">
+                    <span className="text-[#5b6b82]">Nội dung:</span> {studentName} HP T{month}
                   </p>
                 </div>
                 <div className="shrink-0 p-1 border-2 border-primary/20 rounded-lg">
@@ -118,11 +115,11 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
         </div>
         <div className="w-5/12">
           <div className="flex justify-between items-center mb-2 whitespace-nowrap gap-4">
-            <span className="text-slate-500 font-semibold">Cộng tiền học:</span>
+            <span className="text-[#5b6b82] font-semibold">Cộng tiền học:</span>
             <span className="font-bold">{totalAmount.toLocaleString('vi-VN')} đ</span>
           </div>
           <div className="flex justify-between items-center mb-4 whitespace-nowrap gap-4">
-            <span className="text-slate-500 font-semibold">Khuyến mãi / Giảm trừ:</span>
+            <span className="text-[#5b6b82] font-semibold">Khuyến mãi / Giảm trừ:</span>
             <span className="font-bold">0 đ</span>
           </div>
           <div className="flex justify-between items-center pt-4 border-t-2 border-primary/20 whitespace-nowrap gap-4">
@@ -133,7 +130,7 @@ export const TuitionInvoice = React.forwardRef<HTMLDivElement, TuitionInvoicePro
       </div>
 
       {/* Footer */}
-      <div className="absolute bottom-10 left-10 right-10 text-center border-t border-slate-200 pt-6">
+      <div className="absolute bottom-10 left-10 right-10 text-center border-t border-[#eaecef] pt-6">
         <p className="text-sm font-semibold text-slate-600 mb-1">Cảm ơn bạn đã tin tưởng và đồng hành cùng LucyTutor!</p>
         <p className="text-xs text-slate-400">Mọi thắc mắc vui lòng liên hệ Zalo/SĐT: 0869.603.164</p>
       </div>

@@ -46,8 +46,8 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
         const baseEvent: any = {
           id: session.id,
           title: session.title || 'Lịch học',
-          backgroundColor: '#3b82f6',
-          borderColor: '#2563eb',
+          backgroundColor: '#1E3A8A',
+          borderColor: '#1E3A8A',
           extendedProps: {
             type: 'SESSION',
             location: session.location,
@@ -71,8 +71,8 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
               baseEvent.daysOfWeek = [startDate.getDay()];
             }
             baseEvent.editable = false; // Cannot drag and drop virtual classroom schedules
-            baseEvent.backgroundColor = '#10b981'; // Green for classroom schedule
-            baseEvent.borderColor = '#059669';
+            baseEvent.backgroundColor = '#3b82f6'; // Blue for classroom schedule
+            baseEvent.borderColor = '#3b82f6';
           } else {
             baseEvent.startRecur = startDate.toISOString().split('T')[0];
             baseEvent.daysOfWeek = [startDate.getDay()]; // Recurs on that day of week
@@ -97,7 +97,7 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
             end: endDate.toISOString(),
             allDay: false,
             backgroundColor: '#ef4444', // red
-            borderColor: '#dc2626',
+            borderColor: '#ef4444',
             extendedProps: {
               type: 'EXAM',
               examId: exam.id
@@ -229,7 +229,7 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
   };
 
   return (
-    <div className="bg-surface rounded-3xl p-4 md:p-8 h-full flex flex-col relative border border-foreground/10 shadow-sm animate-in fade-in zoom-in duration-500">
+    <div className="bg-surface rounded-2xl p-4 md:p-6 h-full flex flex-col relative border border-line shadow-card animate-in fade-in zoom-in duration-500">
       <div className="flex-1 w-full overflow-y-auto">
         <FullCalendar
           key={isMobile ? 'mobile' : 'desktop'}
@@ -260,19 +260,19 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
       </div>
 
       {showSessionModal && role === 'TEACHER' && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-surface p-6 rounded-3xl w-full max-w-md shadow-2xl animate-in zoom-in-95">
-            <h2 className="text-xl font-bold mb-4">{editSession ? 'Sửa Lịch Học' : 'Tạo Lịch Học'}</h2>
+        <div className="fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface p-6 rounded-2xl w-full max-w-md shadow-2xl border border-line animate-in zoom-in-95">
+            <h2 className="text-xl font-extrabold text-primary mb-5">{editSession ? 'Sửa Lịch Học' : 'Tạo Lịch Học'}</h2>
             <form onSubmit={handleSaveSession} className="space-y-4">
               <div>
-                <label className="block text-sm font-bold mb-1">Tiêu đề</label>
-                <input required type="text" className="w-full p-2 border border-foreground/20 rounded-lg bg-transparent"
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Tiêu đề</label>
+                <input required type="text" className="w-full px-3.5 py-2.5 border border-line-strong rounded-lg bg-transparent focus:outline-none focus:border-primary focus:ring-3 focus:ring-primary/15 transition"
                   value={sessionForm.title} onChange={e => setSessionForm({...sessionForm, title: e.target.value})} />
               </div>
               {!editSession && (
                 <div>
-                  <label className="block text-sm font-bold mb-1">Lớp Học</label>
-                  <select required className="w-full p-2 border border-foreground/20 rounded-lg bg-transparent"
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Lớp Học</label>
+                  <select required className="w-full px-3.5 py-2.5 border border-line-strong rounded-lg bg-transparent focus:outline-none focus:border-primary focus:ring-3 focus:ring-primary/15 transition"
                     value={sessionForm.classroomId} onChange={e => setSessionForm({...sessionForm, classroomId: e.target.value})}>
                     <option value="">Chọn lớp</option>
                     {classrooms?.map(c => (
@@ -283,39 +283,39 @@ export default function CalendarComponent({ user, role, classrooms }: { user: an
               )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-bold mb-1">Bắt đầu</label>
-                  <input required type="datetime-local" className="w-full p-2 border border-foreground/20 rounded-lg bg-transparent"
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Bắt đầu</label>
+                  <input required type="datetime-local" className="w-full px-3.5 py-2.5 border border-line-strong rounded-lg bg-transparent focus:outline-none focus:border-primary focus:ring-3 focus:ring-primary/15 transition"
                     value={sessionForm.startTime} onChange={e => setSessionForm({...sessionForm, startTime: e.target.value})} />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold mb-1">Kết thúc</label>
-                  <input required type="datetime-local" className="w-full p-2 border border-foreground/20 rounded-lg bg-transparent"
+                  <label className="block text-sm font-semibold text-foreground mb-1.5">Kết thúc</label>
+                  <input required type="datetime-local" className="w-full px-3.5 py-2.5 border border-line-strong rounded-lg bg-transparent focus:outline-none focus:border-primary focus:ring-3 focus:ring-primary/15 transition"
                     value={sessionForm.endTime} onChange={e => setSessionForm({...sessionForm, endTime: e.target.value})} />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-bold mb-1">Địa điểm / Link</label>
-                <input type="text" className="w-full p-2 border border-foreground/20 rounded-lg bg-transparent" placeholder="Zoom / Google Meet"
+                <label className="block text-sm font-semibold text-foreground mb-1.5">Địa điểm / Link</label>
+                <input type="text" className="w-full px-3.5 py-2.5 border border-line-strong rounded-lg bg-transparent focus:outline-none focus:border-primary focus:ring-3 focus:ring-primary/15 transition" placeholder="Zoom / Google Meet"
                   value={sessionForm.location} onChange={e => setSessionForm({...sessionForm, location: e.target.value})} />
               </div>
               
               <div className="flex gap-3 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer text-sm font-bold">
-                  <input type="checkbox" checked={sessionForm.isRecurring} onChange={e => setSessionForm({...sessionForm, isRecurring: e.target.checked})} className="w-4 h-4" />
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-foreground">
+                  <input type="checkbox" checked={sessionForm.isRecurring} onChange={e => setSessionForm({...sessionForm, isRecurring: e.target.checked})} className="w-4 h-4 accent-primary" />
                   Lặp lại hàng tuần (vào thứ {new Date(sessionForm.startTime || Date.now()).getDay() === 0 ? 'Chủ nhật' : new Date(sessionForm.startTime || Date.now()).getDay() + 1})
                 </label>
               </div>
 
               <div className="flex gap-3 pt-4">
-                <button type="submit" className="flex-1 bg-primary text-white font-bold py-2 rounded-lg hover:bg-primary/90">
+                <button type="submit" className="flex-1 bg-primary text-white font-bold py-2.5 rounded-full hover:bg-[#172e6e] transition-colors">
                   Lưu
                 </button>
                 {editSession && (
-                  <button type="button" onClick={handleDeleteSession} className="bg-rose-500 text-white font-bold px-4 py-2 rounded-lg hover:bg-rose-600">
+                  <button type="button" onClick={handleDeleteSession} className="bg-red-50 text-red-700 border border-red-200 font-bold px-5 py-2.5 rounded-full hover:bg-red-100 transition-colors">
                     Xóa
                   </button>
                 )}
-                <button type="button" onClick={() => setShowSessionModal(false)} className="px-4 py-2 bg-foreground/10 font-bold rounded-lg hover:bg-foreground/20">
+                <button type="button" onClick={() => setShowSessionModal(false)} className="px-5 py-2.5 border border-line-strong text-muted font-bold rounded-full hover:bg-primary-soft hover:text-primary transition-colors">
                   Hủy
                 </button>
               </div>

@@ -63,7 +63,11 @@ export function WordLookupText({ text, userId, className }: { text: string; user
 
   const lookup = async (word: string, sentence: string) => {
     setAdded(false);
-    const key = word.toLowerCase();
+    // Keyed by sentence + word, not just word — meaning is looked up per-context (the same
+    // word in two different sentences can mean two different things), and this component isn't
+    // remounted between passages, so keying by word alone would also leak a stale translation
+    // from an earlier, unrelated passage into a later one.
+    const key = `${sentence}::${word.toLowerCase()}`;
     const cached = cacheRef.current.get(key);
     if (cached) {
       setResult(cached);
@@ -124,7 +128,7 @@ export function WordLookupText({ text, userId, className }: { text: string; user
           <span
             key={i}
             onClick={(e) => handleWordClick(e, t.value, t.start)}
-            className="cursor-pointer hover:underline decoration-dotted decoration-primary/60 underline-offset-2 hover:text-primary transition-colors"
+            className="cursor-pointer rounded-sm hover:underline decoration-dotted decoration-primary/60 underline-offset-4 hover:text-primary hover:bg-primary-soft transition-colors"
           >
             {t.value}
           </span>
@@ -136,28 +140,28 @@ export function WordLookupText({ text, userId, className }: { text: string; user
         <span
           ref={popupRef}
           style={{ position: "fixed", top: popup.top, left: popup.left, zIndex: 200 }}
-          className="block w-72 max-w-[90vw] bg-surface border border-foreground/10 rounded-2xl shadow-2xl p-4 animate-in fade-in zoom-in-95 duration-150 not-italic font-normal whitespace-normal text-left"
+          className="block w-72 max-w-[90vw] bg-white border border-line rounded-xl shadow-card-hover p-4 animate-in fade-in zoom-in-95 duration-150 not-italic font-normal whitespace-normal text-left leading-normal text-base"
         >
           <span className="flex items-start justify-between gap-2 mb-1">
-            <span className="font-black text-lg text-foreground">{result?.word || popup.word}</span>
-            <button onClick={() => setPopup(null)} className="text-foreground/40 hover:text-foreground text-sm cursor-pointer">✕</button>
+            <span className="font-extrabold text-lg text-primary">{result?.word || popup.word}</span>
+            <button onClick={() => setPopup(null)} aria-label="Đóng" className="w-8 h-8 -mt-1 -mr-1 shrink-0 rounded-full flex items-center justify-center text-muted hover:bg-primary-soft hover:text-primary text-sm cursor-pointer transition-colors">✕</button>
           </span>
           {loading ? (
-            <span className="text-sm text-foreground/50 flex items-center gap-2">
+            <span className="text-sm text-muted flex items-center gap-2">
               <span className="w-3.5 h-3.5 border-2 border-primary/30 border-t-primary rounded-full animate-spin inline-block" /> Đang tra nghĩa...
             </span>
           ) : result ? (
             <>
-              <span className="text-xs text-foreground/40 mb-2 flex gap-2">
+              <span className="text-xs text-muted mb-2 flex gap-2">
                 {result.pos && <span className="italic">{result.pos}</span>}
                 {result.phonetic && <span>{result.phonetic}</span>}
               </span>
-              <span className="text-sm text-foreground/80 leading-relaxed mb-3 block">{result.meaning}</span>
+              <span className="text-sm text-foreground leading-relaxed mb-3 block">{result.meaning}</span>
               {userId && (
                 <button
                   onClick={handleAddToMyWords}
                   disabled={added}
-                  className="w-full text-xs font-bold py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50 cursor-pointer"
+                  className="btn-primary w-full text-xs py-2 cursor-pointer"
                 >
                   {added ? "✓ Đã thêm vào Từ Của Tôi" : "+ Thêm vào Từ Của Tôi"}
                 </button>

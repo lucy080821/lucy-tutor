@@ -236,19 +236,35 @@ export default function PronunciationPracticePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 pt-6 flex items-center justify-between flex-wrap gap-3">
-        <Link href="/dashboard" className="text-sm text-foreground/50 hover:text-primary transition-colors inline-flex items-center gap-1">
-          ← Quay lại Dashboard
-        </Link>
-        <div className="flex bg-foreground/5 p-1 rounded-xl">
+      {/* Page banner (IOT style) */}
+      <div className="w-full bg-surface border-b border-line">
+        <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 flex items-center gap-6">
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
+              <Link href="/dashboard" className="font-semibold text-muted hover:text-primary transition-colors inline-flex items-center gap-1 py-2">
+                ← Quay lại Dashboard
+              </Link>
+              <span aria-hidden>·</span>
+              <span>Trang chủ / Luyện Phát Âm</span>
+            </div>
+            <h1 className="ui-page-title mt-2 text-2xl sm:text-3xl">Luyện Phát Âm Cùng AI</h1>
+            <p className="ui-page-subtitle">Đọc theo từ vựng của bạn, ghi âm và nhận góp ý phát âm từ AI.</p>
+          </div>
+          <img src="/images/thumbs/pronunciation.svg" alt="Minh hoạ luyện phát âm" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
+        </div>
+      </div>
+
+      {/* Pill tabs */}
+      <div className="max-w-5xl mx-auto px-4 pt-6">
+        <div className="flex flex-wrap gap-2">
           {[
-            { key: "PRACTICE", label: "🗣️ Luyện Tập" },
-            { key: "HISTORY", label: `📜 Lịch Sử (${history.length})` }
+            { key: "PRACTICE", label: "Luyện Tập" },
+            { key: "HISTORY", label: `Lịch Sử (${history.length})` }
           ].map(v => (
             <button
               key={v.key}
               onClick={() => { setViewMode(v.key as any); setViewingHistoryItem(null); }}
-              className={`px-3 py-2 text-xs font-bold rounded-lg transition-colors ${viewMode === v.key ? "bg-primary text-white shadow-sm" : "text-foreground/50 hover:text-foreground"}`}
+              className={`ui-chip cursor-pointer ${viewMode === v.key ? "ui-chip-active" : ""}`}
             >
               {v.label}
             </button>
@@ -256,46 +272,45 @@ export default function PronunciationPracticePage() {
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 pb-10 pt-4 space-y-6">
+      <div className="max-w-5xl mx-auto px-4 pb-12 pt-6 space-y-6">
         {viewMode === "PRACTICE" && (
           <>
-            <div className="bg-gradient-to-r from-primary to-secondary rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
-              <div aria-hidden className="absolute -right-4 -top-6 text-[130px] leading-none opacity-10 select-none">🗣️</div>
-              <div className="relative">
-                <p className="text-xs font-bold uppercase tracking-widest text-white/70 mb-1.5">Luyện Phát Âm</p>
-                <h1 className="text-2xl sm:text-3xl font-black mb-2">Đọc Theo & Ghi Âm</h1>
-                <p className="text-white/80 max-w-lg leading-relaxed text-sm sm:text-base">
+            <div className="ui-card p-6 sm:p-8">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-muted mb-1.5">Luyện Phát Âm</p>
+                <h2 className="ui-section-title mb-3">Đọc Theo & Ghi Âm</h2>
+                <p className="text-muted max-w-2xl leading-relaxed text-sm sm:text-base">
                   Luyện đọc từ vựng bạn đã học, ghi âm giọng nói và so khớp với hệ thống nhận dạng giọng nói — kèm góp ý từ AI. Đây là ước lượng dựa trên nhận dạng giọng nói, không phải chấm âm vị học tuyệt đối.
                 </p>
               </div>
             </div>
 
             {loadingSet ? (
-              <div className="text-center py-12 text-foreground/50">Đang tải danh sách từ...</div>
+              <div className="ui-card text-center py-12 text-muted">Đang tải danh sách từ...</div>
             ) : practiceSet.length === 0 ? (
-              <div className="bg-surface border border-foreground/10 rounded-2xl p-8 text-center space-y-3">
-                <div className="text-4xl">📭</div>
-                <h2 className="font-bold text-lg">Bạn chưa có từ vựng nào để luyện</h2>
-                <p className="text-foreground/50 text-sm max-w-md mx-auto">Hãy sang Phòng Gym Từ Vựng để tự thêm vài từ mới (hoặc ôn tập từ giáo viên đã giao), rồi quay lại đây luyện phát âm.</p>
-                <Link href="/gym" className="inline-block mt-2 px-6 py-2.5 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity">
+              <div className="ui-card p-8 text-center space-y-3">
+                <img src="/images/illustrations/empty-state.svg" alt="Chưa có từ vựng để luyện" width={800} height={600} loading="lazy" className="w-full max-w-[220px] h-auto mx-auto" />
+                <h2 className="font-bold text-lg text-primary">Bạn chưa có từ vựng nào để luyện</h2>
+                <p className="text-muted text-sm max-w-md mx-auto">Hãy sang Phòng Gym Từ Vựng để tự thêm vài từ mới (hoặc ôn tập từ giáo viên đã giao), rồi quay lại đây luyện phát âm.</p>
+                <Link href="/gym" className="btn-primary mt-2 px-6 py-2.5">
                   Đến Phòng Gym Từ Vựng →
                 </Link>
               </div>
             ) : currentWord && (
-              <div className="bg-surface border border-foreground/10 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground/40">Từ {currentIndex + 1}/{practiceSet.length}</span>
-                  <button onClick={() => handleSpeak(targetText)} className="text-xs font-bold px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors">
+              <div className="ui-card p-6 sm:p-8 space-y-6">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="ui-badge">Từ {currentIndex + 1}/{practiceSet.length}</span>
+                  <button onClick={() => handleSpeak(targetText)} className="btn-outline text-xs px-4 py-2">
                     🔊 Nghe Mẫu
                   </button>
                 </div>
 
                 <div className="text-center space-y-2">
-                  <h2 className="text-3xl font-black text-primary">{currentWord.word}</h2>
-                  {currentWord.phonetic && <p className="text-foreground/50 font-mono">{currentWord.phonetic}</p>}
-                  <p className="text-foreground/70">{currentWord.meaning}</p>
+                  <h2 className="text-4xl font-extrabold text-primary">{currentWord.word}</h2>
+                  {currentWord.phonetic && <p className="text-muted font-mono">{currentWord.phonetic}</p>}
+                  <p className="text-foreground/80">{currentWord.meaning}</p>
                   {currentWord.example && (
-                    <p className="text-foreground/80 italic bg-primary/5 rounded-xl p-4 mt-3">&quot;{currentWord.example}&quot;</p>
+                    <p className="text-foreground/80 italic bg-primary-soft rounded-xl p-4 mt-3">&quot;{currentWord.example}&quot;</p>
                   )}
                 </div>
 
@@ -304,7 +319,7 @@ export default function PronunciationPracticePage() {
                     <button
                       onClick={startRecording}
                       disabled={transcribing}
-                      className="w-16 h-16 rounded-full bg-rose-500 hover:bg-rose-600 text-white text-2xl shadow-lg flex items-center justify-center transition-colors disabled:opacity-50"
+                      className="w-20 h-20 rounded-full bg-primary hover:bg-[#172e6e] text-white text-3xl shadow-[0_10px_24px_rgba(30,58,138,0.35)] ring-8 ring-primary-soft flex items-center justify-center transition-colors disabled:opacity-50"
                       title="Bắt đầu ghi âm"
                     >
                       🎙️
@@ -312,28 +327,28 @@ export default function PronunciationPracticePage() {
                   ) : (
                     <button
                       onClick={stopRecording}
-                      className="w-16 h-16 rounded-full bg-foreground text-white text-2xl shadow-lg flex items-center justify-center animate-pulse"
+                      className="w-20 h-20 rounded-full bg-red-600 text-white text-3xl shadow-[0_10px_24px_rgba(220,38,38,0.35)] ring-8 ring-red-100 flex items-center justify-center animate-pulse"
                       title="Dừng ghi âm"
                     >
                       ⏹
                     </button>
                   )}
                 </div>
-                <p className="text-center text-xs text-foreground/40 -mt-4">
+                <p className="text-center text-xs font-medium text-muted -mt-3">
                   {isRecording ? "Đang ghi âm — bấm để dừng" : transcribing ? "Đang xử lý bản ghi âm..." : "Bấm để đọc theo câu/từ mẫu ở trên"}
                 </p>
 
                 {transcript !== null && (
-                  <div className="space-y-4 border-t border-foreground/10 pt-6">
+                  <div className="space-y-4 border-t border-line pt-6">
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">Hệ thống nghe được</p>
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted mb-2">Hệ thống nghe được</p>
                       <p className="text-foreground/80 italic">&quot;{transcript || "(không nghe rõ)"}&quot;</p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">So khớp từng từ — {Math.round(matchScore * 10)}% khớp</p>
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted mb-2">So khớp từng từ — {Math.round(matchScore * 10)}% khớp</p>
                       <div className="flex flex-wrap gap-1.5">
                         {wordResults.map((r, i) => (
-                          <span key={i} className={`px-2.5 py-1 rounded-lg text-sm font-semibold ${r.matched ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
+                          <span key={i} className={`px-3 py-1 rounded-full text-sm font-semibold ${r.matched ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-red-50 text-red-700 border border-red-100"}`}>
                             {r.word}
                           </span>
                         ))}
@@ -344,22 +359,22 @@ export default function PronunciationPracticePage() {
                       <button
                         onClick={runCoach}
                         disabled={coaching}
-                        className="w-full py-3 bg-secondary/10 text-secondary font-bold rounded-xl hover:bg-secondary/20 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="btn-outline w-full py-3"
                       >
-                        {coaching ? (<><span className="w-4 h-4 border-2 border-secondary/30 border-t-secondary rounded-full animate-spin" /> Đang phân tích...</>) : (<>🤖 Xin AI Góp Ý</>)}
+                        {coaching ? (<><span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" /> Đang phân tích...</>) : (<>Xin AI Góp Ý</>)}
                       </button>
                     ) : (
                       <div className="space-y-3">
-                        <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 text-sm text-foreground/80 leading-relaxed">{coachFeedback.overall}</div>
+                        <div className="bg-primary-soft border border-primary/15 rounded-xl p-4 text-sm text-foreground/80 leading-relaxed">{coachFeedback.overall}</div>
                         {coachFeedback.likelyIssues?.map((issue, i) => (
-                          <div key={i} className="bg-foreground/[0.03] border border-foreground/10 rounded-xl p-4">
-                            <p className="text-xs font-bold uppercase tracking-wide text-foreground/50 mb-1">{issue.word}</p>
+                          <div key={i} className="bg-white border border-line rounded-xl p-4">
+                            <p className="text-xs font-bold uppercase tracking-wide text-primary mb-1">{issue.word}</p>
                             <p className="text-sm text-foreground/80 leading-relaxed">{issue.tip}</p>
                           </div>
                         ))}
                         {coachFeedback.suggestions?.length > 0 && (
                           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                            <p className="text-xs font-bold uppercase tracking-wide text-amber-700 mb-2">💡 Gợi ý luyện tập</p>
+                            <p className="text-xs font-bold uppercase tracking-wide text-amber-700 mb-2">Gợi ý luyện tập</p>
                             <ul className="space-y-1">
                               {coachFeedback.suggestions.map((s, i) => (
                                 <li key={i} className="text-sm text-amber-800 flex gap-2">
@@ -389,9 +404,9 @@ export default function PronunciationPracticePage() {
                         <button
                           onClick={() => downloadPdf(pdfRef.current, `bao-cao-phat-am-${Date.now()}.pdf`)}
                           disabled={exportingPdf}
-                          className="text-xs font-bold px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50"
+                          className="btn-outline text-xs px-4 py-2"
                         >
-                          🖨️ {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                          {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
                         </button>
                       </div>
                     )}
@@ -399,7 +414,7 @@ export default function PronunciationPracticePage() {
                     <button
                       onClick={saveAndNext}
                       disabled={saving}
-                      className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-md hover:opacity-90 transition-opacity disabled:opacity-50"
+                      className="btn-primary w-full py-4"
                     >
                       {saving ? "Đang lưu..." : "Lưu & Từ Tiếp Theo →"}
                     </button>
@@ -412,24 +427,29 @@ export default function PronunciationPracticePage() {
 
         {viewMode === "HISTORY" && !viewingHistoryItem && (
           <div className="space-y-3">
-            <h1 className="text-2xl font-black">📜 Lịch Sử Luyện Phát Âm</h1>
+            <h2 className="ui-section-title mb-4">Lịch Sử Luyện Phát Âm</h2>
             {history.length === 0 ? (
-              <p className="text-foreground/50 text-sm">Bạn chưa luyện phát âm lần nào. Kết quả sẽ tự động lưu tại đây sau mỗi lần ghi âm.</p>
+              <div className="ui-card p-8 text-center flex flex-col items-center">
+                <img src="/images/illustrations/empty-state.svg" alt="Chưa có lịch sử luyện phát âm" width={800} height={600} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
+                <p className="text-muted text-sm">Bạn chưa luyện phát âm lần nào. Kết quả sẽ tự động lưu tại đây sau mỗi lần ghi âm.</p>
+              </div>
             ) : (
               <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {historyPagination.pageItems.map((h) => (
                   <button
                     key={h.id}
                     onClick={() => setViewingHistoryItem(h)}
-                    className="w-full text-left bg-surface border border-foreground/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all flex items-center justify-between gap-3"
+                    className="w-full text-left ui-card ui-card-hover p-5 flex items-center justify-between gap-3"
                   >
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-foreground/80 line-clamp-1">{h.targetText}</p>
-                      <p className="text-xs text-foreground/50 mt-1">🕓 {formatPracticedAt(h.practicedAt)}</p>
+                      <p className="text-sm font-bold text-primary line-clamp-1">{h.targetText}</p>
+                      <p className="text-xs text-muted mt-1">{formatPracticedAt(h.practicedAt)}</p>
                     </div>
-                    <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-primary/10 text-primary shrink-0">{h.matchScore.toFixed(1)}/10</span>
+                    <span className="ui-badge shrink-0">{h.matchScore.toFixed(1)}/10</span>
                   </button>
                 ))}
+                </div>
                 <Pagination page={historyPagination.page} totalPages={historyPagination.totalPages} totalItems={historyPagination.totalItems} pageSize={10} onPageChange={historyPagination.setPage} />
               </>
             )}
@@ -438,32 +458,32 @@ export default function PronunciationPracticePage() {
 
         {viewMode === "HISTORY" && viewingHistoryItem && (
           <div className="space-y-4">
-            <button onClick={() => setViewingHistoryItem(null)} className="text-xs font-bold text-foreground/40 hover:text-primary transition-colors inline-flex items-center gap-1">
+            <button onClick={() => setViewingHistoryItem(null)} className="text-xs font-bold text-muted hover:text-primary transition-colors inline-flex items-center gap-1 py-2">
               ← Quay lại danh sách
             </button>
-            <h2 className="text-xl font-bold text-foreground">{viewingHistoryItem.targetText}</h2>
-            <p className="text-xs text-foreground/40">🕓 {formatPracticedAt(viewingHistoryItem.practicedAt)}</p>
-            <div className="bg-primary/5 border border-primary/15 rounded-2xl p-5">
-              <p className="text-sm font-bold text-foreground/50 mb-1">Hệ thống nghe được</p>
+            <h2 className="text-xl font-extrabold text-primary">{viewingHistoryItem.targetText}</h2>
+            <p className="text-xs text-muted">{formatPracticedAt(viewingHistoryItem.practicedAt)}</p>
+            <div className="ui-card p-5">
+              <p className="text-xs font-bold uppercase tracking-wide text-muted mb-1">Hệ thống nghe được</p>
               <p className="italic text-foreground/80">&quot;{viewingHistoryItem.transcript}&quot;</p>
               <p className="text-lg font-bold text-primary mt-3">Độ khớp: {viewingHistoryItem.matchScore.toFixed(1)}/10</p>
             </div>
             {historyFeedback && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h3 className="font-bold text-foreground">🤖 Góp Ý AI</h3>
+                  <h3 className="font-bold text-primary">Góp Ý AI</h3>
                   <button
                     onClick={() => downloadPdf(historyPdfRef.current, `bao-cao-phat-am-${Date.now()}.pdf`)}
                     disabled={exportingPdf}
-                    className="text-xs font-bold px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50"
+                    className="btn-outline text-xs px-4 py-2"
                   >
-                    🖨️ {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                    {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
                   </button>
                 </div>
-                <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 text-sm text-foreground/80 leading-relaxed">{historyFeedback.overall}</div>
+                <div className="bg-primary-soft border border-primary/15 rounded-xl p-4 text-sm text-foreground/80 leading-relaxed">{historyFeedback.overall}</div>
                 {historyFeedback.likelyIssues?.map((issue, i) => (
-                  <div key={i} className="bg-foreground/[0.03] border border-foreground/10 rounded-xl p-4">
-                    <p className="text-xs font-bold uppercase tracking-wide text-foreground/50 mb-1">{issue.word}</p>
+                  <div key={i} className="bg-white border border-line rounded-xl p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-primary mb-1">{issue.word}</p>
                     <p className="text-sm text-foreground/80 leading-relaxed">{issue.tip}</p>
                   </div>
                 ))}

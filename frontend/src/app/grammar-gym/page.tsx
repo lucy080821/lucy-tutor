@@ -149,11 +149,11 @@ export default function GrammarGymPage() {
     return (
       <ResponsiveContainer width="100%" height={300}>
         <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
-          <PolarGrid />
-          <PolarAngleAxis dataKey="subject" tick={{ fill: '#888', fontSize: 12 }} />
+          <PolarGrid stroke="#eaecef" />
+          <PolarAngleAxis dataKey="subject" tick={{ fill: '#5b6b82', fontSize: 12 }} />
           <PolarRadiusAxis />
-          <Radar name="Đúng" dataKey="A" stroke="#10b981" fill="#10b981" fillOpacity={0.5} />
-          <Radar name="Sai" dataKey="B" stroke="#f43f5e" fill="#f43f5e" fillOpacity={0.5} />
+          <Radar name="Đúng" dataKey="A" stroke="#10b981" fill="#10b981" fillOpacity={0.4} />
+          <Radar name="Sai" dataKey="B" stroke="#ef4444" fill="#ef4444" fillOpacity={0.35} />
         </RadarChart>
       </ResponsiveContainer>
     );
@@ -165,78 +165,83 @@ export default function GrammarGymPage() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col items-center">
-      {/* Header */}
-      <div className="w-full bg-surface border-b border-foreground/10 p-4 sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-4">
-            <button onClick={() => router.push('/dashboard')} className="p-2 hover:bg-foreground/5 rounded-full transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-            </button>
-            <h1 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center gap-2">
-              🏋️ Grammar Gym
+      {/* Page banner (IOT style) */}
+      <div className="w-full bg-surface border-b border-line">
+        <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 flex items-center gap-6">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 text-sm text-muted">
+              <button onClick={() => router.push('/dashboard')} className="w-9 h-9 shrink-0 flex items-center justify-center rounded-full border border-line-strong text-muted hover:border-primary hover:text-primary hover:bg-primary-soft transition-colors" aria-label="Quay lại">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+              </button>
+              <span>Trang chủ / Grammar Gym</span>
+            </div>
+            <h1 className="ui-page-title mt-3 text-2xl sm:text-3xl">
+              Grammar Gym
             </h1>
+            <p className="ui-page-subtitle">Luyện ngữ pháp theo đúng những chuyên đề bạn hay làm sai.</p>
           </div>
+          <img src="/images/thumbs/grammar.svg" alt="Minh hoạ luyện ngữ pháp" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
+        </div>
+      </div>
 
-          <div className="flex bg-foreground/5 p-1 rounded-xl">
+      {/* Pill tabs */}
+      <div className="w-full">
+        <div className="max-w-5xl mx-auto px-4 pt-6 flex flex-wrap gap-2">
             <button 
               onClick={() => setActiveTab('STATS')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'STATS' ? 'bg-background shadow text-blue-600' : 'text-foreground/60 hover:text-foreground'}`}
+              className={`ui-chip cursor-pointer ${activeTab === 'STATS' ? 'ui-chip-active' : ''}`}
             >
               Phân Tích
             </button>
             <button 
               onClick={() => setActiveTab('PRACTICE')}
-              className={`px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'PRACTICE' ? 'bg-background shadow text-blue-600' : 'text-foreground/60 hover:text-foreground'}`}
+              className={`ui-chip cursor-pointer ${activeTab === 'PRACTICE' ? 'ui-chip-active' : ''}`}
             >
               Luyện Tập
             </button>
-          </div>
         </div>
       </div>
 
-      <div className="flex-1 w-full max-w-4xl p-6">
+      <div className="flex-1 w-full max-w-5xl px-4 py-8">
         {activeTab === 'STATS' && (
           <div className="space-y-8 animate-in fade-in duration-500">
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-8 rounded-3xl text-white shadow-lg relative overflow-hidden">
+            <div className="ui-hero p-8 shadow-card relative overflow-hidden">
               <div className="relative z-10">
-                <h2 className="text-3xl font-black mb-2">Trung Tâm Thể Lực Ngữ Pháp</h2>
-                <p className="text-blue-100 max-w-lg">
+                <h2 className="text-2xl sm:text-3xl font-extrabold mb-2">Trung Tâm Thể Lực Ngữ Pháp</h2>
+                <p className="text-white/80 max-w-lg">
                   Lucy AI đã phân tích Sổ Tay Lỗi Sai của bạn và tạo ra các bài tập chuyên biệt giúp bạn khắc phục triệt để các lỗ hổng ngữ pháp.
                 </p>
-              </div>
-              <div className="absolute right-0 top-0 opacity-10 pointer-events-none">
-                <svg width="200" height="200" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M4 12V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V12M12 4L12 14M12 4C10.8954 4 10 4.89543 10 6C10 7.10457 10.8954 8 12 8C13.1046 8 14 7.10457 14 6C14 4.89543 13.1046 4 12 4Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="col-span-1 md:col-span-2 bg-surface p-6 rounded-3xl border border-foreground/10 shadow-sm">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">🕸️ Radar Kiến Thức</h3>
+              <div className="col-span-1 md:col-span-2 ui-card p-6">
+                <h3 className="ui-section-title text-lg mb-5">Radar Kiến Thức</h3>
                 {notebooks.length > 0 ? (
                   renderRadarChart()
                 ) : (
-                  <div className="h-[300px] flex items-center justify-center text-foreground/40 font-medium">
+                  <div className="h-[300px] flex items-center justify-center text-muted font-medium">
                     Chưa có đủ dữ liệu để vẽ biểu đồ
                   </div>
                 )}
               </div>
 
-              <div className="col-span-1 bg-surface p-6 rounded-3xl border border-foreground/10 shadow-sm">
-                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">🎯 Gợi Ý Hôm Nay</h3>
+              <div className="col-span-1 ui-card p-6">
+                <h3 className="ui-section-title text-lg mb-5">Gợi Ý Hôm Nay</h3>
                 {notebooks.length === 0 ? (
-                  <p className="text-foreground/50 text-sm">Bạn chưa có lỗi sai ngữ pháp nào trong sổ tay. Hãy làm thêm bài tập nhé!</p>
+                  <p className="text-muted text-sm">Bạn chưa có lỗi sai ngữ pháp nào trong sổ tay. Hãy làm thêm bài tập nhé!</p>
                 ) : (
                   <div className="space-y-4">
                     {notebooks.slice(0, 3).map((nb) => (
-                      <div key={nb.id} className="p-4 bg-foreground/5 rounded-2xl hover:bg-blue-500/5 transition-colors group cursor-pointer border border-transparent hover:border-blue-500/20" onClick={() => startSession(nb)}>
-                        <h4 className="font-bold text-blue-600 line-clamp-2 text-sm">{nb.topic}</h4>
-                        <div className="flex justify-between text-xs text-foreground/50 mt-2">
+                      <div key={nb.id} className="p-4 bg-white rounded-xl border border-line hover:border-primary/40 hover:bg-primary-soft transition-colors group cursor-pointer" onClick={() => startSession(nb)}>
+                        <h4 className="font-bold text-primary line-clamp-2 text-sm">{nb.topic}</h4>
+                        <div className="flex justify-between text-xs text-muted mt-2">
                           <span>❌ {nb.mistakeCount} lỗi</span>
                           <span>✅ {nb.correctCount} khắc phục</span>
                         </div>
-                        <button className="w-full mt-3 py-2 bg-blue-500 text-white rounded-xl font-bold text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button className="w-full mt-3 py-2 bg-primary text-white rounded-full font-bold text-sm sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                           Tập ngay →
                         </button>
                       </div>
@@ -250,36 +255,36 @@ export default function GrammarGymPage() {
 
         {activeTab === 'PRACTICE' && generating && (
           <div className="flex flex-col items-center justify-center h-[50vh] animate-pulse">
-            <div className="text-6xl mb-6">🤖</div>
-            <h2 className="text-2xl font-bold mb-2">AI Lucy đang tạo bài tập...</h2>
-            <p className="text-foreground/50">Đang thiết kế giáo án dành riêng cho bạn dựa trên lịch sử lỗi sai</p>
+            <div className="w-12 h-12 mb-6 rounded-full border-4 border-primary-soft border-t-primary animate-spin" aria-hidden="true" />
+            <h2 className="text-2xl font-extrabold text-primary mb-2">AI Lucy đang tạo bài tập...</h2>
+            <p className="text-muted">Đang thiết kế giáo án dành riêng cho bạn dựa trên lịch sử lỗi sai</p>
           </div>
         )}
 
         {activeTab === 'PRACTICE' && !generating && questions.length > 0 && (
           <div className="max-w-2xl mx-auto mt-8">
-            <div className="mb-6 flex justify-between items-center text-sm font-bold text-foreground/50">
+            <div className="mb-6 flex flex-wrap gap-2 justify-between items-center text-sm font-bold text-muted">
               <span>Bài tập {currentQIndex + 1} / {questions.length}</span>
-              <span className="px-3 py-1 bg-foreground/10 rounded-full">
+              <span className="ui-badge px-3 py-1">
                 {questions[currentQIndex].type === 'FIND_FIX' && 'Sửa Lỗi Sai'}
                 {questions[currentQIndex].type === 'BUILDING' && 'Lắp Ráp Câu'}
                 {questions[currentQIndex].type === 'TRANSFORM' && 'Biến Hình Câu'}
               </span>
             </div>
             
-            <div className="bg-surface p-8 rounded-3xl border border-foreground/10 shadow-lg relative">
+            <div className="ui-card p-6 sm:p-8 relative">
               {/* Question UI based on Type */}
               
               {questions[currentQIndex].type === 'FIND_FIX' && (
                 <div className="space-y-6">
-                  <div className="bg-rose-500/10 p-4 rounded-2xl border border-rose-500/20">
-                    <p className="text-sm font-bold text-rose-500 mb-1">Câu có lỗi sai:</p>
+                  <div className="bg-red-50 p-4 rounded-xl border border-red-100">
+                    <p className="text-sm font-bold text-red-700 mb-1">Câu có lỗi sai:</p>
                     <p className="text-xl font-medium">{questions[currentQIndex].incorrectSentence}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-foreground/70 mb-2">Hãy viết lại câu đúng:</label>
+                    <label className="ui-label">Hãy viết lại câu đúng:</label>
                     <textarea 
-                      className="w-full bg-background border-2 border-foreground/10 rounded-2xl p-4 focus:border-blue-500 outline-none resize-none font-medium text-lg"
+                      className="w-full bg-white border border-line-strong rounded-xl p-4 focus:border-primary focus:ring-3 focus:ring-primary/15 outline-none transition resize-none font-medium text-lg"
                       rows={3}
                       value={userAnswer}
                       onChange={e => setUserAnswer(e.target.value)}
@@ -292,11 +297,11 @@ export default function GrammarGymPage() {
 
               {questions[currentQIndex].type === 'BUILDING' && (
                 <div className="space-y-6">
-                  <p className="text-lg font-bold text-center mb-6">Hãy sắp xếp các từ sau thành câu hoàn chỉnh:</p>
+                  <p className="text-lg font-bold text-primary text-center mb-6">Hãy sắp xếp các từ sau thành câu hoàn chỉnh:</p>
                   
                   {/* Selected words (Drop zone) */}
-                  <div className="min-h-[60px] p-4 bg-background border-2 border-dashed border-foreground/20 rounded-2xl flex flex-wrap gap-2 items-center justify-center">
-                    {selectedWords.length === 0 && <span className="text-foreground/30 font-medium">Bấm vào các từ bên dưới</span>}
+                  <div className="min-h-[60px] p-4 bg-primary-soft/50 border-2 border-dashed border-primary/20 rounded-xl flex flex-wrap gap-2 items-center justify-center">
+                    {selectedWords.length === 0 && <span className="text-muted/70 font-medium">Bấm vào các từ bên dưới</span>}
                     {selectedWords.map((word, idx) => (
                       <button 
                         key={`sel-${idx}`} 
@@ -308,7 +313,7 @@ export default function GrammarGymPage() {
                           setAvailableWords([...availableWords, word]);
                         }}
                         disabled={showExplanation}
-                        className="px-4 py-2 bg-blue-500 text-white font-bold rounded-xl hover:scale-105 transition-transform"
+                        className="px-4 py-2 bg-primary text-white font-bold rounded-full hover:bg-[#172e6e] transition-colors"
                       >
                         {word}
                       </button>
@@ -322,14 +327,14 @@ export default function GrammarGymPage() {
                         setAvailableWords([...availableWords, ...selectedWords]);
                         setSelectedWords([]);
                       }} 
-                      className="text-sm text-foreground/50 hover:text-foreground font-medium"
+                      className="btn-ghost px-4 py-2 text-sm"
                     >
                       ↺ Làm lại
                     </button>
                   </div>
 
                   {/* Available words */}
-                  <div className="p-4 bg-foreground/5 rounded-2xl flex flex-wrap gap-2 items-center justify-center">
+                  <div className="p-4 bg-[#f7f9fc] border border-line rounded-xl flex flex-wrap gap-2 items-center justify-center">
                     {availableWords.map((word, idx) => (
                       <button 
                         key={`avail-${idx}`} 
@@ -341,7 +346,7 @@ export default function GrammarGymPage() {
                           setSelectedWords([...selectedWords, word]);
                         }}
                         disabled={showExplanation}
-                        className="px-4 py-2 bg-surface border border-foreground/10 text-foreground font-bold rounded-xl shadow-sm hover:border-blue-500 transition-colors"
+                        className="px-4 py-2 bg-white border border-line-strong text-foreground font-bold rounded-full hover:border-primary hover:text-primary transition-colors"
                       >
                         {word}
                       </button>
@@ -352,20 +357,20 @@ export default function GrammarGymPage() {
 
               {questions[currentQIndex].type === 'TRANSFORM' && (
                 <div className="space-y-6">
-                  <div className="bg-blue-500/10 p-4 rounded-2xl border border-blue-500/20">
-                    <p className="text-sm font-bold text-blue-600 mb-1">Câu gốc:</p>
+                  <div className="bg-primary-soft p-4 rounded-xl border border-primary/15">
+                    <p className="text-sm font-bold text-primary mb-1">Câu gốc:</p>
                     <p className="text-xl font-medium">{questions[currentQIndex].originalSentence}</p>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-foreground/70 mb-2">Viết lại câu giữ nguyên nghĩa:</label>
+                    <label className="ui-label">Viết lại câu giữ nguyên nghĩa:</label>
                     <div className="relative">
                       {questions[currentQIndex].hint && (
-                        <div className="absolute top-4 left-4 font-medium text-foreground/50 pointer-events-none">
+                        <div className="absolute top-4 left-4 font-medium text-muted pointer-events-none">
                           {questions[currentQIndex].hint}
                         </div>
                       )}
                       <textarea 
-                        className={`w-full bg-background border-2 border-foreground/10 rounded-2xl p-4 focus:border-blue-500 outline-none resize-none font-medium text-lg ${questions[currentQIndex].hint ? 'pl-24' : ''}`}
+                        className={`w-full bg-white border border-line-strong rounded-xl p-4 focus:border-primary focus:ring-3 focus:ring-primary/15 outline-none transition resize-none font-medium text-lg ${questions[currentQIndex].hint ? 'pl-24' : ''}`}
                         rows={3}
                         value={userAnswer}
                         onChange={e => setUserAnswer(e.target.value)}
@@ -386,19 +391,19 @@ export default function GrammarGymPage() {
                       (questions[currentQIndex].type !== 'BUILDING' && userAnswer.trim().length === 0) ||
                       (questions[currentQIndex].type === 'BUILDING' && selectedWords.length === 0)
                     }
-                    className="w-full py-4 bg-foreground text-background font-black text-lg rounded-2xl hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-100"
+                    className="btn-primary w-full py-4 text-lg"
                   >
                     Kiểm Tra
                   </button>
                 ) : (
                   <div className="animate-in slide-in-from-bottom-4 duration-300">
-                    <div className={`p-6 rounded-2xl mb-6 flex items-start gap-4 ${isCorrect ? 'bg-green-500/10 border-2 border-green-500/30 text-green-700' : 'bg-rose-500/10 border-2 border-rose-500/30 text-rose-700'}`}>
-                      <div className="text-4xl">{isCorrect ? '🎉' : '💡'}</div>
+                    <div className={`p-5 sm:p-6 rounded-xl mb-6 flex items-start gap-4 ${isCorrect ? 'bg-emerald-50 border border-emerald-200 text-emerald-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+                      <div className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-xl font-black ${isCorrect ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>{isCorrect ? '✓' : '✗'}</div>
                       <div>
                         <h3 className="font-black text-xl mb-1">{isCorrect ? 'Chính xác!' : 'Sai rồi!'}</h3>
                         <p className="font-medium mb-3">{questions[currentQIndex].explanation}</p>
                         {!isCorrect && (
-                          <div className="mt-2 p-3 bg-background rounded-xl border border-current/20">
+                          <div className="mt-2 p-3 bg-white rounded-lg border border-current/20">
                             <span className="text-sm opacity-70 block mb-1">Đáp án chuẩn:</span>
                             <span className="font-bold">{questions[currentQIndex].correctSentence}</span>
                           </div>
@@ -407,9 +412,9 @@ export default function GrammarGymPage() {
                     </div>
                     <button 
                       onClick={nextQuestion}
-                      className={`w-full py-4 font-black text-lg rounded-2xl hover:scale-[1.02] transition-transform text-white shadow-lg ${isCorrect ? 'bg-green-500 hover:bg-green-600' : 'bg-rose-500 hover:bg-rose-600'}`}
+                      className={`btn-primary w-full py-4 text-lg`}
                     >
-                      {currentQIndex < questions.length - 1 ? 'Tiếp Tục ➔' : 'Hoàn Thành Cuổi Tập 🎉'}
+                      {currentQIndex < questions.length - 1 ? 'Tiếp Tục ➔' : 'Hoàn Thành Cuổi Tập'}
                     </button>
                   </div>
                 )}

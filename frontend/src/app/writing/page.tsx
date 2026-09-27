@@ -31,16 +31,16 @@ const FORMATS = [
 const TOPIC_SUGGESTIONS = ["Sở thích cá nhân", "Kỳ nghỉ đáng nhớ", "Công việc mơ ước", "Bảo vệ môi trường", "Bạn thân"];
 
 const FEEDBACK_SECTIONS = [
-  { key: "grammar", label: "Ngữ pháp", icon: "📐", badge: "bg-blue-500/10 text-blue-600" },
-  { key: "vocabulary", label: "Từ vựng", icon: "📚", badge: "bg-violet-500/10 text-violet-600" },
-  { key: "organization", label: "Bố cục", icon: "🧱", badge: "bg-cyan-500/10 text-cyan-600" },
-  { key: "clarity", label: "Độ dễ đọc", icon: "👀", badge: "bg-amber-500/10 text-amber-600" }
+  { key: "grammar", label: "Ngữ pháp", icon: "📐", badge: "bg-primary-soft text-primary" },
+  { key: "vocabulary", label: "Từ vựng", icon: "📚", badge: "bg-primary-soft text-primary" },
+  { key: "organization", label: "Bố cục", icon: "🧱", badge: "bg-primary-soft text-primary" },
+  { key: "clarity", label: "Độ dễ đọc", icon: "👀", badge: "bg-primary-soft text-primary" }
 ];
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
-const fieldLabelClass = "block text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2";
-const fieldInputClass = "w-full p-3 border border-foreground/15 bg-background rounded-xl font-semibold text-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-colors";
+const fieldLabelClass = "ui-label";
+const fieldInputClass = "ui-input font-semibold";
 
 function parsePromptPair(raw: string): { promptEn: string; promptVi: string } {
   try {
@@ -240,48 +240,54 @@ export default function WritingPracticePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-3xl mx-auto px-4 pt-6 flex items-center justify-between flex-wrap gap-3">
-        <Link href="/dashboard" className="text-sm text-foreground/50 hover:text-primary transition-colors inline-flex items-center gap-1">
-          ← Quay lại Dashboard
-        </Link>
-        <div className="flex bg-foreground/5 p-1 rounded-xl">
-          {[
-            { key: "PRACTICE", label: "✍️ Luyện Tập" },
-            { key: "SAVED", label: `🔖 Đề Đã Lưu (${savedPrompts.length})` },
-            { key: "HISTORY", label: `📜 Lịch Sử (${history.length})` }
-          ].map(v => (
-            <button
-              key={v.key}
-              onClick={() => { setViewMode(v.key as any); setViewingHistoryItem(null); }}
-              className={`px-3 py-2 text-xs font-bold rounded-lg transition-colors ${viewMode === v.key ? "bg-primary text-white shadow-sm" : "text-foreground/50 hover:text-foreground"}`}
-            >
-              {v.label}
-            </button>
-          ))}
+      {/* Page banner */}
+      <div className="bg-primary-soft border-b border-line">
+        <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 flex items-center gap-6">
+          <div className="flex-1 min-w-0">
+            <nav aria-label="Breadcrumb" className="text-xs text-muted mb-2 flex flex-wrap items-center gap-1.5">
+              <Link href="/dashboard" className="hover:text-primary">Trang chủ</Link>
+              <span aria-hidden>/</span>
+              <span className="text-foreground font-semibold">Luyện Viết</span>
+            </nav>
+            <h1 className="ui-page-title">Luyện Viết</h1>
+            <p className="ui-page-subtitle max-w-2xl leading-relaxed">
+              Chọn cấp độ A1-C1 và mục đích luyện tập, nhận đề bài song ngữ, AI phân tích chi tiết ngữ pháp, từ vựng, bố cục và độ dễ đọc sau khi bạn nộp bài.
+            </p>
+            <Link href="/dashboard" className="btn-ghost px-3 py-2 text-sm mt-3 -ml-3">
+              ← Quay lại Dashboard
+            </Link>
+          </div>
+          <img
+            src="/images/thumbs/writing.svg"
+            alt="Minh hoạ luyện viết tiếng Anh"
+            width={640}
+            height={360}
+            loading="eager"
+            className="hidden md:block w-60 lg:w-72 h-auto rounded-2xl shrink-0"
+          />
         </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 pb-10 pt-4 space-y-6">
-        {/* Hero */}
-        {viewMode === "PRACTICE" && (
-          <div className="bg-gradient-to-r from-primary to-secondary rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
-            <div aria-hidden className="absolute -right-4 -top-6 text-[130px] leading-none opacity-10 select-none">✍️</div>
-            <div className="relative">
-              <p className="text-xs font-bold uppercase tracking-widest text-white/70 mb-1.5">Kỹ Năng Viết</p>
-              <h1 className="text-2xl sm:text-3xl font-black mb-2">Luyện Viết</h1>
-              <p className="text-white/80 max-w-lg leading-relaxed text-sm sm:text-base">
-                Chọn cấp độ A1-C1 và mục đích luyện tập, nhận đề bài song ngữ, AI phân tích chi tiết ngữ pháp, từ vựng, bố cục và độ dễ đọc sau khi bạn nộp bài.
-              </p>
-            </div>
-          </div>
-        )}
+      <div className="max-w-4xl mx-auto px-4 pt-6 flex flex-wrap gap-2">
+        {[
+          { key: "PRACTICE", label: "Luyện Tập" },
+          { key: "SAVED", label: `Đề Đã Lưu (${savedPrompts.length})` },
+          { key: "HISTORY", label: `Lịch Sử (${history.length})` }
+        ].map(v => (
+          <button
+            key={v.key}
+            onClick={() => { setViewMode(v.key as any); setViewingHistoryItem(null); }}
+            className={`ui-chip ${viewMode === v.key ? "ui-chip-active" : ""}`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
 
+      <div className="max-w-4xl mx-auto px-4 pb-12 pt-5 space-y-6">
         {viewMode === "PRACTICE" && (!promptEn ? (
-          <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-5 shadow-sm">
-            <h2 className="font-bold text-foreground flex items-center gap-2">
-              <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-base">⚙️</span>
-              Tùy Chỉnh Đề Bài
-            </h2>
+          <div className="ui-card p-5 sm:p-6 space-y-5">
+            <h2 className="ui-section-title">Tùy Chỉnh Đề Bài</h2>
             <div className="flex flex-wrap gap-4">
               <div className="flex-1 min-w-[200px]">
                 <label className={fieldLabelClass}>Chủ đề (tùy chọn)</label>
@@ -297,7 +303,7 @@ export default function WritingPracticePage() {
                     <button
                       key={t}
                       onClick={() => setTopic(t)}
-                      className="px-2.5 py-1 text-xs font-medium bg-foreground/5 hover:bg-primary/10 hover:text-primary text-foreground/60 rounded-full transition-colors"
+                      className="ui-chip px-3 py-1.5 text-xs font-medium"
                     >
                       {t}
                     </button>
@@ -332,36 +338,36 @@ export default function WritingPracticePage() {
             <button
               onClick={generatePrompt}
               disabled={loadingPrompt}
-              className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+              className="btn-primary w-full py-3"
             >
               {loadingPrompt ? (
                 <>
                   <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang tạo đề bài...
                 </>
               ) : (
-                <>✍️ Nhận đề bài</>
+                <>Nhận đề bài</>
               )}
             </button>
           </div>
         ) : (
-          <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-5 shadow-sm">
-            <div className="bg-primary/5 border border-primary/15 rounded-xl overflow-hidden">
+          <div className="ui-card p-5 sm:p-6 space-y-5">
+            <div className="bg-surface border border-line rounded-xl overflow-hidden">
               <div className="p-4">
                 <p className="text-xs font-bold text-primary uppercase tracking-wide mb-1">Đề bài (English)</p>
-                <p className="text-foreground/80 leading-relaxed">{promptEn}</p>
+                <p className="text-foreground leading-relaxed">{promptEn}</p>
               </div>
-              <div className="border-t border-primary/10 p-4 bg-primary/[0.03]">
+              <div className="border-t border-line p-4 bg-primary-soft/60">
                 <p className="text-xs font-bold text-primary uppercase tracking-wide mb-1">Đề bài (Tiếng Việt)</p>
-                <p className="text-foreground/80 leading-relaxed">{promptVi}</p>
+                <p className="text-foreground leading-relaxed">{promptVi}</p>
               </div>
             </div>
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <button onClick={reset} className="text-xs font-bold text-foreground/40 hover:text-primary transition-colors inline-flex items-center gap-1">
+              <button onClick={reset} className="btn-ghost px-3 py-2 text-xs">
                 ↺ Đổi đề bài khác
               </button>
               {!feedback && (
-                <button onClick={savePromptForLater} disabled={saving} className="text-xs font-bold text-amber-600 hover:text-amber-700 transition-colors inline-flex items-center gap-1 disabled:opacity-50">
-                  🔖 {saving ? "Đang lưu..." : "Lưu đề để luyện lại sau"}
+                <button onClick={savePromptForLater} disabled={saving} className="btn-outline px-4 py-2 text-xs">
+                  {saving ? "Đang lưu..." : "Lưu đề để luyện lại sau"}
                 </button>
               )}
             </div>
@@ -373,62 +379,58 @@ export default function WritingPracticePage() {
                   onChange={(e) => setSubmission(e.target.value)}
                   rows={10}
                   placeholder="Viết bài của bạn vào đây..."
-                  className="w-full p-4 border border-foreground/15 bg-background rounded-xl leading-relaxed focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-colors"
+                  className="ui-input p-4 leading-relaxed"
                 />
                 <button
                   onClick={submitWriting}
                   disabled={submitting}
-                  className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+                  className="btn-primary w-full py-3"
                 >
                   {submitting ? (
                     <>
                       <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang phân tích...
                     </>
                   ) : (
-                    <>🤖 Nộp bài & Nhận góp ý</>
+                    <>Nộp bài & Nhận góp ý</>
                   )}
                 </button>
               </>
             ) : (
               <div className="space-y-4">
-                <div className="p-4 bg-foreground/5 border border-foreground/10 rounded-xl text-sm leading-relaxed text-foreground/70 italic whitespace-pre-line">
+                <div className="p-4 bg-[#f7f9fc] border border-line rounded-xl text-sm leading-relaxed text-foreground italic whitespace-pre-line">
                   {submission}
                 </div>
 
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h2 className="text-lg font-bold text-foreground flex items-center gap-2">
-                    <span className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-base">✓</span>
-                    Nhận Xét
-                  </h2>
-                  <div className="flex items-center gap-2">
+                  <h2 className="ui-section-title">Nhận Xét</h2>
+                  <div className="flex items-center flex-wrap gap-2">
                     <button
                       onClick={downloadWord}
                       disabled={downloading}
-                      className="text-xs font-bold px-3 py-2 bg-foreground/5 hover:bg-foreground/10 text-foreground/70 rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                      className="btn-outline px-4 py-2 text-xs"
                     >
-                      📄 {downloading ? "Đang tạo file..." : "Tải Word"}
+                      {downloading ? "Đang tạo file..." : "Tải Word"}
                     </button>
                     <button
                       onClick={() => downloadPdf(pdfRef.current, "bao-cao-luyen-viet")}
                       disabled={exportingPdf}
-                      className="text-xs font-bold px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                      className="btn-outline px-4 py-2 text-xs"
                     >
-                      🖨️ {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                      {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
                     </button>
                   </div>
                 </div>
-                {practicedAt && <p className="text-xs text-foreground/40">🕓 Thực hành lúc: {formatPracticedAt(practicedAt)}</p>}
-                <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 text-sm text-foreground/80 leading-relaxed">
+                {practicedAt && <p className="text-xs text-muted">Thực hành lúc: {formatPracticedAt(practicedAt)}</p>}
+                <div className="bg-primary-soft border border-line rounded-xl p-4 text-sm text-foreground leading-relaxed">
                   {feedback.overall}
                 </div>
                 <div className="space-y-3">
-                  {FEEDBACK_SECTIONS.map(({ key, label, icon, badge }) => (feedback as any)[key] && (
-                    <div key={key} className="bg-foreground/[0.03] border border-foreground/10 rounded-xl p-4">
-                      <p className="text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2 flex items-center gap-2">
-                        <span className={`w-6 h-6 rounded-md flex items-center justify-center text-sm ${badge}`}>{icon}</span>
+                  {FEEDBACK_SECTIONS.map(({ key, label }) => (feedback as any)[key] && (
+                    <div key={key} className="bg-surface border border-line rounded-xl p-4">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted mb-2 flex items-center gap-2">
                         {label}
                       </p>
-                      <p className="text-sm text-foreground/80 leading-relaxed">
+                      <p className="text-sm text-foreground leading-relaxed">
                         <HighlightedText text={(feedback as any)[key]} />
                       </p>
                     </div>
@@ -436,7 +438,7 @@ export default function WritingPracticePage() {
                 </div>
                 {feedback.suggestions?.length > 0 && (
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700 mb-2">💡 Gợi ý cải thiện</p>
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700 mb-2">Gợi ý cải thiện</p>
                     <ul className="space-y-1">
                       {feedback.suggestions.map((s, i) => (
                         <li key={i} className="text-sm text-amber-800 flex gap-2">
@@ -449,7 +451,7 @@ export default function WritingPracticePage() {
                 )}
                 <button
                   onClick={reset}
-                  className="w-full py-3 bg-primary/10 text-primary font-bold rounded-xl hover:bg-primary/15 transition-colors"
+                  className="btn-outline w-full py-3"
                 >
                   Viết Đề Khác
                 </button>
@@ -479,25 +481,29 @@ export default function WritingPracticePage() {
 
         {viewMode === "SAVED" && (
           <div className="space-y-3">
-            <h1 className="text-2xl font-black">🔖 Đề Đã Lưu</h1>
+            <h2 className="ui-section-title mb-2">Đề Đã Lưu</h2>
             {savedPrompts.length === 0 ? (
-              <p className="text-foreground/50 text-sm">Chưa có đề nào được lưu. Khi luyện tập, bấm "Lưu đề để luyện lại sau" để thêm vào đây.</p>
+              <div className="ui-card p-8 text-center">
+                <img src="/images/illustrations/empty-state.svg" alt="Chưa có đề viết đã lưu" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
+                <p className="text-muted text-sm">Chưa có đề nào được lưu. Khi luyện tập, bấm "Lưu đề để luyện lại sau" để thêm vào đây.</p>
+              </div>
             ) : (
               <>
                 {savedPromptsPagination.pageItems.map((sp) => {
                   const { promptEn: en } = parsePromptPair(sp.prompt);
                   return (
-                    <div key={sp.id} className="bg-surface border border-foreground/10 rounded-xl p-4 flex items-start justify-between gap-3">
+                    <div key={sp.id} className="ui-card ui-card-hover p-3 sm:p-4 flex items-start justify-between gap-4">
+                      <img src="/images/thumbs/writing.svg" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm text-foreground/80 line-clamp-2">{en}</p>
+                        <p className="text-sm text-foreground line-clamp-2">{en}</p>
                         <div className="flex gap-1.5 mt-2">
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">{sp.level}</span>
-                          <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-secondary/10 text-secondary">{sp.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</span>
+                          <span className="ui-badge text-[11px]">{sp.level}</span>
+                          <span className="ui-badge text-[11px] bg-[#f7f9fc] text-muted">{sp.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</span>
                         </div>
                       </div>
                       <div className="flex flex-col gap-1.5 shrink-0">
-                        <button onClick={() => loadSavedPrompt(sp)} className="text-xs font-bold px-3 py-2 bg-primary text-white rounded-lg hover:opacity-90 transition-opacity">Luyện ngay</button>
-                        <button onClick={() => deleteSavedPrompt(sp.id)} className="text-xs font-bold px-3 py-2 bg-rose-500/10 text-rose-500 rounded-lg hover:bg-rose-500/20 transition-colors">Xóa</button>
+                        <button onClick={() => loadSavedPrompt(sp)} className="btn-primary px-4 py-2 text-xs">Luyện ngay</button>
+                        <button onClick={() => deleteSavedPrompt(sp.id)} className="inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-bold bg-red-50 text-red-700 border border-red-100 hover:bg-red-100 transition-colors">Xóa</button>
                       </div>
                     </div>
                   );
@@ -510,9 +516,12 @@ export default function WritingPracticePage() {
 
         {viewMode === "HISTORY" && !viewingHistoryItem && (
           <div className="space-y-3">
-            <h1 className="text-2xl font-black">📜 Lịch Sử Bài Viết</h1>
+            <h2 className="ui-section-title mb-2">Lịch Sử Bài Viết</h2>
             {history.length === 0 ? (
-              <p className="text-foreground/50 text-sm">Bạn chưa nộp bài viết nào. Bài viết sau khi nhận nhận xét sẽ tự động lưu tại đây.</p>
+              <div className="ui-card p-8 text-center">
+                <img src="/images/illustrations/empty-state.svg" alt="Chưa có lịch sử bài viết" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
+                <p className="text-muted text-sm">Bạn chưa nộp bài viết nào. Bài viết sau khi nhận nhận xét sẽ tự động lưu tại đây.</p>
+              </div>
             ) : (
               <>
                 {historyPagination.pageItems.map((h) => {
@@ -521,10 +530,13 @@ export default function WritingPracticePage() {
                     <button
                       key={h.id}
                       onClick={() => setViewingHistoryItem(h)}
-                      className="w-full text-left bg-surface border border-foreground/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all"
+                      className="ui-card ui-card-hover w-full text-left p-3 sm:p-4 flex items-center gap-4"
                     >
-                      <p className="text-sm font-bold text-foreground/80 line-clamp-1">{en}</p>
-                      <p className="text-xs text-foreground/50 mt-1">🕓 {formatPracticedAt(h.practicedAt)} · {h.level} · {h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</p>
+                      <img src="/images/thumbs/writing.svg" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
+                      <span className="min-w-0 flex-1 block">
+                        <span className="block text-sm font-bold text-primary line-clamp-1">{en}</span>
+                        <span className="block text-xs text-muted mt-1">{formatPracticedAt(h.practicedAt)} · {h.level} · {h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</span>
+                      </span>
                     </button>
                   );
                 })}
@@ -536,37 +548,36 @@ export default function WritingPracticePage() {
 
         {viewMode === "HISTORY" && viewingHistoryItem && historyFeedback && historyPrompt && (
           <div className="space-y-4">
-            <button onClick={() => setViewingHistoryItem(null)} className="text-xs font-bold text-foreground/40 hover:text-primary transition-colors inline-flex items-center gap-1">
+            <button onClick={() => setViewingHistoryItem(null)} className="btn-ghost px-3 py-2 text-sm">
               ← Quay lại danh sách
             </button>
-            <div className="bg-primary/5 border border-primary/15 rounded-xl p-4">
+            <div className="ui-card p-5">
               <p className="text-xs font-bold text-primary uppercase tracking-wide mb-1">Đề bài</p>
-              <p className="text-foreground/80 leading-relaxed">{historyPrompt.promptEn}</p>
+              <p className="text-foreground leading-relaxed">{historyPrompt.promptEn}</p>
             </div>
-            <div className="p-4 bg-foreground/5 border border-foreground/10 rounded-xl text-sm leading-relaxed text-foreground/70 italic whitespace-pre-line">
+            <div className="p-4 bg-[#f7f9fc] border border-line rounded-xl text-sm leading-relaxed text-foreground italic whitespace-pre-line">
               {viewingHistoryItem.essay}
             </div>
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <p className="text-xs text-foreground/40">🕓 Thực hành lúc: {formatPracticedAt(viewingHistoryItem.practicedAt)}</p>
+              <p className="text-xs text-muted">Thực hành lúc: {formatPracticedAt(viewingHistoryItem.practicedAt)}</p>
               <button
                 onClick={() => downloadPdf(historyPdfRef.current, "bao-cao-luyen-viet")}
                 disabled={exportingPdf}
-                className="text-xs font-bold px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                className="btn-outline px-4 py-2 text-xs"
               >
-                🖨️ {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
               </button>
             </div>
-            <div className="bg-primary/5 border border-primary/15 rounded-xl p-4 text-sm text-foreground/80 leading-relaxed">
+            <div className="bg-primary-soft border border-line rounded-xl p-4 text-sm text-foreground leading-relaxed">
               {historyFeedback.overall}
             </div>
             <div className="space-y-3">
-              {FEEDBACK_SECTIONS.map(({ key, label, icon, badge }) => (historyFeedback as any)[key] && (
-                <div key={key} className="bg-foreground/[0.03] border border-foreground/10 rounded-xl p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2 flex items-center gap-2">
-                    <span className={`w-6 h-6 rounded-md flex items-center justify-center text-sm ${badge}`}>{icon}</span>
+              {FEEDBACK_SECTIONS.map(({ key, label }) => (historyFeedback as any)[key] && (
+                <div key={key} className="bg-surface border border-line rounded-xl p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted mb-2 flex items-center gap-2">
                     {label}
                   </p>
-                  <p className="text-sm text-foreground/80 leading-relaxed">
+                  <p className="text-sm text-foreground leading-relaxed">
                     <HighlightedText text={(historyFeedback as any)[key]} />
                   </p>
                 </div>

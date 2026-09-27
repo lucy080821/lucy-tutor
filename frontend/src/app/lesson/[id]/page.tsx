@@ -92,33 +92,32 @@ export default function LessonPage() {
   }
 
   if (!lesson) {
-    return <div className="flex h-screen items-center justify-center font-bold text-xl text-rose-500">Không tìm thấy bài học!</div>;
+    return <div className="flex h-screen items-center justify-center font-bold text-xl text-red-600">Không tìm thấy bài học!</div>;
   }
 
   return (
     <div className="min-h-screen bg-background pb-20">
-      <div className="bg-surface border-b border-foreground/10 sticky top-0 z-10 shadow-sm">
+      <div className="bg-white border-b border-line sticky top-0 z-10">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center gap-4">
-          <button onClick={() => router.back()} className="w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center hover:bg-foreground/10 transition-colors">
+          <button onClick={() => router.back()} className="w-10 h-10 shrink-0 rounded-full border border-line-strong text-primary flex items-center justify-center hover:bg-primary-soft hover:border-primary transition-colors">
             ←
           </button>
           <div>
-            <h1 className="text-xl font-bold">{lesson.title}</h1>
-            {lesson.description && <p className="text-sm text-foreground/60">{lesson.description}</p>}
+            <h1 className="text-xl font-bold text-primary">{lesson.title}</h1>
+            {lesson.description && <p className="text-sm text-muted">{lesson.description}</p>}
           </div>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 py-8 space-y-12">
+      <div className="max-w-4xl mx-auto px-4 py-8 space-y-10">
         
         {/* Vocabulary Section */}
         {lesson.vocabularies?.length > 0 && (
           <section>
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-              <span className="w-10 h-10 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center text-xl">📝</span>
+            <h2 className="ui-section-title text-2xl mb-6">
               Từ Vựng Mới
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
               {lesson.vocabularies.map((vocab: any, i: number) => (
                 <Flashcard 
                   key={i} 
@@ -141,16 +140,15 @@ export default function LessonPage() {
         {/* Grammar Section */}
         {lesson.grammars?.length > 0 && (
           <section>
-            <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-              <span className="w-10 h-10 bg-purple-500/10 text-purple-500 rounded-xl flex items-center justify-center text-xl">📖</span>
+            <h2 className="ui-section-title text-2xl mb-6">
               Ngữ Pháp Trọng Tâm
             </h2>
             <div className="space-y-6">
               {lesson.grammars.map((grammar: any, i: number) => (
-                <div key={i} className="bg-surface border border-foreground/10 p-6 rounded-3xl shadow-sm">
+                <div key={i} className="ui-card p-6">
                   <h3 className="text-xl font-bold text-primary mb-3">{grammar.title}</h3>
                   {grammar.structure && (
-                    <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl font-mono text-primary font-bold mb-4">
+                    <div className="bg-primary-soft border border-primary/15 p-4 rounded-xl font-mono text-primary font-bold mb-4">
                       {grammar.structure}
                     </div>
                   )}
@@ -163,21 +161,21 @@ export default function LessonPage() {
         )}
 
         {/* Action Button */}
-        <div className="flex flex-col items-center pt-8 border-t border-foreground/10 gap-6">
+        <div className="flex flex-col items-center pt-8 border-t border-line gap-6">
           {totalVocabs > 0 && (
             <div className="w-full max-w-md">
-              <div className="flex justify-between text-sm font-bold text-foreground/60 mb-2">
+              <div className="flex justify-between text-sm font-bold text-muted mb-2">
                 <span>Tiến độ từ vựng: {learnedCount}/{totalVocabs}</span>
-                <span className={percent >= 60 ? 'text-green-500' : 'text-orange-500'}>{percent}%</span>
+                <span className={percent >= 60 ? 'text-emerald-600' : 'text-amber-600'}>{percent}%</span>
               </div>
-              <div className="w-full h-3 bg-foreground/5 rounded-full overflow-hidden">
+              <div className="w-full h-3 bg-primary-soft rounded-full overflow-hidden">
                 <div 
-                  className={`h-full transition-all duration-500 ${percent >= 60 ? 'bg-green-500' : 'bg-orange-500'}`}
+                  className={`h-full transition-all duration-500 ${percent >= 60 ? 'bg-emerald-500' : 'bg-amber-500'}`}
                   style={{ width: `${percent}%` }}
                 />
               </div>
               {percent < 60 && (
-                <p className="text-xs text-orange-500 font-medium text-center mt-2">
+                <p className="text-xs text-amber-600 font-medium text-center mt-2">
                   * Lật thẻ để học. Cần học ít nhất 60% từ vựng để hoàn thành bài học
                 </p>
               )}
@@ -186,13 +184,13 @@ export default function LessonPage() {
 
           <button 
             onClick={handleComplete}
-            className={`px-8 py-4 font-black text-lg rounded-2xl transition-all flex items-center gap-3 ${
+            className={`px-8 py-3.5 font-bold text-lg rounded-full transition-all flex items-center gap-3 ${
               percent >= 60 
-                ? 'bg-primary text-white hover:scale-105 shadow-xl shadow-primary/30' 
-                : 'bg-foreground/10 text-foreground/40'
+                ? 'bg-primary text-white hover:bg-[#172e6e] shadow-card-hover' 
+                : 'bg-line text-muted'
             }`}
           >
-            ✅ Đã hiểu & Hoàn thành
+            Đã hiểu & Hoàn thành
           </button>
         </div>
       </div>
@@ -215,41 +213,41 @@ function Flashcard({ vocab, onSpeak, onFlip, isLearned }: { vocab: any, onSpeak:
       <div className={`w-full h-full absolute transition-transform duration-500 transform-style-3d ${flipped ? 'rotate-y-180' : ''}`}>
         
         {/* Front */}
-        <div className={`absolute w-full h-full backface-hidden bg-surface border-2 ${isLearned ? 'border-green-500/50' : 'border-foreground/10'} hover:border-primary/50 rounded-3xl p-6 flex flex-col items-center justify-center shadow-sm text-center transition-colors`}>
+        <div className={`absolute w-full h-full backface-hidden bg-white border ${isLearned ? 'border-emerald-400' : 'border-line'} hover:border-primary/50 rounded-2xl p-6 flex flex-col items-center justify-center shadow-card text-center transition-colors`}>
           <div className="absolute top-4 right-4 flex gap-2">
             <button 
               onClick={(e) => { e.stopPropagation(); onSpeak('en-GB'); }}
-              className="w-9 h-9 bg-primary/10 text-primary font-bold text-xs rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
+              className="w-9 h-9 bg-primary-soft text-primary font-bold text-xs rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
               title="Phát âm giọng Anh (UK)"
             >
               UK
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); onSpeak('en-US'); }}
-              className="w-9 h-9 bg-primary/10 text-primary font-bold text-xs rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
+              className="w-9 h-9 bg-primary-soft text-primary font-bold text-xs rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
               title="Phát âm giọng Mỹ (US)"
             >
               US
             </button>
           </div>
           {vocab.imageUrl && (
-            <div className="w-24 h-24 mb-3 rounded-2xl overflow-hidden shadow border border-foreground/10 shrink-0">
+            <div className="w-24 h-24 mb-3 rounded-2xl overflow-hidden border border-line shrink-0">
               <img src={vocab.imageUrl} alt={vocab.word} className="w-full h-full object-cover" />
             </div>
           )}
           <h3 className="text-3xl font-black text-primary mb-1">{vocab.word}</h3>
-          <p className="text-foreground/50 font-medium italic text-sm">{vocab.pos}</p>
-          <p className="text-foreground/70 font-mono mt-1 text-sm">{vocab.phonetic}</p>
-          <div className="absolute bottom-4 text-xs font-bold text-foreground/30 uppercase tracking-widest">
+          <p className="text-muted font-medium italic text-sm">{vocab.pos}</p>
+          <p className="text-muted font-mono mt-1 text-sm">{vocab.phonetic}</p>
+          <div className="absolute bottom-4 text-xs font-bold text-muted/60 uppercase tracking-widest">
             Nhấn để lật
           </div>
         </div>
 
         {/* Back */}
-        <div className="absolute w-full h-full backface-hidden bg-primary/5 border-2 border-primary/20 rounded-3xl p-6 flex flex-col items-center justify-center shadow-sm text-center rotate-y-180">
-          <h3 className="text-2xl font-bold mb-3">{vocab.meaning}</h3>
+        <div className="absolute w-full h-full backface-hidden bg-primary-soft border border-primary/20 rounded-2xl p-6 flex flex-col items-center justify-center shadow-card text-center rotate-y-180">
+          <h3 className="text-2xl font-bold text-primary mb-3">{vocab.meaning}</h3>
           {vocab.example && (
-            <p className="text-foreground/80 italic text-sm mt-2">"{vocab.example}"</p>
+            <p className="text-foreground italic text-sm mt-2">"{vocab.example}"</p>
           )}
           <div className="absolute bottom-4 text-xs font-bold text-primary/50 uppercase tracking-widest">
             Nhấn để lật

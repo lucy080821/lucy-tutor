@@ -18,8 +18,11 @@ export function levenshteinDistance(a: string, b: string): number {
 }
 
 export function getHintMask(word: string): string {
+  // Map each char to itself (first letter) or '_', joined by a single space — but a literal
+  // space char in a multi-word entry (phrasal verbs like "look after") must not also get the
+  // join separator glued around it, or it renders as 3 spaces at the word boundary instead of 1.
   return word
     .split('')
     .map((ch, i) => (i === 0 ? ch : ch === ' ' ? ' ' : '_'))
-    .join(' ');
+    .reduce((acc, ch, i) => (i === 0 ? ch : acc.endsWith(' ') || ch === ' ' ? acc + ch : acc + ' ' + ch), '');
 }

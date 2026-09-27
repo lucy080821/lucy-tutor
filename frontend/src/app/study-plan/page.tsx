@@ -46,20 +46,9 @@ const WEAK_AREAS = [
 ];
 
 const PRIORITY_STYLES = {
-  High: "bg-red-50 text-red-700 border-red-200",
-  Medium: "bg-amber-50 text-amber-700 border-amber-200",
-  Low: "bg-green-50 text-green-700 border-green-200",
-};
-
-const TYPE_ICON: Record<string, string> = {
-  Practice: "📝",
-  Video: "🎬",
-  Reading: "📖",
-  Listening: "🎧",
-  Speaking: "🗣️",
-  Writing: "✏️",
-  Flashcard: "🃏",
-  Grammar: "✏️",
+  High: "bg-red-50 text-red-700 border-red-100",
+  Medium: "bg-amber-50 text-amber-700 border-amber-100",
+  Low: "bg-emerald-50 text-emerald-700 border-emerald-100",
 };
 
 export default function StudyPlanPage() {
@@ -132,49 +121,55 @@ export default function StudyPlanPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="bg-surface border-b border-foreground/10 px-4 sm:px-6 py-4 flex flex-wrap items-center gap-3 sm:gap-4">
-        <Link href="/dashboard" className="text-foreground/50 hover:text-foreground transition-colors text-sm font-medium">
+      <div className="bg-white border-b border-line px-4 sm:px-6 py-4 flex flex-wrap items-center gap-3 sm:gap-4">
+        <Link href="/dashboard" className="text-muted hover:text-primary transition-colors text-sm font-semibold">
           ← Dashboard
         </Link>
-        <span className="text-foreground/20 hidden sm:inline">/</span>
-        <h1 className="font-bold">Study Plan</h1>
-        <span className="ml-auto px-3 py-1 bg-primary/10 text-primary text-xs font-bold border border-primary/20">AI Powered</span>
+        <span className="text-line-strong hidden sm:inline">/</span>
+        <h1 className="font-bold text-primary">Study Plan</h1>
+        <span className="ml-auto ui-badge">AI Powered</span>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+      <div className="max-w-3xl mx-auto px-4 py-8 space-y-5">
         {step === 1 && (
           <>
-            <div className="space-y-2">
-              <h2 className="text-2xl font-bold">Tạo lộ trình học cá nhân hóa</h2>
-              <p className="text-foreground/60">AI sẽ xây dựng kế hoạch học chi tiết theo tuần dựa trên mục tiêu và thời gian của bạn.</p>
-            </div>
+            <section className="rounded-2xl bg-primary-soft border border-line px-5 py-6 sm:px-7 sm:py-7 flex flex-col md:flex-row md:items-center gap-5">
+              <div className="flex-1 min-w-0 space-y-2">
+                <p className="text-xs sm:text-sm text-muted">Trang chủ / Lộ Trình Học</p>
+                <h2 className="ui-page-title text-2xl sm:text-3xl">Tạo lộ trình học cá nhân hóa</h2>
+                <p className="ui-page-subtitle">AI sẽ xây dựng kế hoạch học chi tiết theo tuần dựa trên mục tiêu và thời gian của bạn.</p>
+              </div>
+              <div className="hidden md:block w-full max-w-[260px] shrink-0">
+                <img src="/images/thumbs/study-plan.svg" alt="Minh hoạ lộ trình học cá nhân hóa" width={640} height={360} loading="eager" className="w-full h-auto rounded-2xl" />
+              </div>
+            </section>
 
             {/* Goal */}
-            <div className="bg-surface border border-foreground/10 p-6 space-y-4">
-              <h3 className="font-bold">1. Mục tiêu của bạn</h3>
+            <div className="ui-card p-5 sm:p-6 space-y-4">
+              <h3 className="font-bold text-primary">1. Mục tiêu của bạn</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {GOALS.map(g => (
                   <button
                     key={g.value}
                     onClick={() => setForm(f => ({ ...f, goal: g.value }))}
-                    className={`p-4 text-left border transition-all ${form.goal === g.value ? "bg-primary/10 border-primary text-primary" : "border-foreground/15 hover:border-foreground/30"}`}
+                    className={`p-4 text-left border rounded-xl transition-all ${form.goal === g.value ? "bg-primary-soft border-primary text-primary" : "bg-white border-line-strong hover:border-primary"}`}
                   >
                     <div className="font-bold">{g.label}</div>
-                    <div className="text-xs text-foreground/50 mt-0.5">{g.desc}</div>
+                    <div className="text-xs text-muted mt-0.5">{g.desc}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Current level */}
-            <div className="bg-surface border border-foreground/10 p-6 space-y-4">
-              <h3 className="font-bold">2. Trình độ hiện tại</h3>
+            <div className="ui-card p-5 sm:p-6 space-y-4">
+              <h3 className="font-bold text-primary">2. Trình độ hiện tại</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {LEVELS.map(l => (
                   <button
                     key={l.value}
                     onClick={() => setForm(f => ({ ...f, currentLevel: l.value }))}
-                    className={`p-3 text-left border transition-all text-sm ${form.currentLevel === l.value ? "bg-primary/10 border-primary text-primary" : "border-foreground/15 hover:border-foreground/30"}`}
+                    className={`p-3 text-left border rounded-xl transition-all text-sm ${form.currentLevel === l.value ? "bg-primary-soft border-primary text-primary font-semibold" : "bg-white border-line-strong hover:border-primary"}`}
                   >
                     {l.label}
                   </button>
@@ -183,30 +178,30 @@ export default function StudyPlanPage() {
             </div>
 
             {/* Deadline & Time */}
-            <div className="bg-surface border border-foreground/10 p-6 space-y-5">
-              <h3 className="font-bold">3. Thời gian & deadline</h3>
+            <div className="ui-card p-5 sm:p-6 space-y-5">
+              <h3 className="font-bold text-primary">3. Thời gian & deadline</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-bold mb-2 text-foreground/70">Ngày thi dự kiến</label>
+                  <label className="ui-label">Ngày thi dự kiến</label>
                   <input
                     type="date"
                     value={form.deadline}
                     min={new Date().toISOString().split("T")[0]}
                     onChange={e => setForm(f => ({ ...f, deadline: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-foreground/15 focus:outline-none focus:border-primary bg-transparent text-sm"
+                    className="ui-input text-sm"
                   />
                   {weeksUntilDeadline && (
-                    <p className="text-xs text-foreground/50 mt-1">≈ {weeksUntilDeadline} tuần còn lại</p>
+                    <p className="text-xs text-muted mt-1">≈ {weeksUntilDeadline} tuần còn lại</p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-bold mb-2 text-foreground/70">Thời gian học mỗi ngày</label>
+                  <label className="ui-label">Thời gian học mỗi ngày</label>
                   <div className="grid grid-cols-2 gap-2">
                     {TIME_OPTIONS.map(t => (
                       <button
                         key={t.value}
                         onClick={() => setForm(f => ({ ...f, timePerDay: t.value }))}
-                        className={`px-3 py-2 text-sm border transition-all ${form.timePerDay === t.value ? "bg-primary/10 border-primary text-primary font-bold" : "border-foreground/15 hover:border-foreground/30"}`}
+                        className={`ui-chip justify-center px-3 py-2 cursor-pointer ${form.timePerDay === t.value ? "ui-chip-active" : ""}`}
                       >
                         {t.label}
                       </button>
@@ -217,9 +212,9 @@ export default function StudyPlanPage() {
             </div>
 
             {/* Weak areas */}
-            <div className="bg-surface border border-foreground/10 p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-bold">4. Điểm yếu của bạn (có thể chọn nhiều)</h3>
+            <div className="ui-card p-5 sm:p-6 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-bold text-primary">4. Điểm yếu của bạn (có thể chọn nhiều)</h3>
                 {form.weakAreas.length > 0 && (
                   <span className="text-xs text-primary font-bold">{form.weakAreas.length} đã chọn</span>
                 )}
@@ -229,7 +224,7 @@ export default function StudyPlanPage() {
                   <button
                     key={area}
                     onClick={() => toggleWeak(area)}
-                    className={`px-3 py-1.5 text-sm border transition-all ${form.weakAreas.includes(area) ? "bg-rose-50 border-rose-300 text-rose-700 font-bold" : "border-foreground/15 hover:border-foreground/30 text-foreground/70"}`}
+                    className={`ui-chip cursor-pointer ${form.weakAreas.includes(area) ? "ui-chip-active" : ""}`}
                   >
                     {area}
                   </button>
@@ -238,18 +233,18 @@ export default function StudyPlanPage() {
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 text-sm">{error}</div>
+              <div className="bg-red-50 border border-red-100 text-red-700 px-4 py-3 text-sm rounded-xl">{error}</div>
             )}
 
             <button
               onClick={generatePlan}
               disabled={loading}
-              className="w-full py-4 bg-primary text-white font-bold text-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-3"
+              className="btn-primary w-full py-3.5 text-lg gap-3"
             >
               {loading ? (
                 <><span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang xây dựng lộ trình...</>
               ) : (
-                <><span>🤖</span> Tạo lộ trình cá nhân hóa</>
+                <>Tạo lộ trình cá nhân hóa</>
               )}
             </button>
           </>
@@ -259,12 +254,12 @@ export default function StudyPlanPage() {
           <>
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div>
-                <h2 className="text-2xl font-bold">Lộ trình học của bạn</h2>
-                <p className="text-foreground/60 text-sm mt-1">{plan.summary}</p>
+                <h2 className="ui-page-title text-2xl">Lộ trình học của bạn</h2>
+                <p className="text-muted text-sm mt-1">{plan.summary}</p>
               </div>
               <button
                 onClick={() => { setStep(1); setPlan(null); }}
-                className="px-4 py-2 border border-foreground/20 text-sm font-bold hover:bg-foreground/5 transition-colors"
+                className="btn-outline px-5 py-2 text-sm"
               >
                 Tạo lại
               </button>
@@ -272,24 +267,24 @@ export default function StudyPlanPage() {
 
             {/* Weekly Schedule */}
             <div className="space-y-4">
-              <h3 className="font-bold text-lg flex items-center gap-2">📅 Lịch học từng tuần</h3>
+              <h3 className="ui-section-title text-lg">Lịch học từng tuần</h3>
               {plan.weeklySchedule.map(week => (
-                <div key={week.week} className="bg-surface border border-foreground/10 overflow-hidden">
-                  <div className="bg-primary/5 border-b border-foreground/10 px-5 py-3 flex items-center justify-between">
-                    <span className="font-bold">Tuần {week.week}</span>
+                <div key={week.week} className="ui-card overflow-hidden">
+                  <div className="bg-primary-soft border-b border-line px-5 py-3 flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-bold text-primary">Tuần {week.week}</span>
                     <span className="text-sm text-primary font-semibold">{week.focus}</span>
                   </div>
                   <div className="p-5 space-y-3">
                     <div className="flex flex-wrap gap-1.5">
                       {week.skills.map(skill => (
-                        <span key={skill} className="text-xs px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 font-medium">
+                        <span key={skill} className="ui-badge">
                           {skill}
                         </span>
                       ))}
                     </div>
                     <ul className="space-y-1.5">
                       {week.dailyTasks.map((task, i) => (
-                        <li key={i} className="flex items-start gap-2 text-sm text-foreground/75">
+                        <li key={i} className="flex items-start gap-2 text-sm text-foreground">
                           <span className="text-primary font-bold shrink-0 mt-0.5">→</span>
                           {task}
                         </li>
@@ -302,15 +297,15 @@ export default function StudyPlanPage() {
 
             {/* Resources */}
             {plan.resources?.length > 0 && (
-              <div className="bg-surface border border-foreground/10 p-6 space-y-4">
-                <h3 className="font-bold text-lg">📚 Tài nguyên học tập gợi ý</h3>
+              <div className="ui-card p-5 sm:p-6 space-y-4">
+                <h3 className="font-bold text-primary text-lg">Tài nguyên học tập gợi ý</h3>
                 <div className="space-y-2">
                   {plan.resources.map((r, i) => (
-                    <div key={i} className="flex items-center gap-3 py-2 border-b border-foreground/5 last:border-0">
-                      <span className="text-xl">{TYPE_ICON[r.type] || "📌"}</span>
+                    <div key={i} className="flex items-center gap-3 py-2.5 border-b border-line last:border-0">
+                      <span aria-hidden className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                       <span className="flex-1 text-sm font-medium">{r.title}</span>
-                      <span className="text-xs text-foreground/50">{r.type}</span>
-                      <span className={`text-xs px-2 py-0.5 font-bold border ${PRIORITY_STYLES[r.priority]}`}>
+                      <span className="text-xs text-muted">{r.type}</span>
+                      <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold border ${PRIORITY_STYLES[r.priority]}`}>
                         {r.priority}
                       </span>
                     </div>
@@ -321,8 +316,8 @@ export default function StudyPlanPage() {
 
             {/* Tips */}
             {plan.tips?.length > 0 && (
-              <div className="bg-amber-50 border border-amber-200 p-6 space-y-3">
-                <h3 className="font-bold text-amber-700 flex items-center gap-2">💡 Lời khuyên từ AI</h3>
+              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5 sm:p-6 space-y-3">
+                <h3 className="font-bold text-amber-700">Lời khuyên từ AI</h3>
                 <ul className="space-y-2">
                   {plan.tips.map((tip, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-amber-800">
@@ -336,14 +331,14 @@ export default function StudyPlanPage() {
 
             {/* Action buttons */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Link href="/gym" className="py-3 bg-surface border border-foreground/15 text-center font-bold text-sm hover:bg-foreground/5 transition-colors flex items-center justify-center gap-2">
-                🏋️ Bắt đầu Vocab Gym
+              <Link href="/gym" className="btn-outline py-3 text-sm">
+                Bắt đầu Vocab Gym
               </Link>
-              <Link href="/conversation" className="py-3 bg-surface border border-foreground/15 text-center font-bold text-sm hover:bg-foreground/5 transition-colors flex items-center justify-center gap-2">
-                🗣️ Luyện Nói Cùng AI
+              <Link href="/conversation" className="btn-outline py-3 text-sm">
+                Luyện Nói Cùng AI
               </Link>
-              <Link href="/listening" className="py-3 bg-surface border border-foreground/15 text-center font-bold text-sm hover:bg-foreground/5 transition-colors flex items-center justify-center gap-2">
-                🎧 Luyện Listening
+              <Link href="/listening" className="btn-outline py-3 text-sm">
+                Luyện Listening
               </Link>
             </div>
           </>

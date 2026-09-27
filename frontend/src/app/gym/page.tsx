@@ -217,40 +217,49 @@ export default function GymPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center">
       
-      {/* Header */}
-      <div className="w-full bg-surface border-b border-foreground/10 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 py-4 flex flex-wrap items-center gap-4 justify-between">
-          <div className="flex items-center gap-4">
-            <button onClick={() => router.push('/dashboard')} className="w-10 h-10 rounded-full bg-foreground/5 flex items-center justify-center hover:bg-foreground/10 transition-colors">
-              ←
-            </button>
-            <div>
-              <h1 className="text-lg sm:text-xl font-black text-primary flex items-center gap-2">
-                🏋️‍♀️ Phòng Gym Từ Vựng
-              </h1>
+      {/* Page banner (IOT style) */}
+      <div className="w-full bg-surface border-b border-line">
+        <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 flex items-center gap-6">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 text-sm text-muted">
+              <button onClick={() => router.push('/dashboard')} className="w-9 h-9 shrink-0 rounded-full border border-line-strong text-muted flex items-center justify-center hover:border-primary hover:text-primary hover:bg-primary-soft transition-colors" aria-label="Quay lại">
+                ←
+              </button>
+              <span>Trang chủ / Phòng Gym Từ Vựng</span>
             </div>
+            <h1 className="ui-page-title mt-3 text-2xl sm:text-3xl">
+              Phòng Gym Từ Vựng
+            </h1>
+            <p className="ui-page-subtitle">Ôn từ vựng bằng thẻ ghi nhớ theo lịch lặp lại ngắt quãng (SRS).</p>
           </div>
-          <div className="flex bg-foreground/5 p-1 rounded-xl">
+          <img src="/images/thumbs/vocabulary.svg" alt="Minh hoạ luyện từ vựng" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
+        </div>
+      </div>
+
+      {/* Pill tabs */}
+      <div className="w-full bg-background">
+        <div className="max-w-5xl mx-auto px-4 pt-6">
+          <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setActiveTab('STATS')}
-              className={`px-3 sm:px-6 py-2 rounded-lg text-sm font-bold transition-colors ${activeTab === 'STATS' ? 'bg-surface shadow-sm text-foreground' : 'text-foreground/50 hover:text-foreground'}`}
+              className={`ui-chip px-3 sm:px-5 cursor-pointer ${activeTab === 'STATS' ? 'ui-chip-active' : ''}`}
             >
               Thống Kê
             </button>
             <button
               onClick={() => setActiveTab('PRACTICE')}
-              className={`px-3 sm:px-6 py-2 rounded-lg text-sm font-bold transition-colors flex items-center gap-2 ${activeTab === 'PRACTICE' ? 'bg-primary text-white shadow-sm' : 'text-foreground/50 hover:text-foreground'}`}
+              className={`ui-chip px-3 sm:px-5 cursor-pointer ${activeTab === 'PRACTICE' ? 'ui-chip-active' : ''}`}
             >
               Ôn Tập
               {dueVocabs.length > 0 && (
-                <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'PRACTICE' ? 'bg-white text-primary' : 'bg-rose-500 text-white'}`}>
+                <span className={`px-2 py-0.5 rounded-full text-xs ${activeTab === 'PRACTICE' ? 'bg-white text-primary' : 'bg-highlight text-foreground'}`}>
                   {dueVocabs.length}
                 </span>
               )}
             </button>
             <button
               onClick={() => setActiveTab('MY_WORDS')}
-              className={`px-3 sm:px-6 py-2 rounded-lg text-sm font-bold transition-colors ${activeTab === 'MY_WORDS' ? 'bg-surface shadow-sm text-foreground' : 'text-foreground/50 hover:text-foreground'}`}
+              className={`ui-chip px-3 sm:px-5 cursor-pointer ${activeTab === 'MY_WORDS' ? 'ui-chip-active' : ''}`}
             >
               Từ Của Tôi
             </button>
@@ -258,28 +267,28 @@ export default function GymPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl w-full mx-auto px-4 py-8">
+      <div className="max-w-5xl w-full mx-auto px-4 py-8">
         
         {/* STATS TAB */}
         {activeTab === 'STATS' && stats && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
             
             {dueVocabs.length > 0 ? (
-              <div className="bg-gradient-to-r from-amber-500/10 to-rose-500/10 border border-amber-500/20 p-6 rounded-3xl flex justify-between items-center shadow-sm">
+              <div className="ui-hero p-6 sm:p-8 flex flex-wrap gap-4 justify-between items-center shadow-card">
                 <div>
-                  <h2 className="text-2xl font-bold text-amber-700">Đã đến giờ luyện tập!</h2>
-                  <p className="text-amber-600/80 font-medium">Bạn có {dueVocabs.length} thẻ cần ôn ngay hôm nay để không bị quên.</p>
+                  <h2 className="text-2xl font-extrabold text-white">Đã đến giờ luyện tập!</h2>
+                  <p className="text-white/80 font-medium mt-1">Bạn có {dueVocabs.length} thẻ cần ôn ngay hôm nay để không bị quên.</p>
                 </div>
-                <button onClick={() => setActiveTab('PRACTICE')} className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-2xl shadow-md transition-all hover:scale-105">
+                <button onClick={() => setActiveTab('PRACTICE')} className="btn-highlight px-6 py-3">
                   Vào Tập Ngay →
                 </button>
               </div>
             ) : (
-              <div className="bg-green-500/10 border border-green-500/20 p-6 rounded-3xl flex items-center gap-4 shadow-sm">
-                <div className="w-12 h-12 bg-green-500 text-white rounded-full flex items-center justify-center text-2xl font-bold">✓</div>
+              <div className="ui-card p-6 flex items-center gap-4 border-l-4 border-l-emerald-500">
+                <div className="w-12 h-12 shrink-0 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center text-2xl font-bold">✓</div>
                 <div>
-                  <h2 className="text-xl font-bold text-green-700">Tuyệt vời! Bạn đã hoàn thành mục tiêu hôm nay.</h2>
-                  <p className="text-green-600/80 font-medium">Hãy nghỉ ngơi và quay lại vào ngày mai nhé.</p>
+                  <h2 className="text-xl font-bold text-emerald-700">Tuyệt vời! Bạn đã hoàn thành mục tiêu hôm nay.</h2>
+                  <p className="text-muted font-medium">Hãy nghỉ ngơi và quay lại vào ngày mai nhé.</p>
                 </div>
               </div>
             )}
@@ -287,8 +296,8 @@ export default function GymPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               
               {/* Pie Chart */}
-              <div className="bg-surface border border-foreground/10 p-6 rounded-3xl shadow-sm flex flex-col items-center">
-                <h3 className="font-bold text-lg mb-4 w-full text-left">Phân Bổ Trạng Thái</h3>
+              <div className="ui-card p-6 flex flex-col items-center">
+                <h3 className="ui-section-title text-lg mb-5 w-full text-left">Phân Bổ Trạng Thái</h3>
                 <div className="w-full h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -306,7 +315,7 @@ export default function GymPage() {
                         ))}
                       </Pie>
                       <RechartsTooltip 
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                        contentStyle={{ borderRadius: '12px', border: '1px solid #eaecef', boxShadow: '0 8px 20px rgba(30,58,138,0.08)' }}
                       />
                       <Legend verticalAlign="bottom" height={36} />
                     </PieChart>
@@ -315,8 +324,8 @@ export default function GymPage() {
               </div>
 
               {/* Bar Chart */}
-              <div className="bg-surface border border-foreground/10 p-6 rounded-3xl shadow-sm flex flex-col items-center">
-                <h3 className="font-bold text-lg mb-4 w-full text-left">Dự Báo Khối Lượng 7 Ngày Tới</h3>
+              <div className="ui-card p-6 flex flex-col items-center">
+                <h3 className="ui-section-title text-lg mb-5 w-full text-left">Dự Báo Khối Lượng 7 Ngày Tới</h3>
                 <div className="w-full h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={stats.workloads} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
@@ -324,10 +333,10 @@ export default function GymPage() {
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, opacity: 0.6 }} dy={10} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, opacity: 0.6 }} />
                       <RechartsTooltip 
-                        cursor={{ fill: 'rgba(0,0,0,0.05)' }}
-                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                        cursor={{ fill: 'rgba(30,58,138,0.06)' }}
+                        contentStyle={{ borderRadius: '12px', border: '1px solid #eaecef', boxShadow: '0 8px 20px rgba(30,58,138,0.08)' }}
                       />
-                      <Bar dataKey="count" name="Số từ cần ôn" fill="var(--color-primary)" radius={[6, 6, 0, 0]} barSize={30} />
+                      <Bar dataKey="count" name="Số từ cần ôn" fill="var(--color-primary)" radius={[8, 8, 0, 0]} barSize={28} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -342,10 +351,10 @@ export default function GymPage() {
           <div className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 h-[calc(100vh-140px)]">
             {dueVocabs.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <div className="text-6xl mb-4">🎉</div>
-                <h2 className="text-2xl font-bold mb-2">Hết từ vựng cần ôn rồi!</h2>
-                <p className="text-foreground/50">Bạn đã hoàn thành toàn bộ khối lượng của hôm nay.</p>
-                <button onClick={() => setActiveTab('STATS')} className="mt-8 px-6 py-2 bg-foreground/10 font-bold rounded-xl hover:bg-foreground/20">Quay lại Thống kê</button>
+                <img src="/images/illustrations/empty-state.svg" alt="Không còn thẻ cần ôn" width={800} height={600} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
+                <h2 className="text-2xl font-extrabold text-primary mb-2">Hết từ vựng cần ôn rồi!</h2>
+                <p className="text-muted">Bạn đã hoàn thành toàn bộ khối lượng của hôm nay.</p>
+                <button onClick={() => setActiveTab('STATS')} className="btn-outline mt-8">Quay lại Thống kê</button>
               </div>
             ) : (() => {
               const currentProgress = dueVocabs[currentCardIndex];
@@ -357,13 +366,13 @@ export default function GymPage() {
 
                 {/* Progress bar */}
                 <div className="w-full mb-8">
-                  <div className="flex justify-between text-xs font-bold text-foreground/50 mb-2">
+                  <div className="flex justify-between gap-2 text-xs font-bold text-muted mb-2">
                     <span>Tiến độ</span>
                     <span>Thẻ {Math.min(sessionTotal - dueVocabs.length + 1, sessionTotal)}/{sessionTotal} · Còn lại {dueVocabs.length} thẻ</span>
                   </div>
-                  <div className="h-2 w-full bg-foreground/10 rounded-full overflow-hidden">
+                  <div className="h-1.5 w-full bg-primary-soft rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-primary transition-all duration-300"
+                      className="h-full bg-primary rounded-full transition-all duration-300"
                       style={{ width: `${sessionTotal > 0 ? Math.max(0, Math.min(100, ((sessionTotal - dueVocabs.length) / sessionTotal) * 100)) : 0}%` }}
                     />
                   </div>
@@ -371,9 +380,9 @@ export default function GymPage() {
 
                 {isTypedMode ? (
                   <div className="w-full flex-1 min-h-[400px] flex flex-col">
-                    <div className="relative flex-1 bg-surface border-2 border-foreground/10 rounded-[2rem] p-8 flex flex-col items-center justify-center shadow-xl text-center">
+                    <div className="relative flex-1 bg-surface border border-line rounded-2xl p-8 flex flex-col items-center justify-center shadow-card-hover text-center">
                       {currentVocab.imageUrl && (
-                        <div className="w-28 h-28 mb-6 rounded-3xl overflow-hidden shadow-md shrink-0 border border-foreground/10">
+                        <div className="w-28 h-28 mb-6 rounded-2xl overflow-hidden shadow-card shrink-0 border border-line">
                           <img src={currentVocab.imageUrl} className="w-full h-full object-cover" alt="vocab" />
                         </div>
                       )}
@@ -392,22 +401,22 @@ export default function GymPage() {
                             autoCorrect="off"
                             autoCapitalize="off"
                             spellCheck={false}
-                            className="w-full max-w-xs text-center text-xl font-bold border-2 border-foreground/10 focus:border-primary rounded-2xl px-4 py-3 outline-none transition-colors bg-background text-foreground"
+                            className="w-full max-w-xs text-center text-xl font-bold border border-line-strong focus:border-primary focus:ring-3 focus:ring-primary/15 rounded-xl px-4 py-3 outline-none transition bg-white text-foreground"
                           />
                           {usedHint && (
-                            <p className="mt-4 font-mono text-lg tracking-widest text-foreground/50">{getHintMask(currentVocab.word)}</p>
+                            <p className="mt-4 font-mono text-lg tracking-widest text-muted">{getHintMask(currentVocab.word)}</p>
                           )}
-                          <div className="mt-6 flex gap-3">
+                          <div className="mt-6 flex flex-wrap justify-center gap-3">
                             <button
                               onClick={() => setUsedHint(true)}
                               disabled={usedHint}
-                              className="px-5 py-2 bg-amber-500/10 text-amber-600 font-bold rounded-xl hover:bg-amber-500 hover:text-white transition-colors disabled:opacity-50"
+                              className="px-5 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 font-bold rounded-full hover:bg-amber-100 transition-colors disabled:opacity-50"
                             >
-                              💡 Gợi Ý
+                              Gợi Ý
                             </button>
                             <button
                               onClick={submitTypedAnswer}
-                              className="px-6 py-2 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity"
+                              className="btn-primary px-6 py-2.5"
                             >
                               Kiểm Tra
                             </button>
@@ -416,20 +425,20 @@ export default function GymPage() {
                       ) : (
                         <>
                           <div className="absolute top-6 right-6 flex gap-2">
-                            <button onClick={() => handleSpeak(currentVocab.word, 'en-GB')} className="w-10 h-10 bg-primary/10 text-primary font-bold text-sm rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors">UK</button>
-                            <button onClick={() => handleSpeak(currentVocab.word, 'en-US')} className="w-10 h-10 bg-primary/10 text-primary font-bold text-sm rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors">US</button>
+                            <button onClick={() => handleSpeak(currentVocab.word, 'en-GB')} className="w-10 h-10 bg-primary-soft text-primary border border-primary/15 font-bold text-sm rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors">UK</button>
+                            <button onClick={() => handleSpeak(currentVocab.word, 'en-US')} className="w-10 h-10 bg-primary-soft text-primary border border-primary/15 font-bold text-sm rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors">US</button>
                           </div>
-                          <div className={`mb-4 px-4 py-2 rounded-xl font-bold ${isCorrect ? 'bg-green-500/10 text-green-600' : 'bg-rose-500/10 text-rose-600'}`}>
+                          <div className={`mb-4 px-4 py-1.5 rounded-full text-sm font-bold ${isCorrect ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
                             {isCorrect ? (computedQuality === 3 ? 'Gần đúng!' : 'Chính xác!') : 'Chưa đúng'}
                           </div>
                           <h3 className="text-4xl font-black text-primary mb-2">{currentVocab.word}</h3>
-                          <p className="text-foreground/50 font-medium italic text-lg">{currentVocab.pos}</p>
-                          <p className="text-foreground/70 font-mono mt-2">{currentVocab.phonetic}</p>
+                          <p className="text-muted font-medium italic text-lg">{currentVocab.pos}</p>
+                          <p className="text-muted font-mono mt-2">{currentVocab.phonetic}</p>
                           {!isCorrect && typedAnswer && (
-                            <p className="text-foreground/50 mt-3">Bạn đã gõ: <span className="line-through">{typedAnswer}</span></p>
+                            <p className="text-muted mt-3">Bạn đã gõ: <span className="line-through">{typedAnswer}</span></p>
                           )}
                           {currentVocab.example && (
-                            <p className="text-foreground/70 italic text-lg mt-4 bg-primary/5 p-4 rounded-xl">&quot;{currentVocab.example}&quot;</p>
+                            <p className="text-foreground/80 italic text-lg mt-4 bg-primary-soft p-4 rounded-xl">&quot;{currentVocab.example}&quot;</p>
                           )}
                         </>
                       )}
@@ -438,7 +447,7 @@ export default function GymPage() {
                     <div className={`mt-8 transition-opacity duration-300 ${submitted ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
                       <button
                         onClick={() => computedQuality !== null && handleReview(computedQuality)}
-                        className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-md hover:opacity-90 transition-opacity"
+                        className="btn-primary w-full py-4"
                       >
                         Tiếp Tục →
                       </button>
@@ -454,39 +463,39 @@ export default function GymPage() {
                   <div className={`w-full h-full absolute transition-transform duration-500 transform-style-3d ${flipped ? 'rotate-y-180' : ''}`}>
                     
                     {/* Front */}
-                    <div className="absolute w-full h-full backface-hidden bg-surface border-2 border-foreground/10 rounded-[2rem] p-8 flex flex-col items-center justify-center shadow-xl text-center">
+                    <div className="absolute w-full h-full backface-hidden bg-surface border border-line rounded-2xl p-8 flex flex-col items-center justify-center shadow-card-hover text-center">
                       {dueVocabs[currentCardIndex].vocab.imageUrl && (
-                        <div className="w-32 h-32 mb-6 rounded-3xl overflow-hidden shadow-md shrink-0 border border-foreground/10">
+                        <div className="w-32 h-32 mb-6 rounded-2xl overflow-hidden shadow-card shrink-0 border border-line">
                           <img src={dueVocabs[currentCardIndex].vocab.imageUrl} className="w-full h-full object-cover" alt="vocab" />
                         </div>
                       )}
                       
                       <h3 className="text-3xl font-bold text-primary mb-4">{dueVocabs[currentCardIndex].vocab.meaning}</h3>
                       
-                      <div className="absolute bottom-6 text-sm font-bold text-foreground/30 uppercase tracking-widest animate-pulse">
+                      <div className="absolute bottom-6 text-xs font-bold text-muted/70 uppercase tracking-widest animate-pulse">
                         Nhấn để xem đáp án
                       </div>
                     </div>
 
                     {/* Back */}
-                    <div className="absolute w-full h-full backface-hidden bg-primary/5 border-2 border-primary/20 rounded-[2rem] p-8 flex flex-col items-center justify-center shadow-xl text-center rotate-y-180">
+                    <div className="absolute w-full h-full backface-hidden bg-surface border border-primary/20 rounded-2xl p-8 flex flex-col items-center justify-center shadow-card-hover text-center rotate-y-180">
                       <div className="absolute top-6 right-6 flex gap-2">
                         <button 
                           onClick={(e) => { e.stopPropagation(); handleSpeak(dueVocabs[currentCardIndex].vocab.word, 'en-GB'); }}
-                          className="w-10 h-10 bg-primary/10 text-primary font-bold text-sm rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
+                          className="w-10 h-10 bg-primary-soft text-primary border border-primary/15 font-bold text-sm rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
                         >UK</button>
                         <button 
                           onClick={(e) => { e.stopPropagation(); handleSpeak(dueVocabs[currentCardIndex].vocab.word, 'en-US'); }}
-                          className="w-10 h-10 bg-primary/10 text-primary font-bold text-sm rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
+                          className="w-10 h-10 bg-primary-soft text-primary border border-primary/15 font-bold text-sm rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-colors"
                         >US</button>
                       </div>
                       
                       <h3 className="text-4xl font-black text-primary mb-2">{dueVocabs[currentCardIndex].vocab.word}</h3>
-                      <p className="text-foreground/50 font-medium italic text-lg">{dueVocabs[currentCardIndex].vocab.pos}</p>
-                      <p className="text-foreground/70 font-mono mt-2">{dueVocabs[currentCardIndex].vocab.phonetic}</p>
+                      <p className="text-muted font-medium italic text-lg">{dueVocabs[currentCardIndex].vocab.pos}</p>
+                      <p className="text-muted font-mono mt-2">{dueVocabs[currentCardIndex].vocab.phonetic}</p>
                       
                       {dueVocabs[currentCardIndex].vocab.example && (
-                        <p className="text-foreground/70 italic text-lg mt-4 bg-white/50 p-4 rounded-xl">"{dueVocabs[currentCardIndex].vocab.example}"</p>
+                        <p className="text-foreground/80 italic text-lg mt-4 bg-primary-soft p-4 rounded-xl">"{dueVocabs[currentCardIndex].vocab.example}"</p>
                       )}
                     </div>
                   </div>
@@ -494,20 +503,20 @@ export default function GymPage() {
 
                 {/* Action Buttons (Only visible when flipped) */}
                 <div className={`mt-8 grid grid-cols-4 gap-2 transition-opacity duration-300 ${flipped ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                  <button onClick={(e) => { e.stopPropagation(); handleReview(1); }} className="flex flex-col items-center justify-center py-3 bg-rose-500/10 hover:bg-rose-500 hover:text-white text-rose-600 rounded-xl font-bold transition-colors">
-                    <span className="text-lg">Lại</span>
+                  <button onClick={(e) => { e.stopPropagation(); handleReview(1); }} className="flex flex-col items-center justify-center py-2.5 bg-red-50 border border-red-100 hover:bg-red-100 text-red-700 rounded-full font-bold transition-colors">
+                    <span className="text-base leading-tight">Lại</span>
                     <span className="text-[10px] opacity-70">&lt; 10 phút</span>
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleReview(3); }} className="flex flex-col items-center justify-center py-3 bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-600 rounded-xl font-bold transition-colors">
-                    <span className="text-lg">Khó</span>
+                  <button onClick={(e) => { e.stopPropagation(); handleReview(3); }} className="flex flex-col items-center justify-center py-2.5 bg-amber-50 border border-amber-100 hover:bg-amber-100 text-amber-700 rounded-full font-bold transition-colors">
+                    <span className="text-base leading-tight">Khó</span>
                     <span className="text-[10px] opacity-70">1 ngày</span>
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleReview(4); }} className="flex flex-col items-center justify-center py-3 bg-green-500/10 hover:bg-green-500 hover:text-white text-green-600 rounded-xl font-bold transition-colors">
-                    <span className="text-lg">Tốt</span>
+                  <button onClick={(e) => { e.stopPropagation(); handleReview(4); }} className="flex flex-col items-center justify-center py-2.5 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100 text-emerald-700 rounded-full font-bold transition-colors">
+                    <span className="text-base leading-tight">Tốt</span>
                     <span className="text-[10px] opacity-70">~ 3 ngày</span>
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleReview(5); }} className="flex flex-col items-center justify-center py-3 bg-blue-500/10 hover:bg-blue-500 hover:text-white text-blue-600 rounded-xl font-bold transition-colors">
-                    <span className="text-lg">Dễ</span>
+                  <button onClick={(e) => { e.stopPropagation(); handleReview(5); }} className="flex flex-col items-center justify-center py-2.5 bg-primary-soft border border-primary/10 hover:bg-primary/10 text-primary rounded-full font-bold transition-colors">
+                    <span className="text-base leading-tight">Dễ</span>
                     <span className="text-[10px] opacity-70">~ 7 ngày</span>
                   </button>
                 </div>
@@ -525,45 +534,45 @@ export default function GymPage() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4">
             <div className="flex justify-between items-center flex-wrap gap-4">
               <div>
-                <h2 className="text-xl font-bold">Từ Vựng Tự Thêm</h2>
-                <p className="text-sm text-foreground/50 mt-1">Tự thêm từ mới để luyện tập — không cần chờ giáo viên giao bài.</p>
+                <h2 className="ui-section-title">Từ Vựng Tự Thêm</h2>
+                <p className="text-sm text-muted mt-2">Tự thêm từ mới để luyện tập — không cần chờ giáo viên giao bài.</p>
               </div>
               <button
                 onClick={() => setShowAddForm(v => !v)}
-                className="px-5 py-2.5 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity"
+                className="btn-primary px-5 py-2.5"
               >
                 {showAddForm ? 'Đóng' : '+ Thêm Từ Mới'}
               </button>
             </div>
 
             {showAddForm && (
-              <div className="bg-surface border border-foreground/10 rounded-2xl p-6 shadow-sm space-y-4">
+              <div className="ui-card p-6 space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold mb-1.5">Từ tiếng Anh *</label>
+                    <label className="ui-label">Từ tiếng Anh *</label>
                     <input type="text" value={newWord} onChange={e => setNewWord(e.target.value)} placeholder="vd: resilient"
-                      className="w-full px-4 py-2.5 border border-foreground/10 bg-background rounded-xl focus:outline-none focus:border-primary" />
+                      className="ui-input" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold mb-1.5">Nghĩa tiếng Việt *</label>
+                    <label className="ui-label">Nghĩa tiếng Việt *</label>
                     <input type="text" value={newMeaning} onChange={e => setNewMeaning(e.target.value)} placeholder="vd: kiên cường, dễ phục hồi"
-                      className="w-full px-4 py-2.5 border border-foreground/10 bg-background rounded-xl focus:outline-none focus:border-primary" />
+                      className="ui-input" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold mb-1.5">Phiên âm — tuỳ chọn</label>
+                    <label className="ui-label">Phiên âm — tuỳ chọn</label>
                     <input type="text" value={newPhonetic} onChange={e => setNewPhonetic(e.target.value)} placeholder="vd: /rɪˈzɪl.i.ənt/"
-                      className="w-full px-4 py-2.5 border border-foreground/10 bg-background rounded-xl focus:outline-none focus:border-primary" />
+                      className="ui-input" />
                   </div>
                   <div>
-                    <label className="block text-sm font-bold mb-1.5">Câu ví dụ — tuỳ chọn</label>
+                    <label className="ui-label">Câu ví dụ — tuỳ chọn</label>
                     <input type="text" value={newExample} onChange={e => setNewExample(e.target.value)} placeholder="vd: She stayed resilient through hardship."
-                      className="w-full px-4 py-2.5 border border-foreground/10 bg-background rounded-xl focus:outline-none focus:border-primary" />
+                      className="ui-input" />
                   </div>
                 </div>
                 <button
                   onClick={handleAddCustomVocab}
                   disabled={savingWord}
-                  className="px-6 py-2.5 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                  className="btn-primary px-6 py-2.5"
                 >
                   {savingWord ? 'Đang lưu...' : 'Lưu Từ Mới'}
                 </button>
@@ -571,20 +580,23 @@ export default function GymPage() {
             )}
 
             {customVocab.length === 0 ? (
-              <p className="text-foreground/40 text-center py-8">Bạn chưa tự thêm từ nào. Bấm "+ Thêm Từ Mới" để bắt đầu.</p>
+              <div className="ui-card text-center py-10 px-6 flex flex-col items-center">
+                <img src="/images/illustrations/empty-state.svg" alt="Chưa có từ vựng tự thêm" width={800} height={600} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
+                <p className="text-muted">Bạn chưa tự thêm từ nào. Bấm &quot;+ Thêm Từ Mới&quot; để bắt đầu.</p>
+              </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {customVocab.map((v: any) => (
-                  <div key={v.id} className="bg-surface border border-foreground/10 rounded-2xl p-5 shadow-sm flex justify-between items-start gap-3">
+                  <div key={v.id} className="ui-card ui-card-hover p-5 flex justify-between items-start gap-3">
                     <div>
                       <h3 className="font-bold text-lg text-primary">{v.word}</h3>
-                      {v.phonetic && <p className="text-foreground/50 font-mono text-sm">{v.phonetic}</p>}
+                      {v.phonetic && <p className="text-muted font-mono text-sm">{v.phonetic}</p>}
                       <p className="text-foreground/80 mt-1">{v.meaning}</p>
-                      {v.example && <p className="text-foreground/50 italic text-sm mt-2">&quot;{v.example}&quot;</p>}
+                      {v.example && <p className="text-muted italic text-sm mt-2">&quot;{v.example}&quot;</p>}
                     </div>
                     <button
                       onClick={() => handleDeleteCustomVocab(v.id)}
-                      className="w-9 h-9 flex items-center justify-center rounded-lg text-foreground/30 hover:text-rose-500 hover:bg-rose-500/10 transition-colors shrink-0"
+                      className="w-9 h-9 flex items-center justify-center rounded-full text-foreground/30 hover:text-red-600 hover:bg-red-50 transition-colors shrink-0"
                       title="Xóa từ"
                     >
                       🗑️

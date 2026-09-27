@@ -40,14 +40,17 @@ export default function InstallPWAButton() {
     <div className="relative shrink-0">
       <button
         onClick={handleInstall}
-        className="px-4 py-2.5 bg-primary/10 text-primary font-bold text-sm hover:bg-primary hover:text-white transition-colors cursor-pointer flex items-center gap-2 rounded-lg whitespace-nowrap"
+        className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/10 border border-white/30 text-white font-bold text-sm whitespace-nowrap hover:bg-white/20 hover:border-white/50 transition-colors cursor-pointer"
       >
-        📲 Cài Đặt Ứng Dụng
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24" aria-hidden="true">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg>
+        Cài Đặt Ứng Dụng
       </button>
       {showIOSHint && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg p-4 text-sm text-slate-600 z-20">
+        <div className="absolute right-0 top-full mt-2 w-64 bg-white border border-line rounded-2xl shadow-card p-4 text-sm text-muted z-20">
           Nhấn nút <b>Chia sẻ</b> (⬆️) trên Safari, sau đó chọn <b>&quot;Thêm vào Màn hình chính&quot;</b> để cài đặt ứng dụng.
-          <button onClick={() => setShowIOSHint(false)} className="block mt-2 text-primary font-bold cursor-pointer">Đã hiểu</button>
+          <button onClick={() => setShowIOSHint(false)} className="block mt-3 px-4 py-2 rounded-full bg-primary text-white text-xs font-bold cursor-pointer hover:bg-[#172e6e] transition-colors">Đã hiểu</button>
         </div>
       )}
     </div>

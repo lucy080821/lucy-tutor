@@ -192,6 +192,7 @@ export default function ConversationPracticePage() {
     recognition.interimResults = true;
 
     let finalTranscript = "";
+    let resolveEnd: (() => void) | null = null;
     recognition.onresult = (event: any) => {
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -204,17 +205,31 @@ export default function ConversationPracticePage() {
       setLiveTranscript(finalTranscript + interim);
     };
     recognition.onerror = () => setIsRecording(false);
+    // `stop()` doesn't synchronously flush trailing speech — the final `onresult` (and then
+    // `onend`) arrive asynchronously shortly after. Reading the transcript right after calling
+    // stop() (the old behavior) could drop the last word(s) spoken just before the button was
+    // clicked. stopRecording awaits this instead of reading the transcript immediately.
+    recognition.onend = () => resolveEnd?.();
     recognition.start();
-    recognitionRef.current = { recognition, getFinal: () => finalTranscript };
+    recognitionRef.current = {
+      recognition,
+      getFinal: () => finalTranscript,
+      waitForEnd: () => new Promise<void>((res) => {
+        resolveEnd = res;
+        setTimeout(res, 1200); // fallback in case onend never fires
+      })
+    };
   }, []);
 
   const stopRecording = async () => {
     const ref = recognitionRef.current;
     if (!ref) return;
+    const waitForEnd = ref.waitForEnd();
     ref.recognition.stop();
+    await waitForEnd;
     setIsRecording(false);
 
-    const transcript = (liveTranscript || ref.getFinal()).trim();
+    const transcript = ref.getFinal().trim();
     setLiveTranscript("");
     if (!transcript || !sessionId) return;
 
@@ -304,55 +319,71 @@ export default function ConversationPracticePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="bg-surface border-b border-foreground/10 px-6 py-4 flex items-center justify-between flex-wrap gap-3">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard" className="text-foreground/50 hover:text-foreground transition-colors text-sm font-medium flex items-center gap-1">
-            ← Dashboard
-          </Link>
-          <span className="text-foreground/20">/</span>
-          <h1 className="font-bold text-foreground">Luyện Nói Cùng AI</h1>
-        </div>
-        {!selectedTopic && !sessionId && (
-          <div className="flex bg-foreground/5 p-1 rounded-xl">
-            {[
-              { key: "PRACTICE", label: "🎤 Luyện Tập" },
-              { key: "HISTORY", label: `📜 Lịch Sử (${history.length})` }
-            ].map(v => (
-              <button
-                key={v.key}
-                onClick={() => { setViewMode(v.key as any); setViewingHistoryItem(null); }}
-                className={`px-3 py-2 text-xs font-bold rounded-lg transition-colors ${viewMode === v.key ? "bg-primary text-white shadow-sm" : "text-foreground/50 hover:text-foreground"}`}
-              >
-                {v.label}
-              </button>
-            ))}
+      {/* Page banner */}
+      <div className="bg-primary-soft border-b border-line">
+        <div className="max-w-5xl mx-auto px-4 py-6 sm:py-8 flex items-center gap-6">
+          <div className="flex-1 min-w-0">
+            <nav aria-label="Breadcrumb" className="text-xs text-muted mb-2 flex flex-wrap items-center gap-1.5">
+              <Link href="/dashboard" className="hover:text-primary">Trang chủ</Link>
+              <span aria-hidden>/</span>
+              <span className="text-foreground font-semibold">Luyện Nói</span>
+            </nav>
+            <h1 className="ui-page-title">Luyện Nói Cùng AI</h1>
+            <p className="ui-page-subtitle max-w-2xl leading-relaxed">
+              Hội thoại tiếng Anh với AI theo ngữ cảnh bạn tự chọn hoặc tình huống giáo viên giao, nhận xét chi tiết sau mỗi buổi luyện tập.
+            </p>
+            <Link href="/dashboard" className="btn-ghost px-3 py-2 text-sm mt-3 -ml-3">
+              ← Dashboard
+            </Link>
           </div>
-        )}
+          <img
+            src="/images/thumbs/conversation.svg"
+            alt="Minh hoạ luyện nói tiếng Anh cùng AI"
+            width={640}
+            height={360}
+            loading="eager"
+            className="hidden md:block w-60 lg:w-72 h-auto rounded-2xl shrink-0"
+          />
+        </div>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
+      {!selectedTopic && !sessionId && (
+        <div className="max-w-4xl mx-auto px-4 pt-6 flex flex-wrap gap-2">
+          {[
+            { key: "PRACTICE", label: "Luyện Tập" },
+            { key: "HISTORY", label: `Lịch Sử (${history.length})` }
+          ].map(v => (
+            <button
+              key={v.key}
+              onClick={() => { setViewMode(v.key as any); setViewingHistoryItem(null); }}
+              className={`ui-chip ${viewMode === v.key ? "ui-chip-active" : ""}`}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="max-w-4xl mx-auto px-4 pt-5 pb-12 space-y-6">
         {viewMode === "PRACTICE" && !selectedTopic && !sessionId && (
           <>
-            <div className="bg-surface border border-foreground/10 rounded-2xl p-6 space-y-4 shadow-sm">
-              <h2 className="font-bold text-foreground flex items-center gap-2">
-                <span className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center text-base">🗨️</span>
-                Tự Chọn Ngữ Cảnh Hội Thoại
-              </h2>
+            <div className="ui-card p-5 sm:p-6 space-y-5">
+              <h2 className="ui-section-title">Tự Chọn Ngữ Cảnh Hội Thoại</h2>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">Ngữ cảnh bạn muốn luyện</label>
+                <label className="ui-label">Ngữ cảnh bạn muốn luyện</label>
                 <input
                   type="text"
                   value={contextText}
                   onChange={(e) => setContextText(e.target.value)}
                   placeholder="VD: Đặt phòng khách sạn khi đi du lịch..."
-                  className="w-full p-3 border border-foreground/15 bg-background rounded-xl focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-colors"
+                  className="ui-input"
                 />
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {CONTEXT_SUGGESTIONS.map((t) => (
                     <button
                       key={t}
                       onClick={() => setContextText(t)}
-                      className="px-2.5 py-1 text-xs font-medium bg-foreground/5 hover:bg-primary/10 hover:text-primary text-foreground/60 rounded-full transition-colors"
+                      className="ui-chip px-3 py-1.5 text-xs font-medium"
                     >
                       {t}
                     </button>
@@ -361,14 +392,14 @@ export default function ConversationPracticePage() {
               </div>
               <div className="flex flex-wrap gap-4">
                 <div className="min-w-[150px]">
-                  <label className="block text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">Cấp độ (CEFR)</label>
-                  <select value={level} onChange={(e) => setLevel(e.target.value as CefrLevel)} className="w-full p-3 border border-foreground/15 bg-background rounded-xl font-semibold">
+                  <label className="ui-label">Cấp độ (CEFR)</label>
+                  <select value={level} onChange={(e) => setLevel(e.target.value as CefrLevel)} className="ui-input font-semibold">
                     {CEFR_LEVELS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}
                   </select>
                 </div>
                 <div className="min-w-[190px]">
-                  <label className="block text-xs font-bold uppercase tracking-wide text-foreground/50 mb-2">Mục đích luyện tập</label>
-                  <select value={purpose} onChange={(e) => setPurpose(e.target.value as PracticePurpose)} className="w-full p-3 border border-foreground/15 bg-background rounded-xl font-semibold">
+                  <label className="ui-label">Mục đích luyện tập</label>
+                  <select value={purpose} onChange={(e) => setPurpose(e.target.value as PracticePurpose)} className="ui-input font-semibold">
                     {PRACTICE_PURPOSES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
                   </select>
                 </div>
@@ -376,36 +407,39 @@ export default function ConversationPracticePage() {
               <button
                 onClick={startSelfSession}
                 disabled={startingSession}
-                className="w-full py-3 bg-primary text-white font-bold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2 shadow-sm"
+                className="btn-primary w-full py-3"
               >
                 {startingSession ? (
                   <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Đang bắt đầu...</>
                 ) : (
-                  <>🎤 Bắt Đầu Hội Thoại</>
+                  <>Bắt Đầu Hội Thoại</>
                 )}
               </button>
             </div>
 
             {topics.length > 0 && (
               <div className="space-y-3">
-                <p className="text-foreground/60 text-sm">Hoặc chọn tình huống giáo viên đã giao:</p>
+                <h2 className="ui-section-title">Hoặc chọn tình huống giáo viên đã giao:</h2>
                 {loading ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {[1, 2].map((i) => <div key={i} className="skeleton h-24 rounded-lg" />)}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {[1, 2].map((i) => <div key={i} className="skeleton h-24 rounded-2xl" />)}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                     {topics.map((topic) => (
                       <button
                         key={topic.id}
                         onClick={() => startSession(topic)}
                         disabled={startingSession}
-                        className="p-4 text-left bg-surface border border-foreground/15 hover:border-primary/40 hover:bg-primary/5 transition-all disabled:opacity-50"
+                        className="ui-card ui-card-hover overflow-hidden text-left disabled:opacity-50 flex flex-col"
                       >
-                        <div className="font-bold text-foreground">{topic.title}</div>
-                        {topic.description && (
-                          <div className="text-xs text-foreground/50 mt-1 line-clamp-2">{topic.description}</div>
-                        )}
+                        <img src="/images/thumbs/conversation.svg" alt="" aria-hidden width={640} height={360} loading="lazy" className="w-full aspect-video object-cover rounded-t-2xl" />
+                        <span className="p-5 block">
+                          <span className="block font-bold text-primary">{topic.title}</span>
+                          {topic.description && (
+                            <span className="block text-xs text-muted mt-1 line-clamp-2">{topic.description}</span>
+                          )}
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -417,19 +451,25 @@ export default function ConversationPracticePage() {
 
         {viewMode === "HISTORY" && !viewingHistoryItem && (
           <div className="space-y-3">
-            <h1 className="text-2xl font-black">📜 Lịch Sử Luyện Nói</h1>
+            <h2 className="ui-section-title mb-2">Lịch Sử Luyện Nói</h2>
             {history.length === 0 ? (
-              <p className="text-foreground/50 text-sm">Bạn chưa hoàn thành buổi luyện nói nào. Buổi luyện tập sau khi kết thúc sẽ tự động lưu tại đây.</p>
+              <div className="ui-card p-8 text-center">
+                <img src="/images/illustrations/empty-state.svg" alt="Chưa có lịch sử luyện nói" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
+                <p className="text-muted text-sm">Bạn chưa hoàn thành buổi luyện nói nào. Buổi luyện tập sau khi kết thúc sẽ tự động lưu tại đây.</p>
+              </div>
             ) : (
               <>
                 {historyPagination.pageItems.map((h) => (
                   <button
                     key={h.id}
                     onClick={() => setViewingHistoryItem(h)}
-                    className="w-full text-left bg-surface border border-foreground/10 rounded-xl p-4 hover:border-primary/30 hover:shadow-sm transition-all"
+                    className="ui-card ui-card-hover w-full text-left p-3 sm:p-4 flex items-center gap-4"
                   >
-                    <p className="text-sm font-bold text-foreground/80 line-clamp-1">{h.topic?.title || h.contextText}</p>
-                    <p className="text-xs text-foreground/50 mt-1">🕓 {formatPracticedAt(h.practicedAt)} {h.level ? `· ${h.level}` : ""} {h.purpose ? `· ${h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}` : ""}</p>
+                    <img src="/images/thumbs/conversation.svg" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
+                    <span className="min-w-0 flex-1 block">
+                      <span className="block text-sm font-bold text-primary line-clamp-1">{h.topic?.title || h.contextText}</span>
+                      <span className="block text-xs text-muted mt-1">{formatPracticedAt(h.practicedAt)} {h.level ? `· ${h.level}` : ""} {h.purpose ? `· ${h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}` : ""}</span>
+                    </span>
                   </button>
                 ))}
                 <Pagination page={historyPagination.page} totalPages={historyPagination.totalPages} totalItems={historyPagination.totalItems} pageSize={10} onPageChange={historyPagination.setPage} />
@@ -440,35 +480,35 @@ export default function ConversationPracticePage() {
 
         {viewMode === "HISTORY" && viewingHistoryItem && historyFeedback && (
           <div className="space-y-4">
-            <button onClick={() => setViewingHistoryItem(null)} className="text-xs font-bold text-foreground/40 hover:text-primary transition-colors inline-flex items-center gap-1">
+            <button onClick={() => setViewingHistoryItem(null)} className="btn-ghost px-3 py-2 text-sm">
               ← Quay lại danh sách
             </button>
-            <h2 className="text-lg font-bold text-foreground">{historyContextLabel}</h2>
-            <div className="bg-foreground/5 border border-foreground/10 rounded-xl p-4 space-y-2 max-h-64 overflow-y-auto">
+            <h2 className="ui-section-title">{historyContextLabel}</h2>
+            <div className="ui-card p-4 sm:p-5 space-y-3 max-h-64 overflow-y-auto">
               {historyMessages.map((m, i) => (
                 <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                  <div className={`max-w-[80%] px-3 py-1.5 rounded-lg text-sm ${m.role === "user" ? "bg-primary text-white" : "bg-foreground/10 text-foreground/80"}`}>{m.content}</div>
+                  <div className={`max-w-[80%] px-4 py-2 rounded-2xl text-sm leading-relaxed ${m.role === "user" ? "bg-primary text-white rounded-br-md" : "bg-[#f7f9fc] border border-line text-foreground rounded-bl-md"}`}>{m.content}</div>
                 </div>
               ))}
             </div>
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <p className="text-xs text-foreground/40">🕓 Thực hành lúc: {formatPracticedAt(viewingHistoryItem.practicedAt)}</p>
+              <p className="text-xs text-muted">Thực hành lúc: {formatPracticedAt(viewingHistoryItem.practicedAt)}</p>
               <button
                 onClick={() => downloadPdf(historyPdfRef.current)}
                 disabled={exportingPdf}
-                className="text-xs font-bold px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                className="btn-outline px-4 py-2 text-xs"
               >
-                🖨️ {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
               </button>
             </div>
-            <div className="bg-primary/5 border border-primary/15 p-4 text-sm text-foreground/80 leading-relaxed rounded-xl">
+            <div className="bg-primary-soft border border-line p-4 text-sm text-foreground leading-relaxed rounded-xl">
               {historyFeedback.overall}
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {FEEDBACK_FIELDS.map(({ key, label }) => (historyFeedback as any)[key] && (
-                <div key={key} className="bg-foreground/5 border border-foreground/10 p-3 rounded-xl">
-                  <p className="text-xs font-bold uppercase tracking-wide text-foreground/50 mb-1">{label}</p>
-                  <p className="text-sm text-foreground/80 leading-relaxed">{(historyFeedback as any)[key]}</p>
+                <div key={key} className="bg-surface border border-line p-4 rounded-xl">
+                  <p className="text-xs font-bold uppercase tracking-wide text-muted mb-1">{label}</p>
+                  <p className="text-sm text-foreground leading-relaxed">{(historyFeedback as any)[key]}</p>
                 </div>
               ))}
             </div>
@@ -494,29 +534,29 @@ export default function ConversationPracticePage() {
         )}
 
         {(selectedTopic || sessionId) && (
-          <div className="bg-surface border border-foreground/10 flex flex-col" style={{ minHeight: "60vh" }}>
-            <div className="px-5 py-3 border-b border-foreground/10 flex items-center justify-between">
+          <div className="ui-card overflow-hidden flex flex-col" style={{ minHeight: "60vh" }}>
+            <div className="px-5 py-4 border-b border-line flex items-center justify-between flex-wrap gap-2">
               <div>
-                <div className="font-bold text-foreground">{contextLabel}</div>
+                <div className="font-bold text-primary">{contextLabel}</div>
                 {selectedTopic?.description && (
-                  <div className="text-xs text-foreground/50">{selectedTopic.description}</div>
+                  <div className="text-xs text-muted">{selectedTopic.description}</div>
                 )}
               </div>
-              <button onClick={reset} className="text-xs text-foreground/40 hover:text-foreground transition-colors underline">
+              <button onClick={reset} className="btn-outline px-4 py-2 text-xs">
                 Đổi tình huống
               </button>
             </div>
 
             {!feedback ? (
               <>
-                <div className="flex-1 px-5 py-4 space-y-3 overflow-y-auto" style={{ maxHeight: "50vh" }}>
+                <div className="flex-1 px-5 py-5 space-y-3 overflow-y-auto bg-[#fafbfd]" style={{ maxHeight: "50vh" }}>
                   {messages.map((m, i) => (
                     <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                       <div
-                        className={`max-w-[80%] px-4 py-2 text-sm leading-relaxed ${
+                        className={`max-w-[80%] px-4 py-2.5 text-sm leading-relaxed rounded-2xl ${
                           m.role === "user"
-                            ? "bg-primary text-white"
-                            : "bg-foreground/5 text-foreground/80"
+                            ? "bg-primary text-white rounded-br-md shadow-sm"
+                            : "bg-surface border border-line text-foreground rounded-bl-md shadow-sm"
                         }`}
                       >
                         {m.content}
@@ -525,15 +565,15 @@ export default function ConversationPracticePage() {
                   ))}
                   {isRecording && liveTranscript && (
                     <div className="flex justify-end">
-                      <div className="max-w-[80%] px-4 py-2 text-sm leading-relaxed bg-primary/40 text-white italic">
+                      <div className="max-w-[80%] px-4 py-2.5 text-sm leading-relaxed bg-primary/50 text-white italic rounded-2xl rounded-br-md">
                         {liveTranscript}
                       </div>
                     </div>
                   )}
                   {sendingTurn && (
                     <div className="flex justify-start">
-                      <div className="px-4 py-2 text-sm bg-foreground/5 text-foreground/50 flex items-center gap-2">
-                        <span className="w-3 h-3 border-2 border-foreground/20 border-t-foreground/50 rounded-full animate-spin" />
+                      <div className="px-4 py-2.5 text-sm bg-surface border border-line text-muted rounded-2xl rounded-bl-md flex items-center gap-2">
+                        <span className="w-3 h-3 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
                         AI đang trả lời...
                       </div>
                     </div>
@@ -541,18 +581,18 @@ export default function ConversationPracticePage() {
                   <div ref={messagesEndRef} />
                 </div>
 
-                <div className="px-5 py-4 border-t border-foreground/10 space-y-3">
+                <div className="px-5 py-4 border-t border-line space-y-3">
                   {!hasSpeechAPI && (
-                    <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 px-3 py-2 text-center">
+                    <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-center">
                       Trình duyệt của bạn không hỗ trợ nhận diện giọng nói. Hãy thử Chrome trên máy tính.
                     </p>
                   )}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center flex-wrap gap-3">
                     <button
                       onClick={isRecording ? stopRecording : startRecording}
                       disabled={sendingTurn || !hasSpeechAPI}
-                      className={`flex-1 py-3 font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${
-                        isRecording ? "bg-red-500 hover:bg-red-600 text-white" : "bg-primary hover:opacity-90 text-white"
+                      className={`flex-1 min-w-[180px] py-3 rounded-full font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-50 ${
+                        isRecording ? "bg-red-500 hover:bg-red-600 text-white" : "bg-primary hover:bg-[#172e6e] text-white"
                       }`}
                     >
                       {isRecording ? (
@@ -566,7 +606,7 @@ export default function ConversationPracticePage() {
                     <button
                       onClick={finishSession}
                       disabled={isRecording || sendingTurn || finishing || messages.length < 2}
-                      className="px-4 py-3 border border-foreground/15 text-foreground/60 text-sm font-bold hover:bg-foreground/5 transition-colors disabled:opacity-40"
+                      className="btn-outline px-5 py-3 text-sm"
                     >
                       {finishing ? "Đang tạo nhận xét..." : "Kết Thúc Hội Thoại"}
                     </button>
@@ -576,30 +616,30 @@ export default function ConversationPracticePage() {
             ) : (
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <h2 className="text-lg font-bold text-foreground">Nhận Xét Buổi Luyện Tập</h2>
+                  <h2 className="ui-section-title">Nhận Xét Buổi Luyện Tập</h2>
                   <button
                     onClick={() => downloadPdf(pdfRef.current)}
                     disabled={exportingPdf}
-                    className="text-xs font-bold px-3 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                    className="btn-outline px-4 py-2 text-xs"
                   >
-                    🖨️ {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
+                    {exportingPdf ? "Đang xuất..." : "Xuất PDF"}
                   </button>
                 </div>
-                {practicedAt && <p className="text-xs text-foreground/40">🕓 Thực hành lúc: {formatPracticedAt(practicedAt)}</p>}
-                <div className="bg-primary/5 border border-primary/15 p-4 text-sm text-foreground/80 leading-relaxed">
+                {practicedAt && <p className="text-xs text-muted">Thực hành lúc: {formatPracticedAt(practicedAt)}</p>}
+                <div className="bg-primary-soft border border-line rounded-xl p-4 text-sm text-foreground leading-relaxed">
                   {feedback.overall}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {FEEDBACK_FIELDS.map(({ key, label }) => (feedback as any)[key] && (
-                    <div key={key} className="bg-foreground/5 border border-foreground/10 p-3">
-                      <p className="text-xs font-bold uppercase tracking-wide text-foreground/50 mb-1">{label}</p>
-                      <p className="text-sm text-foreground/80 leading-relaxed">{(feedback as any)[key]}</p>
+                    <div key={key} className="bg-surface border border-line rounded-xl p-4">
+                      <p className="text-xs font-bold uppercase tracking-wide text-muted mb-1">{label}</p>
+                      <p className="text-sm text-foreground leading-relaxed">{(feedback as any)[key]}</p>
                     </div>
                   ))}
                 </div>
                 {feedback.suggestions?.length > 0 && (
-                  <div className="bg-amber-50 border border-amber-200 p-4">
-                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700 mb-2">💡 Gợi ý cải thiện</p>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                    <p className="text-xs font-bold uppercase tracking-wide text-amber-700 mb-2">Gợi ý cải thiện</p>
                     <ul className="space-y-1">
                       {feedback.suggestions.map((s, i) => (
                         <li key={i} className="text-sm text-amber-800 flex gap-2">
@@ -612,7 +652,7 @@ export default function ConversationPracticePage() {
                 )}
                 <button
                   onClick={reset}
-                  className="w-full py-3 bg-primary/10 text-primary font-bold hover:bg-primary/15 transition-colors"
+                  className="btn-outline w-full py-3"
                 >
                   Luyện Tình Huống Khác
                 </button>
