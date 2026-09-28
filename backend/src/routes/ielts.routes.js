@@ -117,7 +117,14 @@ router.get('/books', async (req, res) => {
       where: { teacherId },
       select: {
         id: true, title: true, extractionStatus: true, errorMessage: true, createdAt: true,
-        tests: { select: { id: true, testNumber: true, title: true, testType: true, status: true, deliveryMode: true } }
+        tests: {
+          select: {
+            id: true, testNumber: true, title: true, testType: true, status: true, deliveryMode: true,
+            // Per-skill counts so the library list shows at a glance which of the 4 skills were extracted.
+            _count: { select: { listeningSections: true, readingPassages: true, writingTasks: true, speakingParts: true } }
+          },
+          orderBy: { testNumber: 'asc' }
+        }
       },
       orderBy: { createdAt: 'desc' }
     });

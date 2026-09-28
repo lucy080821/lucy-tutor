@@ -11,10 +11,11 @@
 // against the book's own Answer Key text (Writing/Speaking have no fixed answer key).
 const { Groq } = require('groq-sdk');
 const prisma = require('../lib/prisma');
+const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'fake_key_for_now' });
 
-const MODEL = 'llama-3.3-70b-versatile';
-// Conservative safety margin for llama-3.3-70b-versatile's context window, leaving room for
+const MODEL = GROQ_TEXT_MODEL;
+// Conservative safety margin for the Groq text model's context window (see lib/aiModel.js), leaving room for
 // prompt scaffolding + JSON output — a whole Cambridge book easily exceeds this, triggering
 // the chunked fallback below.
 const PASS1_SINGLE_CALL_TOKEN_LIMIT = 100000;

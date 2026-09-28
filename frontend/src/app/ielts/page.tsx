@@ -1,7 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
+import { getSessionUserId } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import IeltsStudyPanel, { IeltsSkill } from "@/components/ielts/IeltsStudyPanel";
+import { IeltsNotifications, IeltsProgressPanel, useIeltsProgress } from "@/components/ielts/IeltsProgress";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -20,14 +23,15 @@ const SKILL_META: Record<string, { label: string; path: string }> = {
 export default function IeltsLandingPage() {
   const router = useRouter();
   const [userId, setUserId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"AVAILABLE" | "HISTORY">("AVAILABLE");
+  const [tab, setTab] = useState<"AVAILABLE" | "HISTORY" | "PROGRESS">("AVAILABLE");
   const [tests, setTests] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedAttempt, setExpandedAttempt] = useState<string | null>(null);
+  const progress = useIeltsProgress(userId);
 
   useEffect(() => {
-    const uid = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+    const uid = getSessionUserId();
     if (!uid) { router.push("/"); return; }
     setUserId(uid);
     Promise.all([
@@ -56,15 +60,17 @@ export default function IeltsLandingPage() {
               IELTS Cambridge
             </p>
             <h1 className="ui-page-title text-2xl sm:text-4xl mb-2">IELTS Cambridge</h1>
-            <p className="ui-page-subtitle">Luyện đề Cambridge IELTS đủ 4 kỹ năng Listening, Reading, Writing, Speaking và xem lại band điểm từng lần làm.</p>
+            <p className="ui-page-subtitle">Mỗi đề gồm 3 bước: <b>Làm đề</b> có tính giờ và chấm band, <b>Học đề</b> cùng AI (giải thích câu sai, từ vựng, cấu trúc, bài tập thêm) và <b>theo dõi tiến bộ</b> band điểm 4 kỹ năng.</p>
           </div>
           <div className="hidden md:block w-full max-w-[300px] shrink-0">
             <img src="/images/thumbs/ielts.svg" alt="Minh hoạ luyện đề IELTS Cambridge" width={640} height={360} loading="eager" className="w-full h-auto rounded-2xl" />
           </div>
         </section>
 
+        {progress && tab !== "PROGRESS" && <IeltsNotifications items={progress.notifications} max={2} />}
+
         <div className="flex flex-wrap gap-2">
-          {[{ key: "AVAILABLE", label: "Đề Có Sẵn" }, { key: "HISTORY", label: loading ? "Lịch Sử" : `Lịch Sử (${history.length})` }].map((t) => (
+          {[{ key: "AVAILABLE", label: "Đề Có Sẵn" }, { key: "HISTORY", label: loading ? "Lịch Sử" : `Lịch Sử (${history.length})` }, { key: "PROGRESS", label: "Tiến Bộ" }].map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key as any)}
@@ -132,6 +138,8 @@ export default function IeltsLandingPage() {
           )
         )}
 
+        {tab === "PROGRESS" && <IeltsProgressPanel data={progress} />}
+
         {tab === "HISTORY" && (
           history.length === 0 ? (
             <div className="ui-card text-center py-12 px-4 text-muted italic">
@@ -153,7 +161,7 @@ export default function IeltsLandingPage() {
                 </button>
                 {expandedAttempt === h.id && (
                   <div className="mt-4 pt-4 border-t border-line">
-                    <AttemptDetail skill={h.skill} attemptId={h.id} />
+                    <AttemptDetail skill={h.skill} attemptId={h.id} userId={userId} />
                   </div>
                 )}
               </div>
@@ -167,7 +175,19 @@ export default function IeltsLandingPage() {
   );
 }
 
-function AttemptDetail({ skill, attemptId }: { skill: string; attemptId: string }) {
+function AttemptDetail({ skill, attemptId, userId }: { skill: string; attemptId: string; userId: string | null }) {
+  const [studying, setStudying] = useState(false);
+  return (
+    <div className="space-y-4">
+      <AttemptScore skill={skill} attemptId={attemptId} />
+      {userId && (studying
+        ? <IeltsStudyPanel skill={skill as IeltsSkill} attemptId={attemptId} userId={userId} autoStart />
+        : <button onClick={() => setStudying(true)} className="btn-primary px-5 py-2.5 cursor-pointer">Học đề</button>)}
+    </div>
+  );
+}
+
+function AttemptScore({ skill, attemptId }: { skill: string; attemptId: string }) {
   const [detail, setDetail] = useState<any>(null);
   useEffect(() => {
     fetch(`${API}/api/ielts-attempts/attempts/${skill}/${attemptId}`).then((r) => r.json()).then(setDetail).catch(() => {});

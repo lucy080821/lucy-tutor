@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { getSessionUserId } from "@/lib/session";
 import { useParams, useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
 import confetti from "canvas-confetti";
@@ -15,7 +16,7 @@ export default function LessonPage() {
   const [completing, setCompleting] = useState(false);
 
   useEffect(() => {
-    const uid = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
+    const uid = getSessionUserId();
     setUserId(uid);
     if (!uid) {
       router.push('/');

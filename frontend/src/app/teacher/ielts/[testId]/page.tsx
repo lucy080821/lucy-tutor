@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { getSessionUserId } from "@/lib/session";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "sweetalert2";
@@ -39,8 +40,10 @@ export default function IeltsTestReviewPage() {
   }, [testId]);
 
   useEffect(() => {
-    const uid = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+    const uid = getSessionUserId();
     if (!uid) { router.push("/"); return; }
+    // Trang rà soát đề chỉ dành cho giáo viên
+    fetch(`${API}/api/auth/me?userId=${uid}`).then((r) => r.json()).then((u) => { if (u?.id && u.role !== "TEACHER") router.replace("/dashboard"); }).catch(() => {});
     fetch(`${API}/api/classroom/teacher/${uid}`).then((r) => r.json()).then(setClassrooms).catch(() => {});
     fetchTest();
   }, [fetchTest, router]);

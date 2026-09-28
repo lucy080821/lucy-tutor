@@ -14,9 +14,10 @@ const router = express.Router();
 const { isIeltsAnswerCorrect } = require('../utils/ieltsAnswerGrading');
 const { LISTENING_BAND_TABLE, READING_BAND_TABLE_ACADEMIC, READING_BAND_TABLE_GT, rawScoreToBand } = require('../utils/ieltsBandTables');
 const { combineWritingBand, combineSpeakingBand, averageCriteriaBands } = require('../utils/ieltsRounding');
+const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'fake_key_for_now' });
-const MODEL = 'llama-3.3-70b-versatile';
+const MODEL = GROQ_TEXT_MODEL;
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseKey = process.env.SUPABASE_KEY || '';

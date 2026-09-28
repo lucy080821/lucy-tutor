@@ -76,6 +76,7 @@ model User {
   ieltsReadingAttempts   IeltsReadingAttempt[]
   ieltsWritingAttempts   IeltsWritingAttempt[]
   ieltsSpeakingAttempts  IeltsSpeakingAttempt[]
+  ieltsStudySessions     IeltsStudySession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -659,6 +660,7 @@ model IeltsTest {
   readingAttempts   IeltsReadingAttempt[]
   writingAttempts   IeltsWritingAttempt[]
   speakingAttempts  IeltsSpeakingAttempt[]
+  studySessions     IeltsStudySession[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -849,4 +851,30 @@ model IeltsSpeakingAttempt {
   test IeltsTest @relation(fields: [testId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
+}
+
+// "Học đề" — the study step after a student finishes one skill of an IELTS test. One row per
+// (skill, attempt): the AI's deep analysis of that attempt (why answers were wrong, vocabulary,
+// structures, model answers) is generated once and cached here, plus any extra practice sets the
+// student asked for on the questions/errors they got wrong. attemptId points at one of the 4
+// Ielts*Attempt tables depending on `skill` (polymorphic, so no FK — same "enforced at API level"
+// convention used elsewhere in the IELTS module).
+model IeltsStudySession {
+  id        String @id @default(uuid())
+  userId    String
+  testId    String
+  skill     String // "LISTENING" | "READING" | "WRITING" | "SPEAKING"
+  attemptId String
+
+  analysis String? // JSON — shape depends on skill (see ieltsStudy.js)
+  practice String? // JSON array of practice sets: [{ id, createdAt, title, passage?, script?, questions[], answers?, score?, total?, completedAt? }]
+
+  user User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test IeltsTest @relation(fields: [testId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([skill, attemptId])
+  @@index([userId])
 }

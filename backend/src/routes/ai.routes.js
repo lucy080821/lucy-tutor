@@ -1,6 +1,7 @@
 const express = require('express');
 const { Groq } = require('groq-sdk');
 const prisma = require('../lib/prisma');
+const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
 const router = express.Router();
 
 const groq = new Groq({
@@ -44,7 +45,7 @@ BẮT BUỘC trả về dữ liệu dưới định dạng JSON nguyên chất (
         { role: 'system', content: 'You are a helpful English tutor AI. You must respond in valid JSON format.' },
         { role: 'user', content: prompt }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       temperature: 0.5,
       response_format: { type: "json_object" }
     });
@@ -132,7 +133,7 @@ ${type === 'MULTIPLE_CHOICE' ? `Các đáp án:\nA. ${options[0]}\nB. ${options[
         { role: 'system', content: 'You are a helpful English tutor AI. You must respond in valid JSON format.' },
         { role: 'user', content: prompt }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       temperature: 0.2,
       response_format: { type: "json_object" }
     });
@@ -201,7 +202,7 @@ BẮT BUỘC TRẢ VỀ CHỈ MỘT JSON VỚI CẤU TRÚC SAU (không có markd
         { role: 'system', content: 'You must respond in valid JSON format only.' },
         { role: 'user', content: prompt }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       temperature: 0.7,
       response_format: { type: "json_object" }
     });
@@ -274,7 +275,7 @@ All content must be in Vietnamese.
         { role: 'system', content: 'You are an English education expert. Respond only in valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       temperature: 0.6,
       response_format: { type: 'json_object' }
     });
@@ -367,7 +368,7 @@ Phải có đúng ${count} câu hỏi trong mảng "questions", đúng theo các
         { role: 'system', content: 'You are an English reading comprehension exercise generator. Respond only in valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       temperature: 0.7,
       response_format: { type: 'json_object' }
     });
@@ -411,7 +412,7 @@ Trả về JSON nguyên chất (không markdown code block bọc ngoài), cấu 
         { role: 'system', content: 'You are a concise English-Vietnamese contextual dictionary assistant. Always respond in valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       temperature: 0.3,
       response_format: { type: 'json_object' }
     });
@@ -468,7 +469,7 @@ Trả về JSON:
         { role: 'system', content: 'You are an English writing exercise generator. Respond only in valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       temperature: 0.8,
       response_format: { type: 'json_object' }
     });
@@ -525,7 +526,7 @@ Tất cả nội dung bằng tiếng Việt (trích dẫn câu/từ tiếng Anh 
         { role: 'system', content: 'You are a friendly, encouraging English writing coach who gives thorough, structural grammar analysis. Respond only in valid JSON. The only numeric score allowed anywhere is the "internalScore" field — never mention a score inside the other text fields.' },
         { role: 'user', content: prompt }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       temperature: 0.5,
       response_format: { type: 'json_object' }
     });
@@ -663,7 +664,7 @@ Tất cả bằng tiếng Việt.
         { role: 'system', content: 'You are an English reading strategy coach. Respond only in valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       temperature: 0.5,
       response_format: { type: 'json_object' }
     });

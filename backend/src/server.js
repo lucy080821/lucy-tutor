@@ -42,6 +42,7 @@ const pronunciationRoutes = require('./routes/pronunciation.routes');
 const mockTestRoutes = require('./routes/mockTest.routes');
 const ieltsRoutes = require('./routes/ielts.routes');
 const ieltsAttemptsRoutes = require('./routes/ieltsAttempts.routes');
+const ieltsStudyRoutes = require('./routes/ieltsStudy.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
@@ -65,6 +66,7 @@ app.use('/api/pronunciation', pronunciationRoutes);
 app.use('/api/mock-test', mockTestRoutes);
 app.use('/api/ielts', ieltsRoutes);
 app.use('/api/ielts-attempts', ieltsAttemptsRoutes);
+app.use('/api/ielts-study', ieltsStudyRoutes);
 
 // Every route in this app returns JSON errors as { error: '...' } — but multer's fileFilter/
 // limits errors (bad file type, file too large) and malformed-JSON body-parser errors are

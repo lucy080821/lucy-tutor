@@ -1,10 +1,13 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { getSessionUserId } from "@/lib/session";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "sweetalert2";
 import { SkillReportPDF, SkillReportRubricItem } from "@/components/reports/SkillReportPDF";
 import { exportNodeToPDF } from "@/lib/pdfExport";
+import IeltsStudyPanel from "@/components/ielts/IeltsStudyPanel";
+import { IeltsProgressNotice } from "@/components/ielts/IeltsProgress";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -39,7 +42,7 @@ export default function IeltsSpeakingTakingPage() {
   const pdfRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const uid = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+    const uid = getSessionUserId();
     if (!uid) { router.push("/"); return; }
     setUserId(uid);
     fetch(`${API}/api/auth/me?userId=${uid}`).then((r) => r.json()).then((u) => setUserName(u.name || "Học viên")).catch(() => {});
@@ -160,6 +163,12 @@ export default function IeltsSpeakingTakingPage() {
             </button>
           </div>
         </div>
+        {userId && finalResult.id && (
+          <div className="max-w-3xl mx-auto px-4 pb-6 space-y-5">
+            <IeltsProgressNotice skill="SPEAKING" userId={userId} />
+            <IeltsStudyPanel skill="SPEAKING" attemptId={finalResult.id} userId={userId} />
+          </div>
+        )}
         <div className="max-w-3xl mx-auto px-4 pb-16 space-y-6">
           {[1, 2, 3].map((n) => feedbackByPart[n] && <SpeakingFeedbackBlock key={n} partNumber={n} feedback={feedbackByPart[n]} />)}
         </div>

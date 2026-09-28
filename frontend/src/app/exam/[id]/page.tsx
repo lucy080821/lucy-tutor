@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { getSessionUserId } from "@/lib/session";
 import DOMPurify from 'dompurify';
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -262,7 +263,7 @@ export default function ExamPage() {
   useEffect(() => {
     const fetchExam = async () => {
       try {
-        const storedUserId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
+        const storedUserId = getSessionUserId();
         let currentUserId = null;
         if (storedUserId) {
           currentUserId = storedUserId;
@@ -294,7 +295,7 @@ export default function ExamPage() {
     if (submitting || submitted) return;
     setSubmitting(true);
 
-    const storedUserId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
+    const storedUserId = getSessionUserId();
     if (!storedUserId && !isAutoSubmit) {
       await Swal.fire({
         title: 'Bạn chưa đăng nhập',
@@ -367,7 +368,7 @@ export default function ExamPage() {
       if (now - lastCheatTimeRef.current < 2000) return; // Debounce 2s
       lastCheatTimeRef.current = now;
       
-      const storedUserId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
+      const storedUserId = getSessionUserId();
       if (!storedUserId) {
         console.warn('Cheat event ignored because user is not authenticated');
         return;

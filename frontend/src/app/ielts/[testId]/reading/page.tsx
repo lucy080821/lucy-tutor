@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
+import { getSessionUserId } from "@/lib/session";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "sweetalert2";
@@ -7,6 +8,8 @@ import DOMPurify from "dompurify";
 import { QUESTION_TYPE_META, FILL_TYPES, QuestionType } from "@/lib/readingGrading";
 import { SkillReportPDF, SkillReportRubricItem } from "@/components/reports/SkillReportPDF";
 import { exportNodeToPDF } from "@/lib/pdfExport";
+import IeltsStudyPanel from "@/components/ielts/IeltsStudyPanel";
+import { IeltsProgressNotice } from "@/components/ielts/IeltsProgress";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const DURATION_SEC = 60 * 60; // real IELTS Reading is 60 minutes
@@ -34,7 +37,7 @@ export default function IeltsReadingTakingPage() {
   const pdfRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const uid = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+    const uid = getSessionUserId();
     if (!uid) { router.push("/"); return; }
     setUserId(uid);
     fetch(`${API}/api/auth/me?userId=${uid}`).then((r) => r.json()).then((u) => setUserName(u.name || "Học viên")).catch(() => {});
@@ -106,6 +109,12 @@ export default function IeltsReadingTakingPage() {
             </button>
           </div>
         </div>
+        {userId && result.id && (
+          <div className="max-w-3xl mx-auto px-4 pb-6 space-y-5">
+            <IeltsProgressNotice skill="READING" userId={userId} />
+            <IeltsStudyPanel skill="READING" attemptId={result.id} userId={userId} />
+          </div>
+        )}
         <div className="max-w-3xl mx-auto px-4 pb-16 space-y-6">
           {data.passages.map((p) => (
             <div key={p.id} className="ui-card p-5 space-y-3">

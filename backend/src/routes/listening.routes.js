@@ -5,6 +5,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { Groq } = require('groq-sdk');
 
 const prisma = require('../lib/prisma');
+const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
 const router = express.Router();
 
 const storage = multer.memoryStorage();
@@ -460,7 +461,7 @@ Phải có đúng ${count} câu hỏi.
         { role: 'system', content: 'You are a listening exam question generator. Respond only in valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       temperature: 0.6,
       response_format: { type: 'json_object' }
     });

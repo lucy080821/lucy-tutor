@@ -3,6 +3,7 @@ const multer = require('multer');
 const { Groq, toFile } = require('groq-sdk');
 
 const prisma = require('../lib/prisma');
+const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
 const router = express.Router();
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } }); // short clips only
@@ -87,7 +88,7 @@ Nếu transcript khớp hoàn toàn với câu mẫu, "likelyIssues" có thể �
         { role: 'system', content: 'You are an encouraging English pronunciation coach for Vietnamese learners. Respond only in valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       temperature: 0.5,
       response_format: { type: 'json_object' }
     });

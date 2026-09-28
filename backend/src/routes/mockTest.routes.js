@@ -1,6 +1,7 @@
 const express = require('express');
 const { Groq } = require('groq-sdk');
 const prisma = require('../lib/prisma');
+const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
 const router = express.Router();
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'fake_key_for_now' });
@@ -70,7 +71,7 @@ Số câu hỏi phải đúng chính xác: cloze ${counts.cloze} câu (khớp đ
           { role: 'system', content: 'You are a Vietnamese high-school English exam generator. Respond only in valid JSON.' },
           { role: 'user', content: discretePrompt }
         ],
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_TEXT_MODEL,
         temperature: 0.7,
         response_format: { type: 'json_object' }
       }),
@@ -79,7 +80,7 @@ Số câu hỏi phải đúng chính xác: cloze ${counts.cloze} câu (khớp đ
           { role: 'system', content: 'You are a Vietnamese high-school English exam generator. Respond only in valid JSON.' },
           { role: 'user', content: passagePrompt }
         ],
-        model: 'llama-3.3-70b-versatile',
+        model: GROQ_TEXT_MODEL,
         temperature: 0.7,
         response_format: { type: 'json_object' }
       })
@@ -161,7 +162,7 @@ Tất cả bằng tiếng Việt.
         { role: 'system', content: 'You are a Vietnamese high-school English exam strategy coach. Respond only in valid JSON.' },
         { role: 'user', content: prompt }
       ],
-      model: 'llama-3.3-70b-versatile',
+      model: GROQ_TEXT_MODEL,
       temperature: 0.5,
       response_format: { type: 'json_object' }
     });

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { getSessionUserId } from "@/lib/session";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from 'sweetalert2';
@@ -31,7 +32,7 @@ export default function GrammarGymPage() {
   const [currentNotebookId, setCurrentNotebookId] = useState<string | null>(null);
 
   useEffect(() => {
-    const uid = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
+    const uid = getSessionUserId();
     if (!uid) {
       router.push('/');
       return;

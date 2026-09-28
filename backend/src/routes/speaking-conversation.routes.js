@@ -1,11 +1,12 @@
 const express = require('express');
 const { Groq } = require('groq-sdk');
 const prisma = require('../lib/prisma');
+const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
 const router = express.Router();
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'fake_key_for_now' });
 
-const MODEL = 'llama-3.3-70b-versatile';
+const MODEL = GROQ_TEXT_MODEL;
 
 const LEVEL_LABELS = {
   A1: 'mới bắt đầu (A1)', A2: 'sơ cấp (A2)', B1: 'trung cấp (B1)', B2: 'trung cao cấp (B2)', C1: 'cao cấp (C1)'

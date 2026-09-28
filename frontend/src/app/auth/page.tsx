@@ -1,5 +1,6 @@
 "use client";
 import { useState, Suspense, useEffect } from "react";
+import { getSessionUserId, setSessionUserId, clearSession } from "@/lib/session";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -41,7 +42,7 @@ function AuthForm() {
   }, []);
 
   useEffect(() => {
-    const userId = localStorage.getItem('userId') || sessionStorage.getItem('userId');
+    const userId = getSessionUserId();
     if (userId) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/me?userId=${userId}`)
         .then(res => {
@@ -56,8 +57,7 @@ function AuthForm() {
           }
         })
         .catch(() => {
-          localStorage.removeItem('userId');
-          sessionStorage.removeItem('userId');
+          clearSession();
         });
     }
   }, []);
@@ -85,11 +85,8 @@ function AuthForm() {
         throw new Error(data.error || 'Authentication failed');
       }
 
-      if (rememberMe) {
-        localStorage.setItem('userId', data.id);
-      } else {
-        sessionStorage.setItem('userId', data.id);
-      }
+      // Luôn xoá phiên cũ ở cả 2 storage trước khi ghi phiên mới (xem lib/session.ts)
+      setSessionUserId(data.id, rememberMe);
 
       // Redirect based on the account's actual stored role (server response), not the locally
       // selected toggle — keeps this consistent with the session-restore effect above.

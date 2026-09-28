@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { getSessionUserId } from "@/lib/session";
 import Link from "next/link";
 
 interface StudyPlan {
@@ -67,7 +68,7 @@ export default function StudyPlanPage() {
   });
 
   useEffect(() => {
-    const userId = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+    const userId = getSessionUserId();
     if (!userId) return;
     const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
     fetch(`${API}/api/auth/me?userId=${userId}`)

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useMemo, createRef } from "react";
+import { getSessionUserId, clearSession } from "@/lib/session";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
@@ -157,15 +158,47 @@ export default function TeacherDashboard() {
 
   useEffect(() => {
     const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    const userId = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
+    const userId = getSessionUserId();
     if (!userId) {
       router.replace('/');
       return;
     }
     fetch(`${API}/api/auth/me?userId=${userId}`)
-      .then(res => res.json())
-      .then(data => { setUser(data); setLoading(false); })
-      .catch(err => { console.error(err); setLoading(false); });
+      .then(async res => {
+        // Tài khoản trong phiên không còn tồn tại → phiên hỏng, bắt đăng nhập lại
+        if (res.status === 404) { clearSession(); router.replace('/auth'); return { __redirected: true }; }
+        return res.json();
+      })
+      .then(data => {
+        if (data?.__redirected) return;
+        // /me can answer { error } (backend restarting / transient DB error) — storing that as `user`
+        // crashes every user.name access. Keep the skeleton and offer a reload instead.
+        if (!data?.id) {
+          Swal.fire({
+            icon: 'error',
+            title: 'Không tải được tài khoản',
+            text: data?.error || 'Máy chủ đang bận, vui lòng thử lại sau giây lát.',
+            confirmButtonText: 'Tải lại',
+          }).then(r => { if (r.isConfirmed) window.location.reload(); });
+          return;
+        }
+        // Trang này chỉ dành cho giáo viên — tài khoản học viên bị chuyển về dashboard học sinh
+        if (data.role !== 'TEACHER') {
+          router.replace('/dashboard');
+          return;
+        }
+        setUser(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error(err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Không kết nối được máy chủ',
+          text: 'Vui lòng kiểm tra kết nối mạng rồi thử lại.',
+          confirmButtonText: 'Tải lại',
+        }).then(r => { if (r.isConfirmed) window.location.reload(); });
+      });
   }, []);
 
   // Single in-flight request at a time: the OVERVIEW 30s poll, the visibilitychange handler and
@@ -473,7 +506,24 @@ export default function TeacherDashboard() {
     EXTRACTED: { label: 'Đã trích xuất', className: 'bg-emerald-50 text-emerald-700' },
     FAILED: { label: 'Lỗi phân tích', className: 'bg-red-50 text-red-700' }
   };
-  const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string }> = {
+  // The 4 IELTS skills the Cambridge extraction pipeline produces (see ieltsExtraction.js).
+// `countKey` matches the `_count` fields returned by GET /api/ielts/books.
+const IELTS_SKILL_INFO = [
+  { key: "LISTENING", label: "Listening", vi: "Nghe", short: "L", countKey: "listeningSections", unit: "section",
+    extracted: "AI tách 4 Section, câu hỏi và khớp đáp án theo Answer Key.",
+    manual: "gắn file audio cho từng Section." },
+  { key: "READING", label: "Reading", vi: "Đọc", short: "R", countKey: "readingPassages", unit: "đoạn văn",
+    extracted: "AI tách 3 đoạn văn, câu hỏi và khớp đáp án theo Answer Key.",
+    manual: "rà soát đoạn văn nhiều cột và đáp án." },
+  { key: "WRITING", label: "Writing", vi: "Viết", short: "W", countKey: "writingTasks", unit: "task",
+    extracted: "AI tách đề Task 1 và Task 2; bài làm được AI chấm theo 4 tiêu chí band.",
+    manual: "gắn ảnh biểu đồ/hình cho Task 1." },
+  { key: "SPEAKING", label: "Speaking", vi: "Nói", short: "S", countKey: "speakingParts", unit: "part",
+    extracted: "AI tách câu hỏi Part 1, 2, 3; học viên ghi âm và được AI chấm band.",
+    manual: "kiểm tra lại cue card Part 2." },
+] as const;
+
+const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string }> = {
     PENDING_EXTRACTION: { label: 'Chưa trích xuất', className: 'bg-slate-100 text-muted' },
     EXTRACTED_DRAFT: { label: 'Cần rà soát', className: 'bg-amber-50 text-amber-700' },
     NEEDS_ATTENTION: { label: 'Lỗi — cần xem lại', className: 'bg-red-50 text-red-700' },
@@ -1497,7 +1547,7 @@ export default function TeacherDashboard() {
   useEffect(() => {
     if (selectedExamForView && !selectedExamForView.questions) {
       fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/exams/${selectedExamForView.id}`)
-        .then(res => res.json()).then(data => setSelectedExamForView(data)).catch(console.error);
+        .then(res => res.json()).then(data => { if (data?.id) setSelectedExamForView(data); }).catch(console.error);
     }
   }, [selectedExamForView]);
 
@@ -2313,7 +2363,7 @@ export default function TeacherDashboard() {
         </div>
         <div className="mt-auto border-t border-line px-3 py-3">
           <button
-            onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); router.push('/'); }}
+            onClick={() => { clearSession(); router.push('/'); }}
             className="flex items-center justify-center gap-2 px-3 py-2.5 font-semibold text-muted border border-line-strong hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors w-full cursor-pointer text-sm rounded-full"
           >
             Đăng xuất
@@ -2952,7 +3002,20 @@ export default function TeacherDashboard() {
         {/* ── IELTS LIBRARY (Thư Viện Đề Cambridge) ── */}
         {activeTab === "IELTS_LIBRARY" && (
           <div className="space-y-6 w-full max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <PageBanner title="Thư Viện Đề Cambridge" description="Tải lên file PDF của cả cuốn sách Cambridge IELTS (bản số hoá, copy chữ được) — AI sẽ tự tách các đề thi (Test 1, Test 2...) và trích xuất nội dung Reading kèm đáp án của sách. Vui lòng rà soát kỹ trước khi publish cho học viên — AI có thể sai sót, đặc biệt với đoạn văn nhiều cột và khớp đáp án." />
+            <PageBanner title="Thư Viện Đề Cambridge" description="Tải lên file PDF của cả cuốn sách Cambridge IELTS (bản số hoá, copy chữ được) — AI sẽ tự tách các đề thi (Test 1, Test 2...) và trích xuất đủ 4 kỹ năng Nghe - Nói - Đọc - Viết, kèm đáp án Listening/Reading theo Answer Key của sách. Vui lòng rà soát kỹ trước khi publish cho học viên — AI có thể sai sót, đặc biệt với đoạn văn nhiều cột và khớp đáp án." />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+              {IELTS_SKILL_INFO.map(s => (
+                <div key={s.key} className="ui-card p-5">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <h3 className="font-bold text-primary">{s.label}</h3>
+                    <span className="ui-badge">{s.vi}</span>
+                  </div>
+                  <p className="text-sm text-muted leading-relaxed">{s.extracted}</p>
+                  <p className="text-xs text-foreground mt-2"><span className="font-bold">Giáo viên bổ sung:</span> {s.manual}</p>
+                </div>
+              ))}
+            </div>
 
             <div className="ui-card p-6 mb-8">
               <h2 className="ui-section-title mb-5">Tải sách lên</h2>
@@ -3007,6 +3070,18 @@ export default function TeacherDashboard() {
                             <Link key={t.id} href={`/teacher/ielts/${t.id}`} className="flex items-center gap-2 px-4 py-2 rounded-full border border-line-strong bg-white text-foreground hover:border-primary hover:bg-primary-soft hover:text-primary transition-colors text-sm font-semibold">
                               {t.title} {t.testType ? `(${t.testType === 'ACADEMIC' ? 'Academic' : 'General Training'})` : ''}
                               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${testStatus.className}`}>{testStatus.label}</span>
+                              {t._count && (
+                                <span className="flex items-center gap-1">
+                                  {IELTS_SKILL_INFO.map(s => {
+                                    const n = t._count[s.countKey] || 0;
+                                    return (
+                                      <span key={s.key} title={`${s.label}: ${n} ${s.unit}`} className={`text-[10px] w-5 h-5 inline-flex items-center justify-center rounded-full font-bold ${n > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-line text-muted'}`}>
+                                        {s.short}
+                                      </span>
+                                    );
+                                  })}
+                                </span>
+                              )}
                             </Link>
                           );
                         })}

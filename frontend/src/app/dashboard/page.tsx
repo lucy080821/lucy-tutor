@@ -1,11 +1,13 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { getSessionUserId, clearSession } from "@/lib/session";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from 'recharts';
 import InstallPWAButton from "@/components/InstallPWAButton";
+import { useIeltsProgress } from "@/components/ielts/IeltsProgress";
 import Swal from 'sweetalert2';
 
 // FullCalendar (+ its plugins) is only needed on the CALENDAR tab — load it on demand instead of
@@ -40,6 +42,9 @@ function dailyCheckin(API: string, userId: string) {
   }
   return checkinCache;
 }
+
+// /api/skill-progress returns { READING: {score, hasData}, ... } — or { error } when the backend fails.
+const isSkillProgress = (d: any) => !!d && typeof d === 'object' && !('error' in d);
 
 export default function StudentDashboard() {
   const router = useRouter();
@@ -173,7 +178,7 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    const userId = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
+    const userId = getSessionUserId();
     if (!userId) {
       router.replace('/');
       return;
@@ -183,19 +188,24 @@ export default function StudentDashboard() {
     // waiting for /me before starting the rest — each round trip is ~0.3s+ on the backend.
     const ctrl = new AbortController();
     const signal = ctrl.signal;
-    const meP = fetch(`${API}/api/auth/me?userId=${userId}`, { signal }).then(res => res.json());
+    const meP = fetch(`${API}/api/auth/me?userId=${userId}`, { signal }).then(async res => {
+      // Tài khoản trong phiên không còn tồn tại → phiên hỏng, bắt đăng nhập lại thay vì kẹt ở hộp thoại "Tải lại"
+      if (res.status === 404) { clearSession(); router.replace('/auth'); return { __redirected: true }; }
+      return res.json();
+    });
     fetch(`${API}/api/analytics/history/${userId}`, { signal })
       .then(r => r.json())
       .then(hist => setHistory(Array.isArray(hist) ? hist : []))
       .catch(() => {});
     fetch(`${API}/api/skill-progress/${userId}`, { signal })
       .then(r => r.json())
-      .then(setSkillProgress)
+      .then(data => { if (isSkillProgress(data)) setSkillProgress(data); })
       .catch(() => {});
     const checkin = dailyCheckin(API, userId);
 
     meP
       .then(data => {
+        if (data?.__redirected) return;
         // /me can answer with `{ error }` (e.g. backend restarting or a transient DB error) —
         // storing that as `user` crashed every `user.name.charAt(...)`. Keep the skeleton and offer a reload.
         if (!data?.id) {
@@ -205,6 +215,13 @@ export default function StudentDashboard() {
             text: data?.error || 'Máy chủ đang bận, vui lòng thử lại sau giây lát.',
             confirmButtonText: 'Tải lại',
           }).then(r => { if (r.isConfirmed) window.location.reload(); });
+          return;
+        }
+        // Trang này chỉ dành cho học viên — PWA luôn mở /dashboard (start_url) nên tài khoản giáo viên
+        // phải được chuyển về đúng /teacher thay vì hiện nhầm dashboard học sinh
+        if (data.role === 'TEACHER') {
+          ctrl.abort();
+          router.replace('/teacher');
           return;
         }
         setUser(data);
@@ -323,9 +340,11 @@ export default function StudentDashboard() {
     if (activeTab !== "OVERVIEW" || !user?.id || user?.accessLocked) return;
     const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
     const refresh = () => {
-      fetch(`${API}/api/auth/me?userId=${user.id}`).then(r => r.json()).then(setUser).catch(console.error);
-      fetch(`${API}/api/analytics/history/${user.id}`).then(r => r.json()).then(data => setHistory(data || [])).catch(console.error);
-      fetch(`${API}/api/skill-progress/${user.id}`).then(r => r.json()).then(setSkillProgress).catch(() => {});
+      // A background refresh must never replace good state with an error payload ({ error }) —
+      // that crashed render (user.name.charAt / history.reduce). On a bad response keep the old data.
+      fetch(`${API}/api/auth/me?userId=${user.id}`).then(r => r.json()).then(data => { if (data?.id) setUser(data); }).catch(console.error);
+      fetch(`${API}/api/analytics/history/${user.id}`).then(r => r.json()).then(data => { if (Array.isArray(data)) setHistory(data); }).catch(console.error);
+      fetch(`${API}/api/skill-progress/${user.id}`).then(r => r.json()).then(data => { if (isSkillProgress(data)) setSkillProgress(data); }).catch(() => {});
     };
     // Run immediately when returning to OVERVIEW — otherwise data could be up to 30s stale.
     // (Initial load: skillProgress/history/me were just fetched by the mount effect.)
@@ -537,6 +556,7 @@ export default function StudentDashboard() {
   const leaderboardPagination = usePagination(leaderboardRest, 15, leaderboardFilter);
 
   // ── Auto-generated learning insights (rule-based, computed from live profile/history/skill data) ──
+  const ieltsProgress = useIeltsProgress(user?.id ?? null);
   const studentInsights: StudentInsight[] = (() => {
     const items: StudentInsight[] = [];
     const numAvgScore = parseFloat(avgScore);
@@ -602,6 +622,11 @@ export default function StudentDashboard() {
     if (needsActionExams.length >= 3) {
       items.push({ level: 'critical', icon: '⚠️', title: 'Nhiều bài đang chờ xử lý', message: `Bạn có ${needsActionExams.length} bài tập/đề thi chưa làm hoặc chưa đạt điểm yêu cầu. Ưu tiên xử lý sớm để không bị dồn bài gần hạn nộp.`, cta: { label: 'Xem Bài Đang Chờ', tab: needsActionTargetTab } });
     }
+
+    // IELTS band progress (from /api/ielts-study/progress) — band up/down, long gaps, weakest skill.
+    (ieltsProgress?.notifications || []).slice(0, 2).forEach((n) => {
+      items.push({ level: n.level, icon: '', title: 'Tiến bộ IELTS', message: n.message, cta: { label: 'Xem Tiến Bộ IELTS', href: '/ielts' } });
+    });
 
     const severityOrder: Record<StudentInsight['level'], number> = { critical: 0, warning: 1, success: 2, info: 3 };
     return items.sort((a, b) => severityOrder[a.level] - severityOrder[b.level]).slice(0, 6);
@@ -689,7 +714,7 @@ export default function StudentDashboard() {
           </div>
         )}
         <button
-          onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); router.push('/'); }}
+          onClick={() => { clearSession(); router.push('/'); }}
           className="btn-outline px-6 py-2 text-sm cursor-pointer"
         >
           Đăng xuất
@@ -776,7 +801,7 @@ export default function StudentDashboard() {
 
         <div className="mt-auto border-t border-line px-3 py-3">
           <button
-            onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); router.push('/'); }}
+            onClick={() => { clearSession(); router.push('/'); }}
             className="btn-ghost w-full px-3 py-2.5 text-sm cursor-pointer hover:text-red-600 hover:bg-red-50"
           >
             Đăng xuất
@@ -1683,7 +1708,7 @@ export default function StudentDashboard() {
               onSubmit={async (e) => {
                 e.preventDefault();
                 const formData = new FormData(e.currentTarget);
-                const userId = (localStorage.getItem('userId') || sessionStorage.getItem('userId'));
+                const userId = getSessionUserId();
                 if (!userId) return;
 
                 try {
@@ -1904,7 +1929,7 @@ export default function StudentDashboard() {
                 </div>
               </div>
               <button
-                onClick={() => { localStorage.removeItem('userId'); sessionStorage.removeItem('userId'); router.push('/'); }}
+                onClick={() => { clearSession(); router.push('/'); }}
                 className="w-full py-3 rounded-full border border-red-200 bg-white text-red-600 font-bold hover:bg-red-50 transition-colors cursor-pointer"
               >
                 Đăng Xuất
