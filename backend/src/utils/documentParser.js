@@ -1,4 +1,6 @@
-const { PDFParse } = require('pdf-parse');
+// Loaded lazily: pdf-parse (pdfjs-dist) needs Node >=20.16/22.3 and loading it at boot would crash
+// the whole API on an older runtime, not just the PDF features.
+const loadPDFParse = () => require('pdf-parse').PDFParse;
 const mammoth = require('mammoth');
 
 // pdf-parse v2 exports a class, not a callable function (`require('pdf-parse')(buffer)` — the
@@ -7,6 +9,7 @@ const mammoth = require('mammoth');
 // caller, upload.routes.js's POST /exam, is confirmed unused anywhere in the frontend.
 async function extractTextFromFile(buffer, mimetype) {
   if (mimetype === 'application/pdf') {
+    const PDFParse = loadPDFParse();
     const parser = new PDFParse({ data: buffer });
     try {
       const result = await parser.getText();
@@ -27,6 +30,7 @@ async function extractTextFromFile(buffer, mimetype) {
 // extraction pipeline to anchor test/section boundaries to real page numbers instead of
 // guessing offsets in one flat string.
 async function extractTextWithPages(buffer) {
+  const PDFParse = loadPDFParse();
   const parser = new PDFParse({ data: buffer });
   try {
     const result = await parser.getText();
