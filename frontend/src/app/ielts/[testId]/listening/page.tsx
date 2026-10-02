@@ -4,7 +4,7 @@ import { getSessionUserId } from "@/lib/session";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "sweetalert2";
-import { QuestionAnswerForm } from "../reading/page";
+import { QuestionAnswerForm } from "@/components/ielts/QuestionAnswerForm";
 import { SkillReportPDF, SkillReportRubricItem } from "@/components/reports/SkillReportPDF";
 import { exportNodeToPDF } from "@/lib/pdfExport";
 import IeltsStudyPanel from "@/components/ielts/IeltsStudyPanel";
