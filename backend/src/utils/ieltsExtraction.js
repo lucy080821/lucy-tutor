@@ -12,20 +12,28 @@
 const { Groq } = require('groq-sdk');
 const prisma = require('../lib/prisma');
 const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'fake_key_for_now' });
+// maxRetries: 0 — retries (incl. 429 back-off) are handled by callJsonGroq's own queue below.
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'fake_key_for_now', maxRetries: 0 });
 
 const MODEL = GROQ_TEXT_MODEL;
-// Conservative safety margin for the Groq text model's context window (see lib/aiModel.js), leaving room for
-// prompt scaffolding + JSON output — a whole Cambridge book easily exceeds this, triggering
-// the chunked fallback below.
-const PASS1_SINGLE_CALL_TOKEN_LIMIT = 100000;
-const CHUNK_PAGE_SIZE = 18;
+// Groq enforces a tokens-per-minute cap per model, and a single request whose input alone is
+// larger than that cap is rejected outright with 413 (the on_demand/free tier of
+// openai/gpt-oss-120b is only 8000 TPM — sending a whole 146-page book as one request is ~64k).
+// Every call in this pipeline is therefore sized to fit under the cap and pushed through one
+// sequential queue that waits out the per-minute window. Raise GROQ_TPM_LIMIT on Render after
+// upgrading the Groq plan.
+const GROQ_TPM_LIMIT = Number(process.env.GROQ_TPM_LIMIT) || 8000;
+// Room left in the minute window for the model's own output (JSON + reasoning tokens).
+const OUTPUT_RESERVE_TOKENS = Math.min(3000, Math.floor(GROQ_TPM_LIMIT * 0.35));
+const MAX_INPUT_TOKENS = GROQ_TPM_LIMIT - OUTPUT_RESERVE_TOKENS;
+const MAX_GROQ_ATTEMPTS = 8;
 
 const READING_QUESTION_TYPES = [
   'MULTIPLE_CHOICE', 'TRUE_FALSE', 'FILL_BLANK', 'YES_NO_NOTGIVEN', 'MATCHING_HEADING',
   'MATCHING_INFORMATION', 'MATCHING_FEATURES', 'SUMMARY_COMPLETION', 'SENTENCE_COMPLETION', 'SHORT_ANSWER'
 ];
 
+// Groq's own request-size estimate is ~chars/4 (a 255k-char book was reported as 63.9k tokens).
 function estimateTokens(text) {
   return Math.ceil((text || '').length / 4);
 }
@@ -34,96 +42,207 @@ function buildPagesText(pages) {
   return pages.map((p) => `[PAGE ${p.num}]\n${p.text}`).join('\n\n');
 }
 
-async function callJsonGroq(systemMsg, userPrompt, temperature = 0.2) {
-  const completion = await groq.chat.completions.create({
-    messages: [
-      { role: 'system', content: systemMsg },
-      { role: 'user', content: userPrompt }
-    ],
-    model: MODEL,
-    temperature,
-    response_format: { type: 'json_object' }
-  });
-  const raw = completion.choices[0]?.message?.content || '{}';
-  try {
-    return JSON.parse(raw);
-  } catch {
-    return null;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Sliding 60s window of tokens already spent, shared by every call in this process.
+const tokenWindow = [];
+function tokensUsedLastMinute() {
+  const cutoff = Date.now() - 60000;
+  while (tokenWindow.length && tokenWindow[0].at < cutoff) tokenWindow.shift();
+  return tokenWindow.reduce((sum, e) => sum + e.tokens, 0);
+}
+async function waitForTokenBudget(needed) {
+  while (tokenWindow.length && tokensUsedLastMinute() + needed > GROQ_TPM_LIMIT) {
+    await sleep(Math.max(1000, tokenWindow[0].at + 60000 - Date.now() + 250));
   }
+}
+
+function retryAfterMs(err) {
+  const header = err?.headers?.get?.('retry-after') ?? err?.headers?.['retry-after'];
+  const seconds = Number(header);
+  if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000 + 250;
+  const fromMessage = /try again in ([\d.]+)s/i.exec(err?.message || '');
+  return fromMessage ? Number(fromMessage[1]) * 1000 + 250 : 15000;
+}
+
+let groqQueue = Promise.resolve();
+
+async function callJsonGroqNow(systemMsg, userPrompt, temperature) {
+  const inputTokens = estimateTokens(systemMsg) + estimateTokens(userPrompt);
+  if (inputTokens > MAX_INPUT_TOKENS) {
+    throw new Error(`Nội dung gửi AI quá dài (~${inputTokens} token) so với giới hạn ${GROQ_TPM_LIMIT} token/phút của tài khoản Groq — cần nâng gói Groq và đặt GROQ_TPM_LIMIT tương ứng`);
+  }
+  for (let attempt = 1; ; attempt++) {
+    await waitForTokenBudget(inputTokens + OUTPUT_RESERVE_TOKENS);
+    try {
+      const completion = await groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: systemMsg },
+          { role: 'user', content: userPrompt }
+        ],
+        model: MODEL,
+        temperature,
+        response_format: { type: 'json_object' },
+        // Reasoning tokens count against the same per-minute cap — keep them short.
+        ...(MODEL.startsWith('openai/gpt-oss') ? { reasoning_effort: 'low' } : {})
+      });
+      tokenWindow.push({ at: Date.now(), tokens: completion.usage?.total_tokens || inputTokens + OUTPUT_RESERVE_TOKENS });
+      const raw = completion.choices[0]?.message?.content || '{}';
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return null;
+      }
+    } catch (err) {
+      // Count the failed request's input as spent so the window check backs off too.
+      tokenWindow.push({ at: Date.now(), tokens: inputTokens });
+      if (err?.status === 429 && attempt < MAX_GROQ_ATTEMPTS) {
+        await sleep(retryAfterMs(err));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
+// All Groq calls from this pipeline run one at a time — parallel callers (4 skills × several
+// tests) would otherwise just trip the per-minute cap together.
+function callJsonGroq(systemMsg, userPrompt, temperature = 0.2) {
+  const run = groqQueue.then(() => callJsonGroqNow(systemMsg, userPrompt, temperature));
+  groqQueue = run.catch(() => {});
+  return run;
 }
 
 const STRUCTURE_SYSTEM_MSG = 'You are a precise document-structure analyzer. Respond only in valid JSON, no explanations.';
 const EXTRACTOR_SYSTEM_MSG = 'You are a precise IELTS test-content extractor. Respond only in valid JSON, no explanations.';
 
 // ── Pass 1 — whole-book boundary detection ──────────────────────────────────────────────────
+//
+// Cambridge books print a heading at the top of every section's first page ("Test 1" running
+// header + "LISTENING"/"READING"/"WRITING"/"SPEAKING" in capitals, "Audioscripts", "Listening
+// and Reading answer keys"), so boundaries are read straight off the first lines of each page —
+// no AI call, no token cost. Only if that fails (unusual layout) do we fall back to asking the
+// AI, and even then it only sees each page's first few lines, in chunks sized to the TPM cap.
 
-async function detectBoundariesSingleCall(pages) {
-  const prompt = `Đây là toàn bộ nội dung 1 cuốn sách luyện thi IELTS (Cambridge IELTS), đã được đánh số trang bằng thẻ [PAGE n]. Sách có thể chứa nhiều đề thi (Test 1, Test 2, Test 3, Test 4...), mỗi đề gồm 4 phần: LISTENING, READING, WRITING, SPEAKING. Cuối sách thường có phần "Answer Key" (đáp án Listening + Reading của TẤT CẢ các đề) và phần "Audioscripts" (áp dụng cho tất cả đề).
+const SKILL_HEADING_KEYS = {
+  LISTENING: 'listeningStartPage', READING: 'readingStartPage', WRITING: 'writingStartPage', SPEAKING: 'speakingStartPage'
+};
+const PAGE_HEAD_LINES = 5;
 
-Nhiệm vụ: CHỈ xác định trang bắt đầu của từng phần, KHÔNG trích xuất nội dung.
-
-Nội dung sách:
-"""
-${buildPagesText(pages)}
-"""
-
-Trả về JSON:
-{
-  "tests": [
-    { "testNumber": 1, "listeningStartPage": <int|null>, "readingStartPage": <int|null>, "writingStartPage": <int|null>, "speakingStartPage": <int|null> }
-  ],
-  "answerKey": { "startPage": <int|null>, "endPage": <int|null> },
-  "audioscript": { "startPage": <int|null>, "endPage": <int|null> }
-}`;
-  return callJsonGroq(STRUCTURE_SYSTEM_MSG, prompt, 0.1);
+function pageHeadLines(page, count = PAGE_HEAD_LINES) {
+  return (page.text || '').split('\n').map((l) => l.replace(/\s+/g, ' ').trim()).filter(Boolean).slice(0, count);
 }
 
-async function detectBoundariesChunked(pages) {
-  const chunks = [];
-  for (let i = 0; i < pages.length; i += CHUNK_PAGE_SIZE) {
-    chunks.push(pages.slice(i, i + CHUNK_PAGE_SIZE));
+const isAudioscriptHeading = (line) => /^audio\s*scripts?$/i.test(line || '');
+const isAnswerKeyHeading = (line) => /^(listening and reading )?answer keys?$/i.test(line || '');
+
+// Turns raw start pages into the stored boundaries shape. A back-matter section (Answer Key /
+// Audioscripts) runs until the next back-matter section or the next page with a different
+// first-line heading (e.g. "Sample Writing answers"), whichever the book has.
+function finalizeBoundaries(pages, testsByNumber, answerKeyStart, audioscriptStart) {
+  const lastPage = pages[pages.length - 1]?.num || 0;
+  const endOf = (start, otherStart) => {
+    if (!start) return null;
+    if (otherStart && otherStart > start) return otherStart - 1;
+    return lastPage;
+  };
+  let answerKeyEnd = endOf(answerKeyStart, audioscriptStart);
+  if (answerKeyStart) {
+    // The answer key repeats its heading on every page — stop at the first page that doesn't.
+    const run = pages.filter((p) => p.num >= answerKeyStart && p.num <= answerKeyEnd);
+    const firstOther = run.find((p) => p.num > answerKeyStart && !isAnswerKeyHeading(pageHeadLines(p, 1)[0]));
+    if (firstOther && isAnswerKeyHeading(pageHeadLines(run[0], 1)[0])) answerKeyEnd = firstOther.num - 1;
   }
+  return {
+    tests: Object.values(testsByNumber).sort((a, b) => a.testNumber - b.testNumber),
+    answerKey: { startPage: answerKeyStart, endPage: answerKeyEnd },
+    audioscript: { startPage: audioscriptStart, endPage: endOf(audioscriptStart, answerKeyStart) }
+  };
+}
+
+function detectBoundariesByHeadings(pages) {
+  const testsByNumber = {};
+  let answerKeyStart = null;
+  let audioscriptStart = null;
+  let currentTest = null;
+
+  for (const page of pages) {
+    const head = pageHeadLines(page);
+    if (!head.length) continue;
+    if (isAudioscriptHeading(head[0])) { audioscriptStart = audioscriptStart || page.num; continue; }
+    if (isAnswerKeyHeading(head[0])) { answerKeyStart = answerKeyStart || page.num; continue; }
+    // Back matter (audioscripts/answer keys/sample answers) also prints "Test N" headers.
+    if (audioscriptStart || answerKeyStart) continue;
+
+    const testHeader = head.map((l) => /^test\s*(\d{1,2})$/i.exec(l)).find(Boolean);
+    const skills = head.filter((l) => SKILL_HEADING_KEYS[l]); // exact, upper-case heading only
+    if (testHeader) currentTest = Number(testHeader[1]);
+
+    for (const skill of skills) {
+      // A LISTENING heading without a "Test N" line on the same page opens the next test.
+      if (skill === 'LISTENING' && !testHeader) currentTest = (currentTest || 0) + 1;
+      if (!currentTest) continue; // intro/contents pages before Test 1
+      if (!testsByNumber[currentTest]) testsByNumber[currentTest] = { testNumber: currentTest };
+      const key = SKILL_HEADING_KEYS[skill];
+      if (!testsByNumber[currentTest][key]) testsByNumber[currentTest][key] = page.num;
+    }
+  }
+
+  return finalizeBoundaries(pages, testsByNumber, answerKeyStart, audioscriptStart);
+}
+
+// Headings found for at least 2 of the 4 skills in every detected test → trust the result.
+function boundariesLookValid(boundaries) {
+  return boundaries.tests.length > 0 && boundaries.tests.every((t) =>
+    Object.values(SKILL_HEADING_KEYS).filter((k) => t[k]).length >= 2);
+}
+
+async function detectBoundariesWithAI(pages) {
+  const heads = pages.map((p) => ({ num: p.num, text: pageHeadLines(p, 6).join('\n') }));
+  const chunkBudget = MAX_INPUT_TOKENS - 600; // prompt scaffolding
+  const chunks = [];
+  let current = [];
+  let currentTokens = 0;
+  for (const h of heads) {
+    const t = estimateTokens(h.text) + 5;
+    if (current.length && currentTokens + t > chunkBudget) { chunks.push(current); current = []; currentTokens = 0; }
+    current.push(h);
+    currentTokens += t;
+  }
+  if (current.length) chunks.push(current);
+
   const chunkResults = await Promise.all(chunks.map(async (chunk) => {
-    const prompt = `Đây là 1 đoạn trích (nhiều trang liên tiếp) của 1 cuốn sách luyện thi IELTS, đánh số bằng [PAGE n]:
+    const prompt = `Đây là vài dòng ĐẦU TIÊN của từng trang (nhiều trang liên tiếp) trong 1 cuốn sách luyện thi IELTS, đánh số bằng [PAGE n]:
 """
 ${buildPagesText(chunk)}
 """
-Với MỖI trang trong đoạn này, nếu trang đó THỰC SỰ là trang bắt đầu (có tiêu đề rõ ràng, không chỉ nhắc tới tên mục) của: 1 đề thi mới ("Test N"), phần LISTENING/READING/WRITING/SPEAKING của 1 đề, phần "Answer Key", hoặc phần "Audioscripts" — hãy báo lại.
+Với MỖI trang, nếu trang đó THỰC SỰ là trang bắt đầu (có tiêu đề rõ ràng, không chỉ nhắc tới tên mục) của: phần LISTENING/READING/WRITING/SPEAKING của 1 đề (kèm số đề "Test N"), phần "Answer Key", hoặc phần "Audioscripts" — hãy báo lại.
 
-Trả về JSON: { "hits": [ { "page": <int>, "marker": "TEST_N"|"LISTENING"|"READING"|"WRITING"|"SPEAKING"|"ANSWER_KEY"|"AUDIOSCRIPT", "testNumber": <int|null> } ] }`;
+Trả về JSON: { "hits": [ { "page": <int>, "marker": "LISTENING"|"READING"|"WRITING"|"SPEAKING"|"ANSWER_KEY"|"AUDIOSCRIPT", "testNumber": <int|null> } ] }`;
     const result = await callJsonGroq(STRUCTURE_SYSTEM_MSG, prompt, 0.1);
     return result?.hits || [];
   }));
 
-  const hits = chunkResults.flat();
   const testsByNumber = {};
   let answerKeyStart = null;
   let audioscriptStart = null;
-  hits.forEach((h) => {
-    if (h.marker === 'ANSWER_KEY' && answerKeyStart === null) answerKeyStart = h.page;
-    else if (h.marker === 'AUDIOSCRIPT' && audioscriptStart === null) audioscriptStart = h.page;
-    else if (h.testNumber) {
+  chunkResults.flat().sort((a, b) => a.page - b.page).forEach((h) => {
+    if (h.marker === 'ANSWER_KEY') answerKeyStart = answerKeyStart || h.page;
+    else if (h.marker === 'AUDIOSCRIPT') audioscriptStart = audioscriptStart || h.page;
+    else if (h.testNumber && SKILL_HEADING_KEYS[h.marker]) {
       if (!testsByNumber[h.testNumber]) testsByNumber[h.testNumber] = { testNumber: h.testNumber };
-      const key = { LISTENING: 'listeningStartPage', READING: 'readingStartPage', WRITING: 'writingStartPage', SPEAKING: 'speakingStartPage' }[h.marker];
-      if (key) testsByNumber[h.testNumber][key] = h.page;
+      const key = SKILL_HEADING_KEYS[h.marker];
+      if (!testsByNumber[h.testNumber][key]) testsByNumber[h.testNumber][key] = h.page;
     }
   });
-
-  const lastPage = pages[pages.length - 1]?.num || 0;
-  return {
-    tests: Object.values(testsByNumber).sort((a, b) => a.testNumber - b.testNumber),
-    answerKey: { startPage: answerKeyStart, endPage: audioscriptStart ? audioscriptStart - 1 : lastPage },
-    audioscript: { startPage: audioscriptStart, endPage: audioscriptStart ? lastPage : null }
-  };
+  return finalizeBoundaries(pages, testsByNumber, answerKeyStart, audioscriptStart);
 }
 
 async function detectBookBoundaries(pages) {
-  const fullText = buildPagesText(pages);
-  if (estimateTokens(fullText) <= PASS1_SINGLE_CALL_TOKEN_LIMIT) {
-    const result = await detectBoundariesSingleCall(pages);
-    if (result?.tests?.length) return result;
-  }
-  return detectBoundariesChunked(pages);
+  const byHeadings = detectBoundariesByHeadings(pages);
+  if (boundariesLookValid(byHeadings)) return byHeadings;
+  const byAI = await detectBoundariesWithAI(pages);
+  return byAI.tests.length ? byAI : byHeadings;
 }
 
 function sliceRange(pages, start, end) {
@@ -153,7 +272,7 @@ async function runBoundaryExtraction(bookId) {
 
     await prisma.ieltsBook.update({
       where: { id: bookId },
-      data: { boundariesJson: JSON.stringify(boundaries), answerKeyText, audioscriptText, extractionStatus: 'BOUNDARIES_EXTRACTED' }
+      data: { boundariesJson: JSON.stringify(boundaries), answerKeyText, audioscriptText, extractionStatus: 'BOUNDARIES_EXTRACTED', errorMessage: null }
     });
 
     for (const t of boundaries.tests) {
@@ -201,17 +320,40 @@ function getSkillPageRange(boundaries, testNumber, skillKey, pages) {
 // most likely failure mode in this whole pipeline is scoping the wrong test's answer block
 // here. This prompt is deliberately explicit about the risk; the teacher review UI's answer
 // cross-check screen is the real safety net, not this prompt alone.
+// Narrows the Answer Key to this test's own page(s) for the skill — Cambridge prints one page
+// per test per skill headed "TEST n" + "LISTENING"/"READING". Cuts the prompt from the whole
+// key (~2-3k tokens) to one page and removes most of the wrong-test risk above. Falls back to
+// the whole key if the headings aren't found.
+function answerKeyTextFor(book, testNumber, skill) {
+  const boundaries = JSON.parse(book.boundariesJson || '{}');
+  const { startPage, endPage } = boundaries.answerKey || {};
+  if (startPage) {
+    const pages = JSON.parse(book.pagesJson || '[]');
+    const testRe = new RegExp(`^test\\s*${testNumber}(?!\\d)`, 'i');
+    const own = pages.filter((p) => {
+      if (p.num < startPage || p.num > (endPage || Infinity)) return false;
+      const head = pageHeadLines(p);
+      return head.some((l) => testRe.test(l)) && head.some((l) => l.toUpperCase() === skill);
+    });
+    if (own.length) return own.map((p) => p.text).join('\n\n');
+  }
+  return book.answerKeyText;
+}
+
 async function matchAnswersForSkill(testId, skill) {
-  const test = await prisma.ieltsTest.findUnique({ where: { id: testId }, include: { book: true } });
-  const questions = await prisma.ieltsQuestion.findMany({ where: { testId, skill }, orderBy: { questionNumber: 'asc' } });
+  const [test, questions] = await Promise.all([
+    prisma.ieltsTest.findUnique({ where: { id: testId }, include: { book: true } }),
+    prisma.ieltsQuestion.findMany({ where: { testId, skill }, orderBy: { questionNumber: 'asc' } })
+  ]);
   if (!test?.book?.answerKeyText || !questions.length) return;
+  const answerKeyText = answerKeyTextFor(test.book, test.testNumber, skill);
 
   const skillLabel = skill === 'LISTENING' ? 'Listening' : 'Reading';
   const prompt = `Đây là phần Answer Key (đáp án) trích từ 1 cuốn sách luyện thi IELTS — có thể chứa đáp án của NHIỀU đề thi khác nhau, và số câu hỏi (1, 2, 3...) LẶP LẠI theo từng đề. Cần tìm ĐÚNG phần đáp án ${skillLabel} của "Test ${test.testNumber}" — KHÔNG lấy nhầm đáp án của đề khác dù đánh số câu giống nhau.
 
 Answer Key:
 """
-${test.book.answerKeyText}
+${answerKeyText}
 """
 
 Danh sách câu hỏi ${skillLabel} của Test ${test.testNumber} cần khớp đáp án (kèm dạng câu):
@@ -239,6 +381,18 @@ Trả về JSON: { "answers": [ { "questionNumber": <int>, "correctIndex": <int|
 
 async function detectReadingPassageBoundaries(pages, range) {
   const spanPages = pages.filter((p) => p.num >= range.startPage && p.num <= range.endPage);
+  // Academic books head each passage "READING PASSAGE n" — read it off the page, no AI needed
+  // (a whole Reading section is ~6-7k tokens, too big to send in one call on an 8k TPM plan).
+  const byHeading = [];
+  spanPages.forEach((p) => {
+    const m = pageHeadLines(p).map((l) => /^reading\s+passage\s+(\d)\b/i.exec(l)).find(Boolean);
+    const sectionNumber = m && Number(m[1]);
+    if (sectionNumber && !byHeading.some((b) => b.sectionNumber === sectionNumber)) {
+      byHeading.push({ sectionNumber, passageIndex: 1, startPage: p.num });
+    }
+  });
+  if (byHeading.length) return byHeading;
+
   const prompt = `Đây là phần READING của 1 đề thi IELTS, đánh số trang [PAGE n]:
 """
 ${buildPagesText(spanPages)}

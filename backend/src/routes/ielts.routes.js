@@ -170,9 +170,9 @@ router.post('/books/:id/extract-tests', async (req, res) => {
     res.json({ message: `Đang trích xuất ${targetTests.length} đề (Listening/Reading/Writing/Speaking)`, testIds: targetTests.map((t) => t.id) });
 
     setTimeout(async () => {
-      // Small concurrency cap across tests — each test itself already runs its 4 skills in
-      // parallel (see runFullTestExtraction), so this bounds the total number of simultaneous
-      // Groq calls for the whole book rather than firing one giant unbounded Promise.all.
+      // Groq calls themselves are serialized + paced to the account's tokens-per-minute cap
+      // inside ieltsExtraction.js (callJsonGroq), so this cap only bounds how many tests have
+      // work queued at once — a whole book takes a while on a low-TPM Groq plan.
       const CONCURRENCY = 3;
       for (let i = 0; i < targetTests.length; i += CONCURRENCY) {
         await Promise.all(targetTests.slice(i, i + CONCURRENCY).map((t) => runFullTestExtraction(t.id)));

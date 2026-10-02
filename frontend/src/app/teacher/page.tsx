@@ -2165,6 +2165,14 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
   // khác với DaThu/CanThu trong biểu đồ 6 tháng vốn cố tình chỉ so sánh riêng học phí theo lớp.
   const revenueThisMonthTotal = revenueThisMonth ? revenueThisMonth.DaThu + (revenueThisMonth.HocVienTuDo || 0) : null;
   const revenuePrevMonthTotal = revenuePrevMonth ? revenuePrevMonth.DaThu + (revenuePrevMonth.HocVienTuDo || 0) : null;
+  // Lịch dạy hôm nay cho banner OVERVIEW — lớp có scheduleDays chứa thứ của hôm nay, sắp theo giờ bắt đầu
+  const today = new Date();
+  const todayLabel = today.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+  const todayClasses = classrooms
+    .filter((c: any) => {
+      try { return (c.scheduleDays ? JSON.parse(c.scheduleDays) : []).includes(today.getDay()); } catch { return false; }
+    })
+    .sort((a: any, b: any) => (a.startTime || '99:99').localeCompare(b.startTime || '99:99'));
   const revenueMoMPct = (revenueThisMonthTotal !== null && revenuePrevMonthTotal !== null && revenuePrevMonthTotal > 0)
     ? Math.round(((revenueThisMonthTotal - revenuePrevMonthTotal) / revenuePrevMonthTotal) * 1000) / 10
     : null;
@@ -2393,7 +2401,34 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
               description="Tổng quan tình hình lớp học, học phí và kết quả học tập của học viên — tự động cập nhật theo dữ liệu mới nhất."
               illustration="/images/illustrations/teacher-dashboard.svg"
               illustrationAlt="Giáo viên theo dõi biểu đồ và bảng lớp học"
-            />
+            >
+              <div className="w-full space-y-4">
+                <div className="bg-white rounded-2xl border border-line px-4 py-3 max-w-2xl">
+                  <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                    <p className="text-sm font-bold text-primary">Lịch dạy hôm nay</p>
+                    <span className="text-xs text-muted font-semibold first-letter:uppercase">{todayLabel}</span>
+                  </div>
+                  {todayClasses.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {todayClasses.map((c: any) => (
+                        <span key={c.id} className="ui-chip text-xs">
+                          <span className="font-bold">{c.name}</span>
+                          {c.startTime && <span className="text-muted ml-1.5">{c.startTime}{c.endTime && ` – ${c.endTime}`}</span>}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted">Hôm nay không có lớp nào theo lịch học đã thiết lập.</p>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={() => setActiveTab("ATTENDANCE")} className="btn-primary px-5 py-2.5 text-sm cursor-pointer">Điểm danh</button>
+                  <button type="button" onClick={openAddStudentModal} className="btn-outline px-5 py-2.5 text-sm cursor-pointer">+ Thêm học viên</button>
+                  <button type="button" onClick={() => setActiveTab("CREATE")} className="btn-outline px-5 py-2.5 text-sm cursor-pointer">Tạo đề mới</button>
+                  <button type="button" onClick={() => setActiveTab("CALENDAR")} className="btn-ghost px-5 py-2.5 text-sm cursor-pointer">Xem thời khoá biểu</button>
+                </div>
+              </div>
+            </PageBanner>
             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4 md:gap-5">
               <StatCard title="Tổng Học Viên" value={String(allStudents.length)} />
               <StatCard title="Tổng Lớp Đang Dạy" value={String(classrooms.length)} />
