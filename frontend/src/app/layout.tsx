@@ -45,7 +45,11 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
+  // Khai báo icon tường minh: chỉ để `apple` ở đây thì Next bỏ mất <link rel="icon"> tự sinh từ
+  // app/icon.png (trình duyệt không thấy favicon, cả dev lẫn production). /favicon.ico vẫn được
+  // Next tự khai báo từ file app/favicon.ico.
   icons: {
+    icon: "/icon.png",
     apple: "/logo.png",
   },
   formatDetection: { telephone: false },
@@ -92,8 +96,11 @@ export default function RootLayout({
               </div>
             </Link>
 
-            <div className="hidden lg:flex items-center">
-              <p className="text-sm text-muted font-semibold border-l-[3px] border-primary pl-3 py-0.5">
+            <div className="flex items-center gap-4 md:gap-6">
+              <Link href="/blog" className="text-sm font-bold text-foreground hover:text-primary transition-colors px-2 py-2">
+                Blog
+              </Link>
+              <p className="hidden lg:block text-sm text-muted font-semibold border-l-[3px] border-primary pl-3 py-0.5">
                 "Học tập không ngừng, vươn tới thành công"
               </p>
             </div>

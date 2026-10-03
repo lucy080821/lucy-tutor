@@ -78,6 +78,13 @@ model User {
   ieltsSpeakingAttempts  IeltsSpeakingAttempt[]
   ieltsStudySessions     IeltsStudySession[]
 
+  blogPosts         BlogPost[]         @relation("BlogPostAuthor")
+  blogRevisions     BlogPostRevision[] @relation("BlogRevisionEditor")
+  // Hồ sơ tác giả blog (/blog/tac-gia/[authorSlug]) — tự gán slug khi giáo viên đứng tên bài đầu tiên
+  authorSlug  String? @unique
+  authorTitle String? // Chức danh tự khai, vd "Giáo viên IELTS"
+  authorBio   String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -878,3 +885,63 @@ model IeltsStudySession {
   @@unique([skill, attemptId])
   @@index([userId])
 }
+
+// ─── Blog ────────────────────────────────────────────────────────────────────
+// Bài viết chia sẻ công khai tại /blog/[slug], giáo viên soạn ở /teacher/blog/editor.
+// Bài chỉ hiện công khai khi status = PUBLISHED và publishedAt <= now (publishedAt ở tương lai = hẹn giờ đăng).
+model BlogCategory {
+  id          String     @id @default(uuid())
+  name        String
+  slug        String     @unique
+  description String?
+  createdAt   DateTime   @default(now())
+  posts       BlogPost[]
+}
+
+model BlogPost {
+  id              String        @id @default(uuid())
+  title           String
+  slug            String        @unique
+  excerpt         String?       // Tóm tắt ngắn — hiện ở thẻ danh sách, fallback cho meta description
+  content         String        // HTML từ ReactQuill, đã sanitize ở backend khi lưu
+  coverImage      String?       // URL ảnh bìa (Supabase Storage hoặc link ngoài)
+  status          String        @default("DRAFT") // "DRAFT" | "PENDING" (chờ admin duyệt) | "PUBLISHED"
+  publishedAt     DateTime?
+  metaTitle       String?
+  metaDescription String?
+  tags            String[]      @default([])
+  readingMinutes  Int           @default(1)
+  featured        Boolean       @default(false)
+  views           Int           @default(0)
+  // Bài liên quan do tác giả tự chọn (giữ đúng thứ tự). Không phải FK — bài bị xoá/gỡ đăng tự bị lọc khi đọc.
+  relatedPostIds  String[]      @default([])
+
+  authorId   String
+  author     User          @relation("BlogPostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  categoryId String?
+  category   BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  revisions BlogPostRevision[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([categoryId])
+}
+
+// Ảnh chụp phiên bản cũ của bài, tạo lúc lưu đè (tối đa BLOG_MAX_REVISIONS bản/bài)
+model BlogPostRevision {
+  id         String   @id @default(uuid())
+  postId     String
+  post       BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  title      String
+  excerpt    String?
+  content    String
+  editedById String?
+  editedBy   User?    @relation("BlogRevisionEditor", fields: [editedById], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([postId, createdAt])
+}
+

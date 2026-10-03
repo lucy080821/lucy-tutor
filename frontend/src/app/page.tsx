@@ -452,6 +452,7 @@ export default function Home() {
                 <li><Link href="/grammar-gym" className="hover:text-primary transition-colors">Luyện ngữ pháp</Link></li>
                 <li><Link href="/gym" className="hover:text-primary transition-colors">Phòng Gym Từ Vựng</Link></li>
                 <li><Link href="/phonetics" className="hover:text-primary transition-colors">Bảng Âm IPA</Link></li>
+                <li><Link href="/blog" className="hover:text-primary transition-colors">Blog chia sẻ</Link></li>
               </ul>
             </nav>
             <nav aria-label="Dành cho giáo viên">

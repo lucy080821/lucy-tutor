@@ -1,6 +1,6 @@
 // Cấu hình SEO dùng chung (metadata, sitemap, robots, JSON-LD).
-// NEXT_PUBLIC_SITE_URL nên được set ở môi trường production; giá trị fallback chỉ là placeholder.
-export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://lucytutor.vn").replace(/\/+$/, "");
+// Domain thật: lucytutor.online. NEXT_PUBLIC_SITE_URL (nếu set) sẽ ghi đè giá trị này.
+export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://lucytutor.online").replace(/\/+$/, "");
 export const SITE_NAME = "Lucy Tutor";
 export const SITE_DESCRIPTION =
   "Lucy Tutor – nền tảng luyện thi Tiếng Anh THPT Quốc Gia và IELTS cho học sinh Việt Nam: luyện nghe, đọc, viết, nói cùng AI, đề thi thử, từ vựng SRS và công cụ quản lý lớp học cho giáo viên.";

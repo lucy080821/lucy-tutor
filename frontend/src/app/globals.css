@@ -310,3 +310,38 @@ button {
 .quill-content ol { list-style-type: decimal; padding-left: 1.5em; }
 .quill-content ul { list-style-type: disc; padding-left: 1.5em; }
 .quill-content li { margin-bottom: 0.25em; }
+
+/* Nội dung bài blog (/blog/[slug] + xem trước trong editor). Quill 2 xuất mọi danh sách dạng <ol>
+   kèm li[data-list="bullet"|"ordered"] nên phải tự đổi kiểu đánh dấu, và ẩn span .ql-ui của editor. */
+.blog-content { font-size: 1.0625rem; line-height: 1.8; color: var(--foreground); }
+.blog-content > * + * { margin-top: 1em; }
+.blog-content p { margin-bottom: 0; }
+.blog-content h2 { font-size: 1.6em; font-weight: 800; line-height: 1.3; margin-top: 1.6em; color: var(--primary); scroll-margin-top: 80px; }
+.blog-content h3 { font-size: 1.25em; font-weight: 700; line-height: 1.4; margin-top: 1.4em; scroll-margin-top: 80px; }
+.blog-content h1 { font-size: 1.9em; font-weight: 800; margin-top: 1.4em; }
+.blog-content a { color: #2563eb; text-decoration: underline; text-underline-offset: 2px; }
+.blog-content li[data-list="bullet"] { list-style-type: disc; }
+.blog-content li[data-list="ordered"] { list-style-type: decimal; }
+.blog-content .ql-ui { display: none; }
+.blog-content blockquote { border-left: 4px solid var(--primary); background: var(--primary-soft); padding: 0.75em 1.25em; border-radius: 0 12px 12px 0; font-style: italic; }
+.blog-content pre, .blog-content .ql-code-block-container { background: #0f172a; color: #e2e8f0; padding: 1em 1.25em; border-radius: 12px; overflow-x: auto; font-family: Consolas, monospace; font-size: 0.9em; line-height: 1.6; }
+.blog-content code { background: var(--primary-soft); padding: 0.1em 0.35em; border-radius: 6px; font-family: Consolas, monospace; font-size: 0.9em; }
+.blog-content pre code { background: transparent; padding: 0; }
+.blog-content img { border-radius: 12px; margin-left: auto; margin-right: auto; }
+.blog-content iframe.ql-video { width: 100%; aspect-ratio: 16 / 9; height: auto; border-radius: 12px; }
+.blog-content hr { border-color: var(--line); margin: 2em 0; }
+.blog-content table { border-collapse: collapse; width: 100%; font-size: 0.95em; line-height: 1.5; }
+.blog-content th, .blog-content td { border: 1px solid var(--line-strong); padding: 0.6em 0.8em; text-align: left; vertical-align: top; }
+.blog-content thead th { background: var(--primary); color: #fff; font-weight: 700; }
+.blog-content tbody th { background: var(--primary-soft); font-weight: 600; white-space: nowrap; }
+/* Câu/đoạn đang được đọc khi bấm "Nghe bài viết" */
+.blog-reading { background: #fff4e5; box-shadow: 0 0 0 6px #fff4e5; border-radius: 6px; transition: background-color 0.2s; }
+.blog-content .ql-align-center { text-align: center; }
+.blog-content .ql-align-right { text-align: right; }
+.blog-content .ql-align-justify { text-align: justify; }
+.blog-content .ql-indent-1 { padding-left: 2em; }
+.blog-content .ql-indent-2 { padding-left: 4em; }
+/* Ô soạn thảo blog cao hơn mặc định để viết bài dài thoải mái */
+.blog-editor .ql-container { min-height: 480px; font-size: 1.0625rem; font-family: inherit; }
+.blog-editor .ql-editor { min-height: 480px; line-height: 1.8; }
+.blog-editor .ql-toolbar { position: sticky; top: 0; z-index: 10; background: #fff; border-radius: 12px 12px 0 0; }

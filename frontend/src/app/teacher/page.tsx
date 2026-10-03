@@ -1982,6 +1982,14 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
         { id: "IELTS_LIBRARY", label: "Thư Viện Đề Cambridge", icon: "📚" }
       ]
     },
+    {
+      id: "BLOG_GROUP", label: "Blog", icon: "📰",
+      subItems: [
+        // Trang riêng (không phải tab) — có href thì sidebar điều hướng thay vì setActiveTab
+        { id: "BLOG", label: "Quản Lý Blog", icon: "📰", href: "/teacher/blog" },
+        { id: "BLOG_NEW", label: "Viết Bài Mới", icon: "✍️", href: "/teacher/blog/editor" }
+      ]
+    },
     { id: "LEADERBOARD", label: "Bảng Xếp Hạng", icon: "🏆" }
   ];
 
@@ -2352,7 +2360,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
                   {expandedNav[group.id] && (
                     <div className="flex flex-col gap-0.5">
                       {group.subItems.map(item => (
-                        <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
+                        <button key={item.id} onClick={() => { if ('href' in item && item.href) { router.push(item.href); return; } setActiveTab(item.id); setIsMobileMenuOpen(false); }}
                           className={`ui-nav-item text-sm cursor-pointer ${activeTab === item.id ? 'ui-nav-item-active font-bold' : ''}`}>
                           <span className="truncate">{item.label}</span>
                         </button>

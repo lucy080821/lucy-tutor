@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');
 const router = express.Router();
 const { isCutoffReached, addDays, TRIAL_DAYS, computeAccessStatus } = require('../utils/freeTrial');
+const { compressAvatarDataUrl } = require('../utils/avatarCompress');
 
 const BCRYPT_ROUNDS = 10;
 
@@ -138,7 +139,8 @@ router.put('/change-password', async (req, res) => {
 router.put('/avatar/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { avatar } = req.body; // Base64 string
+    // Base64 string; null/rỗng = xoá avatar. Luôn nén lại phía server (xem utils/avatarCompress.js)
+    const avatar = req.body.avatar ? await compressAvatarDataUrl(req.body.avatar) : null;
     const user = await prisma.user.update({
       where: { id },
       data: { avatar }

@@ -24,6 +24,7 @@ const fireConfetti = (opts: any) => {
 import { usePagination } from "@/lib/usePagination";
 import Pagination from "@/components/Pagination";
 import { compressImageToBase64 } from "@/lib/imageCompress";
+import LatestBlogPosts from "@/components/blog/LatestBlogPosts";
 
 // Daily check-in is a non-idempotent POST (adds XP) — share one in-flight request per user/day so
 // React StrictMode's double-mounted effect (dev) or a quick re-visit doesn't fire it twice.
@@ -1112,6 +1113,9 @@ export default function StudentDashboard() {
 
             {/* 4 Skills Panel */}
             <SkillsPanel progress={skillProgress} />
+
+            {/* 3 bài blog mới nhất (tự ẩn nếu chưa có bài) */}
+            <LatestBlogPosts />
 
             {/* Chart Section */}
             {history.length > 0 && (

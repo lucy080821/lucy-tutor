@@ -3,3 +3,6 @@ node_modules
 .env
 
 /generated/prisma
+
+# Bản sao lưu dữ liệu người dùng (vd avatar gốc từ scripts/compressExistingAvatars.js) — không commit
+/backups
