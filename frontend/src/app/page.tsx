@@ -1,8 +1,14 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { CEFR_LEVELS } from "@/lib/skillPractice";
 import JsonLd from "@/components/seo/JsonLd";
+import ScrollReveal from "@/components/landing/ScrollReveal";
+import FeatureVideo from "@/components/landing/FeatureVideo";
 
 // Server component: nội dung tĩnh hoàn toàn (không state) → HTML render sẵn, tốt cho SEO.
+// Chuyển động: class lp-* (hero) + data-reveal (hiện dần khi cuộn, do <ScrollReveal />) — CSS ở khối
+// "Landing motion" cuối globals.css. d(ms) = độ trễ so le, truyền qua biến CSS --d.
+const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 
 /* 4 kỹ năng — nay hiển thị ngay trong lưới luyện tập (mục 3) thay vì tab chuyển đổi. */
 const PRACTICE_ITEMS = [
@@ -164,24 +170,25 @@ export default function Home() {
   return (
     <div className="flex-1 flex flex-col bg-white">
       <JsonLd />
+      <ScrollReveal />
 
       {/* ── 1. Hero ── */}
-      <section className="bg-white px-4 sm:px-6 pt-10 pb-14 md:pt-14 md:pb-20" aria-labelledby="hero-title">
+      <section className="bg-white px-4 sm:px-6 pt-10 pb-14 md:pt-14 md:pb-20 overflow-hidden" aria-labelledby="hero-title">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center">
           <div className="space-y-6 text-center lg:text-left">
-            <span className="ui-badge uppercase tracking-wide">Nền tảng luyện thi Tiếng Anh toàn diện</span>
-            <h1 id="hero-title" className="text-4xl sm:text-5xl lg:text-[3.4rem] font-extrabold tracking-tight leading-tight text-primary">
+            <span className="ui-badge uppercase tracking-wide lp-enter" style={d(0)}>Nền tảng luyện thi Tiếng Anh toàn diện</span>
+            <h1 id="hero-title" style={d(100)} className="lp-enter text-4xl sm:text-5xl lg:text-[3.4rem] font-extrabold tracking-tight leading-tight text-primary">
               Chinh phục Tiếng Anh bằng{" "}
               <span className="relative inline-block">
                 <span className="relative z-10">AI thế hệ mới</span>
-                <span aria-hidden="true" className="absolute left-0 right-0 bottom-1 h-3 sm:h-4 bg-highlight/40 rounded-sm" />
+                <span aria-hidden="true" className="lp-underline absolute left-0 right-0 bottom-1 h-3 sm:h-4 bg-highlight/40 rounded-sm" />
               </span>
             </h1>
-            <p className="text-base sm:text-lg text-muted max-w-xl mx-auto lg:mx-0 leading-relaxed">
+            <p className="lp-enter text-base sm:text-lg text-muted max-w-xl mx-auto lg:mx-0 leading-relaxed" style={d(200)}>
               Lộ trình học cá nhân hóa · Luyện 4 kỹ năng Reading, Listening, Speaking, Writing · AI phân tích điểm yếu tức thì · Giáo viên quản lý lớp không cần Excel.
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start">
-              <Link href="/auth?role=STUDENT" className="btn-primary px-8 py-3.5 text-base">
+            <div className="lp-enter flex flex-col sm:flex-row gap-3 justify-center lg:justify-start" style={d(300)}>
+              <Link href="/auth?role=STUDENT" className="btn-primary lp-shine px-8 py-3.5 text-base">
                 Dành cho Học Sinh
               </Link>
               <Link href="/auth?role=TEACHER" className="btn-outline px-8 py-3.5 text-base">
@@ -189,7 +196,7 @@ export default function Home() {
               </Link>
             </div>
             {/* Trial callout — ưu đãi thật, không phải số liệu dàn dựng */}
-            <p className="flex flex-wrap items-center justify-center lg:justify-start gap-2 text-sm text-muted">
+            <p className="lp-enter flex flex-wrap items-center justify-center lg:justify-start gap-2 text-sm text-muted" style={d(400)}>
               <span className="ui-badge-new">Dùng thử miễn phí 3 ngày</span>
               <span aria-hidden="true">·</span>
               <span>Không cần thẻ tín dụng</span>
@@ -197,26 +204,30 @@ export default function Home() {
           </div>
 
           <div className="relative mx-auto w-full max-w-xl">
-            <div className="rounded-3xl bg-primary-soft p-4 sm:p-6">
+            {/* 2 đốm màu mờ trôi chậm phía sau ảnh minh hoạ */}
+            <span aria-hidden="true" className="lp-blob pointer-events-none absolute -top-8 -right-6 w-44 h-44 rounded-full bg-highlight/25 blur-2xl" />
+            <span aria-hidden="true" className="lp-blob pointer-events-none absolute -bottom-10 -left-8 w-52 h-52 rounded-full bg-primary/15 blur-2xl" style={d(2500)} />
+            <div className="lp-enter-zoom relative rounded-3xl bg-primary-soft p-4 sm:p-6" style={d(150)}>
               <img
                 src="/images/illustrations/hero-student.svg"
                 alt="Học sinh luyện thi Tiếng Anh trên máy tính với tai nghe và sách"
                 width={800}
                 height={600}
                 loading="eager"
-                className="w-full h-auto"
+                className="lp-float w-full h-auto"
+                style={d(1000)}
               />
             </div>
             {/* Floating cards — chỉ nêu tính năng có thật */}
-            <div className="absolute -left-2 sm:-left-6 top-6 sm:top-10 bg-white rounded-2xl shadow-card border border-line px-4 py-3 max-w-[190px]">
+            <div style={d(600)} className="lp-pop-float absolute -left-2 sm:-left-6 top-6 sm:top-10 bg-white rounded-2xl shadow-card border border-line px-4 py-3 max-w-[190px]">
               <p className="text-xs text-muted">Luyện theo cấp độ</p>
               <p className="text-sm font-bold text-primary">CEFR A1 – C1</p>
             </div>
-            <div className="absolute -right-2 sm:-right-6 top-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-card border border-line px-4 py-3 max-w-[190px] hidden sm:block">
+            <div style={d(800)} className="lp-pop-float absolute -right-2 sm:-right-6 top-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-card border border-line px-4 py-3 max-w-[190px] hidden sm:block">
               <p className="text-xs text-muted">Chấm Writing & Speaking</p>
               <p className="text-sm font-bold text-primary">Tiêu chí IELTS</p>
             </div>
-            <div className="absolute left-4 sm:left-10 -bottom-5 bg-white rounded-2xl shadow-card border border-line px-4 py-3 max-w-[210px]">
+            <div style={d(1000)} className="lp-pop-float absolute left-4 sm:left-10 -bottom-5 bg-white rounded-2xl shadow-card border border-line px-4 py-3 max-w-[210px]">
               <p className="text-xs text-muted">Ôn từ vựng khoa học</p>
               <p className="text-sm font-bold text-primary">SRS · Thuật toán SM-2</p>
             </div>
@@ -224,19 +235,35 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── Video giới thiệu tính năng (MP4 tự phát khi cuộn tới, xem FeatureVideo) — nối liền nền với mục 6 bước bên dưới ── */}
+      <section className="bg-background px-4 sm:px-6 pt-14 pb-2" aria-labelledby="video-title">
+        <div className="max-w-5xl mx-auto">
+          <div data-reveal className="text-center mb-8 space-y-3">
+            <h2 id="video-title" className="ui-section-title text-center text-2xl md:text-3xl font-extrabold">Xem Lucy Tutor hoạt động</h2>
+            <p className="text-muted max-w-2xl mx-auto">Một vòng hơn 1 phút qua luyện 4 kỹ năng, AI chấm bài viết, đề thi thử có tính giờ và hơn thế nữa.</p>
+          </div>
+          <div data-reveal="zoom" className="ui-card overflow-hidden p-0">
+            <FeatureVideo />
+          </div>
+        </div>
+      </section>
+
       {/* ── 2. 6 bước ── */}
       <section className="bg-background px-4 sm:px-6 py-14" aria-labelledby="steps-title">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-10 space-y-3">
+          <div data-reveal className="text-center mb-10 space-y-3">
             <h2 id="steps-title" className="ui-section-title text-center text-2xl md:text-3xl font-extrabold">6 bước chinh phục Tiếng Anh cùng Lucy Tutor</h2>
             <p className="text-muted max-w-2xl mx-auto">Từ lúc tạo tài khoản đến khi theo dõi tiến bộ — mỗi bước đều gắn với một công cụ có sẵn trong ứng dụng.</p>
           </div>
           <ol className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-6">
-            {STEPS.map((step) => (
-              <li key={step.num} className="ui-card ui-card-hover p-6 h-full">
-                <span className="block text-4xl font-black text-primary/20 leading-none mb-3">{step.num}</span>
-                <h3 className="text-lg font-bold text-primary mb-2">{step.title}</h3>
-                <p className="text-muted text-sm leading-relaxed">{step.desc}</p>
+            {STEPS.map((step, i) => (
+              // data-reveal đặt ở lớp bọc ngoài, không đặt thẳng lên card — tránh transition-delay làm chậm hiệu ứng hover của card
+              <li key={step.num} data-reveal style={d((i % 3) * 110)} className="h-full">
+                <div className="group ui-card ui-card-hover p-6 h-full">
+                  <span className="block text-4xl font-black text-primary/20 leading-none mb-3 transition-colors duration-300 group-hover:text-highlight">{step.num}</span>
+                  <h3 className="text-lg font-bold text-primary mb-2">{step.title}</h3>
+                  <p className="text-muted text-sm leading-relaxed">{step.desc}</p>
+                </div>
               </li>
             ))}
           </ol>
@@ -246,15 +273,16 @@ export default function Home() {
       {/* ── 3. Luyện tập ── */}
       <section className="bg-white px-4 sm:px-6 py-14" aria-labelledby="practice-title">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-10 space-y-3">
+          <div data-reveal className="text-center mb-10 space-y-3">
             <h2 id="practice-title" className="ui-section-title text-center text-2xl md:text-3xl font-extrabold">Luyện tập 4 kỹ năng & đề thi thử</h2>
             <p className="text-muted max-w-2xl mx-auto">Mỗi kỹ năng được track độc lập với lộ trình, bài tập và báo cáo riêng biệt.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
-            {PRACTICE_ITEMS.map((item) => (
-              <article key={item.href} className="ui-card ui-card-hover overflow-hidden flex flex-col">
-                <div className="aspect-video bg-primary-soft">
-                  <img src={item.thumb} alt={item.alt} width={640} height={360} loading="lazy" className="w-full h-full object-cover" />
+            {PRACTICE_ITEMS.map((item, i) => (
+              <div key={item.href} data-reveal style={d((i % 4) * 100)} className="h-full">
+              <article className="group ui-card ui-card-hover overflow-hidden flex flex-col h-full">
+                <div className="aspect-video bg-primary-soft overflow-hidden">
+                  <img src={item.thumb} alt={item.alt} width={640} height={360} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 </div>
                 <div className="p-5 flex flex-col flex-1">
                   <h3 className="font-bold text-primary text-base mb-1">{item.title}</h3>
@@ -265,6 +293,7 @@ export default function Home() {
                   </Link>
                 </div>
               </article>
+              </div>
             ))}
           </div>
         </div>
@@ -273,16 +302,16 @@ export default function Home() {
       {/* ── 4. Lộ trình cấp độ CEFR ── */}
       <section className="bg-background px-4 sm:px-6 py-14" aria-labelledby="levels-title">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-10 space-y-3">
+          <div data-reveal className="text-center mb-10 space-y-3">
             <h2 id="levels-title" className="ui-section-title text-center text-2xl md:text-3xl font-extrabold">Lộ trình theo cấp độ A1 – C1</h2>
             <p className="text-muted max-w-2xl mx-auto">Reading, Writing, Speaking và Listening đều cho phép chọn cấp độ theo khung CEFR, để bài luyện luôn vừa sức với bạn.</p>
           </div>
-          <ol className="relative grid grid-cols-1 md:grid-cols-5 gap-5">
-            <span aria-hidden="true" className="hidden md:block absolute top-7 left-[10%] right-[10%] h-0.5 bg-primary/20" />
+          <ol data-reveal className="relative grid grid-cols-1 md:grid-cols-5 gap-5">
+            <span aria-hidden="true" className="lp-line hidden md:block absolute top-7 left-[10%] right-[10%] h-0.5 bg-primary/20" />
             {CEFR_LEVELS.map((lvl, i) => {
               const [code, name] = lvl.label.split(" — ");
               return (
-                <li key={lvl.value} className="relative flex md:flex-col items-start md:items-center gap-4 md:gap-3 md:text-center">
+                <li key={lvl.value} data-reveal="zoom" style={d(200 + i * 130)} className="relative flex md:flex-col items-start md:items-center gap-4 md:gap-3 md:text-center">
                   <span
                     className={`relative z-10 shrink-0 w-14 h-14 rounded-full flex items-center justify-center font-extrabold text-lg border-2 border-primary ${
                       i === CEFR_LEVELS.length - 1 ? "bg-primary text-white" : "bg-white text-primary"
@@ -304,21 +333,23 @@ export default function Home() {
       {/* ── Tính năng nổi bật ── */}
       <section className="bg-white px-4 sm:px-6 py-14" aria-labelledby="features-title">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-10 space-y-3">
+          <div data-reveal className="text-center mb-10 space-y-3">
             <h2 id="features-title" className="ui-section-title text-center text-2xl md:text-3xl font-extrabold">Mọi thứ bạn cần để bứt phá</h2>
             <p className="text-muted max-w-2xl mx-auto">8 tính năng nổi bật dành cho học viên và giáo viên.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
-            {FEATURES.map((f) => (
-              <article key={f.title} className="ui-card ui-card-hover overflow-hidden">
-                <div className="aspect-video bg-primary-soft">
-                  <img src={f.thumb} alt={f.alt} width={640} height={360} loading="lazy" className="w-full h-full object-cover" />
-                </div>
-                <div className="p-5">
-                  <h3 className="font-bold text-primary text-base mb-2">{f.title}</h3>
-                  <p className="text-muted text-sm leading-relaxed">{f.desc}</p>
-                </div>
-              </article>
+            {FEATURES.map((f, i) => (
+              <div key={f.title} data-reveal style={d((i % 4) * 100)} className="h-full">
+                <article className="group ui-card ui-card-hover overflow-hidden h-full">
+                  <div className="aspect-video bg-primary-soft overflow-hidden">
+                    <img src={f.thumb} alt={f.alt} width={640} height={360} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  </div>
+                  <div className="p-5">
+                    <h3 className="font-bold text-primary text-base mb-2">{f.title}</h3>
+                    <p className="text-muted text-sm leading-relaxed">{f.desc}</p>
+                  </div>
+                </article>
+              </div>
             ))}
           </div>
         </div>
@@ -327,24 +358,24 @@ export default function Home() {
       {/* ── 5. Dành cho giáo viên ── */}
       <section className="bg-background px-4 sm:px-6 py-14" aria-labelledby="teacher-title">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-          <div className="order-2 lg:order-1">
+          <div data-reveal="left" className="order-2 lg:order-1">
             <img
               src="/images/illustrations/teacher-dashboard.svg"
               alt="Giáo viên theo dõi biểu đồ và quản lý lớp học trên dashboard"
               width={800}
               height={600}
               loading="lazy"
-              className="w-full h-auto max-w-xl mx-auto"
+              className="lp-float w-full h-auto max-w-xl mx-auto"
             />
           </div>
-          <div className="order-1 lg:order-2 space-y-5">
+          <div data-reveal="right" className="order-1 lg:order-2 space-y-5">
             <h2 id="teacher-title" className="ui-section-title text-2xl md:text-3xl font-extrabold">Dashboard dành cho Giáo Viên</h2>
             <p className="text-muted leading-relaxed">
               Quản lý lớp học, điểm danh, học phí, giao đề thi — tất cả trên một nền tảng, không cần bảng tính Excel.
             </p>
             <ul className="space-y-3">
-              {TEACHER_FEATURES.map((t) => (
-                <li key={t} className="flex items-start gap-3 text-foreground">
+              {TEACHER_FEATURES.map((t, i) => (
+                <li key={t} data-reveal="left" style={d(150 + i * 70)} className="flex items-start gap-3 text-foreground">
                   <svg aria-hidden="true" className="w-5 h-5 mt-0.5 shrink-0 text-primary" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                   </svg>
@@ -362,7 +393,7 @@ export default function Home() {
       {/* ── 6. FAQ ── */}
       <section className="bg-white px-4 sm:px-6 py-14" aria-labelledby="faq-title">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[2fr_3fr] gap-10 items-start">
-          <div className="space-y-4 text-center lg:text-left">
+          <div data-reveal className="space-y-4 text-center lg:text-left">
             <h2 id="faq-title" className="ui-section-title text-2xl md:text-3xl font-extrabold inline-block lg:block">Câu hỏi thường gặp</h2>
             <p className="text-muted">Những thắc mắc phổ biến về tài khoản, dùng thử và cách chấm điểm.</p>
             <img
@@ -376,7 +407,7 @@ export default function Home() {
           </div>
           <div className="space-y-3">
             {FAQS.map((f, i) => (
-              <details key={f.q} className="group ui-card px-5 py-1" open={i === 0}>
+              <details key={f.q} data-reveal style={d(i * 90)} className="group ui-card px-5 py-1" open={i === 0}>
                 <summary className="flex items-center justify-between gap-4 py-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                   <h3 className="font-bold text-primary text-base">{f.q}</h3>
                   <svg aria-hidden="true" className="w-5 h-5 shrink-0 text-primary transition-transform group-open:rotate-180" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24">
@@ -390,9 +421,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── 7. Liên hệ / CTA ── */}
-      <section className="bg-background px-4 sm:px-6 py-14" aria-labelledby="cta-title">
-        <div className="max-w-7xl mx-auto ui-card p-6 sm:p-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+      {/* ── 7. Liên hệ / CTA ── (menu "Liên hệ" ở header trỏ tới #lien-he; scroll-mt chừa chỗ cho header sticky) */}
+      <section id="lien-he" className="bg-background px-4 sm:px-6 py-14 scroll-mt-16" aria-labelledby="cta-title">
+        <div data-reveal="zoom" className="max-w-7xl mx-auto ui-card p-6 sm:p-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
           <div className="space-y-5 text-center md:text-left">
             <h2 id="cta-title" className="ui-section-title text-2xl md:text-3xl font-extrabold inline-block md:block">Bắt đầu học ngay hôm nay</h2>
             <p className="text-muted text-base sm:text-lg">Không cần thẻ tín dụng. Dùng thử miễn phí 3 ngày.</p>
@@ -404,9 +435,20 @@ export default function Home() {
                 Dành cho Giáo Viên
               </Link>
             </div>
-            <p className="text-sm text-muted">
-              Cần hỗ trợ? Liên hệ <a href="mailto:lucy@lucytutor.vn" className="font-semibold text-primary hover:underline">lucy@lucytutor.vn</a>
-            </p>
+            <div className="rounded-2xl bg-primary-soft p-4 sm:p-5 text-left">
+              <h3 className="font-bold text-foreground">Liên hệ với Lucy Tutor</h3>
+              <p className="text-sm text-muted mt-1">Cần tư vấn lộ trình, hỗ trợ tài khoản hay hợp tác? Liên hệ với chúng tôi:</p>
+              <dl className="mt-3 space-y-1 text-sm">
+                <div className="flex flex-wrap items-center gap-x-2">
+                  <dt className="text-muted">Hotline:</dt>
+                  <dd><a href="tel:+84869603164" className="inline-block py-1.5 font-bold text-primary hover:underline">0869.603.164</a></dd>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-2">
+                  <dt className="text-muted">Email:</dt>
+                  <dd><a href="mailto:admin@lucytutor.online" className="inline-block py-1.5 font-bold text-primary hover:underline break-all">admin@lucytutor.online</a></dd>
+                </div>
+              </dl>
+            </div>
           </div>
           <img
             src="/images/illustrations/contact.svg"
@@ -414,7 +456,7 @@ export default function Home() {
             width={800}
             height={600}
             loading="lazy"
-            className="w-full h-auto max-w-md mx-auto"
+            className="lp-float w-full h-auto max-w-md mx-auto"
           />
         </div>
       </section>
@@ -459,7 +501,8 @@ export default function Home() {
               <h3 className="text-primary font-bold mb-3 text-sm uppercase tracking-wide">Giáo viên</h3>
               <ul className="space-y-2 text-sm">
                 <li><Link href="/auth?role=TEACHER" className="hover:text-primary transition-colors">Đăng nhập Giáo Viên</Link></li>
-                <li><a href="mailto:lucy@lucytutor.vn" className="hover:text-primary transition-colors">Hỗ trợ: lucy@lucytutor.vn</a></li>
+                <li><a href="tel:+84869603164" className="hover:text-primary transition-colors">Hotline: 0869.603.164</a></li>
+                <li><a href="mailto:admin@lucytutor.online" className="hover:text-primary transition-colors break-all">Hỗ trợ: admin@lucytutor.online</a></li>
               </ul>
             </nav>
           </div>

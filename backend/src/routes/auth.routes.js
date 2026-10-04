@@ -95,6 +95,10 @@ router.post('/signin', async (req, res) => {
     if (!user || !user.password || !(await bcrypt.compare(password, user.password))) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
+    // 3 loại tài khoản tách biệt: tài khoản quản trị (ADMIN) chỉ đăng nhập ở /administrator, không bao giờ qua đây
+    if (user.role === 'ADMIN') {
+      return res.status(403).json({ error: 'Tài khoản quản trị không dùng để đăng nhập ở đây. Vui lòng đăng nhập tại trang quản trị.' });
+    }
     // One account is locked to the role it registered with — a student picking "Giáo Viên"
     // (or vice versa) on the login toggle must not be let in under the wrong role.
     if (role && user.role !== role) {

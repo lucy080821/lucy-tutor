@@ -6,9 +6,10 @@ import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import DOMPurify from "dompurify";
-import { getSessionUserId } from "@/lib/session";
+import { getSessionUserId, redirectToOwnArea } from "@/lib/session";
 import { SITE_URL } from "@/lib/seo";
-import { API_URL, slugify, stripHtml, type BlogCategory } from "@/lib/blog";
+import { API_URL, slugify, stripHtml, type BlogCategory, type BlogReadStats } from "@/lib/blog";
+import { PostStatsDetail } from "../BlogStatsWidgets";
 import AiAssistant from "./AiAssistant";
 import RevisionsModal from "./RevisionsModal";
 import RelatedPostsPicker from "./RelatedPostsPicker";
@@ -114,7 +115,8 @@ function BlogEditor() {
   const [dirty, setDirty] = useState(false);
   const [preview, setPreview] = useState(false);
   const [showRevisions, setShowRevisions] = useState(false);
-  const [views, setViews] = useState(0);
+  // Thống kê người đọc (lượt xem/click, thời gian đọc, mức cuộn) — chỉ hiện với bài đã đăng
+  const [stats, setStats] = useState<BlogReadStats | null>(null);
   // id bài vừa được tạo ngay trong trang này — đổi URL sang ?id=... không cần tải lại bài từ server
   const createdHereRef = useRef<string | null>(null);
   // Điều khiển editor nội dung từ sidebar (chèn link bài liên quan tại vị trí con trỏ)
@@ -142,7 +144,7 @@ function BlogEditor() {
           fetch(`${API_URL}/api/auth/teachers`),
         ]);
         const me = meRes.ok ? await meRes.json() : null;
-        if (me?.id && me.role !== "TEACHER") { router.replace("/dashboard"); return; }
+        if (me?.id && me.role !== "TEACHER") { redirectToOwnArea(me.role, router); return; }
         if (blogMeRes.ok) setIsAdmin(!!(await blogMeRes.json()).isAdmin);
         if (catRes.ok) setCategories(await catRes.json());
         if (teacherRes.ok) setTeachers(await teacherRes.json());
@@ -177,7 +179,11 @@ function BlogEditor() {
         };
         serverUpdatedAt = new Date(p.updatedAt).getTime();
         setSavedStatus(p.status);
-        setViews(p.views || 0);
+        setStats({
+          views: p.views || 0, clicks: p.clicks || 0, readingMinutes: p.readingMinutes || 1,
+          readSeconds: p.readSeconds || 0, readSessions: p.readSessions || 0,
+          scroll25: p.scroll25 || 0, scroll50: p.scroll50 || 0, scroll75: p.scroll75 || 0, scroll100: p.scroll100 || 0,
+        });
         setLastSavedAt(new Date(p.updatedAt));
         setSlugTouched(true); // bài đã có link — không tự đổi link theo tiêu đề nữa (tránh gãy link đã chia sẻ)
       }
@@ -673,10 +679,14 @@ function BlogEditor() {
                 Ghim làm bài nổi bật (lên đầu trang Blog)
               </label>
             )}
-            {postId && savedStatus === "PUBLISHED" && (
-              <p className="text-xs text-muted">Lượt xem: <b className="text-foreground">{views.toLocaleString("vi-VN")}</b> ·{" "}
-                <Link href={`/blog/${form.slug}`} target="_blank" className="text-primary hover:underline">Mở bài viết</Link>
-              </p>
+            {postId && savedStatus === "PUBLISHED" && stats && (
+              <div className="border-t border-line pt-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-foreground">Thống kê người đọc</p>
+                  <Link href={`/blog/${form.slug}`} target="_blank" className="text-xs text-primary hover:underline">Mở bài viết</Link>
+                </div>
+                <PostStatsDetail stats={stats} />
+              </div>
             )}
           </section>
 

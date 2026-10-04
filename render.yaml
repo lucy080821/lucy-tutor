@@ -17,6 +17,9 @@ services:
         sync: false
       - key: SUPABASE_KEY
         sync: false
+      # Trang quản trị /administrator: khoá ký phiên đăng nhập admin (chuỗi ngẫu nhiên dài)
+      - key: ADMIN_TOKEN_SECRET
+        sync: false
 
   # 2. Frontend Service (Next.js Application)
   - type: web

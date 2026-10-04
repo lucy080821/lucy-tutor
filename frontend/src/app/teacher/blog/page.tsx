@@ -4,12 +4,24 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Swal from "sweetalert2";
-import { getSessionUserId } from "@/lib/session";
+import { getSessionUserId, redirectToOwnArea } from "@/lib/session";
 import { usePagination } from "@/lib/usePagination";
 import Pagination from "@/components/Pagination";
-import { API_URL, authorHref, formatBlogDate, slugify, type BlogCategory, type BlogPostSummary } from "@/lib/blog";
+import {
+  API_URL, authorHref, deriveReadStats, formatBlogDate, formatDuration, slugify,
+  type BlogCategory, type BlogPostSummary, type BlogReadStats,
+} from "@/lib/blog";
+import { ScrollBars, readPercentTone } from "./BlogStatsWidgets";
 
-type ManagedPost = BlogPostSummary & { status: "DRAFT" | "PENDING" | "PUBLISHED"; updatedAt: string };
+type ManagedPost = BlogPostSummary & BlogReadStats & { status: "DRAFT" | "PENDING" | "PUBLISHED"; updatedAt: string };
+type StatsSort = "views" | "clicks" | "readSessions" | "avgSeconds" | "readPercent" | "finish";
+const STATS_SORT_LABEL: Record<StatsSort, string> = {
+  views: "Lượt xem", clicks: "Lượt click", readSessions: "Lượt đọc",
+  avgSeconds: "Thời gian đọc TB", readPercent: "% thời lượng đã đọc", finish: "Tỉ lệ đọc hết bài",
+};
+const STATS_PAGE_SIZE = 10;
+// Số liệu người đọc tự làm mới định kỳ (polling như dashboard giáo viên, không WebSocket)
+const STATS_REFRESH_MS = 30_000;
 type StatusFilter = "ALL" | "PENDING" | "PUBLISHED" | "SCHEDULED" | "DRAFT";
 type BlogMe = {
   isAdmin: boolean;
@@ -70,13 +82,29 @@ export default function TeacherBlogPage() {
     }
   }, []);
 
+  // Làm mới ngầm danh sách bài (kèm số liệu người đọc) mỗi 30 giây và khi tab lấy lại focus — không bật trạng thái "Đang tải"
+  useEffect(() => {
+    if (!userId) return;
+    const refresh = async () => {
+      if (document.hidden) return;
+      try {
+        const res = await fetch(`${API_URL}/api/blog/manage/posts?userId=${userId}`);
+        if (res.ok) setPosts(await res.json());
+      } catch { /* mất mạng — giữ số cũ */ }
+    };
+    const timer = setInterval(refresh, STATS_REFRESH_MS);
+    const onVisible = () => { if (!document.hidden) refresh(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { clearInterval(timer); document.removeEventListener("visibilitychange", onVisible); };
+  }, [userId]);
+
   useEffect(() => {
     const uid = getSessionUserId();
     if (!uid) { router.push("/auth?role=TEACHER"); return; }
     fetch(`${API_URL}/api/auth/me?userId=${uid}`)
       .then((r) => r.json())
       .then((u) => {
-        if (u?.id && u.role !== "TEACHER") { router.replace("/dashboard"); return; }
+        if (u?.id && u.role !== "TEACHER") { redirectToOwnArea(u.role, router); return; }
         setUserId(uid);
         load(uid);
       })
@@ -97,6 +125,38 @@ export default function TeacherBlogPage() {
     );
   }, [posts, search, statusFilter]);
   const pagination = usePagination(filtered, PAGE_SIZE, `${search}|${statusFilter}`);
+
+  // Thống kê người đọc: chỉ bài đang hiện công khai
+  const [statsSort, setStatsSort] = useState<StatsSort>("views");
+  const statsRows = useMemo(() => {
+    const rows = posts
+      .filter((p) => postState(p) === "PUBLISHED")
+      .map((p) => ({ post: p, d: deriveReadStats(p) }));
+    const key = (r: (typeof rows)[number]): number => {
+      switch (statsSort) {
+        case "views": return r.post.views;
+        case "clicks": return r.post.clicks;
+        case "readSessions": return r.post.readSessions;
+        case "avgSeconds": return r.d.avgSeconds;
+        case "readPercent": return r.d.readPercent;
+        case "finish": return r.d.scroll[100];
+      }
+    };
+    return rows.sort((a, b) => key(b) - key(a));
+  }, [posts, statsSort]);
+  const statsPagination = usePagination(statsRows, STATS_PAGE_SIZE, statsSort);
+  const statsTotals = useMemo(() => {
+    const t = { views: 0, clicks: 0, readSeconds: 0, readSessions: 0, scroll100: 0 };
+    statsRows.forEach(({ post }) => {
+      t.views += post.views; t.clicks += post.clicks; t.readSeconds += post.readSeconds;
+      t.readSessions += post.readSessions; t.scroll100 += post.scroll100;
+    });
+    return {
+      ...t,
+      avgSeconds: t.readSessions ? Math.round(t.readSeconds / t.readSessions) : 0,
+      finishRate: t.readSessions ? Math.min(100, Math.round((t.scroll100 / t.readSessions) * 100)) : 0,
+    };
+  }, [statsRows]);
 
   const deletePost = async (post: ManagedPost) => {
     const ok = await Swal.fire({
@@ -182,7 +242,94 @@ export default function TeacherBlogPage() {
         </div>
       </section>
 
-      <div className="max-w-6xl mx-auto px-4 md:px-8 py-8 grid gap-6 lg:grid-cols-[1fr_280px]">
+      <div className="max-w-6xl mx-auto px-4 md:px-8 pt-8">
+        <section className="ui-card p-4 md:p-6" aria-labelledby="blog-stats-title">
+          <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div>
+              <h2 id="blog-stats-title" className="ui-section-title text-lg">Thống Kê Bài Viết</h2>
+              <p className="text-xs text-muted mt-2">
+                Bài đã đăng · tự cập nhật mỗi 30 giây. Thời gian đọc chỉ tính lúc người đọc mở tab và có tương tác; mỗi lượt tối đa 30 phút.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <span className="text-muted">Sắp xếp theo</span>
+              <select value={statsSort} onChange={(e) => setStatsSort(e.target.value as StatsSort)} className="ui-input py-1.5">
+                {(Object.keys(STATS_SORT_LABEL) as StatsSort[]).map((k) => <option key={k} value={k}>{STATS_SORT_LABEL[k]}</option>)}
+              </select>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+            {[
+              ["Tổng lượt xem", statsTotals.views.toLocaleString("vi-VN")],
+              ["Tổng lượt click", statsTotals.clicks.toLocaleString("vi-VN")],
+              ["Tổng lượt đọc", statsTotals.readSessions.toLocaleString("vi-VN")],
+              ["Thời gian đọc TB", statsTotals.readSessions ? formatDuration(statsTotals.avgSeconds) : "—"],
+              ["Tỉ lệ đọc hết bài", statsTotals.readSessions ? `${statsTotals.finishRate}%` : "—"],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-xl border border-line p-3">
+                <p className="text-xs text-muted">{label}</p>
+                <p className="text-xl font-bold text-foreground tabular-nums mt-1">{value}</p>
+              </div>
+            ))}
+          </div>
+
+          {loading ? (
+            <p className="text-muted text-sm py-6 text-center">Đang tải...</p>
+          ) : statsRows.length === 0 ? (
+            <p className="text-muted text-sm py-6 text-center">Chưa có bài nào được đăng công khai.</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="ui-table w-full text-sm">
+                  <thead>
+                    <tr>
+                      <th className="text-left">Bài viết</th>
+                      <th className="text-right">Lượt xem</th>
+                      <th className="text-right">Lượt click</th>
+                      <th className="text-right">Lượt đọc</th>
+                      <th className="text-right">Đọc TB</th>
+                      <th className="text-right" title="Thời gian đọc TB so với thời gian đọc dự kiến của bài">Đã đọc</th>
+                      <th className="text-left">Mức cuộn</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {statsPagination.pageItems.map(({ post: p, d }) => (
+                      <tr key={p.id}>
+                        <td className="min-w-[220px]">
+                          <Link href={`/teacher/blog/editor?id=${p.id}`} className="font-semibold text-foreground hover:text-primary">{p.title}</Link>
+                          <p className="text-xs text-muted mt-0.5">{formatBlogDate(p.publishedAt)} · dự kiến {p.readingMinutes} phút đọc</p>
+                        </td>
+                        <td className="text-right tabular-nums">{p.views.toLocaleString("vi-VN")}</td>
+                        <td className="text-right tabular-nums">{p.clicks.toLocaleString("vi-VN")}</td>
+                        <td className="text-right tabular-nums">{p.readSessions.toLocaleString("vi-VN")}</td>
+                        <td className="text-right whitespace-nowrap tabular-nums">{p.readSessions ? formatDuration(d.avgSeconds) : "—"}</td>
+                        <td className="text-right">
+                          {p.readSessions ? <span className={`ui-badge ${readPercentTone(d.readPercent)}`}>{d.readPercent}%</span> : "—"}
+                        </td>
+                        <td>{p.readSessions ? <ScrollBars scroll={d.scroll} /> : <span className="text-xs text-muted">Chưa có dữ liệu</span>}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {statsPagination.totalPages > 1 && (
+                <div className="mt-4">
+                  <Pagination
+                    page={statsPagination.page}
+                    totalPages={statsPagination.totalPages}
+                    onPageChange={statsPagination.setPage}
+                    totalItems={statsPagination.totalItems}
+                    pageSize={STATS_PAGE_SIZE}
+                  />
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 grid gap-6 lg:grid-cols-[1fr_280px]">
         <div className="ui-card p-4 md:p-6 min-w-0">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-4">
             <div className="flex flex-wrap gap-2">
@@ -224,6 +371,7 @@ export default function TeacherBlogPage() {
                       <th className="text-left hidden md:table-cell">Danh mục</th>
                       <th className="text-left">Trạng thái</th>
                       <th className="text-right hidden sm:table-cell">Lượt xem</th>
+                      <th className="text-right hidden sm:table-cell">Lượt click</th>
                       <th className="text-right">Thao tác</th>
                     </tr>
                   </thead>
@@ -248,6 +396,7 @@ export default function TeacherBlogPage() {
                             )}
                           </td>
                           <td className="text-right hidden sm:table-cell">{p.views.toLocaleString("vi-VN")}</td>
+                          <td className="text-right hidden sm:table-cell">{(p.clicks ?? 0).toLocaleString("vi-VN")}</td>
                           <td className="text-right whitespace-nowrap">
                             <Link href={`/teacher/blog/editor?id=${p.id}`} className="btn-ghost text-sm">Sửa</Link>
                             {state === "PUBLISHED" && (

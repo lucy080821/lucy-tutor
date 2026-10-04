@@ -1,11 +1,13 @@
 import Link from "next/link";
+import { BlogPostStats } from "@/components/blog/BlogStats";
 import { type BlogPostSummary, authorHref, categoryHref, formatBlogDate } from "@/lib/blog";
 
-// Thẻ bài viết trong lưới /blog và mục "Bài viết liên quan" — server component, không có JS phía client.
+// Thẻ bài viết trong lưới /blog và mục "Bài viết liên quan" — server component. Link vào bài gắn data-blog-click
+// để BlogStatsProvider đếm lượt click; dòng lượt xem/click là client component tự làm mới.
 export default function PostCard({ post, large = false }: { post: BlogPostSummary; large?: boolean }) {
   return (
     <article className={`group ui-card ui-card-hover overflow-hidden flex flex-col ${large ? "lg:flex-row lg:col-span-full" : ""}`}>
-      <Link href={`/blog/${post.slug}`} className={`block bg-primary-soft shrink-0 ${large ? "lg:w-1/2" : ""}`}>
+      <Link href={`/blog/${post.slug}`} data-blog-click={post.slug} className={`block bg-primary-soft shrink-0 ${large ? "lg:w-1/2" : ""}`}>
         <img
           src={post.coverImage || "/images/thumbs/lesson.svg"}
           alt={post.title}
@@ -25,39 +27,29 @@ export default function PostCard({ post, large = false }: { post: BlogPostSummar
           )}
         </div>
         <h2 className={`font-bold text-foreground leading-snug ${large ? "text-2xl md:text-3xl" : "text-lg"}`}>
-          <Link href={`/blog/${post.slug}`} className="hover:text-primary transition-colors">
+          <Link href={`/blog/${post.slug}`} data-blog-click={post.slug} className="hover:text-primary transition-colors">
             {post.title}
           </Link>
         </h2>
         {post.excerpt && (
           <p className={`text-muted text-sm leading-relaxed ${large ? "line-clamp-4" : "line-clamp-3"}`}>{post.excerpt}</p>
         )}
-        {/* Nút đọc tiếp: thẻ nổi bật dùng nút cam (CTA nổi bật duy nhất), thẻ thường dùng link chữ.
+        {/* Nút đọc tiếp: mọi thẻ (nổi bật lẫn thường) dùng chung nút cam theo yêu cầu.
             Mũi tên trượt sang phải khi rê chuột vào cả thẻ để kéo mắt người đọc về nút. */}
-        {large ? (
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <Link href={`/blog/${post.slug}`} aria-label={`Đọc tiếp: ${post.title}`} className="btn-highlight shadow-sm">
-              Đọc tiếp bài viết
-              <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">→</span>
-            </Link>
-            <span className="text-xs text-muted">Chỉ mất khoảng {post.readingMinutes} phút</span>
-          </div>
-        ) : (
-          <Link
-            href={`/blog/${post.slug}`}
-            aria-label={`Đọc tiếp: ${post.title}`}
-            className="mt-1 self-start inline-flex items-center gap-1.5 py-2 text-sm font-bold text-primary hover:underline underline-offset-4"
-          >
-            Đọc tiếp
+        <div className={`flex flex-wrap items-center gap-3 ${large ? "mt-3" : "mt-2"}`}>
+          <Link href={`/blog/${post.slug}`} data-blog-click={post.slug} aria-label={`Đọc tiếp: ${post.title}`} className="btn-highlight shadow-sm">
+            Đọc tiếp bài viết
             <span aria-hidden className="transition-transform duration-200 group-hover:translate-x-1">→</span>
           </Link>
-        )}
+          <span className="text-xs text-muted">Chỉ mất khoảng {post.readingMinutes} phút</span>
+        </div>
         <p className="mt-auto pt-2 text-xs text-muted">
           {post.author.authorSlug
             ? <Link href={authorHref(post.author.authorSlug)} className="hover:text-primary">{post.author.name}</Link>
             : post.author.name}{" "}
           · {formatBlogDate(post.publishedAt)} · {post.readingMinutes} phút đọc
         </p>
+        <BlogPostStats slug={post.slug} views={post.views} clicks={post.clicks} className="text-xs text-muted" />
       </div>
     </article>
   );

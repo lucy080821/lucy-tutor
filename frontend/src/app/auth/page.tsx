@@ -1,6 +1,6 @@
 "use client";
 import { useState, Suspense, useEffect } from "react";
-import { getSessionUserId, setSessionUserId, clearSession } from "@/lib/session";
+import { getSessionUserId, setSessionUserId, clearSession, homeForRole } from "@/lib/session";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -50,11 +50,10 @@ function AuthForm() {
           throw new Error('Invalid session');
         })
         .then(data => {
-          if (data.role === 'TEACHER') {
-            router.replace('/teacher');
-          } else {
-            router.replace('/dashboard');
-          }
+          // Phiên của tài khoản không thuộc luồng học viên/giáo viên (vd ADMIN) -> bỏ phiên, ở lại trang đăng nhập
+          const home = homeForRole(data.role);
+          if (home) router.replace(home);
+          else clearSession();
         })
         .catch(() => {
           clearSession();
@@ -85,16 +84,15 @@ function AuthForm() {
         throw new Error(data.error || 'Authentication failed');
       }
 
-      // Luôn xoá phiên cũ ở cả 2 storage trước khi ghi phiên mới (xem lib/session.ts)
-      setSessionUserId(data.id, rememberMe);
-
       // Redirect based on the account's actual stored role (server response), not the locally
       // selected toggle — keeps this consistent with the session-restore effect above.
-      if (data.role === 'TEACHER') {
-        router.replace('/teacher');
-      } else {
-        router.replace('/dashboard');
-      }
+      // Backend đã chặn tài khoản ADMIN ở /signin; đây là lớp chặn thứ 2 phòng khi role lạ lọt qua
+      const home = homeForRole(data.role);
+      if (!home) throw new Error('Tài khoản này không đăng nhập được ở đây.');
+
+      // Luôn xoá phiên cũ ở cả 2 storage trước khi ghi phiên mới (xem lib/session.ts)
+      setSessionUserId(data.id, rememberMe);
+      router.replace(home);
     } catch (err: any) {
       setError(err.message);
     } finally {

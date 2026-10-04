@@ -339,7 +339,7 @@ button {
 .blog-content tbody th { background: var(--primary-soft); font-weight: 600; }
 @media (max-width: 640px) {
   .blog-content table { font-size: 0.875em; }
-  .blog-content th, .blog-content td { padding: 0.5em 0.6em; min-width: 6.5em; }
+  .blog-content th, .blog-content td { padding: 0.5em 0.6em; min-width: 6em; }
 }
 /* Câu/đoạn đang được đọc khi bấm "Nghe bài viết" */
 .blog-reading { background: #fff4e5; box-shadow: 0 0 0 6px #fff4e5; border-radius: 6px; transition: background-color 0.2s; }
@@ -352,3 +352,50 @@ button {
 .blog-editor .ql-container { min-height: 480px; font-size: 1.0625rem; font-family: inherit; }
 .blog-editor .ql-editor { min-height: 480px; line-height: 1.8; }
 .blog-editor .ql-toolbar { position: sticky; top: 0; z-index: 10; background: #fff; border-radius: 12px 12px 0 0; }
+
+/* ── Landing motion (trang chủ) ────────────────────────────────────────────────
+   Chỉ chạy khi người dùng KHÔNG bật "giảm chuyển động". Hiệu ứng vào trang của hero chạy bằng CSS thuần;
+   hiệu ứng hiện dần khi cuộn ([data-reveal]) chỉ ẩn phần tử khi <html> có class lp-motion do ScrollReveal thêm
+   sau khi JS chạy → không có JS thì nội dung vẫn hiện bình thường. Delay so le truyền qua biến --d (ms). */
+@keyframes lp-fade-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes lp-zoom-in { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes lp-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+@keyframes lp-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes lp-blob { 0%, 100% { transform: translate(0, 0) scale(1); } 50% { transform: translate(14px, -16px) scale(1.08); } }
+@keyframes lp-shine { 0% { transform: translateX(-160%) skewX(-20deg); } 55%, 100% { transform: translateX(320%) skewX(-20deg); } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .lp-enter { animation: lp-fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: var(--d, 0ms); }
+  .lp-enter-zoom { animation: lp-zoom-in 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: var(--d, 0ms); }
+  /* Thẻ nổi ở hero: bật ra rồi lơ lửng nhẹ (2 animation nối nhau trên cùng thuộc tính transform) */
+  .lp-pop-float {
+    animation: lp-zoom-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both, lp-float 5s ease-in-out infinite;
+    animation-delay: var(--d, 0ms), calc(var(--d, 0ms) + 600ms);
+  }
+  .lp-float { animation: lp-float 6s ease-in-out infinite; animation-delay: var(--d, 0ms); }
+  .lp-underline { transform-origin: left; animation: lp-grow-x 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.5s both; }
+  .lp-blob { animation: lp-blob 9s ease-in-out infinite; animation-delay: var(--d, 0ms); }
+  /* Vệt sáng lướt qua nút CTA chính */
+  .lp-shine { position: relative; overflow: hidden; }
+  .lp-shine::after {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 35%; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    animation: lp-shine 3.6s ease-in-out 1.6s infinite;
+  }
+
+  html.lp-motion [data-reveal] {
+    transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1), transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--d, 0ms);
+  }
+  html.lp-motion [data-reveal]:not(.is-visible) { opacity: 0; transform: translateY(28px); }
+  html.lp-motion [data-reveal="zoom"]:not(.is-visible) { transform: scale(0.9); }
+  html.lp-motion [data-reveal="left"]:not(.is-visible) { transform: translateX(-28px); }
+  html.lp-motion [data-reveal="right"]:not(.is-visible) { transform: translateX(28px); }
+  /* Gạch nhấn dưới tiêu đề mục kéo dài ra khi tiêu đề hiện */
+  html.lp-motion [data-reveal] .ui-section-title::after { transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.3s; transform-origin: left; }
+  html.lp-motion [data-reveal] .ui-section-title.text-center::after { transform-origin: center; }
+  html.lp-motion [data-reveal]:not(.is-visible) .ui-section-title::after { transform: scaleX(0); }
+  /* Đường nối lộ trình CEFR tự vẽ từ trái sang phải */
+  html.lp-motion [data-reveal] .lp-line { transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.2s; transform-origin: left; }
+  html.lp-motion [data-reveal]:not(.is-visible) .lp-line { transform: scaleX(0); }
+}

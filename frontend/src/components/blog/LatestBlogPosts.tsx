@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { trackBlogClick } from "@/components/blog/BlogStats";
 import { API_URL, formatBlogDate, type BlogPostSummary } from "@/lib/blog";
 
 // 3 bài blog mới nhất, hiện trong tab Tổng Quan của dashboard học viên. Chưa có bài nào -> không hiện gì.
@@ -28,7 +29,7 @@ export default function LatestBlogPosts() {
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {posts.map((p) => (
-          <Link key={p.id} href={`/blog/${p.slug}`} className="group rounded-xl border border-line overflow-hidden hover:border-primary transition-colors flex flex-col">
+          <Link key={p.id} href={`/blog/${p.slug}`} onClick={() => trackBlogClick(p.slug)} className="group rounded-xl border border-line overflow-hidden hover:border-primary transition-colors flex flex-col">
             <img
               src={p.coverImage || "/images/thumbs/lesson.svg"}
               alt={p.title}

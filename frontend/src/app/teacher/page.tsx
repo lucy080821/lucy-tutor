@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef, useMemo, createRef } from "react";
-import { getSessionUserId, clearSession } from "@/lib/session";
+import { getSessionUserId, clearSession, redirectToOwnArea } from "@/lib/session";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
@@ -182,9 +182,9 @@ export default function TeacherDashboard() {
           }).then(r => { if (r.isConfirmed) window.location.reload(); });
           return;
         }
-        // Trang này chỉ dành cho giáo viên — tài khoản học viên bị chuyển về dashboard học sinh
+        // Trang này chỉ dành cho giáo viên — tài khoản học viên về dashboard học sinh, tài khoản khác (ADMIN) bị đăng xuất
         if (data.role !== 'TEACHER') {
-          router.replace('/dashboard');
+          redirectToOwnArea(data.role, router);
           return;
         }
         setUser(data);

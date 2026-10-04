@@ -1,20 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { API_URL } from "@/lib/blog";
-
-// Trang bài viết được cache (ISR) nên lượt xem phải đếm từ trình duyệt. Mỗi tab chỉ đếm 1 lần/bài.
-export function BlogViewTracker({ slug }: { slug: string }) {
-  useEffect(() => {
-    const key = `blog_viewed_${slug}`;
-    try {
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, "1");
-    } catch { /* storage bị chặn — vẫn đếm */ }
-    fetch(`${API_URL}/api/blog/posts/${encodeURIComponent(slug)}/view`, { method: "POST" }).catch(() => {});
-  }, [slug]);
-  return null;
-}
+import { useState } from "react";
 
 export function ShareButtons({ url, title }: { url: string; title: string }) {
   const [copied, setCopied] = useState(false);

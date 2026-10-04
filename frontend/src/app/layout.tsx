@@ -79,7 +79,7 @@ export default function RootLayout({
 
         {/* Global Header — phong cách ieltsonlinetests: trắng, mảnh, viền dưới nhạt */}
         <header className="sticky top-0 z-50 bg-white border-b border-line shadow-[0_2px_12px_rgba(30,58,138,0.05)]">
-          <div className="max-w-screen-2xl mx-auto px-4 md:px-8 h-14 md:h-16 flex justify-between items-center gap-4">
+          <div className="max-w-screen-2xl mx-auto px-4 md:px-8 h-14 md:h-16 flex justify-between items-center gap-2 sm:gap-4">
             <Link href="/" className="flex items-center gap-2 md:gap-3 group">
               <img
                 src="/logo.png"
@@ -87,7 +87,7 @@ export default function RootLayout({
                 className="w-9 h-9 md:w-11 md:h-11 object-contain group-hover:scale-105 transition-transform duration-300"
               />
               <div className="flex flex-col leading-none">
-                <span className="text-xl md:text-2xl font-black text-primary tracking-tight">
+                <span className="text-lg sm:text-xl md:text-2xl font-black text-primary tracking-tight">
                   LUCY<span className="text-slate-400">TUTOR</span>
                 </span>
                 <span className="hidden md:block text-[10px] text-muted font-semibold tracking-widest uppercase mt-0.5">
@@ -96,10 +96,13 @@ export default function RootLayout({
               </div>
             </Link>
 
-            <div className="flex items-center gap-4 md:gap-6">
-              <Link href="/blog" className="text-sm font-bold text-foreground hover:text-primary transition-colors px-2 py-2">
-                Blog
-              </Link>
+            <div className="flex items-center gap-2 md:gap-6">
+              <nav aria-label="Menu chính" className="flex items-center md:gap-2">
+                <Link href="/" className="text-[13px] sm:text-sm font-bold text-foreground hover:text-primary transition-colors px-1 sm:px-2 py-2">Trang chủ</Link>
+                <Link href="/blog" className="text-[13px] sm:text-sm font-bold text-foreground hover:text-primary transition-colors px-1 sm:px-2 py-2">Blog</Link>
+                {/* Khối liên hệ nằm cuối trang chủ (section#lien-he) */}
+                <Link href="/#lien-he" className="text-[13px] sm:text-sm font-bold text-foreground hover:text-primary transition-colors px-1 sm:px-2 py-2">Liên hệ</Link>
+              </nav>
               <p className="hidden lg:block text-sm text-muted font-semibold border-l-[3px] border-primary pl-3 py-0.5">
                 "Học tập không ngừng, vươn tới thành công"
               </p>

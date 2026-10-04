@@ -6,7 +6,8 @@ import AuthorAvatar from "@/components/blog/AuthorAvatar";
 import BlogAudioPlayer from "@/components/blog/BlogAudioPlayer";
 import { baseOpenGraph, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { authorHref, blogFetch, categoryHref, formatBlogDate, slugify, stripHtml, type BlogPost, type BlogPostSummary } from "@/lib/blog";
-import { BlogViewTracker, ShareButtons } from "./BlogClientBits";
+import { ShareButtons } from "./BlogClientBits";
+import { BlogPostStats, BlogReadTracker, BlogViewTracker } from "@/components/blog/BlogStats";
 
 type Params = Promise<{ slug: string }>;
 type PostResponse = { post: BlogPost; related: BlogPostSummary[] };
@@ -113,6 +114,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
   return (
     <div className="flex-1">
       <BlogViewTracker slug={post.slug} />
+      <BlogReadTracker slug={post.slug} />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
@@ -140,6 +142,8 @@ export default async function BlogPostPage({ params }: { params: Params }) {
             <time dateTime={post.publishedAt ?? undefined}>{formatBlogDate(post.publishedAt)}</time>
             <span>·</span>
             <span>{post.readingMinutes} phút đọc</span>
+            <span>·</span>
+            <BlogPostStats slug={post.slug} views={post.views} clicks={post.clicks} />
           </div>
           {/* Nghe bài viết bằng giọng đọc của trình duyệt — đọc tiêu đề, tóm tắt rồi nội dung */}
           <BlogAudioPlayer wordCount={stripHtml(`${post.title} ${post.excerpt || ""} ${post.content}`).split(" ").length} />

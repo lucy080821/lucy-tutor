@@ -92,7 +92,7 @@ const publicWhere = () => ({ status: 'PUBLISHED', publishedAt: { lte: new Date()
 const AUTHOR_SELECT = { id: true, name: true, authorSlug: true };
 const LIST_SELECT = {
   id: true, title: true, slug: true, excerpt: true, coverImage: true, publishedAt: true,
-  readingMinutes: true, featured: true, tags: true, views: true,
+  readingMinutes: true, featured: true, tags: true, views: true, clicks: true,
   author: { select: AUTHOR_SELECT },
   category: { select: { id: true, name: true, slug: true } },
 };
@@ -213,14 +213,66 @@ router.get('/posts/:slug', async (req, res) => {
   }
 });
 
-// Đếm lượt xem gọi riêng từ client — trang bài viết được cache (ISR) nên không đếm được lúc render.
-router.post('/posts/:slug/view', async (req, res) => {
+// Lượt xem / lượt click đếm riêng từ client — trang bài viết được cache (ISR) nên không đếm được lúc render.
+// - view: mở trang bài viết (mỗi tab đếm 1 lần/bài, xem BlogViewTracker)
+// - click: bấm vào link dẫn tới bài từ thẻ bài viết (danh sách /blog, bài liên quan, dashboard học viên)
+// Trả về số liệu mới nhất để trình duyệt cập nhật ngay, không chờ lượt làm mới định kỳ.
+const STATS_SELECT = { slug: true, views: true, clicks: true };
+
+const bumpCounter = (field) => async (req, res) => {
   try {
-    await prisma.blogPost.updateMany({
-      where: { ...publicWhere(), slug: req.params.slug },
-      data: { views: { increment: 1 } },
-    });
-    res.json({ ok: true });
+    const where = { ...publicWhere(), slug: req.params.slug };
+    const { count } = await prisma.blogPost.updateMany({ where, data: { [field]: { increment: 1 } } });
+    if (!count) return res.status(404).json({ error: 'Không tìm thấy bài viết' });
+    const stats = await prisma.blogPost.findFirst({ where, select: STATS_SELECT });
+    res.json(stats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+router.post('/posts/:slug/view', bumpCounter('views'));
+router.post('/posts/:slug/click', bumpCounter('clicks'));
+
+// Thời gian đọc + mức cuộn, gửi từ BlogReadTracker khi người đọc rời tab/trang (navigator.sendBeacon gửi
+// text/plain để khỏi bị CORS preflight → tự parse JSON). Body: { seconds, first, scroll: [25|50|75|100] }
+// - seconds: số giây đọc thực sự kể từ lần gửi trước · first: lần gửi đầu của lượt đọc này → +1 lượt đọc
+// - scroll: các mốc vừa đạt được lần đầu trong lượt đọc. Chỉ cộng dồn, không lưu ai đọc.
+const READ_SCROLL_FIELDS = { 25: 'scroll25', 50: 'scroll50', 75: 'scroll75', 100: 'scroll100' };
+const MAX_READ_SECONDS = 30 * 60;
+router.post('/posts/:slug/read', express.text({ type: '*/*', limit: '2kb' }), async (req, res) => {
+  try {
+    let body = req.body;
+    if (typeof body === 'string') {
+      try { body = JSON.parse(body); } catch { return res.status(400).json({ error: 'Dữ liệu không hợp lệ' }); }
+    }
+    const seconds = Math.min(MAX_READ_SECONDS, Math.max(0, Math.round(Number(body?.seconds) || 0)));
+    const data = {};
+    if (seconds) data.readSeconds = { increment: seconds };
+    if (body?.first === true && seconds) data.readSessions = { increment: 1 };
+    for (const m of Array.isArray(body?.scroll) ? body.scroll : []) {
+      const field = READ_SCROLL_FIELDS[m];
+      if (field) data[field] = { increment: 1 };
+    }
+    if (Object.keys(data).length) {
+      await prisma.blogPost.updateMany({ where: { ...publicWhere(), slug: req.params.slug }, data });
+    }
+    res.status(204).end();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Số liệu xem/click của nhiều bài cùng lúc (?slugs=a,b,c) — trang /blog làm mới định kỳ để hiện gần real-time.
+// 1 truy vấn cho cả trang, chỉ select 3 field.
+const MAX_STATS_SLUGS = 50;
+router.get('/stats', async (req, res) => {
+  try {
+    const slugs = [...new Set(String(req.query.slugs || '').split(',').map((s) => s.trim()).filter(Boolean))]
+      .slice(0, MAX_STATS_SLUGS);
+    if (!slugs.length) return res.json({});
+    const rows = await prisma.blogPost.findMany({ where: { ...publicWhere(), slug: { in: slugs } }, select: STATS_SELECT });
+    res.set('Cache-Control', 'no-store');
+    res.json(Object.fromEntries(rows.map(({ slug, ...s }) => [slug, s])));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -322,7 +374,10 @@ router.get('/manage/posts', requireTeacher, async (req, res) => {
   try {
     const posts = await prisma.blogPost.findMany({
       where: req.teacher.isAdmin ? {} : { authorId: req.teacherId },
-      select: { ...LIST_SELECT, status: true, updatedAt: true, createdAt: true },
+      select: {
+        ...LIST_SELECT, status: true, updatedAt: true, createdAt: true,
+        readSeconds: true, readSessions: true, scroll25: true, scroll50: true, scroll75: true, scroll100: true,
+      },
       orderBy: { updatedAt: 'desc' },
     });
     res.json(posts);

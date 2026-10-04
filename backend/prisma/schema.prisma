@@ -913,6 +913,15 @@ model BlogPost {
   readingMinutes  Int           @default(1)
   featured        Boolean       @default(false)
   views           Int           @default(0)
+  clicks          Int           @default(0) // Lượt bấm vào bài từ thẻ bài viết (danh sách, bài liên quan, dashboard)
+  // Thời gian giữ chân người đọc (đo ở trình duyệt, xem BlogReadTracker): tổng giây đọc thực sự (tab đang mở + có tương tác)
+  // và số lượt đọc → thời gian đọc TB = readSeconds / readSessions. scrollNN = số lượt đọc đã cuộn tới NN% nội dung bài.
+  readSeconds     Int           @default(0)
+  readSessions    Int           @default(0)
+  scroll25        Int           @default(0)
+  scroll50        Int           @default(0)
+  scroll75        Int           @default(0)
+  scroll100       Int           @default(0)
   // Bài liên quan do tác giả tự chọn (giữ đúng thứ tự). Không phải FK — bài bị xoá/gỡ đăng tự bị lọc khi đọc.
   relatedPostIds  String[]      @default([])
 
@@ -945,3 +954,20 @@ model BlogPostRevision {
   @@index([postId, createdAt])
 }
 
+
+// Sổ thu chi của trang quản trị /administrator — admin tự nhập tay (thu nhập, chi phí) để tính lợi nhuận theo tháng.
+// Học phí thu qua app (TuitionPayment, FreeStudentPayment) KHÔNG tự cộng vào đây, chỉ hiện ở trang admin để tham khảo.
+model AdminTransaction {
+  id             String   @id @default(uuid())
+  type           String   // "INCOME" | "EXPENSE"
+  category       String   // Nhóm tự đặt, vd "Server", "Marketing", "Học phí trung tâm"
+  amount         Int      // VND, luôn dương
+  date           DateTime // Ngày phát sinh (lưu 12:00 giờ VN để không lệch tháng khi đổi múi giờ)
+  note           String?
+  recurring      Boolean  @default(false) // Khoản cố định hàng tháng — nút "Chép khoản cố định" sẽ chép sang tháng mới
+  createdByEmail String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([date])
+}

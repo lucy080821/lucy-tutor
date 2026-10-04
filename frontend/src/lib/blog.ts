@@ -19,6 +19,7 @@ export type BlogPostSummary = {
   featured: boolean;
   tags: string[];
   views: number;
+  clicks: number;
   author: BlogAuthorRef;
   category: { id: string; name: string; slug: string } | null;
 };
@@ -50,6 +51,46 @@ export function formatBlogDate(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString("vi-VN", {
     day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Asia/Ho_Chi_Minh",
   });
+}
+
+// Số liệu giữ chân người đọc (chỉ trả về ở API quản lý /manage/*, không hiện công khai).
+export type BlogReadStats = {
+  views: number;
+  clicks: number;
+  readingMinutes: number;
+  readSeconds: number;
+  readSessions: number;
+  scroll25: number;
+  scroll50: number;
+  scroll75: number;
+  scroll100: number;
+};
+
+export const SCROLL_MILESTONES = [25, 50, 75, 100] as const;
+
+const pct = (part: number, total: number) => (total > 0 ? Math.min(100, Math.round((part / total) * 100)) : 0);
+
+// Dẫn xuất từ số cộng dồn: thời gian đọc TB, % bài đã đọc so với thời gian đọc dự kiến, % lượt đọc cuộn tới từng mốc.
+export function deriveReadStats(s: BlogReadStats) {
+  const avgSeconds = s.readSessions > 0 ? Math.round(s.readSeconds / s.readSessions) : 0;
+  return {
+    avgSeconds,
+    readPercent: pct(avgSeconds, s.readingMinutes * 60),
+    scroll: {
+      25: pct(s.scroll25, s.readSessions),
+      50: pct(s.scroll50, s.readSessions),
+      75: pct(s.scroll75, s.readSessions),
+      100: pct(s.scroll100, s.readSessions),
+    } as Record<(typeof SCROLL_MILESTONES)[number], number>,
+  };
+}
+
+// 165 → "2 phút 45 giây"
+export function formatDuration(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = Math.round(totalSeconds % 60);
+  if (!m) return `${s} giây`;
+  return s ? `${m} phút ${s} giây` : `${m} phút`;
 }
 
 export function stripHtml(html: string): string {

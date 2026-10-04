@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
-import { getSessionUserId, clearSession } from "@/lib/session";
+import { getSessionUserId, clearSession, redirectToOwnArea } from "@/lib/session";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
@@ -219,10 +219,10 @@ export default function StudentDashboard() {
           return;
         }
         // Trang này chỉ dành cho học viên — PWA luôn mở /dashboard (start_url) nên tài khoản giáo viên
-        // phải được chuyển về đúng /teacher thay vì hiện nhầm dashboard học sinh
-        if (data.role === 'TEACHER') {
+        // phải được chuyển về đúng /teacher thay vì hiện nhầm dashboard học sinh; tài khoản khác (ADMIN) bị đăng xuất
+        if (data.role !== 'STUDENT') {
           ctrl.abort();
-          router.replace('/teacher');
+          redirectToOwnArea(data.role, router);
           return;
         }
         setUser(data);
