@@ -330,10 +330,17 @@ button {
 .blog-content img { border-radius: 12px; margin-left: auto; margin-right: auto; }
 .blog-content iframe.ql-video { width: 100%; aspect-ratio: 16 / 9; height: auto; border-radius: 12px; }
 .blog-content hr { border-color: var(--line); margin: 2em 0; }
-.blog-content table { border-collapse: collapse; width: 100%; font-size: 0.95em; line-height: 1.5; }
-.blog-content th, .blog-content td { border: 1px solid var(--line-strong); padding: 0.6em 0.8em; text-align: left; vertical-align: top; }
+/* Bảng: .quill-content đã cho display:block + overflow-x:auto → bảng nhiều cột tự cuộn ngang thay vì bóp méo.
+   Ô bảng không được ngắt giữa chữ (.quill-content đặt word-break: break-word cho cả khối → "Mist/ake"),
+   mỗi cột có min-width để chữ xuống dòng theo từ; cột tiêu đề hàng không nowrap nữa (từng chiếm gần hết bề ngang trên điện thoại). */
+.blog-content table { border-collapse: collapse; width: 100%; font-size: 0.95em; line-height: 1.5; -webkit-overflow-scrolling: touch; }
+.blog-content th, .blog-content td { border: 1px solid var(--line-strong); padding: 0.6em 0.8em; text-align: left; vertical-align: top; min-width: 7.5em; word-break: normal; overflow-wrap: normal; }
 .blog-content thead th { background: var(--primary); color: #fff; font-weight: 700; }
-.blog-content tbody th { background: var(--primary-soft); font-weight: 600; white-space: nowrap; }
+.blog-content tbody th { background: var(--primary-soft); font-weight: 600; }
+@media (max-width: 640px) {
+  .blog-content table { font-size: 0.875em; }
+  .blog-content th, .blog-content td { padding: 0.5em 0.6em; min-width: 6.5em; }
+}
 /* Câu/đoạn đang được đọc khi bấm "Nghe bài viết" */
 .blog-reading { background: #fff4e5; box-shadow: 0 0 0 6px #fff4e5; border-radius: 6px; transition: background-color 0.2s; }
 .blog-content .ql-align-center { text-align: center; }
