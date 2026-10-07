@@ -53,25 +53,33 @@ const BLOG_TOPICS = [
 // Đoạn dẫn nhập trang /blog: nói rõ blog để làm gì + có những chủ đề nào, dẫn người đọc xuống danh sách bài.
 function BlogIntro() {
   return (
-    <div className="mt-4 max-w-2xl">
-      <p className="text-sm md:text-base text-foreground leading-relaxed">
-        Học Tiếng Anh hiệu quả không chỉ nằm ở số giờ ngồi học mà ở <strong className="text-foreground">cách học đúng</strong>.
-        Blog là nơi đội ngũ giáo viên Lucy Tutor ghi lại những gì đã đúc kết từ quá trình đứng lớp: mẹo làm bài,
-        lỗi sai học viên hay mắc và cách khắc phục — viết ngắn gọn, có ví dụ cụ thể để bạn áp dụng được ngay.
+    <div className="mt-5 max-w-2xl">
+      <p className="border-l-4 border-primary pl-4 text-sm md:text-base text-foreground leading-relaxed">
+        Học Tiếng Anh hiệu quả không nằm ở số giờ ngồi học mà ở <strong className="text-primary">cách học đúng</strong>.
+        Đây là nơi giáo viên Lucy Tutor ghi lại những gì đúc kết từ quá trình đứng lớp: mẹo làm bài, lỗi sai hay gặp
+        và cách khắc phục, viết ngắn gọn, có ví dụ để bạn áp dụng ngay.
       </p>
-      <ul className="mt-4 grid sm:grid-cols-2 gap-x-6 gap-y-2.5">
-        {BLOG_TOPICS.map((t) => (
-          <li key={t.title} className="flex gap-2 text-sm">
-            <span aria-hidden className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
-            <span>
-              <strong className="text-foreground">{t.title}</strong>
-              <span className="text-muted"> — {t.text}</span>
+
+      <p className="mt-5 mb-2.5 text-xs font-bold uppercase tracking-wider text-muted">Bạn sẽ tìm thấy gì ở đây</p>
+      <ul className="grid sm:grid-cols-2 gap-3">
+        {BLOG_TOPICS.map((t, i) => (
+          <li key={t.title} className="flex gap-3 rounded-xl border border-line bg-surface p-3.5 shadow-card">
+            <span
+              aria-hidden
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-xs font-bold text-primary"
+            >
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-primary">{t.title}</span>
+              <span className="mt-0.5 block text-xs leading-snug text-muted">{t.text}</span>
             </span>
           </li>
         ))}
       </ul>
-      <p className="mt-4 text-sm text-muted">
-        Chọn một chủ đề bên dưới hoặc tìm theo từ khoá để bắt đầu đọc.
+
+      <p className="mt-4 flex items-center gap-1.5 text-sm font-semibold text-primary">
+        <span aria-hidden>↓</span> Chọn chủ đề bên dưới hoặc tìm theo từ khoá để bắt đầu đọc
       </p>
     </div>
   );
