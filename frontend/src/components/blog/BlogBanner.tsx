@@ -7,6 +7,7 @@ export default function BlogBanner({
   subtitle,
   searchAction,
   defaultQuery = "",
+  intro,
   aside,
 }: {
   crumbs: { label: string; href?: string }[];
@@ -14,6 +15,7 @@ export default function BlogBanner({
   subtitle?: string | null;
   searchAction?: string;
   defaultQuery?: string;
+  intro?: React.ReactNode;
   aside?: React.ReactNode;
 }) {
   return (
@@ -31,6 +33,7 @@ export default function BlogBanner({
           </nav>
           <h1 className="ui-page-title">{title}</h1>
           {subtitle && <p className="ui-page-subtitle mt-2">{subtitle}</p>}
+          {intro}
           {searchAction && (
             <form action={searchAction} className="mt-5 flex gap-2 max-w-md">
               <input
