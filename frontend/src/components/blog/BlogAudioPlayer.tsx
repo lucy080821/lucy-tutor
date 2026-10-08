@@ -459,6 +459,15 @@ export default function BlogAudioPlayer({ slug, wordCount }: { slug: string; wor
     } else if (status === "playing") speakFrom(index);
   };
 
+  // Nút âm lượng trên thanh chính: bấm để xoay vòng Bình thường -> Lớn -> Rất lớn
+  const cycleBoost = () => {
+    const i = BOOSTS.findIndex((b) => b.value === boost);
+    const next = BOOSTS[(i + 1) % BOOSTS.length].value;
+    updatePrefs({ boost: next });
+    if (gainRef.current) gainRef.current.gain.value = next;
+  };
+  const boostLabel = BOOSTS.find((b) => b.value === boost)?.label;
+
   // Đổi giọng trình duyệt khi đang đọc -> đọc lại câu hiện tại với cài đặt mới
   const applyAndRestart = (patch: Prefs) => {
     updatePrefs(patch);
@@ -511,6 +520,13 @@ export default function BlogAudioPlayer({ slug, wordCount }: { slug: string; wor
               </button>
             ))}
           </div>
+          {engine === "cloud" && (
+            <button onClick={cycleBoost} title="Bấm để đổi âm lượng" aria-label={`Âm lượng: ${boostLabel}. Bấm để đổi`}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold text-primary bg-primary-soft hover:bg-primary hover:text-white cursor-pointer">
+              <span aria-hidden="true">{boost >= 3 ? "🔊" : boost >= 2 ? "🔉" : "🔈"}</span>
+              {boostLabel}
+            </button>
+          )}
           <button onClick={() => setShowSettings((s) => !s)} aria-expanded={showSettings}
             className="text-xs font-semibold text-primary hover:underline cursor-pointer px-2 py-2">
             Giọng đọc
@@ -533,19 +549,6 @@ export default function BlogAudioPlayer({ slug, wordCount }: { slug: string; wor
                 Giọng đọc: <span className="font-semibold">Trung</span>
                 <span className="text-muted"> · giọng nam miền Nam (AI ElevenLabs), nghe giống nhau trên mọi thiết bị</span>
               </p>
-            ) : null}
-            {engine === "cloud" ? (
-              <div className="sm:col-span-2">
-                <p className="ui-label">Âm lượng</p>
-                <div className="flex flex-wrap gap-2">
-                  {BOOSTS.map((b) => (
-                    <button key={b.value} onClick={() => { updatePrefs({ boost: b.value }); if (gainRef.current) gainRef.current.gain.value = b.value; }}
-                      className={`ui-chip ${boost === b.value ? "ui-chip-active" : ""}`}>
-                      {b.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
             ) : (
               <>
                 <div className="sm:col-span-2">
