@@ -19,6 +19,10 @@ const CLOUD_MAX_CHARS = 2500; // backend nhận tối đa 3000 ký tự/đoạn
 
 const STORAGE_KEY = "blog_tts_prefs";
 const RATES = [0.75, 1, 1.25, 1.5];
+// Khuếch đại giọng ElevenLabs (file gốc khá nhỏ; volume của <audio> tối đa chỉ 100%) qua Web Audio:
+// gain -> limiter để to hơn mà không bị rè/vỡ tiếng. Giọng trình duyệt không khuếch đại được.
+const BOOSTS = [{ value: 1, label: "Bình thường" }, { value: 2, label: "Lớn" }, { value: 3, label: "Rất lớn" }];
+const DEFAULT_BOOST = 2;
 // Chữ có dấu tiếng Việt -> câu tiếng Việt
 const VI_CHARS = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
 // Viết tắt máy hay đọc sai -> đọc đầy đủ
@@ -124,7 +128,7 @@ function silentWav() {
   return silentUrl;
 }
 
-type Prefs = { voiceURI?: string; rate?: number; englishVoice?: boolean; follow?: boolean };
+type Prefs = { voiceURI?: string; rate?: number; englishVoice?: boolean; follow?: boolean; boost?: number };
 function loadPrefs(): Prefs {
   try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); } catch { return {}; }
 }
@@ -157,6 +161,8 @@ export default function BlogAudioPlayer({ slug, wordCount }: { slug: string; wor
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioIndexRef = useRef(-1); // khối đang nạp trong <audio> (để "Đọc tiếp" phát tiếp đúng chỗ đã dừng)
   const unlockedRef = useRef(false);
+  const gainRef = useRef<GainNode | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
   const urlCacheRef = useRef(new Map<string, Promise<string>>());
   const highlightedRef = useRef<HTMLElement | null>(null);
   const prefsRef = useRef<Prefs>({});
@@ -185,6 +191,7 @@ export default function BlogAudioPlayer({ slug, wordCount }: { slug: string; wor
   const enVoice = useMemo(() => englishVoice(voices), [voices]);
   const viVoice = viVoices.find((v) => v.voiceURI === prefs.voiceURI) || viVoices[0] || null;
   const rate = prefs.rate ?? 1;
+  const boost = prefs.boost ?? DEFAULT_BOOST;
   const englishVoiceOn = prefs.englishVoice ?? true;
   const follow = prefs.follow ?? true;
 
@@ -222,8 +229,35 @@ export default function BlogAudioPlayer({ slug, wordCount }: { slug: string; wor
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.preload = "auto";
+      // Bắt buộc để Web Audio đọc được mp3 khác domain (Supabase / backend đều trả CORS *); thiếu là ra im lặng
+      audioRef.current.crossOrigin = "anonymous";
     }
     return audioRef.current;
+  };
+
+  // Nối <audio> -> gain -> limiter -> loa. Gọi trong lúc bấm nút (iOS/Chrome chỉ cho AudioContext chạy sau cú chạm).
+  // Trình duyệt không có Web Audio thì vẫn phát bình thường, chỉ không khuếch đại.
+  const ensureBoost = () => {
+    try {
+      if (!audioCtxRef.current) {
+        const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+        if (!Ctx) return;
+        const ctx = new Ctx();
+        const gain = ctx.createGain();
+        const limiter = ctx.createDynamicsCompressor();
+        limiter.threshold.value = -3;
+        limiter.knee.value = 0;
+        limiter.ratio.value = 20;
+        limiter.attack.value = 0.003;
+        limiter.release.value = 0.15;
+        ctx.createMediaElementSource(getAudio()).connect(gain);
+        gain.connect(limiter).connect(ctx.destination);
+        audioCtxRef.current = ctx;
+        gainRef.current = gain;
+      }
+      if (gainRef.current) gainRef.current.gain.value = prefsRef.current.boost ?? DEFAULT_BOOST;
+      if (audioCtxRef.current.state === "suspended") audioCtxRef.current.resume().catch(() => {});
+    } catch { /* không khuếch đại được -> phát âm lượng gốc */ }
   };
 
   // URL mp3 của 1 đoạn (backend tạo 1 lần rồi cache) — nhớ promise để tải trước / bấm lại không gọi 2 lần
@@ -323,6 +357,7 @@ export default function BlogAudioPlayer({ slug, wordCount }: { slug: string; wor
     runRef.current++;
     const run = runRef.current;
     silenceAll();
+    if (engineRef.current === "cloud") ensureBoost();
     if (engineRef.current === "cloud" && !unlockedRef.current) {
       // Gọi trong lúc bấm nút (đồng bộ) -> mở khoá <audio> cho iOS
       unlockedRef.current = true;
@@ -384,6 +419,7 @@ export default function BlogAudioPlayer({ slug, wordCount }: { slug: string; wor
       runRef.current++;
       const run = runRef.current;
       bindAudio(audio, index, run);
+      ensureBoost();
       audio.playbackRate = prefsRef.current.rate ?? 1;
       setStatus("playing");
       audio.play().catch(() => { if (run === runRef.current) speakFrom(index); });
@@ -497,6 +533,19 @@ export default function BlogAudioPlayer({ slug, wordCount }: { slug: string; wor
                 Giọng đọc: <span className="font-semibold">Trung</span>
                 <span className="text-muted"> · giọng nam miền Nam (AI ElevenLabs), nghe giống nhau trên mọi thiết bị</span>
               </p>
+            ) : null}
+            {engine === "cloud" ? (
+              <div className="sm:col-span-2">
+                <p className="ui-label">Âm lượng</p>
+                <div className="flex flex-wrap gap-2">
+                  {BOOSTS.map((b) => (
+                    <button key={b.value} onClick={() => { updatePrefs({ boost: b.value }); if (gainRef.current) gainRef.current.gain.value = b.value; }}
+                      className={`ui-chip ${boost === b.value ? "ui-chip-active" : ""}`}>
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             ) : (
               <>
                 <div className="sm:col-span-2">
