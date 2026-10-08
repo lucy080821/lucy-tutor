@@ -145,8 +145,8 @@ export default async function BlogPostPage({ params }: { params: Params }) {
             <span>·</span>
             <BlogPostStats slug={post.slug} views={post.views} clicks={post.clicks} />
           </div>
-          {/* Nghe bài viết bằng giọng đọc của trình duyệt — đọc tiêu đề, tóm tắt rồi nội dung */}
-          <BlogAudioPlayer wordCount={stripHtml(`${post.title} ${post.excerpt || ""} ${post.content}`).split(" ").length} />
+          {/* Nghe bài viết bằng giọng ElevenLabs (lỗi thì giọng trình duyệt) — đọc tiêu đề, tóm tắt rồi nội dung */}
+          <BlogAudioPlayer slug={post.slug} wordCount={stripHtml(`${post.title} ${post.excerpt || ""} ${post.content}`).split(" ").length} />
         </header>
 
         {post.coverImage && (

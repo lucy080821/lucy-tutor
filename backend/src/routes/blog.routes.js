@@ -8,6 +8,7 @@ const prisma = require('../lib/prisma');
 const { slugify } = require('../utils/slugify');
 const { Groq } = require('groq-sdk');
 const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
+const tts = require('../utils/elevenlabsTts');
 
 const router = express.Router();
 
@@ -260,6 +261,102 @@ router.post('/posts/:slug/read', express.text({ type: '*/*', limit: '2kb' }), as
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// "Nghe bài viết" bằng giọng ElevenLabs: trình phát gửi lên từng đoạn (tiêu đề / tóm tắt / từng đoạn văn),
+// trả về URL mp3. Mỗi đoạn tạo 1 lần rồi cache trong Storage (`blog-tts/<hash>.mp3`, hash theo giọng + nội
+// dung) → người đọc sau không tốn ký tự; sửa 1 đoạn chỉ tạo lại đúng đoạn đó; chỉ đoạn nào có người nghe
+// tới mới tốn ký tự. Chỉ nhận đoạn văn có thật trong bài đã đăng — không để API key bị dùng đọc chữ tuỳ ý.
+const MAX_TTS_CHARS = 3000;
+const ttsUrlCache = new Map(); // hash -> URL công khai (đã có file trong Storage)
+const ttsInFlight = new Map(); // hash -> Promise<URL> (2 người cùng nghe 1 đoạn chưa có file → tạo 1 lần)
+// Dự phòng khi Storage lỗi (vd bị khoá vì vượt egress — lỗi 402): giữ mp3 trong RAM và backend tự phát,
+// để không phải gọi ElevenLabs (tốn ký tự) lại mỗi lần có người nghe. Giới hạn dung lượng, bỏ file cũ nhất.
+const TTS_MEMORY_MAX_BYTES = 64 * 1024 * 1024;
+const ttsMemory = new Map(); // hash -> Buffer (Map giữ thứ tự thêm vào → phần tử đầu là cũ nhất)
+let ttsMemoryBytes = 0;
+function rememberTtsAudio(hash, buf) {
+  ttsMemory.set(hash, buf);
+  ttsMemoryBytes += buf.length;
+  for (const [key, old] of ttsMemory) {
+    if (ttsMemoryBytes <= TTS_MEMORY_MAX_BYTES) break;
+    ttsMemory.delete(key);
+    ttsUrlCache.delete(key);
+    ttsMemoryBytes -= old.length;
+  }
+}
+const decodeEntities = (s) => s
+  .replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+  .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n))).replace(/&amp;/g, '&');
+// So khớp chỉ theo chữ + số: textContent của trình duyệt và HTML đã bỏ thẻ khác nhau ở khoảng trắng/dấu câu
+const lettersOnly = (s) => s.normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+const ttsPostText = new Map(); // slug -> { at, text } (cache 60 giây, khỏi truy vấn DB mỗi đoạn)
+async function postPlainLetters(slug) {
+  const hit = ttsPostText.get(slug);
+  if (hit && Date.now() - hit.at < 60_000) return hit.text;
+  const post = await prisma.blogPost.findFirst({ where: { ...publicWhere(), slug }, select: { title: true, excerpt: true, content: true } });
+  const text = post ? lettersOnly(decodeEntities(`${post.title} ${post.excerpt || ''} ${post.content.replace(/<[^>]*>/g, ' ')}`)) : null;
+  ttsPostText.set(slug, { at: Date.now(), text });
+  return text;
+}
+
+router.post('/posts/:slug/tts', async (req, res) => {
+  try {
+    if (!tts.isConfigured() || !supabase) return res.status(503).json({ error: 'Chưa cấu hình giọng đọc ElevenLabs' });
+    const raw = String(req.body?.text || '').replace(/\s+/g, ' ').trim();
+    if (!raw || raw.length > MAX_TTS_CHARS) return res.status(400).json({ error: 'Đoạn văn không hợp lệ' });
+    const letters = lettersOnly(raw);
+    if (!letters) return res.status(400).json({ error: 'Đoạn văn không hợp lệ' });
+    const postText = await postPlainLetters(req.params.slug);
+    if (postText === null) return res.status(404).json({ error: 'Không tìm thấy bài viết' });
+    if (!postText.includes(letters)) return res.status(400).json({ error: 'Đoạn văn không thuộc bài viết' });
+
+    const text = tts.normalizeForSpeech(raw);
+    const { voiceId, hash } = await tts.cacheKey(text);
+    if (ttsUrlCache.has(hash)) return res.json({ url: ttsUrlCache.get(hash) });
+
+    if (!ttsInFlight.has(hash)) {
+      const job = (async () => {
+        const fileName = `blog-tts/${hash}.mp3`;
+        const { data } = supabase.storage.from('documents').getPublicUrl(fileName);
+        // Server khởi động lại thì mất cache trong RAM → hỏi Storage xem file đã có chưa trước khi tạo lại
+        const head = await fetch(data.publicUrl, { method: 'HEAD' }).catch(() => null);
+        if (!head?.ok) {
+          const audio = await tts.synthesize(text, voiceId);
+          const { error } = await supabase.storage.from('documents').upload(fileName, audio, {
+            contentType: 'audio/mpeg', cacheControl: '31536000', upsert: true,
+          });
+          if (error) {
+            console.error('[blog tts] Storage lỗi, phát mp3 từ RAM:', error.message);
+            rememberTtsAudio(hash, audio);
+            const local = `/api/blog/tts-audio/${hash}.mp3`; // đường dẫn tương đối — trình phát tự ghép API_URL
+            ttsUrlCache.set(hash, local);
+            return local;
+          }
+        }
+        ttsUrlCache.set(hash, data.publicUrl);
+        return data.publicUrl;
+      })().finally(() => ttsInFlight.delete(hash));
+      ttsInFlight.set(hash, job);
+    }
+    res.json({ url: await ttsInFlight.get(hash) });
+  } catch (err) {
+    console.error('[blog tts]', err.message);
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+// Phát mp3 giữ trong RAM (xem rememberTtsAudio). Hỗ trợ Range vì Safari bắt buộc 206 mới phát/tua được audio.
+router.get('/tts-audio/:file', (req, res) => {
+  const buf = ttsMemory.get(String(req.params.file).replace(/\.mp3$/, ''));
+  if (!buf) return res.status(404).end();
+  res.set({ 'Content-Type': 'audio/mpeg', 'Accept-Ranges': 'bytes', 'Cache-Control': 'public, max-age=86400' });
+  const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range || '');
+  if (!m || (!m[1] && !m[2])) return res.send(buf);
+  const start = m[1] ? Number(m[1]) : Math.max(0, buf.length - Number(m[2]));
+  const end = m[1] && m[2] ? Math.min(Number(m[2]), buf.length - 1) : buf.length - 1;
+  if (start >= buf.length || start > end) return res.status(416).set('Content-Range', `bytes */${buf.length}`).end();
+  res.status(206).set('Content-Range', `bytes ${start}-${end}/${buf.length}`).send(buf.subarray(start, end + 1));
 });
 
 // Số liệu xem/click của nhiều bài cùng lúc (?slugs=a,b,c) — trang /blog làm mới định kỳ để hiện gần real-time.
