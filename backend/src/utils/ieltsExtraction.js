@@ -12,6 +12,7 @@
 const { Groq } = require('groq-sdk');
 const prisma = require('../lib/prisma');
 const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
+const { restoreParagraphs } = require('./ieltsParagraphs');
 // maxRetries: 0 — retries (incl. 429 back-off) are handled by callJsonGroq's own queue below.
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || 'fake_key_for_now', maxRetries: 0 });
 
@@ -411,7 +412,7 @@ async function extractReadingPassage(pages, passageRange) {
 ${buildPagesText(spanPages)}
 """
 Nhiệm vụ:
-1. Trích xuất NGUYÊN VĂN đoạn văn đọc hiểu (bodyText) — ghép lại đúng thứ tự câu nếu bài bị ngắt dòng sai do dàn trang nhiều cột.
+1. Trích xuất NGUYÊN VĂN đoạn văn đọc hiểu (bodyText) — ghép lại đúng thứ tự câu nếu bài bị ngắt dòng sai do dàn trang nhiều cột. GIỮ ĐÚNG cách chia đoạn như trong sách: nối các dòng trong cùng 1 đoạn thành 1 dòng, các đoạn cách nhau bằng 1 dòng trống ("\\n\\n"); nếu đoạn có nhãn chữ cái (A, B, C...) thì giữ nhãn ở đầu đoạn. Bỏ chú thích cuối trang (dòng bắt đầu bằng * hoặc •) và số trang.
 2. Trích xuất TOÀN BỘ câu hỏi đi cùng đoạn văn này. Mỗi câu gồm: questionNumber (số câu trong đề, ví dụ 1-13), type (chọn đúng 1 trong: ${READING_QUESTION_TYPES.join(', ')}), groupInstruction (hướng dẫn chung nếu câu thuộc 1 nhóm câu hỏi được giới thiệu cùng nhau, ví dụ "Questions 14-18: Complete the summary below" — để trống nếu câu độc lập), promptText (nội dung câu hỏi hoặc câu cần điền), options (mảng các lựa chọn nếu là dạng trắc nghiệm/nối — với dạng nối tiêu đề/thông tin/đặc điểm thì đây là danh sách lựa chọn chung của cả nhóm câu, lặp lại y nguyên cho mỗi câu trong nhóm; để trống nếu là dạng điền từ/trả lời ngắn), wordLimit (ví dụ "NO MORE THAN TWO WORDS", để trống nếu không ghi rõ).
 KHÔNG cần điền đáp án đúng ở bước này.
 
@@ -438,7 +439,13 @@ async function runReadingExtraction(testId) {
   const extracted = await Promise.all(sortedPassages.map((p, i) => {
     const endPage = i + 1 < sortedPassages.length ? sortedPassages[i + 1].startPage - 1 : range.endPage;
     return extractReadingPassage(pages, { startPage: p.startPage, endPage })
-      .then((data) => ({ sectionNumber: p.sectionNumber, passageIndex: p.passageIndex || 1, ...data }));
+      .then((data) => ({
+        sectionNumber: p.sectionNumber,
+        passageIndex: p.passageIndex || 1,
+        ...data,
+        // the model often still returns one unbroken block — recover paragraphs from the page text
+        bodyText: restoreParagraphs(data?.bodyText, pages.filter((pg) => pg.num >= p.startPage && pg.num <= endPage))
+      }));
   }));
 
   for (const p of extracted) {
@@ -652,6 +659,7 @@ async function runSingleSkillExtraction(testId, skill) {
 }
 
 module.exports = {
+  getSkillPageRange,
   runBoundaryExtraction,
   runFullTestExtraction,
   runSingleSkillExtraction
