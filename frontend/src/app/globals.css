@@ -399,3 +399,16 @@ button {
   html.lp-motion [data-reveal] .lp-line { transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1) 0.2s; transform-origin: left; }
   html.lp-motion [data-reveal]:not(.is-visible) .lp-line { transform: scaleX(0); }
 }
+
+/* Highlight + ghi chú của học viên trên bài đọc (components/highlight/HighlightableHtml.tsx) */
+mark.user-hl {
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+  cursor: context-menu;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+mark.user-hl.user-hl-noted {
+  border-bottom: 2px dotted #1E3A8A;
+}

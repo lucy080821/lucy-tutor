@@ -4,7 +4,7 @@ import { getSessionUserId } from "@/lib/session";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "sweetalert2";
-import DOMPurify from "dompurify";
+import HighlightableHtml from "@/components/highlight/HighlightableHtml";
 import { SkillReportPDF, SkillReportRubricItem } from "@/components/reports/SkillReportPDF";
 import { exportNodeToPDF } from "@/lib/pdfExport";
 import IeltsStudyPanel from "@/components/ielts/IeltsStudyPanel";
@@ -59,6 +59,10 @@ export default function IeltsReadingTakingPage() {
       const resData = await res.json();
       if (!res.ok) { Swal.fire("Lỗi", resData.error || "Không thể nộp bài", "error"); return; }
       setResult(resData);
+      // Nộp xong thì bỏ highlight/ghi chú tạm của lượt này — lần làm lại bắt đầu bài đọc sạch
+      try {
+        Object.keys(sessionStorage).filter((k) => k.startsWith(`ielts_hl_${testId}_`)).forEach((k) => sessionStorage.removeItem(k));
+      } catch {}
     } catch (err) { console.error(err); Swal.fire("Lỗi", "Không thể nộp bài", "error"); } finally { setSubmitting(false); }
   }, [userId, testId, answers, submitting]);
   submitRef.current = handleSubmit;
@@ -171,10 +175,17 @@ export default function IeltsReadingTakingPage() {
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 space-y-6">
         {data.passages.map((passage: any) => (
           <div key={passage.id} className="ui-card p-5 sm:p-6 space-y-4">
-            <h2 className="ui-section-title text-lg">Section {passage.sectionNumber}{passage.passageIndex > 1 ? `.${passage.passageIndex}` : ""}{passage.title ? ` — ${passage.title}` : ""}</h2>
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <h2 className="ui-section-title text-lg">Section {passage.sectionNumber}{passage.passageIndex > 1 ? `.${passage.passageIndex}` : ""}{passage.title ? ` — ${passage.title}` : ""}</h2>
+              <p className="text-xs text-muted">Bôi đen rồi bấm chuột phải (điện thoại: ấn giữ) để highlight hoặc ghi chú</p>
+            </div>
             <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start space-y-4 lg:space-y-0">
             <div className="space-y-3 lg:sticky lg:top-20">
-            <div className="text-[15px] leading-relaxed whitespace-pre-wrap max-h-96 lg:max-h-[calc(100vh-8rem)] overflow-y-auto p-4 sm:p-5 bg-background rounded-xl border border-line text-foreground" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(passage.bodyText) }} />
+            <HighlightableHtml
+              html={passage.bodyText || ""}
+              storageKey={`ielts_hl_${testId}_${passage.id}`}
+              className="text-[15px] leading-relaxed whitespace-pre-wrap max-h-96 lg:max-h-[calc(100vh-8rem)] overflow-y-auto p-4 sm:p-5 bg-background rounded-xl border border-line text-foreground"
+            />
             {passage.imageUrl && <img src={passage.imageUrl} alt="" className="max-h-72 rounded-lg border border-line" />}
             </div>
 
