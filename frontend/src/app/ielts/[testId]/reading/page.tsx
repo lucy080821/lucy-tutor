@@ -4,7 +4,7 @@ import { getSessionUserId } from "@/lib/session";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "sweetalert2";
-import HighlightableHtml from "@/components/highlight/HighlightableHtml";
+import HighlightableHtml, { type StoredHighlight } from "@/components/highlight/HighlightableHtml";
 import { SkillReportPDF, SkillReportRubricItem } from "@/components/reports/SkillReportPDF";
 import { exportNodeToPDF } from "@/lib/pdfExport";
 import IeltsStudyPanel from "@/components/ielts/IeltsStudyPanel";
@@ -36,6 +36,45 @@ export default function IeltsReadingTakingPage() {
   const submitRef = useRef<() => void>(() => {});
   const pdfRef = useRef<HTMLDivElement>(null);
 
+  // ── Lưu highlight/ghi chú lên server: gom thao tác liên tiếp (0,6s) rồi gửi 1 lần / bài đọc ──
+  const pendingHlRef = useRef<Record<string, StoredHighlight[]>>({});
+  const hlTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const hlErrorShownRef = useRef(false);
+
+  const flushHighlights = useCallback((passageId: string, keepalive = false) => {
+    clearTimeout(hlTimersRef.current[passageId]);
+    const list = pendingHlRef.current[passageId];
+    if (!list || !userId) return;
+    delete pendingHlRef.current[passageId];
+    fetch(`${API}/api/ielts-attempts/tests/${testId}/reading/annotations/${passageId}`, {
+      method: "PUT", headers: { "Content-Type": "application/json" }, keepalive,
+      body: JSON.stringify({ userId, highlights: list })
+    }).then((r) => { if (!r.ok) throw new Error(); }).catch(() => {
+      if (hlErrorShownRef.current || keepalive) return;
+      hlErrorShownRef.current = true;
+      Swal.fire({ toast: true, position: "top-end", icon: "warning", title: "Chưa lưu được highlight — kiểm tra kết nối mạng", timer: 3000, showConfirmButton: false });
+    });
+  }, [testId, userId]);
+
+  const saveHighlights = useCallback((passageId: string, list: StoredHighlight[]) => {
+    pendingHlRef.current[passageId] = list;
+    clearTimeout(hlTimersRef.current[passageId]);
+    hlTimersRef.current[passageId] = setTimeout(() => flushHighlights(passageId), 600);
+  }, [flushHighlights]);
+
+  // Rời trang / ẩn tab → gửi nốt phần chưa lưu (keepalive để request vẫn đi khi trang đóng)
+  useEffect(() => {
+    const flushAll = () => Object.keys(pendingHlRef.current).forEach((id) => flushHighlights(id, true));
+    const onVisibility = () => { if (document.visibilityState === "hidden") flushAll(); };
+    window.addEventListener("pagehide", flushAll);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flushAll);
+      document.removeEventListener("visibilitychange", onVisibility);
+      flushAll();
+    };
+  }, [flushHighlights]);
+
   useEffect(() => {
     const uid = getSessionUserId();
     if (!uid) { router.push("/"); return; }
@@ -59,10 +98,6 @@ export default function IeltsReadingTakingPage() {
       const resData = await res.json();
       if (!res.ok) { Swal.fire("Lỗi", resData.error || "Không thể nộp bài", "error"); return; }
       setResult(resData);
-      // Nộp xong thì bỏ highlight/ghi chú tạm của lượt này — lần làm lại bắt đầu bài đọc sạch
-      try {
-        Object.keys(sessionStorage).filter((k) => k.startsWith(`ielts_hl_${testId}_`)).forEach((k) => sessionStorage.removeItem(k));
-      } catch {}
     } catch (err) { console.error(err); Swal.fire("Lỗi", "Không thể nộp bài", "error"); } finally { setSubmitting(false); }
   }, [userId, testId, answers, submitting]);
   submitRef.current = handleSubmit;
@@ -183,7 +218,8 @@ export default function IeltsReadingTakingPage() {
             <div className="space-y-3 lg:sticky lg:top-20">
             <HighlightableHtml
               html={passage.bodyText || ""}
-              storageKey={`ielts_hl_${testId}_${passage.id}`}
+              initialHighlights={passage.highlights}
+              onChange={(list) => saveHighlights(passage.id, list)}
               className="text-[15px] leading-relaxed whitespace-pre-wrap max-h-96 lg:max-h-[calc(100vh-8rem)] overflow-y-auto p-4 sm:p-5 bg-background rounded-xl border border-line text-foreground"
             />
             {passage.imageUrl && <img src={passage.imageUrl} alt="" className="max-h-72 rounded-lg border border-line" />}

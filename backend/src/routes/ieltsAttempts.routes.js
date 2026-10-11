@@ -72,6 +72,29 @@ async function findAccessibleTest(testId, userId) {
   return test;
 }
 
+// ── Highlight / ghi chú trên bài đọc Reading ──
+const MAX_HIGHLIGHTS = 300;
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
+// Chỉ giữ đúng các field cần thiết, đúng kiểu, giới hạn độ dài (dữ liệu do client gửi lên)
+function sanitizeHighlights(list) {
+  return list
+    .filter((h) => h && Number.isInteger(h.start) && Number.isInteger(h.end) && h.start >= 0 && h.end > h.start && h.end - h.start <= 20000)
+    .map((h) => ({
+      id: String(h.id || '').slice(0, 64),
+      start: h.start,
+      end: h.end,
+      text: String(h.text || '').slice(0, 20000),
+      color: HEX_COLOR.test(h.color) ? h.color : '#fde68a',
+      ...(h.note && String(h.note).trim() ? { note: String(h.note).trim().slice(0, 2000) } : {})
+    }))
+    .filter((h) => h.id);
+}
+
+function parseHighlights(json) {
+  try { const v = JSON.parse(json); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+
 // LIBRARY = unlimited practice, no deadline. ASSIGNED = bounded by maxAttempts + deadline
 // (same semantics as Exam.maxAttempts/deadline via exams.routes.js's canAttempt logic).
 function computeCanAttempt(test, attemptsCount) {
@@ -167,17 +190,23 @@ router.get('/tests/:id/listening', async (req, res) => {
 router.get('/tests/:id/reading', async (req, res) => {
   try {
     const { userId } = req.query;
-    const [test, passages] = await Promise.all([
+    const [test, passages, annotations] = await Promise.all([
       findAccessibleTest(req.params.id, userId),
       prisma.ieltsReadingPassage.findMany({
         where: { testId: req.params.id },
         orderBy: [{ sectionNumber: 'asc' }, { passageIndex: 'asc' }],
         include: { questions: { orderBy: { questionNumber: 'asc' } } }
-      })
+      }),
+      // userId rỗng trong where = "không lọc" ở Prisma → chỉ truy vấn khi có userId
+      userId
+        ? prisma.ieltsReadingAnnotation.findMany({ where: { userId, testId: req.params.id }, select: { passageId: true, highlights: true } })
+        : []
     ]);
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề hoặc bạn không có quyền truy cập' });
+    const highlightsByPassage = new Map(annotations.map((a) => [a.passageId, parseHighlights(a.highlights)]));
     const safe = passages.map((p) => ({
       id: p.id, sectionNumber: p.sectionNumber, passageIndex: p.passageIndex, title: p.title, bodyText: p.bodyText, imageUrl: p.imageUrl,
+      highlights: highlightsByPassage.get(p.id) || [],
       questions: p.questions.map((q) => ({
         id: q.id, questionNumber: q.questionNumber, type: q.type, groupInstruction: q.groupInstruction,
         promptText: q.promptText, options: q.options ? JSON.parse(q.options) : null, wordLimit: q.wordLimit, imageUrl: q.imageUrl
@@ -185,6 +214,37 @@ router.get('/tests/:id/reading', async (req, res) => {
     }));
     res.json({ testId: test.id, testType: test.testType, passages: safe });
   } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// 3b. Lưu highlight + ghi chú của học viên trên 1 bài đọc (ghi đè toàn bộ danh sách của passage đó).
+router.put('/tests/:id/reading/annotations/:passageId', async (req, res) => {
+  try {
+    const { userId, highlights } = req.body;
+    if (!Array.isArray(highlights)) return res.status(400).json({ error: 'highlights phải là mảng' });
+    if (highlights.length > MAX_HIGHLIGHTS) return res.status(400).json({ error: `Tối đa ${MAX_HIGHLIGHTS} highlight mỗi bài đọc` });
+    const clean = sanitizeHighlights(highlights);
+
+    const [test, passage] = await Promise.all([
+      findAccessibleTest(req.params.id, userId),
+      prisma.ieltsReadingPassage.findFirst({ where: { id: req.params.passageId, testId: req.params.id }, select: { id: true } })
+    ]);
+    if (!test || !passage) return res.status(404).json({ error: 'Không tìm thấy bài đọc hoặc bạn không có quyền truy cập' });
+
+    if (!clean.length) {
+      await prisma.ieltsReadingAnnotation.deleteMany({ where: { userId, passageId: passage.id } });
+    } else {
+      const json = JSON.stringify(clean);
+      await prisma.ieltsReadingAnnotation.upsert({
+        where: { userId_passageId: { userId, passageId: passage.id } },
+        create: { userId, testId: test.id, passageId: passage.id, highlights: json },
+        update: { highlights: json }
+      });
+    }
+    res.json({ ok: true, count: clean.length });
+  } catch (err) {
+    console.error(err);
     res.status(400).json({ error: err.message });
   }
 });

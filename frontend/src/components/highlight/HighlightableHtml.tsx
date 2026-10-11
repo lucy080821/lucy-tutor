@@ -19,7 +19,9 @@ const MARK_SELECTOR = "mark.user-hl";
 
 type Menu = { top: number; left: number; markId?: string };
 type NoteEditor = { markId: string; top: number; left: number; text: string };
-type Saved = { src: string; html: string; notes: Record<string, string> };
+// Dạng lưu trữ (server): vị trí ký tự [start, end) trong textContent của khối văn bản + đoạn chữ để
+// đối chiếu — nếu bài đọc bị sửa làm lệch vị trí thì tự dò lại theo `text`.
+export type StoredHighlight = { id: string; start: number; end: number; text: string; color: string; note?: string };
 
 // id duy nhất cho mỗi lần highlight (kèm thời điểm để không trùng id đã lưu từ lần tải trang trước)
 let hlSeq = 0;
@@ -55,6 +57,7 @@ function wrapRange(range: Range, color: string, hlId: string) {
     const mark = document.createElement("mark");
     mark.className = "user-hl";
     mark.dataset.hlId = hlId;
+    mark.dataset.color = color;
     mark.style.backgroundColor = color;
     mark.title = markTitle();
     try { sub.surroundContents(mark); wrapped = true; } catch {}
@@ -62,15 +65,89 @@ function wrapRange(range: Range, color: string, hlId: string) {
   return wrapped;
 }
 
+// Đọc toàn bộ highlight đang có trong DOM ra dạng lưu trữ (gộp các mảnh cùng id)
+function serializeHighlights(root: HTMLElement, notes: Record<string, string>): StoredHighlight[] {
+  const fullText = root.textContent || "";
+  const byId = new Map<string, StoredHighlight>();
+  root.querySelectorAll<HTMLElement>(MARK_SELECTOR).forEach((mark) => {
+    const id = mark.dataset.hlId;
+    if (!id) return;
+    const r = document.createRange();
+    r.setStart(root, 0);
+    r.setEndBefore(mark);
+    const start = r.toString().length;
+    const end = start + (mark.textContent || "").length;
+    const cur = byId.get(id);
+    if (cur) { cur.start = Math.min(cur.start, start); cur.end = Math.max(cur.end, end); }
+    else byId.set(id, { id, start, end, text: "", color: mark.dataset.color || HIGHLIGHT_COLORS[0].value });
+  });
+  return [...byId.values()].map((h) => ({ ...h, text: fullText.slice(h.start, h.end), ...(notes[h.id] ? { note: notes[h.id] } : {}) }));
+}
+
+// Đổi vị trí ký tự → (text node, offset) để dựng Range
+function locate(root: HTMLElement, offset: number): { node: Text; offset: number } | null {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let pos = 0;
+  let n: Node | null;
+  let last: Text | null = null;
+  while ((n = walker.nextNode())) {
+    const t = n as Text;
+    if (offset <= pos + t.length) return { node: t, offset: offset - pos };
+    pos += t.length;
+    last = t;
+  }
+  return last ? { node: last, offset: last.length } : null;
+}
+
+// Vẽ lại highlight đã lưu lên DOM; trả về map ghi chú của các highlight vẽ được
+function restoreHighlights(root: HTMLElement, list: StoredHighlight[]) {
+  const notes: Record<string, string> = {};
+  const fullText = root.textContent || "";
+  for (const h of list) {
+    let start = h.start;
+    if (h.text && fullText.slice(h.start, h.end) !== h.text) {
+      // Bài đọc đã bị sửa → tìm lần xuất hiện của đoạn chữ gần vị trí cũ nhất
+      let best = -1;
+      for (let i = fullText.indexOf(h.text); i !== -1; i = fullText.indexOf(h.text, i + 1)) {
+        if (best === -1 || Math.abs(i - h.start) < Math.abs(best - h.start)) best = i;
+      }
+      if (best === -1) continue;
+      start = best;
+    }
+    const end = start + (h.text ? h.text.length : h.end - h.start);
+    if (end > fullText.length) continue;
+    const a = locate(root, start);
+    const b = locate(root, end);
+    if (!a || !b) continue;
+    const range = document.createRange();
+    range.setStart(a.node, a.offset);
+    range.setEnd(b.node, b.offset);
+    if (!wrapRange(range, h.color, h.id)) continue;
+    if (h.note) {
+      notes[h.id] = h.note;
+      root.querySelectorAll<HTMLElement>(`${MARK_SELECTOR}[data-hl-id="${h.id}"]`).forEach((m) => {
+        m.classList.add("user-hl-noted");
+        m.title = markTitle(h.note);
+      });
+    }
+  }
+  return notes;
+}
+
 /**
  * Khối văn bản (HTML) cho phép học viên highlight nhiều màu + ghi chú gắn theo từng highlight.
  * Mọi thao tác qua chuột phải: bôi đen → chuột phải → chọn màu / ghi chú; chuột phải vào chỗ đã
  * highlight → đổi màu, sửa ghi chú, xoá. Điện thoại: ấn giữ ~0,45s thay cho chuột phải.
  * Nội dung được gắn vào DOM 1 lần (không qua dangerouslySetInnerHTML) nên trang re-render (vd đồng
- * hồ đếm giờ mỗi giây) không xoá mất highlight. `storageKey` → lưu tạm trong sessionStorage để tải
- * lại trang (cùng tab) vẫn còn highlight/ghi chú.
+ * hồ đếm giờ mỗi giây) không xoá mất highlight. Lưu trữ do trang cha lo: `initialHighlights` vẽ
+ * lại lúc mở, `onChange` nhận toàn bộ danh sách mới sau mỗi thao tác (để gửi lên server).
  */
-export default function HighlightableHtml({ html, storageKey, className }: { html: string; storageKey?: string; className?: string }) {
+export default function HighlightableHtml({ html, initialHighlights, onChange, className }: {
+  html: string;
+  initialHighlights?: StoredHighlight[];
+  onChange?: (highlights: StoredHighlight[]) => void;
+  className?: string;
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const noteRef = useRef<HTMLDivElement>(null);
@@ -83,24 +160,17 @@ export default function HighlightableHtml({ html, storageKey, className }: { htm
     try { return (typeof window !== "undefined" && localStorage.getItem(COLOR_KEY)) || HIGHLIGHT_COLORS[0].value; } catch { return HIGHLIGHT_COLORS[0].value; }
   });
 
-  // Gắn nội dung vào DOM; khôi phục bản đã highlight nếu nguồn chưa đổi
+  // Gắn nội dung vào DOM rồi vẽ lại highlight đã lưu
   useEffect(() => {
     if (!ref.current) return;
-    let restored: Saved | null = null;
-    if (storageKey) {
-      try {
-        const raw = sessionStorage.getItem(storageKey);
-        const parsed = raw ? (JSON.parse(raw) as Saved) : null;
-        if (parsed && parsed.src === html) restored = parsed;
-      } catch {}
-    }
-    ref.current.innerHTML = DOMPurify.sanitize(restored ? restored.html : html);
-    setNotes(restored?.notes || {});
-  }, [html, storageKey]);
+    ref.current.innerHTML = DOMPurify.sanitize(html);
+    const restoredNotes = initialHighlights?.length ? restoreHighlights(ref.current, initialHighlights) : {};
+    setNotes(restoredNotes);
+  }, [html, initialHighlights]);
 
   const persist = (nextNotes: Record<string, string>) => {
-    if (!storageKey || !ref.current) return;
-    try { sessionStorage.setItem(storageKey, JSON.stringify({ src: html, html: ref.current.innerHTML, notes: nextNotes } satisfies Saved)); } catch {}
+    if (!onChange || !ref.current) return;
+    onChange(serializeHighlights(ref.current, nextNotes));
   };
 
   const marksOf = (id: string) => ref.current?.querySelectorAll<HTMLElement>(`${MARK_SELECTOR}[data-hl-id="${id}"]`) ?? [];
@@ -171,7 +241,7 @@ export default function HighlightableHtml({ html, storageKey, className }: { htm
   };
 
   const pickColor = (c: string) => {
-    if (menu?.markId) marksOf(menu.markId).forEach((m) => { m.style.backgroundColor = c; });
+    if (menu?.markId) marksOf(menu.markId).forEach((m) => { m.style.backgroundColor = c; m.dataset.color = c; });
     else createFromSelection(c);
     setColor(c);
     try { localStorage.setItem(COLOR_KEY, c); } catch {}
@@ -184,6 +254,7 @@ export default function HighlightableHtml({ html, storageKey, className }: { htm
     const id = menu.markId || createFromSelection(color);
     setMenu(null);
     if (!id) return;
+    if (!menu.markId) persist(notes); // highlight mới tạo được lưu ngay, kể cả khi bấm Huỷ ghi chú
     setNoteEditor({ markId: id, top: menu.top, left: menu.left, text: notes[id] || "" });
   };
 

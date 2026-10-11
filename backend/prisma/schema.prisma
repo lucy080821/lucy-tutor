@@ -77,6 +77,7 @@ model User {
   ieltsWritingAttempts   IeltsWritingAttempt[]
   ieltsSpeakingAttempts  IeltsSpeakingAttempt[]
   ieltsStudySessions     IeltsStudySession[]
+  ieltsReadingAnnotations IeltsReadingAnnotation[]
 
   blogPosts         BlogPost[]         @relation("BlogPostAuthor")
   blogRevisions     BlogPostRevision[] @relation("BlogRevisionEditor")
@@ -700,6 +701,7 @@ model IeltsTest {
   writingAttempts   IeltsWritingAttempt[]
   speakingAttempts  IeltsSpeakingAttempt[]
   studySessions     IeltsStudySession[]
+  readingAnnotations IeltsReadingAnnotation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -732,8 +734,9 @@ model IeltsReadingPassage {
   bodyText      String // extracted passage text — highest-risk field for multi-column reordering, always teacher-editable
   imageUrl      String? // optional accompanying diagram (e.g. a map/plan-labeling question's image) — manually attached
 
-  test      IeltsTest       @relation(fields: [testId], references: [id], onDelete: Cascade)
-  questions IeltsQuestion[]
+  test        IeltsTest                @relation(fields: [testId], references: [id], onDelete: Cascade)
+  questions   IeltsQuestion[]
+  annotations IeltsReadingAnnotation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -916,6 +919,26 @@ model IeltsStudySession {
 
   @@unique([skill, attemptId])
   @@index([userId])
+}
+
+// Highlight + ghi chú của học viên trên 1 bài đọc IELTS Reading (1 dòng / học viên / passage),
+// lưu theo vị trí ký tự trong text của bài đọc (không lưu HTML) — xem HighlightableHtml.tsx.
+model IeltsReadingAnnotation {
+  id         String @id @default(uuid())
+  userId     String
+  testId     String
+  passageId  String
+  highlights String @default("[]") // JSON: [{ id, start, end, text, color, note? }]
+
+  user    User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  test    IeltsTest           @relation(fields: [testId], references: [id], onDelete: Cascade)
+  passage IeltsReadingPassage @relation(fields: [passageId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, passageId])
+  @@index([userId, testId])
 }
 
 // ─── Blog ────────────────────────────────────────────────────────────────────
