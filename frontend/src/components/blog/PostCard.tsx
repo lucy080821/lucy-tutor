@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BlogPostStats } from "@/components/blog/BlogStats";
 import { type BlogPostSummary, authorHref, categoryHref, formatBlogDate } from "@/lib/blog";
+import { BLOG_FALLBACK_COVER } from "@/lib/photos";
 
 // Thẻ bài viết trong lưới /blog và mục "Bài viết liên quan" — server component. Link vào bài gắn data-blog-click
 // để BlogStatsProvider đếm lượt click; dòng lượt xem/click là client component tự làm mới.
@@ -9,7 +10,7 @@ export default function PostCard({ post, large = false }: { post: BlogPostSummar
     <article className={`group ui-card ui-card-hover overflow-hidden flex flex-col ${large ? "lg:flex-row lg:col-span-full" : ""}`}>
       <Link href={`/blog/${post.slug}`} data-blog-click={post.slug} className={`block bg-primary-soft shrink-0 ${large ? "lg:w-1/2" : ""}`}>
         <img
-          src={post.coverImage || "/images/thumbs/lesson.svg"}
+          src={post.coverImage || BLOG_FALLBACK_COVER}
           alt={post.title}
           width={640}
           height={360}

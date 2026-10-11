@@ -1,6 +1,7 @@
 import Link from "next/link";
 import PostCard from "@/components/blog/PostCard";
 import { blogFetch, categoryHref, type BlogCategory, type BlogPostSummary } from "@/lib/blog";
+import { PHOTOS } from "@/lib/photos";
 
 type ListResponse = { posts: BlogPostSummary[]; total: number; totalPages: number };
 
@@ -72,7 +73,11 @@ export default async function BlogListView({
 
       {posts.length === 0 ? (
         <div className="ui-card p-10 text-center">
-          <img src="/images/illustrations/empty-state.svg" alt="Chưa có bài viết" width={240} height={180} loading="lazy" className="mx-auto w-48 h-auto mb-4" />
+          <div className="relative mx-auto w-48 h-56 mb-4">
+            <span aria-hidden="true" className="absolute inset-x-0 bottom-0 flex justify-center"><span className="block w-44 h-44 rounded-full bg-primary-soft" /></span>
+            <img src={PHOTOS.blogEmpty.src} alt={PHOTOS.blogEmpty.alt} width={PHOTOS.blogEmpty.width} height={PHOTOS.blogEmpty.height} loading="lazy"
+              className="relative h-full w-full object-contain object-bottom" />
+          </div>
           <p className="font-bold text-foreground">Chưa có bài viết nào</p>
           <p className="text-sm text-muted mt-1">
             {data ? emptyText : "Không tải được danh sách bài viết, vui lòng thử lại sau."}

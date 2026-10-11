@@ -4,6 +4,8 @@ import { CEFR_LEVELS } from "@/lib/skillPractice";
 import JsonLd from "@/components/seo/JsonLd";
 import ScrollReveal from "@/components/landing/ScrollReveal";
 import FeatureVideo from "@/components/landing/FeatureVideo";
+import { FREE_TOOLS } from "@/lib/freeTools";
+import { PHOTOS } from "@/lib/photos";
 
 // Server component: nội dung tĩnh hoàn toàn (không state) → HTML render sẵn, tốt cho SEO.
 // Chuyển động: class lp-* (hero) + data-reveal (hiện dần khi cuộn, do <ScrollReveal />) — CSS ở khối
@@ -16,64 +18,64 @@ const PRACTICE_ITEMS = [
     title: "Reading",
     desc: "Luyện đọc hiểu với passage thực tế từ IELTS, TOEIC và đề thi THPT. AI phân tích điểm yếu theo từng dạng câu hỏi.",
     meta: "Đọc hiểu · Cấp độ A1–C1 · 10 dạng câu hỏi",
-    thumb: "/images/thumbs/reading.svg",
-    alt: "Minh họa luyện kỹ năng đọc hiểu Tiếng Anh",
+    thumb: "/images/photos/home/luyen-doc-hieu-tieng-anh.webp",
+    alt: "Học viên đeo kính đọc sách luyện đọc hiểu Tiếng Anh",
     href: "/reading",
   },
   {
     title: "Listening",
     desc: "Bài nghe theo chuẩn IELTS/TOEIC với audio chất lượng cao. Luyện tập nhiều lần, track kết quả theo từng phần.",
     meta: "Nghe hiểu · Giọng UK / US / AUS",
-    thumb: "/images/thumbs/listening.svg",
-    alt: "Minh họa luyện kỹ năng nghe Tiếng Anh với tai nghe",
+    thumb: "/images/photos/home/luyen-nghe-tieng-anh.webp",
+    alt: "Học viên đeo tai nghe luyện nghe Tiếng Anh",
     href: "/listening",
   },
   {
     title: "Speaking",
     desc: "Luyện nói với AI phân tích phát âm, fluency và coherence theo tiêu chí IELTS. Ghi âm và nhận phản hồi tức thì.",
     meta: "Hội thoại cùng AI · Tự chọn ngữ cảnh",
-    thumb: "/images/thumbs/speaking.svg",
-    alt: "Minh họa luyện nói Tiếng Anh cùng AI",
+    thumb: "/images/photos/home/luyen-noi-tieng-anh-giao-tiep.webp",
+    alt: "Nhóm bạn trò chuyện, luyện nói Tiếng Anh giao tiếp",
     href: "/conversation",
   },
   {
     title: "Writing",
     desc: "Luyện viết Task 1 và Task 2 IELTS. AI chấm điểm theo 4 tiêu chí: Task Achievement, Coherence, Lexical Resource, Grammar.",
     meta: "AI chấm chi tiết · Lưu lịch sử bài viết",
-    thumb: "/images/thumbs/writing.svg",
-    alt: "Minh họa luyện viết bài luận Tiếng Anh",
+    thumb: "/images/photos/home/luyen-viet-tieng-anh.webp",
+    alt: "Bàn tay viết bài luận Tiếng Anh vào sổ",
     href: "/writing",
   },
   {
     title: "Đề Thi Thử THPT Quốc Gia",
     desc: "AI sinh đề đúng cấu trúc 5 phần: Ngữ Âm, Ngữ Pháp & Từ Vựng, Giao Tiếp, Đọc Điền Từ, Đọc Hiểu.",
     meta: "Đề ngắn 25 phút · Đề đầy đủ 50 phút",
-    thumb: "/images/thumbs/mock-test.svg",
-    alt: "Minh họa đề thi thử THPT Quốc Gia môn Tiếng Anh",
+    thumb: "/images/photos/home/de-thi-thu-thpt-quoc-gia.webp",
+    alt: "Học sinh làm bài thi trong phòng thi THPT Quốc Gia",
     href: "/mock-test",
   },
   {
     title: "IELTS Cambridge",
     desc: "Làm đề Listening, Reading, Writing, Speaking từ bộ sách Cambridge do giáo viên đưa lên, chấm theo band 0–9.",
     meta: "4 kỹ năng · Chấm theo band IELTS",
-    thumb: "/images/thumbs/ielts.svg",
-    alt: "Minh họa luyện đề IELTS Cambridge",
+    thumb: "/images/photos/home/sach-luyen-thi-ielts.webp",
+    alt: "Chồng sách luyện thi IELTS Cambridge",
     href: "/ielts",
   },
   {
     title: "Luyện Ngữ Pháp",
     desc: "Luyện tập ngữ pháp theo chuyên đề, tích hợp ôn tập ngắt quãng để ghi nhớ lâu.",
     meta: "Theo chuyên đề · Tự chấm điểm",
-    thumb: "/images/thumbs/grammar.svg",
-    alt: "Minh họa luyện ngữ pháp Tiếng Anh theo chuyên đề",
+    thumb: "/images/photos/home/ngu-phap-tieng-anh.webp",
+    alt: "Bảng đen ghi các mẫu câu Tiếng Anh giao tiếp cơ bản",
     href: "/grammar-gym",
   },
   {
     title: "Bảng Âm IPA",
     desc: "Tra cứu 44 âm Tiếng Anh theo bảng Adrian Underhill, bấm để nghe và xem cách phát âm.",
     meta: "44 âm · Nguyên âm, nguyên âm đôi, phụ âm",
-    thumb: "/images/thumbs/phonetics.svg",
-    alt: "Minh họa bảng phiên âm quốc tế IPA",
+    thumb: "/images/photos/home/phien-am-tieng-anh-tu-dien.webp",
+    alt: "Kính đặt trên trang từ điển Tiếng Anh có phiên âm",
     href: "/phonetics",
   },
 ];
@@ -113,14 +115,14 @@ const STEPS = [
 ];
 
 const FEATURES = [
-  { title: "AI Phân Tích Điểm Yếu", desc: "Tự động nhận diện lỗi sai theo từng chủ điểm ngữ pháp, từ vựng, gợi ý bài luyện tập phù hợp.", thumb: "/images/thumbs/mistakes.svg", alt: "Minh họa AI phân tích lỗi sai của học viên" },
-  { title: "Luyện Phát Âm Cùng AI", desc: "Ghi âm giọng nói, AI so khớp với từ mẫu và chỉ ra lỗi phát âm thường gặp của người Việt.", thumb: "/images/thumbs/pronunciation.svg", alt: "Minh họa luyện phát âm Tiếng Anh bằng ghi âm" },
-  { title: "Đề Thi Thử THPT Quốc Gia", desc: "AI tự sinh đề đúng cấu trúc đề thi thật (ngữ âm, ngữ pháp, đọc hiểu...), làm có tính giờ và chấm điểm tự động.", thumb: "/images/thumbs/exam.svg", alt: "Minh họa bài thi thử có tính giờ" },
-  { title: "Biểu Đồ Tiến Độ 4 Kỹ Năng", desc: "Dashboard riêng cho từng kỹ năng Reading, Listening, Speaking, Writing với biểu đồ theo dõi theo thời gian.", thumb: "/images/thumbs/study-plan.svg", alt: "Minh họa biểu đồ theo dõi tiến độ học tập" },
-  { title: "SRS Vocabulary", desc: "Thuật toán SM-2 lên lịch ôn từ vựng khoa học — tự thêm từ của riêng bạn hoặc ôn từ giáo viên giao.", thumb: "/images/thumbs/vocabulary.svg", alt: "Minh họa thẻ ghi nhớ từ vựng" },
-  { title: "Ngân Hàng Câu Hỏi", desc: "Đề thi THPT, IELTS, TOEIC được phân loại rõ ràng. Giáo viên nhập câu hỏi hàng loạt từ file Excel mẫu.", thumb: "/images/thumbs/documents.svg", alt: "Minh họa ngân hàng câu hỏi và tài liệu" },
-  { title: "Gamification & Streak", desc: "Tích XP, giữ streak học mỗi ngày, leo bảng xếp hạng lớp học — tạo động lực học tập bền vững.", thumb: "/images/thumbs/lesson.svg", alt: "Minh họa học tập mỗi ngày để giữ chuỗi streak" },
-  { title: "Dashboard Giáo Viên Pro", desc: "Quản lý lớp học, điểm danh, học phí, giao đề thi — tất cả trên một nền tảng, không cần bảng tính Excel.", thumb: "/images/thumbs/classroom.svg", alt: "Minh họa lớp học do giáo viên quản lý" },
+  { title: "AI Phân Tích Điểm Yếu", desc: "Tự động nhận diện lỗi sai theo từng chủ điểm ngữ pháp, từ vựng, gợi ý bài luyện tập phù hợp.", thumb: "/images/photos/home/ai-phan-tich-diem-yeu.webp", alt: "Màn hình máy tính hiển thị biểu đồ phân tích điểm yếu" },
+  { title: "Luyện Phát Âm Cùng AI", desc: "Ghi âm giọng nói, AI so khớp với từ mẫu và chỉ ra lỗi phát âm thường gặp của người Việt.", thumb: "/images/photos/home/luyen-phat-am-cung-ai.webp", alt: "Micro thu âm dùng để luyện phát âm Tiếng Anh cùng AI" },
+  { title: "Đề Thi Thử THPT Quốc Gia", desc: "AI tự sinh đề đúng cấu trúc đề thi thật (ngữ âm, ngữ pháp, đọc hiểu...), làm có tính giờ và chấm điểm tự động.", thumb: "/images/photos/home/phieu-tra-loi-trac-nghiem.webp", alt: "Học sinh tô phiếu trả lời trắc nghiệm đề thi thử" },
+  { title: "Biểu Đồ Tiến Độ 4 Kỹ Năng", desc: "Dashboard riêng cho từng kỹ năng Reading, Listening, Speaking, Writing với biểu đồ theo dõi theo thời gian.", thumb: "/images/photos/home/bieu-do-tien-do-hoc-tap.webp", alt: "Biểu đồ đường theo dõi tiến độ học tập 4 kỹ năng" },
+  { title: "SRS Vocabulary", desc: "Thuật toán SM-2 lên lịch ôn từ vựng khoa học — tự thêm từ của riêng bạn hoặc ôn từ giáo viên giao.", thumb: "/images/photos/home/tu-vung-tieng-anh-srs.webp", alt: "Các ô chữ cái xếp thành từ vựng Tiếng Anh" },
+  { title: "Ngân Hàng Câu Hỏi", desc: "Đề thi THPT, IELTS, TOEIC được phân loại rõ ràng. Giáo viên nhập câu hỏi hàng loạt từ file Excel mẫu.", thumb: "/images/photos/home/ngan-hang-cau-hoi.webp", alt: "Tủ hồ sơ chứa ngân hàng câu hỏi và đề thi" },
+  { title: "Gamification & Streak", desc: "Tích XP, giữ streak học mỗi ngày, leo bảng xếp hạng lớp học — tạo động lực học tập bền vững.", thumb: "/images/photos/home/bang-xep-hang-thanh-tich.webp", alt: "Những chiếc cúp thành tích cho bảng xếp hạng học tập" },
+  { title: "Dashboard Giáo Viên Pro", desc: "Quản lý lớp học, điểm danh, học phí, giao đề thi — tất cả trên một nền tảng, không cần bảng tính Excel.", thumb: "/images/photos/home/dashboard-giao-vien.webp", alt: "Giáo viên dạy học online, quản lý lớp trên máy tính" },
 ];
 
 /* Mô tả chung của khung CEFR cho từng cấp — không phải số liệu. */
@@ -207,15 +209,15 @@ export default function Home() {
             {/* 2 đốm màu mờ trôi chậm phía sau ảnh minh hoạ */}
             <span aria-hidden="true" className="lp-blob pointer-events-none absolute -top-8 -right-6 w-44 h-44 rounded-full bg-highlight/25 blur-2xl" />
             <span aria-hidden="true" className="lp-blob pointer-events-none absolute -bottom-10 -left-8 w-52 h-52 rounded-full bg-primary/15 blur-2xl" style={d(2500)} />
-            <div className="lp-enter-zoom relative rounded-3xl bg-primary-soft p-4 sm:p-6" style={d(150)}>
+            <div className="lp-enter-zoom relative rounded-3xl bg-primary-soft p-2 sm:p-3 shadow-card" style={d(150)}>
               <img
-                src="/images/illustrations/hero-student.svg"
-                alt="Học sinh luyện thi Tiếng Anh trên máy tính với tai nghe và sách"
-                width={800}
-                height={600}
+                src="/images/photos/home/hoc-tieng-anh-online-cung-ai.webp"
+                alt="Học viên đeo tai nghe học Tiếng Anh online cùng AI trên máy tính xách tay"
+                width={1000}
+                height={750}
                 loading="eager"
-                className="lp-float w-full h-auto"
-                style={d(1000)}
+                fetchPriority="high"
+                className="w-full h-auto rounded-[20px]"
               />
             </div>
             {/* Floating cards — chỉ nêu tính năng có thật */}
@@ -232,6 +234,34 @@ export default function Home() {
               <p className="text-sm font-bold text-primary">SRS · Thuật toán SM-2</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── Công cụ miễn phí, không cần đăng nhập — mỗi công cụ là 1 trang riêng (tốt cho SEO). Menu "Công cụ" ở header trỏ tới #cong-cu-mien-phi ── */}
+      <section id="cong-cu-mien-phi" className="bg-background px-4 sm:px-6 pt-14 pb-4 scroll-mt-16" aria-labelledby="tools-title">
+        <div className="max-w-7xl mx-auto">
+          <div data-reveal className="text-center mb-10 space-y-3">
+            <span className="ui-badge">Miễn phí · Không cần đăng nhập</span>
+            <h2 id="tools-title" className="ui-section-title text-center text-2xl md:text-3xl font-extrabold">Công cụ học Tiếng Anh miễn phí</h2>
+            <p className="text-muted max-w-2xl mx-auto">Kiểm tra trình độ, chấm Writing bằng AI, tính điểm IELTS, flashcard theo sách giáo khoa — dùng ngay, không cần tạo tài khoản.</p>
+          </div>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 md:gap-6">
+            {FREE_TOOLS.map((t, i) => (
+              <li key={t.href} data-reveal style={d((i % 4) * 100)} className="h-full">
+                <Link href={t.href} className="group ui-card ui-card-hover overflow-hidden flex flex-col h-full">
+                  <span className="block aspect-video bg-primary-soft overflow-hidden">
+                    <img src={t.thumb} alt={t.alt} width={960} height={540} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  </span>
+                  <span className="p-5 flex flex-col flex-1">
+                    <span className="ui-badge self-start mb-2">{t.tag}</span>
+                    <h3 className="font-bold text-primary text-base mb-1">{t.title}</h3>
+                    <span className="text-sm text-foreground/80 leading-relaxed flex-1">{t.desc}</span>
+                    <span className="btn-outline self-start mt-4 px-5 py-2 text-sm">Dùng ngay</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -282,7 +312,7 @@ export default function Home() {
               <div key={item.href} data-reveal style={d((i % 4) * 100)} className="h-full">
               <article className="group ui-card ui-card-hover overflow-hidden flex flex-col h-full">
                 <div className="aspect-video bg-primary-soft overflow-hidden">
-                  <img src={item.thumb} alt={item.alt} width={640} height={360} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                  <img src={item.thumb} alt={item.alt} width={960} height={540} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                 </div>
                 <div className="p-5 flex flex-col flex-1">
                   <h3 className="font-bold text-primary text-base mb-1">{item.title}</h3>
@@ -342,7 +372,7 @@ export default function Home() {
               <div key={f.title} data-reveal style={d((i % 4) * 100)} className="h-full">
                 <article className="group ui-card ui-card-hover overflow-hidden h-full">
                   <div className="aspect-video bg-primary-soft overflow-hidden">
-                    <img src={f.thumb} alt={f.alt} width={640} height={360} loading="lazy" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <img src={f.thumb} alt={f.alt} width={960} height={540} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                   </div>
                   <div className="p-5">
                     <h3 className="font-bold text-primary text-base mb-2">{f.title}</h3>
@@ -359,14 +389,22 @@ export default function Home() {
       <section className="bg-background px-4 sm:px-6 py-14" aria-labelledby="teacher-title">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
           <div data-reveal="left" className="order-2 lg:order-1">
-            <img
-              src="/images/illustrations/teacher-dashboard.svg"
-              alt="Giáo viên theo dõi biểu đồ và quản lý lớp học trên dashboard"
-              width={800}
-              height={600}
-              loading="lazy"
-              className="lp-float w-full h-auto max-w-xl mx-auto"
-            />
+            <div className="relative max-w-xl mx-auto">
+              <span aria-hidden="true" className="absolute -left-4 -bottom-4 w-2/3 h-2/3 rounded-3xl bg-primary/10" />
+              <img
+                src="/images/photos/home/giao-vien-day-hoc-bang-tuong-tac.webp"
+                alt="Giáo viên đứng lớp, giảng bài trên bảng tương tác cho học sinh"
+                width={1000}
+                height={750}
+                loading="lazy"
+                decoding="async"
+                className="relative w-full h-auto rounded-3xl shadow-card"
+              />
+              <div className="lp-pop-float absolute -right-2 sm:-right-5 top-6 bg-white rounded-2xl shadow-card border border-line px-4 py-2.5">
+                <p className="text-xs text-muted">Quản lý lớp học</p>
+                <p className="text-sm font-bold text-primary">Điểm danh · Học phí · Giao đề</p>
+              </div>
+            </div>
           </div>
           <div data-reveal="right" className="order-1 lg:order-2 space-y-5">
             <h2 id="teacher-title" className="ui-section-title text-2xl md:text-3xl font-extrabold">Dashboard dành cho Giáo Viên</h2>
@@ -396,14 +434,26 @@ export default function Home() {
           <div data-reveal className="space-y-4 text-center lg:text-left">
             <h2 id="faq-title" className="ui-section-title text-2xl md:text-3xl font-extrabold inline-block lg:block">Câu hỏi thường gặp</h2>
             <p className="text-muted">Những thắc mắc phổ biến về tài khoản, dùng thử và cách chấm điểm.</p>
-            <img
-              src="/images/illustrations/faq.svg"
-              alt="Minh họa hỏi đáp và hỗ trợ người học"
-              width={800}
-              height={600}
-              loading="lazy"
-              className="w-full h-auto max-w-sm mx-auto lg:mx-0 hidden sm:block"
-            />
+            {/* Ảnh người (tách nền) đứng trên vòng tròn xanh nhạt + thẻ nổi hotline */}
+            <div className="hidden sm:block relative max-w-sm mx-auto lg:mx-0 h-[400px]">
+              <span aria-hidden="true" className="absolute inset-x-0 bottom-0 flex justify-center">
+                <span className="block w-[330px] h-[330px] rounded-full bg-primary-soft" />
+              </span>
+              <span aria-hidden="true" className="lp-blob absolute right-6 top-14 w-12 h-12 rounded-full bg-highlight/60" />
+              <img
+                src={PHOTOS.homeFaq.src}
+                alt={PHOTOS.homeFaq.alt}
+                width={PHOTOS.homeFaq.width}
+                height={PHOTOS.homeFaq.height}
+                loading="lazy"
+                decoding="async"
+                className="relative h-full w-full object-contain object-bottom drop-shadow-[0_16px_28px_rgba(30,58,138,0.22)]"
+              />
+              <div className="lp-pop-float absolute left-0 bottom-16 bg-white rounded-2xl shadow-card border border-line px-4 py-2.5 text-left">
+                <p className="text-xs text-muted">Cần hỗ trợ thêm?</p>
+                <p className="text-sm font-bold text-primary">Hotline 0869.603.164</p>
+              </div>
+            </div>
           </div>
           <div className="space-y-3">
             {FAQS.map((f, i) => (
@@ -422,49 +472,63 @@ export default function Home() {
       </section>
 
       {/* ── 7. Liên hệ / CTA ── (menu "Liên hệ" ở header trỏ tới #lien-he; scroll-mt chừa chỗ cho header sticky) */}
-      <section id="lien-he" className="bg-background px-4 sm:px-6 py-14 scroll-mt-16" aria-labelledby="cta-title">
-        <div data-reveal="zoom" className="max-w-7xl mx-auto ui-card p-6 sm:p-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          <div className="space-y-5 text-center md:text-left">
-            <h2 id="cta-title" className="ui-section-title text-2xl md:text-3xl font-extrabold inline-block md:block">Bắt đầu học ngay hôm nay</h2>
-            <p className="text-muted text-base sm:text-lg">Không cần thẻ tín dụng. Dùng thử miễn phí 3 ngày.</p>
+      <section id="lien-he" className="bg-background px-4 sm:px-6 pt-14 md:pt-28 pb-14 scroll-mt-16" aria-labelledby="cta-title">
+        <div data-reveal="zoom" className="relative max-w-7xl mx-auto rounded-[28px] bg-primary text-white grid grid-cols-1 md:grid-cols-[1.2fr_1fr] items-end">
+          {/* Họa tiết vòng tròn mờ — bọc riêng để overflow-hidden không cắt mất ảnh người nhô lên khỏi mép trên */}
+          <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden rounded-[28px]">
+            <span className="absolute -right-24 -bottom-32 w-[420px] h-[420px] rounded-full bg-white/[0.07]" />
+            <span className="absolute -left-16 -top-20 w-64 h-64 rounded-full bg-white/[0.05]" />
+            <span className="absolute right-[38%] top-10 w-14 h-14 rounded-full bg-highlight/80" />
+          </span>
+          <div className="relative space-y-5 p-6 sm:p-10 md:pb-12 text-center md:text-left">
+            <h2 id="cta-title" className="text-3xl md:text-4xl font-extrabold leading-tight">Bắt đầu học ngay hôm nay</h2>
+            <p className="text-white/80 text-base sm:text-lg">Không cần thẻ tín dụng. Dùng thử miễn phí 3 ngày.</p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center md:justify-start">
-              <Link href="/auth?role=STUDENT" className="btn-primary px-7 py-3 text-base">
+              <Link href="/auth?role=STUDENT" className="btn-highlight lp-shine px-7 py-3 text-base">
                 Học viên đăng ký
               </Link>
-              <Link href="/auth?role=TEACHER" className="btn-outline px-7 py-3 text-base">
+              <Link href="/auth?role=TEACHER" className="inline-flex items-center justify-center rounded-full border-2 border-white/70 px-7 py-3 text-base font-bold text-white hover:bg-white hover:text-primary transition-colors">
                 Dành cho Giáo Viên
               </Link>
             </div>
-            <div className="rounded-2xl bg-primary-soft p-4 sm:p-5 text-left">
-              <h3 className="font-bold text-foreground">Liên hệ với Lucy Tutor</h3>
-              <p className="text-sm text-muted mt-1">Cần tư vấn lộ trình, hỗ trợ tài khoản hay hợp tác? Liên hệ với chúng tôi:</p>
+            <div className="rounded-2xl bg-white/10 p-4 sm:p-5 text-left">
+              <h3 className="font-bold">Liên hệ với Lucy Tutor</h3>
+              <p className="text-sm text-white/75 mt-1">Cần tư vấn lộ trình, hỗ trợ tài khoản hay hợp tác? Liên hệ với chúng tôi:</p>
               <dl className="mt-3 space-y-1 text-sm">
                 <div className="flex flex-wrap items-center gap-x-2">
-                  <dt className="text-muted">Hotline:</dt>
-                  <dd><a href="tel:+84869603164" className="inline-block py-1.5 font-bold text-primary hover:underline">0869.603.164</a></dd>
+                  <dt className="text-white/75">Hotline:</dt>
+                  <dd><a href="tel:+84869603164" className="inline-block py-1.5 font-bold text-white hover:underline">0869.603.164</a></dd>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-2">
-                  <dt className="text-muted">Email:</dt>
-                  <dd><a href="mailto:admin@lucytutor.online" className="inline-block py-1.5 font-bold text-primary hover:underline break-all">admin@lucytutor.online</a></dd>
+                  <dt className="text-white/75">Email:</dt>
+                  <dd><a href="mailto:admin@lucytutor.online" className="inline-block py-1.5 font-bold text-white hover:underline break-all">admin@lucytutor.online</a></dd>
                 </div>
               </dl>
             </div>
           </div>
-          <img
-            src="/images/illustrations/contact.svg"
-            alt="Minh họa liên hệ và trò chuyện với Lucy Tutor"
-            width={800}
-            height={600}
-            loading="lazy"
-            className="lp-float w-full h-auto max-w-md mx-auto"
-          />
+          {/* Ảnh người cỡ lớn, trên desktop nhô lên khỏi mép trên của khối */}
+          <div className="relative h-[320px] sm:h-[380px] md:h-[500px] md:-mt-24">
+            <img
+              src={PHOTOS.homeCta.src}
+              alt={PHOTOS.homeCta.alt}
+              width={PHOTOS.homeCta.width}
+              height={PHOTOS.homeCta.height}
+              loading="lazy"
+              decoding="async"
+              className="h-full w-full object-contain object-bottom drop-shadow-[0_20px_30px_rgba(0,0,0,0.25)]"
+            />
+            <div className="lp-pop-float absolute left-2 md:-left-6 top-1/3 bg-white text-left rounded-2xl shadow-card px-4 py-2.5">
+              <p className="text-xs text-muted">Học viên tự do</p>
+              <p className="text-sm font-bold text-primary">Dùng thử miễn phí 3 ngày</p>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* ── 8. Footer ── */}
       <footer className="bg-white border-t border-line text-muted pt-12 pb-8 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pb-8 border-b border-line">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 pb-8 border-b border-line">
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center text-white font-black text-sm">L</div>
@@ -484,6 +548,14 @@ export default function Home() {
                 <li><Link href="/pronunciation" className="hover:text-primary transition-colors">Luyện Phát Âm</Link></li>
               </ul>
             </nav>
+            <nav aria-label="Công cụ miễn phí">
+              <h3 className="text-primary font-bold mb-3 text-sm uppercase tracking-wide">Công cụ miễn phí</h3>
+              <ul className="space-y-2 text-sm">
+                {FREE_TOOLS.map((t) => (
+                  <li key={t.href}><Link href={t.href} className="hover:text-primary transition-colors">{t.title}</Link></li>
+                ))}
+              </ul>
+            </nav>
             <nav aria-label="Đề thi và công cụ">
               <h3 className="text-primary font-bold mb-3 text-sm uppercase tracking-wide">Học viên</h3>
               <ul className="space-y-2 text-sm">
@@ -493,7 +565,6 @@ export default function Home() {
                 <li><Link href="/exam" className="hover:text-primary transition-colors">Demo bài thi</Link></li>
                 <li><Link href="/grammar-gym" className="hover:text-primary transition-colors">Luyện ngữ pháp</Link></li>
                 <li><Link href="/gym" className="hover:text-primary transition-colors">Phòng Gym Từ Vựng</Link></li>
-                <li><Link href="/phonetics" className="hover:text-primary transition-colors">Bảng Âm IPA</Link></li>
                 <li><Link href="/blog" className="hover:text-primary transition-colors">Blog chia sẻ</Link></li>
               </ul>
             </nav>

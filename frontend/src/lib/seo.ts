@@ -12,3 +12,21 @@ export const baseOpenGraph = {
   locale: "vi_VN",
   type: "website" as const,
 };
+
+/** Metadata đầy đủ cho 1 trang công khai: title, description, keywords, canonical, OpenGraph, Twitter. */
+export function pageMetadata({ title, description, path, keywords, ogTitle, image }: {
+  title: string; description: string; path: string; keywords: string[]; ogTitle?: string;
+  /** Ảnh chia sẻ mạng xã hội — bỏ trống thì dùng ảnh OG chung (app/opengraph-image.tsx) */
+  image?: { src: string; alt: string; width: number; height: number };
+}) {
+  const fullTitle = ogTitle || `${title} | ${SITE_NAME}`;
+  const images = image ? [{ url: image.src, width: image.width, height: image.height, alt: image.alt }] : undefined;
+  return {
+    title,
+    description,
+    keywords,
+    alternates: { canonical: path },
+    openGraph: { ...baseOpenGraph, title: fullTitle, description, url: path, ...(images ? { images } : {}) },
+    twitter: { card: "summary_large_image" as const, title: fullTitle, description, ...(images ? { images: images.map((i) => i.url) } : {}) },
+  };
+}

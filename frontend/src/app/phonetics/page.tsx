@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { getSessionUserId } from "@/lib/session";
 
 type Difficulty = "easy" | "medium" | "hard";
 
@@ -370,8 +371,12 @@ export default function PhoneticsPage() {
   const [hasTTS, setHasTTS] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Trang công khai: đã đăng nhập thì "quay lại" về dashboard, chưa thì về trang chủ
+  const [loggedIn, setLoggedIn] = useState(false);
+
   useEffect(() => {
     setHasTTS("speechSynthesis" in window);
+    setLoggedIn(!!getSessionUserId());
   }, []);
 
   // Consonants (8 cols) and monophthongs (4 cols) both need more width than a phone screen
@@ -413,14 +418,14 @@ export default function PhoneticsPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8 flex items-center gap-6">
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted">
-              <Link href="/dashboard" className="font-semibold text-muted hover:text-primary transition-colors py-2">
-                ← Dashboard
+              <Link href={loggedIn ? "/dashboard" : "/"} className="font-semibold text-muted hover:text-primary transition-colors py-2">
+                ← {loggedIn ? "Dashboard" : "Trang chủ"}
               </Link>
               <span className="text-line-strong">/</span>
               <span>Bảng Âm IPA</span>
             </div>
             <div className="flex flex-wrap items-center gap-3 mt-2">
-              <h1 className="ui-page-title text-2xl sm:text-3xl">Bảng Âm IPA</h1>
+              <h1 className="ui-page-title text-2xl sm:text-3xl">Bảng Phiên Âm IPA Tiếng Anh 44 Âm</h1>
               <span className="ui-badge px-3 py-1">
                 44 âm · British English
               </span>

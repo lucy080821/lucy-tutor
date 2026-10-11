@@ -1,15 +1,15 @@
-// IELTS overall-band rounding rule. VERIFY against an official IELTS source before relying on
-// this for anything beyond practice-test estimates — the commonly-described rule (used here) is:
-// take the raw average, round to the nearest quarter band, then if the result ends in .25 round
-// UP to the next .5, and if it ends in .75 round UP to the next whole band (bands never round
-// down at the quarter mark). Examples: 6.25 -> 6.5, 6.63 (~6.75 after rounding to quarter) -> 7.0.
+// IELTS overall-band rounding rule (as published by IELTS): if the average ends in .25 it is rounded
+// UP to the next half band, if it ends in .75 it is rounded UP to the next whole band. Anything below
+// .25 rounds down, so: fraction < .25 -> .0, .25 <= fraction < .75 -> .5, fraction >= .75 -> next whole.
+// Examples: 6.125 -> 6.0, 6.25 -> 6.5, 6.625 -> 6.5, 6.75 -> 7.0.
+// (An earlier version rounded to the nearest quarter first, which pushed 6.125 up to 6.5 and 6.625 up to 7.0.)
+// Mirrored in frontend/src/lib/tools/ieltsBand.ts — keep both in sync.
 function roundIeltsBand(rawAverage) {
-  const nearestQuarter = Math.round(rawAverage * 4) / 4;
-  const wholePart = Math.floor(nearestQuarter);
-  const frac = nearestQuarter - wholePart;
-  if (Math.abs(frac - 0.25) < 1e-9) return wholePart + 0.5;
-  if (Math.abs(frac - 0.75) < 1e-9) return wholePart + 1;
-  return nearestQuarter; // frac is already 0 or 0.5
+  const whole = Math.floor(rawAverage + 1e-9);
+  const frac = rawAverage - whole;
+  if (frac < 0.25 - 1e-9) return whole;
+  if (frac < 0.75 - 1e-9) return whole + 0.5;
+  return whole + 1;
 }
 
 // Writing overall = Task 1 (weight 1/3) + Task 2 (weight 2/3), per the official IELTS weighting

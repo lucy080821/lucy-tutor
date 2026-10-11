@@ -45,6 +45,8 @@ const ieltsAttemptsRoutes = require('./routes/ieltsAttempts.routes');
 const ieltsStudyRoutes = require('./routes/ieltsStudy.routes');
 const blogRoutes = require('./routes/blog.routes');
 const adminRoutes = require('./routes/admin.routes');
+const passwordResetRoutes = require('./routes/passwordReset.routes');
+const freeToolsRoutes = require('./routes/freeTools.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
@@ -71,6 +73,8 @@ app.use('/api/ielts-attempts', ieltsAttemptsRoutes);
 app.use('/api/ielts-study', ieltsStudyRoutes);
 app.use('/api/blog', blogRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/password-reset', passwordResetRoutes);
+app.use('/api/free-tools', freeToolsRoutes);
 
 // Every route in this app returns JSON errors as { error: '...' } — but multer's fileFilter/
 // limits errors (bad file type, file too large) and malformed-JSON body-parser errors are
@@ -89,4 +93,6 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   // Open the DB connection at boot so the first user request doesn't pay the ~1.5s cold connect.
   require('./lib/prisma').$connect().catch(err => console.error('Prisma warm-up failed:', err.message));
+  // Quét từ vựng cho trang /flashcard-tieng-anh ngay lúc khởi động, sau đó mỗi ngày 23:30 giờ VN
+  require('./utils/flashcardCatalog').startFlashcardScanner();
 });

@@ -35,3 +35,17 @@ export async function exportNodeToPDF(node: HTMLElement, filename: string) {
 
   pdf.save(filename);
 }
+
+// Each node = exactly one PDF page (A4-ish, PAGE_WIDTH x PAGE_HEIGHT). Used for printable layouts
+// such as flashcards, where slicing one tall image across pages (exportNodeToPDF) would cut cards in half.
+export async function exportPagesToPDF(nodes: HTMLElement[], filename: string) {
+  if (!nodes.length) return;
+  const [{ default: jsPDF }, { toPng }] = await Promise.all([import("jspdf"), import("html-to-image")]);
+  const pdf = new jsPDF({ orientation: "portrait", unit: "px", format: [PAGE_WIDTH, PAGE_HEIGHT] });
+  for (let i = 0; i < nodes.length; i++) {
+    const dataUrl = await toPng(nodes[i], { pixelRatio: 2, cacheBust: true, backgroundColor: "#ffffff" });
+    if (i > 0) pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    pdf.addImage(dataUrl, "PNG", 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+  }
+  pdf.save(filename);
+}

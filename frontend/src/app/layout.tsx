@@ -98,7 +98,9 @@ export default function RootLayout({
 
             <div className="flex items-center gap-2 md:gap-6">
               <nav aria-label="Menu chính" className="flex items-center md:gap-2">
-                <Link href="/" className="text-[13px] sm:text-sm font-bold text-foreground hover:text-primary transition-colors px-1 sm:px-2 py-2">Trang chủ</Link>
+                <Link href="/" className="hidden sm:inline-block text-sm font-bold text-foreground hover:text-primary transition-colors px-2 py-2">Trang chủ</Link>
+                {/* Khối "Công cụ miễn phí" trên trang chủ (section#cong-cu-mien-phi) */}
+                <Link href="/#cong-cu-mien-phi" className="text-[13px] sm:text-sm font-bold text-foreground hover:text-primary transition-colors px-1 sm:px-2 py-2">Công cụ</Link>
                 <Link href="/blog" className="text-[13px] sm:text-sm font-bold text-foreground hover:text-primary transition-colors px-1 sm:px-2 py-2">Blog</Link>
                 {/* Khối liên hệ nằm cuối trang chủ (section#lien-he) */}
                 <Link href="/#lien-he" className="text-[13px] sm:text-sm font-bold text-foreground hover:text-primary transition-colors px-1 sm:px-2 py-2">Liên hệ</Link>
