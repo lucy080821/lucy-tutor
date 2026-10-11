@@ -359,6 +359,7 @@ export default function StudentDashboard() {
 
   const [expandedNav, setExpandedNav] = useState<Record<string, boolean>>({
     'LEARNING': true,
+    'GAMES': true,
   });
 
   const toggleNavGroup = (id: string) => {
@@ -405,12 +406,20 @@ export default function StudentDashboard() {
       { id: "IELTS_LINK",        featureKey: "ielts",        label: "IELTS Cambridge",            icon: "🎓", isLink: true, href: '/ielts' },
     ]
   };
+  // Trò chơi ôn tập (thuần client-side, không cần lớp) — mỗi bộ trò chơi là 1 mục con
+  const gamesGroup = {
+    id: "GAMES", label: "Trò Chơi Học Tập", icon: "🎮",
+    subItems: [
+      { id: "GAMES_G3_LINK", label: "Tiếng Anh Lớp 3", icon: "🎮", isLink: true, href: '/games/lop-3' },
+    ]
+  };
   // Học viên chưa tham gia lớp nào chưa dùng được nhóm "Học Tập" (phụ thuộc giáo viên giao) —
   // đưa 2 nhóm tự luyện (không cần lớp) lên trước để chúng là thứ đầu tiên nhìn thấy.
   const isClassless = !user?.classroomsJoined?.length;
   const navGroups = [
     { id: "OVERVIEW", label: "Tổng Quan", icon: "📊" },
     ...(isClassless ? [fourSkillsGroup, trainingCenterGroup, learningGroup] : [learningGroup, fourSkillsGroup, trainingCenterGroup]),
+    gamesGroup,
     { id: "CALENDAR", label: "Thời Khóa Biểu", icon: "📅" },
     { id: "NOTEBOOK", label: "Sổ Tay Lỗi Sai", icon: "📔" },
     { id: "LEADERBOARD", label: "Bảng Xếp Hạng", icon: "🏆" },
@@ -1014,7 +1023,7 @@ export default function StudentDashboard() {
 
             {/* Practice grid (IOT-style) — built only from the self-practice links already in the sidebar, same featureKey gating */}
             {(() => {
-              const practiceLinks = [...fourSkillsGroup.subItems, ...trainingCenterGroup.subItems]
+              const practiceLinks = [...fourSkillsGroup.subItems, ...trainingCenterGroup.subItems, ...gamesGroup.subItems]
                 .filter((item: any) => !item.featureKey || enabledFeatures.has(item.featureKey));
               if (practiceLinks.length === 0) return null;
               const groups = PRACTICE_GROUPS
@@ -2053,6 +2062,7 @@ const PRACTICE_GROUPS: { id: string; label: string; description: string; hrefs: 
   { id: 'EXAM', label: 'Luyện Thi', description: 'Đề thi thử THPT Quốc Gia và IELTS Cambridge', hrefs: ['/ielts', '/mock-test'] },
   { id: 'FOUNDATION', label: 'Từ Vựng & Ngữ Pháp', description: 'Ôn từ vựng SRS, ngữ pháp theo chuyên đề và lộ trình học', hrefs: ['/gym', '/grammar-gym', '/study-plan'] },
   { id: 'PRONUNCIATION', label: 'Phát Âm', description: 'Bảng âm IPA và luyện phát âm cùng AI', hrefs: ['/phonetics', '/pronunciation'] },
+  { id: 'GAMES', label: 'Trò Chơi', description: 'Vừa chơi vừa ôn từ vựng và mẫu câu theo sách', hrefs: ['/games/lop-3'] },
 ];
 
 // Thumbnail per self-practice route for the OVERVIEW "Luyện tập" grid (files under /public/images/thumbs/)
@@ -2069,6 +2079,7 @@ const PRACTICE_THUMBS: Record<string, string> = {
   '/mock-test': 'mock-test',
   '/ielts': 'ielts',
   '/mistakes': 'mistakes',
+  '/games/lop-3': 'games',
 };
 
 function EmptyIllustration() {
