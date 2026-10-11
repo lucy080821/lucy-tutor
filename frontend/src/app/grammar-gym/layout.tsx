@@ -5,7 +5,9 @@ export const metadata: Metadata = {
   title: "Grammar Gym – Luyện Ngữ Pháp",
   description:
     "Luyện ngữ pháp tiếng Anh theo chuyên đề, tập trung vào những lỗi bạn hay mắc, kết hợp ôn tập lặp lại ngắt quãng.",
-  alternates: { canonical: "/grammar-gym" },
+  // Trang cần đăng nhập (hoặc chỉ có dữ liệu mẫu): Googlebot chỉ thấy trang rỗng/bị chuyển hướng → không index,
+  // vẫn follow để link trên trang được tính. Không chặn ở robots.ts (chặn thì Google không đọc được thẻ noindex).
+  robots: { index: false, follow: true },
   openGraph: {
     ...baseOpenGraph,
     title: "Grammar Gym – Luyện Ngữ Pháp | Lucy Tutor",

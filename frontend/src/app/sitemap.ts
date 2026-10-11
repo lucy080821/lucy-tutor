@@ -5,24 +5,14 @@ import { FREE_TOOLS } from "@/lib/freeTools";
 import { getFlashGrades, gradeWordCount } from "@/lib/tools/flashcards";
 import { PHOTOS } from "@/lib/photos";
 
-// Chỉ liệt kê các trang công khai. Khu vực riêng tư (dashboard, teacher, trang theo id)
-// được chặn ở robots.ts và gắn noindex trong layout tương ứng.
+// Chỉ liệt kê trang có nội dung thật khi chưa đăng nhập. Các trang luyện tập cần đăng nhập
+// (gym, reading, writing, listening, conversation, pronunciation, mock-test, ielts, grammar-gym,
+// study-plan, mistakes, exam) gắn noindex trong layout và không đưa vào đây; khu vực riêng tư
+// (dashboard, teacher, trang theo id) còn bị chặn thêm ở robots.ts.
 const PUBLIC_ROUTES: { path: string; priority: number; changeFrequency: "weekly" | "monthly" }[] = [
   { path: "", priority: 1, changeFrequency: "weekly" },
   { path: "/blog", priority: 0.8, changeFrequency: "weekly" },
-  { path: "/auth", priority: 0.8, changeFrequency: "monthly" },
-  { path: "/mock-test", priority: 0.8, changeFrequency: "monthly" },
-  { path: "/ielts", priority: 0.8, changeFrequency: "monthly" },
-  { path: "/reading", priority: 0.7, changeFrequency: "monthly" },
-  { path: "/writing", priority: 0.7, changeFrequency: "monthly" },
-  { path: "/listening", priority: 0.7, changeFrequency: "monthly" },
-  { path: "/conversation", priority: 0.7, changeFrequency: "monthly" },
-  { path: "/pronunciation", priority: 0.7, changeFrequency: "monthly" },
-  { path: "/gym", priority: 0.6, changeFrequency: "monthly" },
-  { path: "/grammar-gym", priority: 0.6, changeFrequency: "monthly" },
-  { path: "/study-plan", priority: 0.5, changeFrequency: "monthly" },
-  { path: "/mistakes", priority: 0.4, changeFrequency: "monthly" },
-  { path: "/exam", priority: 0.4, changeFrequency: "monthly" },
+  { path: "/auth", priority: 0.5, changeFrequency: "monthly" },
 ];
 
 // Công cụ miễn phí (không cần đăng nhập) — ưu tiên cao vì là trang đích từ Google; gồm cả /phonetics và /games/lop-3
