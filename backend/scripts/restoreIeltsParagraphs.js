@@ -3,6 +3,7 @@
 // (xem src/utils/ieltsParagraphs.js).
 // Chạy: node scripts/restoreIeltsParagraphs.js          (xem trước, không ghi)
 //       node scripts/restoreIeltsParagraphs.js --write  (ghi vào DB)
+//       thêm --force: chia lại cả bài đã có đoạn (mất chia đoạn giáo viên sửa tay — nên sao lưu trước)
 //
 // Idempotent: bài đã có dòng trống giữa các đoạn (đã chia hoặc giáo viên sửa tay) được bỏ qua.
 require('dotenv').config();
@@ -11,6 +12,8 @@ const { restoreParagraphs } = require('../src/utils/ieltsParagraphs');
 const { getSkillPageRange } = require('../src/utils/ieltsExtraction');
 
 const WRITE = process.argv.includes('--write');
+// --force: chia lại cả bài đã có đoạn (vd chạy lại sau khi sửa thuật toán) — làm mất chia đoạn sửa tay
+const FORCE = process.argv.includes('--force');
 
 (async () => {
   const passages = await prisma.ieltsReadingPassage.findMany({
@@ -29,7 +32,7 @@ const WRITE = process.argv.includes('--write');
     if (!range) { console.log(`- ${label}: bỏ qua (không có phạm vi trang Reading)`); continue; }
 
     const span = pages.filter((pg) => pg.num >= range.startPage && pg.num <= range.endPage);
-    const next = restoreParagraphs(p.bodyText, span);
+    const next = restoreParagraphs(p.bodyText, span, { force: FORCE });
     if (next === p.bodyText) { console.log(`- ${label}: giữ nguyên`); continue; }
     changed++;
     console.log(`- ${label}: ${next.split(/\n\s*\n/).length} đoạn`);
