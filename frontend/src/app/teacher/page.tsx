@@ -11,6 +11,7 @@ import { CEFR_LEVELS, CefrLevel } from '@/lib/skillPractice';
 import { usePagination } from '@/lib/usePagination';
 import Pagination from '@/components/Pagination';
 import { compressImageToBase64 } from '@/lib/imageCompress';
+import { usePasswordResets, PasswordResetPanel, showTempPasswordDialog } from './_components/PasswordResets';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -118,7 +119,7 @@ export default function TeacherDashboard() {
   >("NAME_ASC");
   const [globalLoading, setGlobalLoading] = useState({ isLoading: false, message: "" });
 
-  // ── Manually add a student (teacher enrolls someone in person, default password 123456) ──
+  // ── Manually add a student (teacher enrolls someone in person; backend issues a random temp password) ──
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [addStudentName, setAddStudentName] = useState("");
   const [addStudentEmail, setAddStudentEmail] = useState("");
@@ -129,6 +130,9 @@ export default function TeacherDashboard() {
   // ── FREE_STUDENTS tab: free-standing (no classroom) students managed by this teacher ──
   const [freeStudents, setFreeStudents] = useState<any[]>([]);
   const [searchFreeStudentQuery, setSearchFreeStudentQuery] = useState("");
+
+  // ── Quên mật khẩu: yêu cầu từ học viên + mật khẩu tạm đã cấp chưa được đổi (xem _components/PasswordResets.tsx) ──
+  const passwordResets = usePasswordResets(user?.id, activeTab === "STUDENTS" || activeTab === "FREE_STUDENTS" || activeTab === "OVERVIEW");
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -357,11 +361,8 @@ export default function TeacherDashboard() {
       ));
       setShowAddStudentModal(false);
       fetchTeacherData();
-      Swal.fire({
-        title: 'Đã thêm học viên!',
-        html: `Tài khoản <b>${data.email}</b> đã được tạo với mật khẩu mặc định <b>123456</b>. Học viên có thể đăng nhập và đổi mật khẩu sau trong mục Cài Đặt.`,
-        icon: 'success'
-      });
+      passwordResets.reload();
+      showTempPasswordDialog(data.name, data.email, data.tempPassword, 'Đã thêm học viên!');
     } catch (err) {
       console.error('Error adding student', err);
       Swal.fire('Lỗi', 'Không thể thêm học viên', 'error');
@@ -2213,6 +2214,10 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
       items.push({ level: 'warning', icon: '⏳', title: 'Học viên tự do sắp hết hạn', message: `${expiringFreeStudents.length} học viên tự do sẽ hết hạn trong 7 ngày tới. Nhắc đóng phí sớm để tránh gián đoạn học tập.` });
     }
 
+    if (passwordResets.requests.length > 0) {
+      items.push({ level: 'critical', icon: '🔑', title: 'Học viên quên mật khẩu', message: `${passwordResets.requests.length} học viên đang chờ được cấp lại mật khẩu và chưa đăng nhập được. Vào tab "Học Viên" để cấp mật khẩu tạm.` });
+    }
+
     if (tuitionCollectionRate !== null && overviewTuitionData) {
       if (tuitionCollectionRate < 70) {
         items.push({ level: 'warning', icon: '💰', title: 'Thu học phí còn chậm', message: `Mới thu được ${tuitionCollectionRate}% học phí tháng ${overviewTuitionMonth.split('-')[1]} (còn ${overviewTuitionData.unpaidCount} học viên chưa đóng). Nên gửi nhắc nhở sớm qua Zalo/tin nhắn.` });
@@ -2282,7 +2287,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
     return items.sort((a, b) => severityOrder[a.level] - severityOrder[b.level]).slice(0, 6);
   },
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  [activeTab, revenueMoMPct, freeStudents, tuitionCollectionRate, overviewTuitionData, overviewTuitionMonth, completionRate, classroomScoreStats, classrooms, allStudents, studentAvgById]);
+  [activeTab, revenueMoMPct, freeStudents, passwordResets.requests, tuitionCollectionRate, overviewTuitionData, overviewTuitionMonth, completionRate, classroomScoreStats, classrooms, allStudents, studentAvgById]);
 
   if (loading) return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden w-full">
@@ -2626,6 +2631,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
             <PageBanner title="Danh Sách Học Viên" description="Toàn bộ học viên trong các lớp của bạn — cấp bậc, điểm trung bình, tiến độ so với mục tiêu và ngày đăng ký.">
               <button onClick={openAddStudentModal} disabled={classrooms.length === 0} title={classrooms.length === 0 ? 'Cần tạo ít nhất 1 lớp học trước' : ''} className="btn-primary px-4 py-2 text-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap">+ Thêm Học Viên</button>
             </PageBanner>
+            <PasswordResetPanel {...passwordResets} />
             <div className="flex flex-wrap gap-3">
               <div className="relative flex-1 min-w-[220px]">
                 <input
@@ -2680,6 +2686,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
                         <th className="p-4 font-bold border-b border-line text-center">Mục tiêu</th>
                         <th className="p-4 font-bold border-b border-line w-32">Tiến độ</th>
                         <th className="p-4 font-bold border-b border-line">Ngày Đăng Ký</th>
+                        <th className="p-4 font-bold border-b border-line"></th>
                       </tr>
                     </thead>
                     <tbody>
@@ -2722,6 +2729,11 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
                               </div>
                             </td>
                             <td className="p-4 text-sm text-muted">{s.createdAt ? new Date(s.createdAt).toLocaleDateString('vi-VN') : '—'}</td>
+                            <td className="p-4 text-right">
+                              <button onClick={() => passwordResets.resetPassword(s)} className="text-xs font-semibold text-primary hover:underline px-2 py-2 cursor-pointer whitespace-nowrap">
+                                Đặt lại mật khẩu
+                              </button>
+                            </td>
                           </tr>
                         );
                       })}
@@ -2802,12 +2814,17 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
                               ) : '—'}
                             </td>
                             <td className="p-4 text-center">
-                              <button
-                                onClick={() => handleConfirmFreeStudentPayment(s)}
-                                className="btn-primary px-4 py-2 text-sm cursor-pointer"
-                              >
-                                {s.accessLocked ? 'Kích Hoạt Lại' : 'Xác Nhận Đóng Phí'}
-                              </button>
+                              <div className="flex flex-col items-center gap-1">
+                                <button
+                                  onClick={() => handleConfirmFreeStudentPayment(s)}
+                                  className="btn-primary px-4 py-2 text-sm cursor-pointer"
+                                >
+                                  {s.accessLocked ? 'Kích Hoạt Lại' : 'Xác Nhận Đóng Phí'}
+                                </button>
+                                <button onClick={() => passwordResets.resetPassword(s)} className="text-xs font-semibold text-primary hover:underline px-2 py-2 cursor-pointer whitespace-nowrap">
+                                  Đặt lại mật khẩu
+                                </button>
+                              </div>
                             </td>
                           </tr>
                         );
@@ -4301,7 +4318,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
         <div className="fixed inset-0 bg-slate-900/50 z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 sm:p-8 w-full max-w-xl max-h-[90vh] overflow-y-auto border border-line shadow-2xl animate-in zoom-in-95 duration-200">
             <h2 className="text-2xl font-extrabold text-primary mb-2">Thêm Học Viên Thủ Công</h2>
-            <p className="text-sm text-muted mb-6">Tài khoản mới sẽ có mật khẩu mặc định <b>123456</b> — học viên có thể đổi lại sau khi đăng nhập.</p>
+            <p className="text-sm text-muted mb-6">Hệ thống tạo 1 mật khẩu tạm ngẫu nhiên để bạn gửi cho học viên — lần đăng nhập đầu học viên sẽ phải đặt mật khẩu mới. Bạn xem lại được mật khẩu tạm ở tab Học Viên tới khi học viên đổi.</p>
             <form onSubmit={handleAddStudent}>
               <div className="mb-4">
                 <label className="ui-label">Họ Tên</label>

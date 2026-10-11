@@ -3,6 +3,7 @@ import { useState, Suspense, useEffect } from "react";
 import { getSessionUserId, setSessionUserId, clearSession, homeForRole } from "@/lib/session";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { ForgotPasswordForm, ForceChangePassword } from "@/components/auth/PasswordRecovery";
 
 const FEATURE_BULLETS = [
   { text: "AI phân tích điểm yếu tức thì" },
@@ -32,6 +33,9 @@ function AuthForm() {
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
+  // Đăng nhập bằng mật khẩu tạm -> giữ lại tới khi đặt xong mật khẩu mới mới ghi phiên (xem ForceChangePassword)
+  const [pendingLogin, setPendingLogin] = useState<{ id: string; home: string; password: string } | null>(null);
 
   // Only needed for the "free-standing student" signup picker below — cheap enough to fetch upfront.
   useEffect(() => {
@@ -89,6 +93,11 @@ function AuthForm() {
       // Backend đã chặn tài khoản ADMIN ở /signin; đây là lớp chặn thứ 2 phòng khi role lạ lọt qua
       const home = homeForRole(data.role);
       if (!home) throw new Error('Tài khoản này không đăng nhập được ở đây.');
+
+      if (isLogin && data.mustChangePassword) {
+        setPendingLogin({ id: data.id, home, password });
+        return;
+      }
 
       // Luôn xoá phiên cũ ở cả 2 storage trước khi ghi phiên mới (xem lib/session.ts)
       setSessionUserId(data.id, rememberMe);
@@ -154,7 +163,16 @@ function AuthForm() {
             <span className="text-xl font-black text-primary tracking-tight">LUCY<span className="text-muted">TUTOR</span></span>
           </div>
 
-          {/* Card */}
+          {showForgot ? (
+            <ForgotPasswordForm defaultEmail={email} onBack={() => setShowForgot(false)} />
+          ) : pendingLogin ? (
+            <ForceChangePassword
+              userId={pendingLogin.id}
+              currentPassword={pendingLogin.password}
+              onCancel={() => { setPendingLogin(null); setPassword(''); }}
+              onDone={() => { setSessionUserId(pendingLogin.id, rememberMe); router.replace(pendingLogin.home); }}
+            />
+          ) : (
           <div>
             <h1 className="text-[24px] font-extrabold text-primary text-center leading-tight mb-1.5 tracking-tight">
               {isLogin ? 'Chào mừng trở lại' : 'Tạo tài khoản mới'}
@@ -219,7 +237,14 @@ function AuthForm() {
               </div>
 
               <div>
-                <label className="ui-label">Mật khẩu</label>
+                <div className="flex items-center justify-between gap-2">
+                  <label className="ui-label">Mật khẩu</label>
+                  {isLogin && (
+                    <button type="button" onClick={() => { setError(''); setShowForgot(true); }} className="text-xs font-semibold text-primary hover:underline cursor-pointer mb-1.5">
+                      Quên mật khẩu?
+                    </button>
+                  )}
+                </div>
                 <div className="relative">
                   <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
@@ -330,6 +355,7 @@ function AuthForm() {
               </Link>
             </div>
           </div>
+          )}
 
           {/* Trust badges */}
           <div className="flex flex-wrap items-center justify-center gap-2 mt-5">

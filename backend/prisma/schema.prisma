@@ -85,8 +85,33 @@ model User {
   authorTitle String? // Chức danh tự khai, vd "Giáo viên IELTS"
   authorBio   String?
 
+  // Quên mật khẩu (email đăng nhập không phải hộp thư thật -> giáo viên/admin cấp mật khẩu tạm).
+  // tempPassword giữ bản rõ của mật khẩu tạm để người cấp xem lại được tới khi chủ tài khoản đổi mật khẩu
+  // (đổi xong thì xoá). Mặc định bị omit ở lib/prisma.js giống `password`.
+  mustChangePassword    Boolean   @default(false)
+  tempPassword          String?
+  tempPasswordIssuedAt  DateTime?
+  passwordResetRequests PasswordResetRequest[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// Yêu cầu "Quên mật khẩu" gửi từ /auth — học viên: giáo viên phụ trách xử lý; giáo viên: admin xử lý (admin thấy tất cả)
+model PasswordResetRequest {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contact      String? // SĐT/Zalo học viên tự ghi để người cấp liên lạc gửi mật khẩu tạm
+  note         String?
+  status       String    @default("PENDING") // PENDING | DONE | DISMISSED
+  resolvedAt   DateTime?
+  resolvedById String? // id giáo viên/admin đã xử lý (không FK)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status])
+  @@index([userId])
 }
 
 model Question {

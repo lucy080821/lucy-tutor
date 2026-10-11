@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import Pagination from "@/components/Pagination";
 import { usePagination } from "@/lib/usePagination";
-import { adminFetch, AdminAuthError, formatVNDate, FREE_STATUS_LABEL, ROLE_LABEL, type AdminUser, type FreeStatus } from "@/lib/adminApi";
+import { adminFetch, AdminAuthError, formatVNDate, FREE_STATUS_LABEL, ROLE_LABEL, type AdminUser, type FreeStatus, type PasswordRequest } from "@/lib/adminApi";
+import { SITE_URL } from "@/lib/seo";
 import { ErrorBlock, LoadingBlock, Modal, SectionCard } from "./ui";
 
 const PAGE_SIZE = 20;
@@ -27,6 +28,25 @@ const HTML_ESCAPES: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
 
 // Bỏ dấu để tìm "tuan" ra "Tuấn"
+// Tin nhắn soạn sẵn gửi mật khẩu tạm qua Zalo/điện thoại (email đăng nhập thường không phải hộp thư thật)
+const loginMessage = (email: string, tempPassword: string) =>
+  `Lucy Tutor — thông tin đăng nhập của bạn:\nEmail: ${email}\nMật khẩu tạm: ${tempPassword}\nĐăng nhập tại ${SITE_URL}/auth — hệ thống sẽ yêu cầu bạn đặt mật khẩu mới ngay sau đó.`;
+const copyText = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+    Swal.fire({ toast: true, position: "top-end", icon: "success", title: "Đã sao chép", showConfirmButton: false, timer: 1500 });
+  } catch {
+    Swal.fire("Không sao chép được", "Trình duyệt chặn quyền clipboard — hãy sao chép thủ công.", "warning");
+  }
+};
+const showTempPassword = (title: string, name: string, email: string, tempPassword: string) =>
+  Swal.fire({
+    title,
+    html: `Gửi cho <b>${esc(name)}</b> thông tin đăng nhập:<br/>Email: <b>${esc(email)}</b><br/>Mật khẩu tạm: <b style="font-size:18px;letter-spacing:1px">${esc(tempPassword)}</b>`
+      + `<p style="margin-top:10px;font-size:13px;color:#64748b">Lần đăng nhập đầu sẽ phải đặt mật khẩu mới. Nếu quên, xem lại ở cột "Mật khẩu tạm" tới khi người dùng đổi.</p>`,
+    icon: "success", showCancelButton: true, confirmButtonText: "Sao chép tin nhắn", cancelButtonText: "Đóng",
+  }).then((r) => { if (r.isConfirmed) copyText(loginMessage(email, tempPassword)); });
+
 const fold = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
 
 export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
@@ -38,6 +58,8 @@ export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
   const [newTeacher, setNewTeacher] = useState({ name: "", email: "", phone: "" });
   const [saving, setSaving] = useState(false);
   const [reloadTick, setReloadTick] = useState(0);
+  const [requests, setRequests] = useState<PasswordRequest[]>([]);
+  const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const reload = () => setReloadTick((t) => t + 1);
 
   const handleError = useCallback((err: unknown, title?: string) => {
@@ -51,6 +73,9 @@ export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
     adminFetch<{ users: AdminUser[] }>("/users")
       .then((d) => { if (!cancelled) setUsers(d.users); })
       .catch((err) => { if (!cancelled) handleError(err); });
+    adminFetch<{ requests: PasswordRequest[] }>("/password-requests")
+      .then((d) => { if (!cancelled) setRequests(d.requests); })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, [reloadTick, handleError]);
 
@@ -79,16 +104,12 @@ export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
     e.preventDefault();
     setSaving(true);
     try {
-      const r = await adminFetch<{ user: { name: string; email: string }; defaultPassword: string }>("/users/teacher", {
+      const r = await adminFetch<{ user: { name: string; email: string }; tempPassword: string }>("/users/teacher", {
         method: "POST", body: JSON.stringify(newTeacher),
       });
       setCreating(false);
       setNewTeacher({ name: "", email: "", phone: "" });
-      Swal.fire({
-        title: "Đã tạo tài khoản giáo viên",
-        html: `Gửi cho <b>${esc(r.user.name)}</b> thông tin đăng nhập:<br/>Email: <b>${esc(r.user.email)}</b><br/>Mật khẩu: <b>${r.defaultPassword}</b>`,
-        icon: "success",
-      });
+      showTempPassword("Đã tạo tài khoản giáo viên", r.user.name, r.user.email, r.tempPassword);
       reload();
     } catch (err) {
       handleError(err, "Không tạo được tài khoản");
@@ -97,18 +118,28 @@ export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
     }
   };
 
-  const resetPassword = async (u: AdminUser) => {
+  const resetPassword = async (u: { id: string; name: string; email: string }) => {
     const ok = await Swal.fire({
       title: "Đặt lại mật khẩu?",
-      html: `Mật khẩu của <b>${esc(u.name)}</b> (${esc(u.email)}) sẽ được đặt về mật khẩu mặc định. Mật khẩu hiện tại sẽ không dùng được nữa.`,
+      html: `Hệ thống sẽ tạo 1 mật khẩu tạm cho <b>${esc(u.name)}</b> (${esc(u.email)}). Mật khẩu hiện tại sẽ không dùng được nữa.`,
       icon: "warning", showCancelButton: true, confirmButtonText: "Đặt lại", cancelButtonText: "Huỷ", confirmButtonColor: "#dc2626",
     });
     if (!ok.isConfirmed) return;
     try {
-      const r = await adminFetch<{ defaultPassword: string }>(`/users/${u.id}/reset-password`, { method: "POST" });
-      Swal.fire("Đã đặt lại", `Mật khẩu mới của ${u.name}: ${r.defaultPassword}`, "success");
+      const r = await adminFetch<{ tempPassword: string }>(`/users/${u.id}/reset-password`, { method: "POST" });
+      reload();
+      showTempPassword("Đã đặt lại mật khẩu", u.name, u.email, r.tempPassword);
     } catch (err) {
       handleError(err, "Không đặt lại được");
+    }
+  };
+
+  const dismissRequest = async (r: PasswordRequest) => {
+    try {
+      await adminFetch(`/password-requests/${r.id}/dismiss`, { method: "POST" });
+      setRequests((list) => list.filter((x) => x.id !== r.id));
+    } catch (err) {
+      handleError(err, "Không bỏ qua được yêu cầu");
     }
   };
 
@@ -117,6 +148,28 @@ export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
   return (
     <SectionCard title="Người dùng" subtitle={users ? `${users.length.toLocaleString("vi-VN")} tài khoản` : undefined}
       actions={<button onClick={() => setCreating(true)} className="btn-primary px-4 py-2 text-sm cursor-pointer">+ Tạo tài khoản giáo viên</button>}>
+      {requests.length > 0 && (
+        <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+          <p className="font-bold text-foreground mb-1">Yêu cầu quên mật khẩu ({requests.length})</p>
+          <p className="text-xs text-muted mb-3">Gửi từ trang đăng nhập. Yêu cầu của giáo viên chỉ admin xử lý; yêu cầu của học viên thường do giáo viên phụ trách xử lý — admin làm thay nếu cần.</p>
+          <ul className="divide-y divide-line">
+            {requests.map((r) => (
+              <li key={r.id} className="py-2.5 flex flex-col sm:flex-row sm:items-center gap-2">
+                <div className="flex-1 min-w-0 text-sm">
+                  <p className="font-semibold text-foreground">{r.user.name} <span className="text-xs font-normal text-muted">· {ROLE_LABEL[r.user.role] || r.user.role}</span></p>
+                  <p className="text-xs text-muted break-all">{r.user.email} · Liên hệ: <b className="text-foreground">{r.contact || r.user.phone || "—"}</b> · {formatVNDate(r.createdAt)}</p>
+                  {r.note && <p className="text-xs text-muted italic">&quot;{r.note}&quot;</p>}
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => resetPassword(r.user)} className="btn-primary px-3 py-2 text-xs cursor-pointer">Cấp mật khẩu tạm</button>
+                  <button onClick={() => dismissRequest(r)} className="btn-ghost px-3 py-2 text-xs cursor-pointer">Bỏ qua</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row md:items-center gap-3 mb-4">
         <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tìm theo tên, email, số điện thoại..."
           className="ui-input md:max-w-sm" aria-label="Tìm người dùng" />
@@ -134,7 +187,7 @@ export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
       ) : (
         <>
           <div className="overflow-x-auto -mx-4 sm:mx-0">
-            <table className="ui-table min-w-[820px] text-sm">
+            <table className="ui-table min-w-[960px] text-sm">
               <thead>
                 <tr>
                   <th>Người dùng</th>
@@ -143,6 +196,7 @@ export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
                   <th>Trạng thái</th>
                   <th>Đăng ký</th>
                   <th>Hoạt động gần nhất</th>
+                  <th>Mật khẩu tạm</th>
                   <th></th>
                 </tr>
               </thead>
@@ -168,6 +222,15 @@ export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
                     </td>
                     <td className="text-muted whitespace-nowrap">{formatVNDate(u.createdAt)}</td>
                     <td className="text-muted whitespace-nowrap">{formatVNDate(u.lastActive)}</td>
+                    <td className="whitespace-nowrap">
+                      {u.tempPassword ? (
+                        <div className="flex items-center gap-1">
+                          <code className="text-xs font-bold text-primary bg-primary-soft rounded px-2 py-1">{revealed[u.id] ? u.tempPassword : "••••-••••"}</code>
+                          <button onClick={() => setRevealed((v) => ({ ...v, [u.id]: !v[u.id] }))} className="text-xs text-primary hover:underline px-1.5 py-2 cursor-pointer">{revealed[u.id] ? "Ẩn" : "Hiện"}</button>
+                          <button onClick={() => copyText(loginMessage(u.email, u.tempPassword!))} className="text-xs text-primary hover:underline px-1.5 py-2 cursor-pointer">Sao chép</button>
+                        </div>
+                      ) : <span className="text-muted">—</span>}
+                    </td>
                     <td className="text-right">
                       {/* Mật khẩu admin chỉ do chính admin đó đổi (hoặc script createAdmin.js) */}
                       {u.role !== "ADMIN" && <button onClick={() => resetPassword(u)} className="text-xs font-semibold text-primary hover:underline px-2 py-2 cursor-pointer whitespace-nowrap">
@@ -199,7 +262,7 @@ export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
               <label htmlFor="t-phone" className="ui-label">Số điện thoại <span className="text-muted font-normal">(tuỳ chọn)</span></label>
               <input id="t-phone" type="tel" value={newTeacher.phone} onChange={(e) => setNewTeacher({ ...newTeacher, phone: e.target.value })} className="ui-input" />
             </div>
-            <p className="text-xs text-muted">Tài khoản được tạo với mật khẩu mặc định — mật khẩu sẽ hiện sau khi tạo để bạn gửi cho giáo viên.</p>
+            <p className="text-xs text-muted">Tài khoản được tạo với mật khẩu tạm ngẫu nhiên — mật khẩu hiện sau khi tạo để bạn gửi cho giáo viên; giáo viên phải đặt mật khẩu mới ở lần đăng nhập đầu.</p>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setCreating(false)} className="btn-ghost px-4 py-2 cursor-pointer">Huỷ</button>
               <button type="submit" disabled={saving} className="btn-primary px-5 py-2 cursor-pointer">{saving ? "Đang tạo..." : "Tạo tài khoản"}</button>

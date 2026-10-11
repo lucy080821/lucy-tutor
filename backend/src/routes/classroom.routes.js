@@ -1,11 +1,9 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
 const prisma = require('../lib/prisma');
 const router = express.Router();
 const crypto = require('crypto');
 
-const BCRYPT_ROUNDS = 10;
-const DEFAULT_STUDENT_PASSWORD = '123456';
+const { tempPasswordData } = require('../utils/tempPassword');
 
 // Teacher creates a classroom
 router.post('/create', async (req, res) => {
@@ -73,10 +71,12 @@ router.post('/add-student', async (req, res) => {
     const uniqueClassroomIds = [...new Set(classroomIds)];
 
     // Email check, ownership check and password hashing are independent — run in parallel.
-    const [existing, ownedCount, hashedPassword] = await Promise.all([
+    // Mật khẩu tạm ngẫu nhiên (không dùng "123456" ai cũng biết) — giáo viên xem lại được ở tab Học Sinh
+    // tới khi học viên đăng nhập lần đầu và bị bắt đổi mật khẩu (xem utils/tempPassword.js)
+    const [existing, ownedCount, temp] = await Promise.all([
       prisma.user.findFirst({ where: { email: { equals: normalizedEmail, mode: 'insensitive' } }, select: { id: true } }),
       prisma.classroom.count({ where: { id: { in: uniqueClassroomIds }, teacherId } }),
-      bcrypt.hash(DEFAULT_STUDENT_PASSWORD, BCRYPT_ROUNDS)
+      tempPasswordData()
     ]);
     if (existing) {
       return res.status(400).json({ error: 'Email đã được sử dụng. Vui lòng chọn email khác.' });
@@ -90,13 +90,13 @@ router.post('/add-student', async (req, res) => {
         name,
         email: normalizedEmail,
         phone: phone || null,
-        password: hashedPassword,
+        ...temp.data,
         role: 'STUDENT',
         classroomsJoined: { connect: uniqueClassroomIds.map((id) => ({ id })) }
       }
     });
 
-    res.json(student);
+    res.json({ ...student, tempPassword: temp.tempPassword });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

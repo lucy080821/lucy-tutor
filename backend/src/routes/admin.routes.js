@@ -6,6 +6,7 @@ const {
   ADMIN_ROLE, createAdminToken, requireAdmin,
   loginBlocked, recordFailedLogin, clearFailedLogins,
 } = require('../utils/adminAuth');
+const { tempPasswordData, issueTempPassword } = require('../utils/tempPassword');
 
 // Trang quản trị /administrator: tổng quan hệ thống, sổ thu chi nhập tay + lợi nhuận theo tháng, quản lý tài khoản.
 // Chỉ tài khoản role ADMIN (tài khoản riêng, tạo bằng backend/scripts/createAdmin.js) mới vào được.
@@ -14,7 +15,6 @@ const {
 const router = express.Router();
 
 const BCRYPT_ROUNDS = 10;
-const DEFAULT_PASSWORD = '123456'; // giống mật khẩu mặc định khi giáo viên thêm học viên thủ công
 const TYPES = ['INCOME', 'EXPENSE'];
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -338,6 +338,8 @@ router.get('/users', async (req, res) => {
       select: {
         id: true, name: true, email: true, phone: true, role: true, createdAt: true, lastActive: true, totalXP: true,
         accessExpiresAt: true,
+        // Mật khẩu tạm admin/giáo viên đã cấp mà chủ tài khoản chưa đổi -> admin xem lại được nếu quên
+        tempPassword: true, tempPasswordIssuedAt: true,
         managerTeacher: { select: { name: true } },
         _count: { select: { classroomsJoined: true, classroomsOwned: true, freeStudentPaymentsMade: true } },
       },
@@ -357,7 +359,7 @@ router.get('/users', async (req, res) => {
   }
 });
 
-// Giáo viên không tự đăng ký được (xem /auth) -> admin tạo tài khoản, mật khẩu mặc định, giáo viên tự đổi sau
+// Giáo viên không tự đăng ký được (xem /auth) -> admin tạo tài khoản với mật khẩu tạm, giáo viên bị bắt đổi ở lần đăng nhập đầu
 router.post('/users/teacher', async (req, res) => {
   try {
     const name = String(req.body?.name || '').trim();
@@ -369,11 +371,12 @@ router.post('/users/teacher', async (req, res) => {
     const exists = await prisma.user.findUnique({ where: { email }, select: { id: true } });
     if (exists) return res.status(409).json({ error: 'Email này đã có tài khoản' });
 
+    const temp = await tempPasswordData();
     const user = await prisma.user.create({
-      data: { name, email, phone, role: 'TEACHER', password: await bcrypt.hash(DEFAULT_PASSWORD, BCRYPT_ROUNDS) },
+      data: { name, email, phone, role: 'TEACHER', ...temp.data },
       select: { id: true, name: true, email: true },
     });
-    res.status(201).json({ user, defaultPassword: DEFAULT_PASSWORD });
+    res.status(201).json({ user, tempPassword: temp.tempPassword });
   } catch (err) {
     sendError(res, err);
   }
@@ -383,12 +386,40 @@ router.post('/users/teacher', async (req, res) => {
 // (để 1 admin không chiếm được tài khoản admin khác)
 router.post('/users/:id/reset-password', async (req, res) => {
   try {
-    const { count } = await prisma.user.updateMany({
-      where: { id: req.params.id, role: { in: ['STUDENT', 'TEACHER'] } },
-      data: { password: await bcrypt.hash(DEFAULT_PASSWORD, BCRYPT_ROUNDS) },
+    const user = await prisma.user.findFirst({
+      where: { id: req.params.id, role: { in: ['STUDENT', 'TEACHER'] } }, select: { id: true },
     });
-    if (!count) return res.status(404).json({ error: 'Không tìm thấy tài khoản học viên/giáo viên này' });
-    res.json({ defaultPassword: DEFAULT_PASSWORD });
+    if (!user) return res.status(404).json({ error: 'Không tìm thấy tài khoản học viên/giáo viên này' });
+    res.json({ tempPassword: await issueTempPassword(user.id, req.admin.uid) });
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+// ===== Yêu cầu "Quên mật khẩu" (gửi từ /auth, xem passwordReset.routes.js) =====
+// Admin thấy tất cả: yêu cầu của giáo viên (chỉ admin xử lý) + của học viên (dự phòng khi giáo viên chưa xử lý)
+
+router.get('/password-requests', async (req, res) => {
+  try {
+    const requests = await prisma.passwordResetRequest.findMany({
+      where: { status: 'PENDING' },
+      select: { id: true, contact: true, note: true, createdAt: true, user: { select: { id: true, name: true, email: true, phone: true, role: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ requests });
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+router.post('/password-requests/:id/dismiss', async (req, res) => {
+  try {
+    const { count } = await prisma.passwordResetRequest.updateMany({
+      where: { id: req.params.id, status: 'PENDING' },
+      data: { status: 'DISMISSED', resolvedAt: new Date(), resolvedById: req.admin.uid },
+    });
+    if (!count) return res.status(404).json({ error: 'Không tìm thấy yêu cầu' });
+    res.json({ ok: true });
   } catch (err) {
     sendError(res, err);
   }

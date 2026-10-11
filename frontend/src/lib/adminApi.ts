@@ -58,6 +58,12 @@ export type AdminUser = {
   id: string; name: string; email: string; phone: string | null; role: string; createdAt: string; lastActive: string;
   totalXP: number; accessExpiresAt: string | null; classroomsJoined: number; classroomsOwned: number;
   managerTeacherName: string | null; freeStatus: FreeStatus | null;
+  // Mật khẩu tạm đã cấp mà chủ tài khoản chưa đổi (đổi xong thì null)
+  tempPassword: string | null; tempPasswordIssuedAt: string | null;
+};
+export type PasswordRequest = {
+  id: string; contact: string | null; note: string | null; createdAt: string;
+  user: { id: string; name: string; email: string; phone: string | null; role: string };
 };
 
 // ===== Định dạng =====

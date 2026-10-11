@@ -4,6 +4,7 @@ const prisma = require('../lib/prisma');
 const router = express.Router();
 const { isCutoffReached, addDays, TRIAL_DAYS, computeAccessStatus } = require('../utils/freeTrial');
 const { compressAvatarDataUrl } = require('../utils/avatarCompress');
+const { CLEAR_TEMP_PASSWORD } = require('../utils/tempPassword');
 
 const BCRYPT_ROUNDS = 10;
 
@@ -128,10 +129,14 @@ router.put('/change-password', async (req, res) => {
 
     const matches = await bcrypt.compare(currentPassword, user.password);
     if (!matches) return res.status(401).json({ error: 'Mật khẩu hiện tại không đúng' });
+    if (newPassword === currentPassword) {
+      return res.status(400).json({ error: 'Mật khẩu mới phải khác mật khẩu hiện tại' });
+    }
 
+    // Tự đặt mật khẩu mới -> mật khẩu tạm (nếu có) hết hiệu lực, xoá bản rõ người cấp đang xem được
     await prisma.user.update({
       where: { id: userId },
-      data: { password: await bcrypt.hash(newPassword, BCRYPT_ROUNDS) }
+      data: { password: await bcrypt.hash(newPassword, BCRYPT_ROUNDS), ...CLEAR_TEMP_PASSWORD }
     });
     res.json({ message: 'Đổi mật khẩu thành công' });
   } catch (error) {
@@ -173,7 +178,7 @@ router.post('/placement', async (req, res) => {
 const USER_SELECT = {
   id: true, name: true, email: true, role: true, avatar: true,
   totalXP: true, streakCount: true, targetScore: true, phone: true, currentLevel: true,
-  accessExpiresAt: true,
+  accessExpiresAt: true, mustChangePassword: true,
   managerTeacher: { select: { id: true, name: true, email: true, phone: true } },
   classroomsJoined: {
     select: { id: true, name: true, joinCode: true, scheduleDays: true, startTime: true, endTime: true, feePerLesson: true, enabledFeatures: true }
