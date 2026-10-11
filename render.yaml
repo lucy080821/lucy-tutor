@@ -37,3 +37,8 @@ services:
           type: web
           name: lucy-backend
           envVarKey: RENDER_EXTERNAL_URL
+      # Xác minh Google Search Console / Bing Webmaster (chỉ phần content của thẻ meta, cần build lại khi đổi)
+      - key: GOOGLE_SITE_VERIFICATION
+        sync: false
+      - key: BING_SITE_VERIFICATION
+        sync: false

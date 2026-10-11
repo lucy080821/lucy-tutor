@@ -45,6 +45,15 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true, "max-image-preview": "large" },
   },
+  // Thẻ xác minh chủ sở hữu Google Search Console / Bing Webmaster Tools — chỉ dán phần `content`
+  // của thẻ <meta> vào biến môi trường. Không đặt biến = không in thẻ. Trang được render tĩnh nên
+  // biến phải có lúc `next build` (đổi giá trị thì phải build/deploy lại).
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION }
+      : undefined,
+  },
   // Khai báo icon tường minh: chỉ để `apple` ở đây thì Next bỏ mất <link rel="icon"> tự sinh từ
   // app/icon.png (trình duyệt không thấy favicon, cả dev lẫn production). /favicon.ico vẫn được
   // Next tự khai báo từ file app/favicon.ico.
