@@ -432,7 +432,7 @@ export default function PhoneticsPage() {
             </div>
             <p className="ui-page-subtitle">Bấm vào từng âm để nghe mẫu và xem cách phát âm, so sánh với tiếng Việt.</p>
           </div>
-          <img src="/images/thumbs/phonetics.svg" alt="Minh hoạ bảng âm IPA" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
+          <img src="/images/photos/app/phonetics.webp" alt="Minh hoạ bảng âm IPA" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
         </div>
       </div>
 

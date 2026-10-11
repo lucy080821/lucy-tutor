@@ -183,7 +183,7 @@ export default function GrammarGymPage() {
             </h1>
             <p className="ui-page-subtitle">Luyện ngữ pháp theo đúng những chuyên đề bạn hay làm sai.</p>
           </div>
-          <img src="/images/thumbs/grammar.svg" alt="Minh hoạ luyện ngữ pháp" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
+          <img src="/images/photos/app/grammar.webp" alt="Minh hoạ luyện ngữ pháp" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
         </div>
       </div>
 

@@ -95,7 +95,7 @@ export default function IeltsReadingTakingPage() {
               <p className="text-sm text-white/80 mt-2">Đúng {result.rawScore}/{totalQuestions} câu</p>
             </div>
             <div className="w-full max-w-[200px] shrink-0">
-              <img src="/images/illustrations/exam-result.svg" alt="Minh hoạ kết quả IELTS Reading" width={800} height={600} loading="eager" className="w-full h-auto rounded-2xl bg-white/95 p-2" />
+              <img src="/images/photos/app/illus/exam-result.webp" alt="Minh hoạ kết quả IELTS Reading" width={800} height={600} loading="eager" className="w-full h-auto rounded-2xl bg-white/95 p-2" />
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">

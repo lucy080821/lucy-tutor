@@ -251,7 +251,7 @@ export default function PronunciationPracticePage() {
             <h1 className="ui-page-title mt-2 text-2xl sm:text-3xl">Luyện Phát Âm Cùng AI</h1>
             <p className="ui-page-subtitle">Đọc theo từ vựng của bạn, ghi âm và nhận góp ý phát âm từ AI.</p>
           </div>
-          <img src="/images/thumbs/pronunciation.svg" alt="Minh hoạ luyện phát âm" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
+          <img src="/images/photos/app/pronunciation.webp" alt="Minh hoạ luyện phát âm" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
         </div>
       </div>
 
@@ -290,7 +290,7 @@ export default function PronunciationPracticePage() {
               <div className="ui-card text-center py-12 text-muted">Đang tải danh sách từ...</div>
             ) : practiceSet.length === 0 ? (
               <div className="ui-card p-8 text-center space-y-3">
-                <img src="/images/illustrations/empty-state.svg" alt="Chưa có từ vựng để luyện" width={800} height={600} loading="lazy" className="w-full max-w-[220px] h-auto mx-auto" />
+                <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có từ vựng để luyện" width={800} height={600} loading="lazy" className="w-full max-w-[220px] h-auto mx-auto" />
                 <h2 className="font-bold text-lg text-primary">Bạn chưa có từ vựng nào để luyện</h2>
                 <p className="text-muted text-sm max-w-md mx-auto">Hãy sang Phòng Gym Từ Vựng để tự thêm vài từ mới (hoặc ôn tập từ giáo viên đã giao), rồi quay lại đây luyện phát âm.</p>
                 <Link href="/gym" className="btn-primary mt-2 px-6 py-2.5">
@@ -431,7 +431,7 @@ export default function PronunciationPracticePage() {
             <h2 className="ui-section-title mb-4">Lịch Sử Luyện Phát Âm</h2>
             {history.length === 0 ? (
               <div className="ui-card p-8 text-center flex flex-col items-center">
-                <img src="/images/illustrations/empty-state.svg" alt="Chưa có lịch sử luyện phát âm" width={800} height={600} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
+                <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có lịch sử luyện phát âm" width={800} height={600} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
                 <p className="text-muted text-sm">Bạn chưa luyện phát âm lần nào. Kết quả sẽ tự động lưu tại đây sau mỗi lần ghi âm.</p>
               </div>
             ) : (

@@ -128,7 +128,7 @@ function AuthForm() {
         </div>
 
         <img
-          src="/images/illustrations/auth-learning.svg"
+          src="/images/photos/app/illus/auth-learning.webp"
           alt="Học viên bắt đầu hành trình học Tiếng Anh cùng Lucy Tutor"
           width={800}
           height={600}

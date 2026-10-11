@@ -63,7 +63,7 @@ export default function IeltsLandingPage() {
             <p className="ui-page-subtitle">Mỗi đề gồm 3 bước: <b>Làm đề</b> có tính giờ và chấm band, <b>Học đề</b> cùng AI (giải thích câu sai, từ vựng, cấu trúc, bài tập thêm) và <b>theo dõi tiến bộ</b> band điểm 4 kỹ năng.</p>
           </div>
           <div className="hidden md:block w-full max-w-[300px] shrink-0">
-            <img src="/images/thumbs/ielts.svg" alt="Minh hoạ luyện đề IELTS Cambridge" width={640} height={360} loading="eager" className="w-full h-auto rounded-2xl" />
+            <img src="/images/photos/app/ielts.webp" alt="Minh hoạ luyện đề IELTS Cambridge" width={640} height={360} loading="eager" className="w-full h-auto rounded-2xl" />
           </div>
         </section>
 
@@ -86,7 +86,7 @@ export default function IeltsLandingPage() {
         {tab === "AVAILABLE" && (
           tests.length === 0 ? (
             <div className="ui-card text-center py-12 px-4 text-muted italic">
-              <img src="/images/illustrations/empty-state.svg" alt="Chưa có đề IELTS" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-3" />
+              <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có đề IELTS" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-3" />
               Chưa có đề IELTS nào được giao cho bạn — hãy liên hệ giáo viên.
             </div>
           ) : (
@@ -94,7 +94,7 @@ export default function IeltsLandingPage() {
             {tests.map((test) => (
               <div key={test.id} className="ui-card ui-card-hover overflow-hidden flex flex-col">
                 <div className="aspect-video bg-primary-soft rounded-t-2xl overflow-hidden">
-                  <img src="/images/thumbs/ielts.svg" alt={`Đề IELTS ${test.title}`} width={640} height={360} loading="lazy" className="w-full h-full object-cover" />
+                  <img src="/images/photos/app/ielts.webp" alt={`Đề IELTS ${test.title}`} width={640} height={360} loading="lazy" className="w-full h-full object-cover" />
                 </div>
                 <div className="p-5 space-y-4 flex-1 flex flex-col">
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -143,7 +143,7 @@ export default function IeltsLandingPage() {
         {tab === "HISTORY" && (
           history.length === 0 ? (
             <div className="ui-card text-center py-12 px-4 text-muted italic">
-              <img src="/images/illustrations/empty-state.svg" alt="Chưa có lịch sử làm bài IELTS" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-3" />
+              <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có lịch sử làm bài IELTS" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-3" />
               Chưa có lần làm bài IELTS nào.
             </div>
           ) : (

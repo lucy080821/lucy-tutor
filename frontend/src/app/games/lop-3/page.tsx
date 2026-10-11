@@ -69,7 +69,7 @@ export default function Grade3GamesPage() {
             <h1 className="ui-page-title mt-3 text-2xl sm:text-3xl">Trò Chơi Tiếng Anh Lớp 3</h1>
             <p className="ui-page-subtitle">Vừa chơi vừa ôn từ vựng và mẫu câu Global Success 3, từ Starter đến Unit 9.</p>
           </div>
-          <img src="/images/thumbs/games.svg" alt="Minh hoạ trò chơi học tiếng Anh" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
+          <img src="/images/photos/app/games.webp" alt="Minh hoạ trò chơi học tiếng Anh" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
         </div>
       </div>
 
@@ -104,7 +104,7 @@ export default function Grade3GamesPage() {
               {GAMES.map((g) => (
                 <button key={g.id} onClick={() => openGame(g.id)} className="ui-card ui-card-hover overflow-hidden flex flex-col text-left group cursor-pointer">
                   <div className="aspect-video overflow-hidden bg-primary-soft">
-                    <img src={`/images/thumbs/${g.thumb}.svg`} alt={`Ảnh minh hoạ trò chơi ${g.title}`} width={640} height={360} loading="lazy"
+                    <img src={`/images/photos/app/${g.thumb}.webp`} alt={`Ảnh minh hoạ trò chơi ${g.title}`} width={640} height={360} loading="lazy"
                       className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                   </div>
                   <div className="p-4 sm:p-5 flex flex-col flex-1 gap-2">

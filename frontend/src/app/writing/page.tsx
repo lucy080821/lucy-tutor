@@ -259,7 +259,7 @@ export default function WritingPracticePage() {
             </Link>
           </div>
           <img
-            src="/images/thumbs/writing.svg"
+            src="/images/photos/app/writing.webp"
             alt="Minh hoạ luyện viết tiếng Anh"
             width={640}
             height={360}
@@ -485,7 +485,7 @@ export default function WritingPracticePage() {
             <h2 className="ui-section-title mb-2">Đề Đã Lưu</h2>
             {savedPrompts.length === 0 ? (
               <div className="ui-card p-8 text-center">
-                <img src="/images/illustrations/empty-state.svg" alt="Chưa có đề viết đã lưu" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
+                <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có đề viết đã lưu" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
                 <p className="text-muted text-sm">Chưa có đề nào được lưu. Khi luyện tập, bấm "Lưu đề để luyện lại sau" để thêm vào đây.</p>
               </div>
             ) : (
@@ -494,7 +494,7 @@ export default function WritingPracticePage() {
                   const { promptEn: en } = parsePromptPair(sp.prompt);
                   return (
                     <div key={sp.id} className="ui-card ui-card-hover p-3 sm:p-4 flex items-start justify-between gap-4">
-                      <img src="/images/thumbs/writing.svg" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
+                      <img src="/images/photos/app/writing.webp" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm text-foreground line-clamp-2">{en}</p>
                         <div className="flex gap-1.5 mt-2">
@@ -520,7 +520,7 @@ export default function WritingPracticePage() {
             <h2 className="ui-section-title mb-2">Lịch Sử Bài Viết</h2>
             {history.length === 0 ? (
               <div className="ui-card p-8 text-center">
-                <img src="/images/illustrations/empty-state.svg" alt="Chưa có lịch sử bài viết" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
+                <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có lịch sử bài viết" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
                 <p className="text-muted text-sm">Bạn chưa nộp bài viết nào. Bài viết sau khi nhận nhận xét sẽ tự động lưu tại đây.</p>
               </div>
             ) : (
@@ -533,7 +533,7 @@ export default function WritingPracticePage() {
                       onClick={() => setViewingHistoryItem(h)}
                       className="ui-card ui-card-hover w-full text-left p-3 sm:p-4 flex items-center gap-4"
                     >
-                      <img src="/images/thumbs/writing.svg" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
+                      <img src="/images/photos/app/writing.webp" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
                       <span className="min-w-0 flex-1 block">
                         <span className="block text-sm font-bold text-primary line-clamp-1">{en}</span>
                         <span className="block text-xs text-muted mt-1">{formatPracticedAt(h.practicedAt)} · {h.level} · {h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</span>

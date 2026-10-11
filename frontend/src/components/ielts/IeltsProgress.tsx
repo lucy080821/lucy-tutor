@@ -94,7 +94,7 @@ export function IeltsProgressPanel({ data }: { data: IeltsProgressData | null })
   if (!practiced.length) {
     return (
       <div className="ui-card text-center py-12 px-4 text-muted italic">
-        <img src="/images/illustrations/study-progress.svg" alt="Chưa có dữ liệu tiến bộ IELTS" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-3" />
+        <img src="/images/photos/app/illus/study-progress.webp" alt="Chưa có dữ liệu tiến bộ IELTS" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-3" />
         Làm bài IELTS đầu tiên để bắt đầu theo dõi tiến bộ band điểm.
       </div>
     );

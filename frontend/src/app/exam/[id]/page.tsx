@@ -533,7 +533,7 @@ export default function ExamPage() {
           <p className="text-white/80">Bạn đạt <strong className="text-white">{percent}%</strong> số câu đúng trong bài thi này</p>
           </div>
           <div className="w-full max-w-[220px] shrink-0">
-            <img src="/images/illustrations/exam-result.svg" alt="Minh hoạ kết quả bài thi" width={800} height={600} loading="eager" className="w-full h-auto rounded-2xl bg-white/95 p-2" />
+            <img src="/images/photos/app/illus/exam-result.webp" alt="Minh hoạ kết quả bài thi" width={800} height={600} loading="eager" className="w-full h-auto rounded-2xl bg-white/95 p-2" />
           </div>
           </div>
           <div className="p-6 sm:p-8">
@@ -569,7 +569,7 @@ export default function ExamPage() {
   if (totalQ === 0) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-center space-y-4 px-4">
-        <img src="/images/illustrations/empty-state.svg" alt="Đề thi chưa có câu hỏi" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto" />
+        <img src="/images/photos/app/illus/empty-state.webp" alt="Đề thi chưa có câu hỏi" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto" />
         <p className="text-2xl font-bold text-primary">Đề thi chưa có câu hỏi</p>
         <p className="text-muted">Giáo viên chưa nhập nội dung câu hỏi cho bài thi này.</p>
         <Link href="/dashboard" className="btn-outline">← Quay lại</Link>

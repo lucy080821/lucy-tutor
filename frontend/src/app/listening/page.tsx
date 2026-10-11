@@ -399,7 +399,7 @@ export default function ListeningPracticePage() {
             </Link>
           </div>
           <img
-            src="/images/thumbs/listening.svg"
+            src="/images/photos/app/listening.webp"
             alt="Minh hoạ luyện nghe tiếng Anh"
             width={640}
             height={360}
@@ -450,7 +450,7 @@ export default function ListeningPracticePage() {
           </div>
         ) : queue.length === 0 ? (
           <div className="ui-card flex flex-col items-center justify-center text-center py-16 px-6">
-            <img src="/images/illustrations/empty-state.svg" alt="Chưa có audio luyện nghe" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mb-4" />
+            <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có audio luyện nghe" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mb-4" />
             <h2 className="text-2xl font-bold text-primary mb-2">Chưa có audio để luyện nghe</h2>
             <p className="text-muted">
               Giáo viên chưa gán audio nào cho bạn hoặc lớp của bạn. Hãy quay lại sau khi giáo viên cập nhật thêm nội dung ở Studio Luyện Nghe.
@@ -639,7 +639,7 @@ export default function ListeningPracticePage() {
               <h2 className="ui-section-title">Tạo Đề Luyện Nghe</h2>
               {examClips.length === 0 ? (
                 <div className="text-center py-4">
-                  <img src="/images/illustrations/empty-state.svg" alt="Chưa có audio để tạo đề" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
+                  <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có audio để tạo đề" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
                   <p className="text-sm text-muted">Chưa có audio nào khả dụng để tạo đề. Hãy đợi giáo viên giao thêm audio luyện nghe cho bạn.</p>
                 </div>
               ) : (
@@ -748,7 +748,7 @@ export default function ListeningPracticePage() {
               ) : (
                 <div className="space-y-4">
                   <div className="ui-card p-5 flex items-center justify-between flex-wrap gap-3">
-                    <img src="/images/illustrations/exam-result.svg" alt="Minh hoạ kết quả bài làm" width={800} height={600} loading="lazy" className="hidden sm:block w-24 h-auto shrink-0" />
+                    <img src="/images/photos/app/illus/exam-result.webp" alt="Minh hoạ kết quả bài làm" width={800} height={600} loading="lazy" className="hidden sm:block w-24 h-auto shrink-0" />
                     <div className="flex-1 min-w-[180px]">
                       <p className="text-xl font-extrabold text-primary">
                         Kết quả: {examData.questions.reduce((s, q, i) => s + (isReadingAnswerCorrect(q, examAnswers[i]) ? 1 : 0), 0)}/{examData.questions.length} câu đúng
@@ -794,7 +794,7 @@ export default function ListeningPracticePage() {
           <h2 className="ui-section-title mb-2">Lịch Sử Luyện Nghe</h2>
           {examHistory.length === 0 ? (
             <div className="ui-card p-8 text-center">
-              <img src="/images/illustrations/empty-state.svg" alt="Chưa có lịch sử luyện nghe" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
+              <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có lịch sử luyện nghe" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
               <p className="text-muted text-sm">Bạn chưa làm đề luyện nghe nào. Đề sau khi nộp sẽ tự động lưu tại đây.</p>
             </div>
           ) : (
@@ -809,7 +809,7 @@ export default function ListeningPracticePage() {
                     onClick={() => setViewingExamHistoryItem(h)}
                     className="ui-card ui-card-hover w-full text-left p-3 sm:p-4 flex items-center justify-between gap-4"
                   >
-                    <img src="/images/thumbs/listening.svg" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
+                    <img src="/images/photos/app/listening.webp" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-primary line-clamp-1">{h.title}</p>
                       <p className="text-xs text-muted mt-1">{formatPracticedAt(h.practicedAt)} · {h.level} · {h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</p>
@@ -833,7 +833,7 @@ export default function ListeningPracticePage() {
             <button onClick={() => setViewingExamHistoryItem(null)} className="btn-ghost px-3 py-2 text-sm">← Quay lại danh sách</button>
             <h2 className="ui-section-title">{viewingExamHistoryItem.title}</h2>
             <div className="ui-card p-5 flex items-center justify-between flex-wrap gap-3">
-              <img src="/images/illustrations/exam-result.svg" alt="Minh hoạ kết quả bài làm" width={800} height={600} loading="lazy" className="hidden sm:block w-24 h-auto shrink-0" />
+              <img src="/images/photos/app/illus/exam-result.webp" alt="Minh hoạ kết quả bài làm" width={800} height={600} loading="lazy" className="hidden sm:block w-24 h-auto shrink-0" />
               <div className="flex-1 min-w-[180px]">
                 <p className="text-xl font-extrabold text-primary">Kết quả: {correct}/{qs.length} câu đúng</p>
                 <p className="text-xs text-muted mt-1">{formatPracticedAt(viewingExamHistoryItem.practicedAt)}</p>

@@ -101,7 +101,7 @@ export default function IeltsWritingTakingPage() {
               <p className="text-6xl sm:text-7xl font-black text-white mt-2">{result.overallBand?.toFixed(1)}</p>
             </div>
             <div className="w-full max-w-[200px] shrink-0">
-              <img src="/images/illustrations/exam-result.svg" alt="Minh hoạ kết quả IELTS Writing" width={800} height={600} loading="eager" className="w-full h-auto rounded-2xl bg-white/95 p-2" />
+              <img src="/images/photos/app/illus/exam-result.webp" alt="Minh hoạ kết quả IELTS Writing" width={800} height={600} loading="eager" className="w-full h-auto rounded-2xl bg-white/95 p-2" />
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">

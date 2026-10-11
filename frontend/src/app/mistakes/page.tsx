@@ -11,7 +11,7 @@ export default function MistakeBank() {
           </button>
         </div>
         <div className="hidden md:block w-full max-w-[320px] shrink-0">
-          <img src="/images/thumbs/mistakes.svg" alt="Minh hoạ sổ tay câu sai" width={640} height={360} loading="eager" className="w-full h-auto rounded-2xl" />
+          <img src="/images/photos/app/mistakes.webp" alt="Minh hoạ sổ tay câu sai" width={640} height={360} loading="eager" className="w-full h-auto rounded-2xl" />
         </div>
       </section>
 

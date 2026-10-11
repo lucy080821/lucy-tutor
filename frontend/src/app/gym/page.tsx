@@ -236,7 +236,7 @@ export default function GymPage() {
             </h1>
             <p className="ui-page-subtitle">Ôn từ vựng bằng thẻ ghi nhớ theo lịch lặp lại ngắt quãng (SRS).</p>
           </div>
-          <img src="/images/thumbs/vocabulary.svg" alt="Minh hoạ luyện từ vựng" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
+          <img src="/images/photos/app/vocabulary.webp" alt="Minh hoạ luyện từ vựng" width={640} height={360} loading="eager" className="hidden md:block w-60 h-auto rounded-2xl border border-line shadow-card shrink-0" />
         </div>
       </div>
 
@@ -355,7 +355,7 @@ export default function GymPage() {
           <div className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 h-[calc(100vh-140px)]">
             {dueVocabs.length === 0 ? (
               <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <img src="/images/illustrations/empty-state.svg" alt="Không còn thẻ cần ôn" width={800} height={600} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
+                <img src="/images/photos/app/illus/empty-state.webp" alt="Không còn thẻ cần ôn" width={800} height={600} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
                 <h2 className="text-2xl font-extrabold text-primary mb-2">Hết từ vựng cần ôn rồi!</h2>
                 <p className="text-muted">Bạn đã hoàn thành toàn bộ khối lượng của hôm nay.</p>
                 <button onClick={() => setActiveTab('STATS')} className="btn-outline mt-8">Quay lại Thống kê</button>
@@ -585,7 +585,7 @@ export default function GymPage() {
 
             {customVocab.length === 0 ? (
               <div className="ui-card text-center py-10 px-6 flex flex-col items-center">
-                <img src="/images/illustrations/empty-state.svg" alt="Chưa có từ vựng tự thêm" width={800} height={600} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
+                <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có từ vựng tự thêm" width={800} height={600} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
                 <p className="text-muted">Bạn chưa tự thêm từ nào. Bấm &quot;+ Thêm Từ Mới&quot; để bắt đầu.</p>
               </div>
             ) : (

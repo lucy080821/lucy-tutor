@@ -274,7 +274,7 @@ export default function ReadingPracticePage() {
             </Link>
           </div>
           <img
-            src="/images/thumbs/reading.svg"
+            src="/images/photos/app/reading.webp"
             alt="Minh hoạ luyện đọc hiểu tiếng Anh"
             width={640}
             height={360}
@@ -505,7 +505,7 @@ export default function ReadingPracticePage() {
                         <p className="text-sm text-muted mt-1">{scoreMessage(scorePct)}</p>
                         {practicedAt && <p className="text-xs text-muted mt-1">{formatPracticedAt(practicedAt)}</p>}
                       </div>
-                      <img src="/images/illustrations/exam-result.svg" alt="Minh hoạ kết quả bài làm" width={800} height={600} loading="lazy" className="hidden sm:block w-28 h-auto shrink-0" />
+                      <img src="/images/photos/app/illus/exam-result.webp" alt="Minh hoạ kết quả bài làm" width={800} height={600} loading="lazy" className="hidden sm:block w-28 h-auto shrink-0" />
                     </div>
 
                     {!analysis ? (
@@ -587,7 +587,7 @@ export default function ReadingPracticePage() {
             <h2 className="ui-section-title mb-2">Lịch Sử Luyện Đọc</h2>
             {history.length === 0 ? (
               <div className="ui-card p-8 text-center">
-                <img src="/images/illustrations/empty-state.svg" alt="Chưa có lịch sử luyện đọc" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
+                <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có lịch sử luyện đọc" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
                 <p className="text-muted text-sm">Bạn chưa làm bài đọc nào. Bài đọc sau khi nộp sẽ tự động lưu tại đây.</p>
               </div>
             ) : (
@@ -602,7 +602,7 @@ export default function ReadingPracticePage() {
                       onClick={() => setViewingHistoryItem(h)}
                       className="ui-card ui-card-hover w-full text-left p-3 sm:p-4 flex items-center justify-between gap-4"
                     >
-                      <img src="/images/thumbs/reading.svg" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
+                      <img src="/images/photos/app/reading.webp" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-bold text-primary line-clamp-1">{h.topic || "Bài đọc"}</p>
                         <p className="text-xs text-muted mt-1">{formatPracticedAt(h.practicedAt)} · {h.level} · {h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}</p>
@@ -632,7 +632,7 @@ export default function ReadingPracticePage() {
                 <p className="text-xl font-extrabold text-primary">Kết quả: {historyScore}/{historyQuestions.length} câu đúng</p>
                 <p className="text-xs text-muted mt-1">{formatPracticedAt(viewingHistoryItem.practicedAt)}</p>
               </div>
-              <img src="/images/illustrations/exam-result.svg" alt="Minh hoạ kết quả bài làm" width={800} height={600} loading="lazy" className="hidden sm:block w-28 h-auto shrink-0" />
+              <img src="/images/photos/app/illus/exam-result.webp" alt="Minh hoạ kết quả bài làm" width={800} height={600} loading="lazy" className="hidden sm:block w-28 h-auto shrink-0" />
             </div>
             {historyAnalysis && (
               <div className="space-y-3">

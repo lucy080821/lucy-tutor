@@ -338,7 +338,7 @@ export default function ConversationPracticePage() {
             </Link>
           </div>
           <img
-            src="/images/thumbs/conversation.svg"
+            src="/images/photos/app/conversation.webp"
             alt="Minh hoạ luyện nói tiếng Anh cùng AI"
             width={640}
             height={360}
@@ -434,7 +434,7 @@ export default function ConversationPracticePage() {
                         disabled={startingSession}
                         className="ui-card ui-card-hover overflow-hidden text-left disabled:opacity-50 flex flex-col"
                       >
-                        <img src="/images/thumbs/conversation.svg" alt="" aria-hidden width={640} height={360} loading="lazy" className="w-full aspect-video object-cover rounded-t-2xl" />
+                        <img src="/images/photos/app/conversation.webp" alt="" aria-hidden width={640} height={360} loading="lazy" className="w-full aspect-video object-cover rounded-t-2xl" />
                         <span className="p-5 block">
                           <span className="block font-bold text-primary">{topic.title}</span>
                           {topic.description && (
@@ -455,7 +455,7 @@ export default function ConversationPracticePage() {
             <h2 className="ui-section-title mb-2">Lịch Sử Luyện Nói</h2>
             {history.length === 0 ? (
               <div className="ui-card p-8 text-center">
-                <img src="/images/illustrations/empty-state.svg" alt="Chưa có lịch sử luyện nói" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
+                <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có lịch sử luyện nói" width={800} height={600} loading="lazy" className="w-full h-auto max-w-[220px] mx-auto mb-4" />
                 <p className="text-muted text-sm">Bạn chưa hoàn thành buổi luyện nói nào. Buổi luyện tập sau khi kết thúc sẽ tự động lưu tại đây.</p>
               </div>
             ) : (
@@ -466,7 +466,7 @@ export default function ConversationPracticePage() {
                     onClick={() => setViewingHistoryItem(h)}
                     className="ui-card ui-card-hover w-full text-left p-3 sm:p-4 flex items-center gap-4"
                   >
-                    <img src="/images/thumbs/conversation.svg" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
+                    <img src="/images/photos/app/conversation.webp" alt="" aria-hidden width={640} height={360} loading="lazy" className="hidden sm:block w-28 h-auto rounded-xl shrink-0" />
                     <span className="min-w-0 flex-1 block">
                       <span className="block text-sm font-bold text-primary line-clamp-1">{h.topic?.title || h.contextText}</span>
                       <span className="block text-xs text-muted mt-1">{formatPracticedAt(h.practicedAt)} {h.level ? `· ${h.level}` : ""} {h.purpose ? `· ${h.purpose === "IELTS" ? "IELTS" : "Giao tiếp"}` : ""}</span>

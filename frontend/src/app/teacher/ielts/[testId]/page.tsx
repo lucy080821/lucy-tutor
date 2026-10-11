@@ -426,7 +426,7 @@ function EmptySkillNotice({ skill, onReExtract }: { skill: string; onReExtract: 
   const label: Record<string, string> = { READING: "Reading", LISTENING: "Listening", WRITING: "Writing", SPEAKING: "Speaking" };
   return (
     <div className="ui-card text-center py-10 px-4 text-muted italic space-y-3">
-      <img src="/images/illustrations/empty-state.svg" alt={`Chưa có nội dung ${label[skill]}`} width={800} height={600} loading="lazy" className="w-full h-auto max-w-[200px] mx-auto" />
+      <img src="/images/photos/app/illus/empty-state.webp" alt={`Chưa có nội dung ${label[skill]}`} width={800} height={600} loading="lazy" className="w-full h-auto max-w-[200px] mx-auto" />
       <p>Chưa có nội dung {label[skill]} nào được trích xuất.</p>
       <button onClick={onReExtract} className="btn-primary px-4 py-2 text-sm cursor-pointer">
         Trích xuất {label[skill]}

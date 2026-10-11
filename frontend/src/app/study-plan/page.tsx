@@ -141,7 +141,7 @@ export default function StudyPlanPage() {
                 <p className="ui-page-subtitle">AI sẽ xây dựng kế hoạch học chi tiết theo tuần dựa trên mục tiêu và thời gian của bạn.</p>
               </div>
               <div className="hidden md:block w-full max-w-[260px] shrink-0">
-                <img src="/images/thumbs/study-plan.svg" alt="Minh hoạ lộ trình học cá nhân hóa" width={640} height={360} loading="eager" className="w-full h-auto rounded-2xl" />
+                <img src="/images/photos/app/study-plan.webp" alt="Minh hoạ lộ trình học cá nhân hóa" width={640} height={360} loading="eager" className="w-full h-auto rounded-2xl" />
               </div>
             </section>
 
