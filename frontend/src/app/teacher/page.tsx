@@ -12,6 +12,8 @@ import { usePagination } from '@/lib/usePagination';
 import Pagination from '@/components/Pagination';
 import { compressImageToBase64 } from '@/lib/imageCompress';
 import { usePasswordResets, PasswordResetPanel, showTempPasswordDialog } from './_components/PasswordResets';
+import SidebarNav, { SidebarCreateMenu, SidebarUserCard, type NavItem, type NavSection } from '@/components/nav/SidebarNav';
+import type { NavIconName } from '@/components/nav/NavIcon';
 import 'react-quill-new/dist/quill.snow.css';
 
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
@@ -1463,7 +1465,6 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
     setLessonGrammars(oldLesson.grammars?.map((g: any) => ({ title: g.title, structure: g.structure, explanation: g.explanation })) || []);
     setEditingLessonId(null);
     setActiveTab("CREATE_LESSON");
-    setExpandedNav(prev => ({ ...prev, 'LESSONS_GROUP': true }));
   };
 
   const handleEditLessonSetup = (lesson: any) => {
@@ -1477,7 +1478,6 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
     setLessonGrammars(lesson.grammars?.map((g: any) => ({ id: g.id, title: g.title, structure: g.structure, explanation: g.explanation })) || []);
     setEditingLessonId(lesson.id);
     setActiveTab("CREATE_LESSON");
-    setExpandedNav(prev => ({ ...prev, 'LESSONS_GROUP': true }));
   };
 
   const handleDuplicateExam = async (oldExam: any) => {
@@ -1528,7 +1528,6 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
       markExpanded(qArray.map((q: any) => q._key));
       setQuestionsListGeneration(g => g + 1);
       setActiveTab("CREATE");
-      setExpandedNav(prev => ({ ...prev, 'EXAMS_GROUP': true }));
     } catch (e: any) {
       Swal.fire('Lỗi', 'Không thể tải chi tiết đề thi để nhân bản.', 'error');
     } finally {
@@ -1921,77 +1920,45 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
   };
 
   // ── Nav ──
-  const [expandedNav, setExpandedNav] = useState<Record<string, boolean>>({
-    'QUANLY': true,
-    'DOCUMENTS_GROUP': true,
-    'LESSONS_GROUP': true,
-    'EXAMS_GROUP': true,
-  });
-
-  const toggleNavGroup = (id: string) => {
-    setExpandedNav(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const navGroups = [
-    { id: "OVERVIEW", label: "Tổng Quan", icon: "📊" },
+  // Sidebar: gom mục theo công việc (Lớp học / Vận hành / Nội dung giảng dạy / Truyền thông). Các hành động
+  // tạo mới (bài học, đề thi, bài blog) nằm ở nút "Tạo mới" đầu sidebar, không lẫn vào danh sách điều hướng;
+  // trang tạo vẫn tô sáng mục danh sách tương ứng (CREATE_LESSON → Bài Học, CREATE → Đề Thi).
+  const goTab = (id: string) => () => setActiveTab(id);
+  const navItem = (id: string, label: string, icon: NavIconName, extra?: Partial<NavItem>): NavItem =>
+    ({ id, label, icon, active: activeTab === id, onClick: goTab(id), ...extra });
+  const navSections: NavSection[] = [
+    { id: "MAIN", items: [navItem("OVERVIEW", "Tổng Quan", "dashboard")] },
     {
-      id: "QUANLY", label: "Quản Lý Chung", icon: "🗂️",
-      subItems: [
-        { id: "CLASSES", label: "Lớp Học", icon: "🏫" },
-        { id: "STUDENTS", label: "Học Viên", icon: "🧑‍🎓" },
-        { id: "FREE_STUDENTS", label: "Học Viên Tự Do", icon: "🕊️" },
-        { id: "ATTENDANCE", label: "Điểm Danh & Học Phí", icon: "💳" },
-        { id: "CALENDAR", label: "Thời Khóa Biểu", icon: "📅" },
-        { id: "CHEAT_CONTROL", label: "Kiểm Soát Gian Lận", icon: "🛡️" }
+      id: "CLASS", label: "Lớp Học", items: [
+        navItem("CLASSES", "Lớp Học", "school"),
+        navItem("STUDENTS", "Học Viên", "users", { badge: passwordResets.requests.length }),
+        navItem("FREE_STUDENTS", "Học Viên Tự Do", "userCheck", { badge: freeStudents.filter((s: any) => s.accessLocked).length }),
+        navItem("CALENDAR", "Thời Khóa Biểu", "calendar"),
+        navItem("LEADERBOARD", "Bảng Xếp Hạng", "trophy"),
       ]
     },
     {
-      id: "LESSONS_GROUP", label: "Bài Học", icon: "📖",
-      subItems: [
-        { id: "LESSONS", label: "Danh Sách Bài Học", icon: "📋" },
-        { id: "CREATE_LESSON", label: "Tạo Bài Học", icon: "✍️" }
+      id: "OPS", label: "Vận Hành", items: [
+        navItem("ATTENDANCE", "Điểm Danh & Học Phí", "wallet"),
+        navItem("CHEAT_CONTROL", "Kiểm Soát Gian Lận", "shield"),
       ]
     },
     {
-      id: "DOCUMENTS_GROUP", label: "Tài Liệu", icon: "📁",
-      subItems: [
-        { id: "DOCUMENTS", label: "Kho Tài Liệu", icon: "📁" }
+      id: "CONTENT", label: "Nội Dung Giảng Dạy", items: [
+        navItem("LESSONS", "Bài Học", "book", { active: activeTab === "LESSONS" || activeTab === "CREATE_LESSON" }),
+        navItem("EXAMS", "Đề Thi", "clipboard", { active: activeTab === "EXAMS" || activeTab === "CREATE" }),
+        navItem("DOCUMENTS", "Tài Liệu", "folder"),
+        navItem("LISTENING_STUDIO", "Studio Luyện Nghe", "headphones"),
+        navItem("SPEAKING_TOPICS", "Chủ Đề Hội Thoại", "message"),
+        navItem("IELTS_LIBRARY", "Thư Viện IELTS", "award"),
       ]
     },
-    {
-      id: "LISTENING_GROUP", label: "Luyện Nghe", icon: "🎧",
-      subItems: [
-        { id: "LISTENING_STUDIO", label: "Studio Luyện Nghe", icon: "🎙️" }
-      ]
-    },
-    {
-      id: "SPEAKING_GROUP", label: "Luyện Nói", icon: "🗣️",
-      subItems: [
-        { id: "SPEAKING_TOPICS", label: "Chủ Đề Hội Thoại", icon: "💬" }
-      ]
-    },
-    {
-      id: "EXAMS_GROUP", label: "Đề Thi", icon: "📝",
-      subItems: [
-        { id: "EXAMS", label: "Ngân Hàng Đề Thi", icon: "🏦" },
-        { id: "CREATE", label: "Tạo Đề Mới", icon: "➕" }
-      ]
-    },
-    {
-      id: "IELTS_GROUP", label: "IELTS", icon: "🎓",
-      subItems: [
-        { id: "IELTS_LIBRARY", label: "Thư Viện Đề Cambridge", icon: "📚" }
-      ]
-    },
-    {
-      id: "BLOG_GROUP", label: "Blog", icon: "📰",
-      subItems: [
-        // Trang riêng (không phải tab) — có href thì sidebar điều hướng thay vì setActiveTab
-        { id: "BLOG", label: "Quản Lý Blog", icon: "📰", href: "/teacher/blog" },
-        { id: "BLOG_NEW", label: "Viết Bài Mới", icon: "✍️", href: "/teacher/blog/editor" }
-      ]
-    },
-    { id: "LEADERBOARD", label: "Bảng Xếp Hạng", icon: "🏆" }
+    { id: "MEDIA", label: "Truyền Thông", items: [{ id: "BLOG", label: "Blog", icon: "newspaper", href: "/teacher/blog" }] },
+  ];
+  const createActions = [
+    { id: "NEW_LESSON", label: "Bài học mới", icon: "book" as const, onClick: goTab("CREATE_LESSON") },
+    { id: "NEW_EXAM", label: "Đề thi mới", icon: "clipboard" as const, onClick: goTab("CREATE") },
+    { id: "NEW_POST", label: "Bài viết blog", icon: "newspaper" as const, href: "/teacher/blog/editor" },
   ];
 
   // Derived data below is memoized on its inputs: this component re-renders on every keystroke in
@@ -2329,67 +2296,21 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-64 ui-sidebar flex flex-col shrink-0 h-full overflow-y-auto shadow-2xl md:shadow-none transform transition-transform duration-300 md:relative md:translate-x-0 pt-5 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="mb-3 mx-3 p-3 rounded-2xl bg-primary-soft flex items-center gap-3">
-          <label className="w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer relative overflow-hidden ring-2 ring-white hover:ring-primary/30 transition-all group">
-            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-            {user?.avatar ? (
-              <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
-            ) : (
-              user?.name?.charAt(0)?.toUpperCase() || 'T'
-            )}
-            <div className="absolute inset-0 bg-primary/70 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="text-[10px] font-bold text-white tracking-wider">ĐỔI</span>
-            </div>
-          </label>
-          <div className="overflow-hidden">
-            <h2 className="text-sm font-bold text-primary truncate">{user?.name || 'Thầy/Cô'}</h2>
-            <p className="text-[10px] text-muted font-semibold uppercase tracking-widest">Giáo viên</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-0.5 px-3">
-          {navGroups.map((group, index) => (
-            <div key={group.id} className={`flex flex-col ${index > 0 && (group.subItems || (navGroups[index - 1] as any).subItems) ? 'mt-3 pt-3 border-t border-line' : ''}`}>
-              {group.subItems ? (
-                <>
-                  <button
-                    onClick={() => toggleNavGroup(group.id)}
-                    className="ui-nav-group-label flex items-center justify-between gap-2 pb-2 min-h-[32px] transition-colors duration-150 cursor-pointer text-left hover:text-primary"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      {group.label}
-                    </span>
-                    <span className={`transform transition-transform text-slate-400 ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▾</span>
-                  </button>
-                  {expandedNav[group.id] && (
-                    <div className="flex flex-col gap-0.5">
-                      {group.subItems.map(item => (
-                        <button key={item.id} onClick={() => { if ('href' in item && item.href) { router.push(item.href); return; } setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                          className={`ui-nav-item text-sm cursor-pointer ${activeTab === item.id ? 'ui-nav-item-active font-bold' : ''}`}>
-                          <span className="truncate">{item.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <button onClick={() => { setActiveTab(group.id); setIsMobileMenuOpen(false); }}
-                  className={`ui-nav-item text-sm cursor-pointer ${activeTab === group.id ? 'ui-nav-item-active font-bold' : ''}`}>
-                  <span className="truncate">{group.label}</span>
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-        <div className="mt-auto border-t border-line px-3 py-3">
-          <button
-            onClick={() => { clearSession(); router.push('/'); }}
-            className="flex items-center justify-center gap-2 px-3 py-2.5 font-semibold text-muted border border-line-strong hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors w-full cursor-pointer text-sm rounded-full"
-          >
-            Đăng xuất
-          </button>
-        </div>
+      <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-64 ui-sidebar flex flex-col shrink-0 h-full shadow-2xl md:shadow-none transform transition-transform duration-300 md:relative md:translate-x-0 pt-5 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <SidebarNav
+          sections={navSections}
+          onNavigate={() => setIsMobileMenuOpen(false)}
+          header={<SidebarCreateMenu actions={createActions} onNavigate={() => setIsMobileMenuOpen(false)} />}
+          footer={
+            <SidebarUserCard
+              name={user?.name || 'Thầy/Cô'}
+              role="Giáo viên"
+              avatar={user?.avatar}
+              onAvatarChange={handleAvatarUpload}
+              onLogout={() => { clearSession(); router.push('/'); }}
+            />
+          }
+        />
       </div>
 
       {/* Main Content Area */}
@@ -2412,7 +2333,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
             <PageBanner
               title={<>Xin chào, {user?.name?.split(' ').slice(-1)[0] || 'Thầy/Cô'}</>}
               description="Tổng quan tình hình lớp học, học phí và kết quả học tập của học viên — tự động cập nhật theo dữ liệu mới nhất."
-              illustration="/images/illustrations/teacher-dashboard.svg"
+              illustration="/images/photos/app/illus/teacher-dashboard.webp"
               illustrationAlt="Giáo viên theo dõi biểu đồ và bảng lớp học"
             >
               <div className="w-full space-y-4">
@@ -2893,7 +2814,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
               {filteredDocuments.length === 0 && <div className="ui-card col-span-full"><EmptyState message="Không tìm thấy tài liệu phù hợp" /></div>}
               {documentsPagination.pageItems.map((doc: any) => (
                 <div key={doc.id} className="ui-card ui-card-hover flex flex-col justify-between group relative overflow-hidden">
-                  <CardThumb src="/images/thumbs/documents.svg" alt={`Tài liệu ${doc.title}`} />
+                  <CardThumb src="/images/photos/app/documents.webp" alt={`Tài liệu ${doc.title}`} />
                   <div className="absolute top-0 right-0 p-3 flex gap-2 z-10">
                      <button onClick={() => handleUpdateDocumentVisibility(doc)} className={`text-[10px] px-2.5 py-1 rounded-full font-bold uppercase hover:opacity-80 cursor-pointer transition-opacity ${doc.visibility === 'PUBLIC' ? 'bg-emerald-50 text-emerald-700' : doc.visibility === 'CLASS' ? 'bg-primary-soft text-primary' : 'bg-red-50 text-red-700'}`} title="Nhấn để đổi trạng thái">
                         {doc.visibility === 'CLASS' ? (doc.classroom?.name || 'Lớp') : doc.visibility}
@@ -3028,7 +2949,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
               {listeningClips.length === 0 && <div className="ui-card col-span-full"><EmptyState message="Chưa có audio nào" /></div>}
               {listeningClipsPagination.pageItems.map((clip: any) => (
                 <div key={clip.id} className="ui-card ui-card-hover flex flex-col justify-between group relative overflow-hidden">
-                  <CardThumb src="/images/thumbs/listening-studio.svg" alt={`Audio luyện nghe ${clip.title}`} />
+                  <CardThumb src="/images/photos/app/listening-studio.webp" alt={`Audio luyện nghe ${clip.title}`} />
                   <div className="absolute top-3 right-3">
                     <span className={`text-[10px] px-2 py-1 rounded-full font-bold uppercase ${clip.status === 'READY' ? 'bg-emerald-50 text-emerald-700' : clip.status === 'FAILED' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>
                       {clip.status === 'READY' ? 'Sẵn sàng' : clip.status === 'FAILED' ? 'Lỗi' : 'Đang xử lý'}
@@ -3101,7 +3022,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
                 const bookStatus = IELTS_BOOK_STATUS_LABEL[book.extractionStatus] || IELTS_BOOK_STATUS_LABEL.PENDING;
                 return (
                   <div key={book.id} className="ui-card ui-card-hover flex flex-col overflow-hidden">
-                    <CardThumb src="/images/thumbs/ielts.svg" alt={`Sách IELTS ${book.title}`}>
+                    <CardThumb src="/images/photos/app/ielts.webp" alt={`Sách IELTS ${book.title}`}>
                       <span className={`absolute top-3 right-3 text-[10px] px-2 py-1 rounded-full font-bold uppercase shadow-sm ${bookStatus.className}`}>{bookStatus.label}</span>
                     </CardThumb>
                     <div className="p-5 sm:p-6 flex flex-col flex-1">
@@ -3234,7 +3155,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
               {speakingTopics.length === 0 && <div className="ui-card col-span-full"><EmptyState message="Chưa có chủ đề nào" /></div>}
               {speakingTopicsPagination.pageItems.map((topic: any) => (
                 <div key={topic.id} className="ui-card ui-card-hover flex flex-col justify-between group relative overflow-hidden">
-                  <CardThumb src="/images/thumbs/conversation.svg" alt={`Chủ đề hội thoại ${topic.title}`} />
+                  <CardThumb src="/images/photos/app/conversation.webp" alt={`Chủ đề hội thoại ${topic.title}`} />
                   <div className="px-6 pt-5">
                     <h3 className="font-bold text-lg text-primary line-clamp-2 mb-1" title={topic.title}>{topic.title}</h3>
                     {topic.description && <p className="text-sm text-muted mb-2 line-clamp-2">{topic.description}</p>}
@@ -3669,14 +3590,14 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
 
             {localLessons.length === 0 ? (
               <div className="ui-card p-8 flex flex-col items-center text-center">
-                <img src="/images/illustrations/empty-state.svg" alt="Chưa có bài học" width={220} height={165} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
+                <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có bài học" width={220} height={165} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
                 <h2 className="text-2xl font-extrabold text-primary mb-2">Chưa có bài học nào</h2>
                 <p className="text-muted mb-6">Bắt đầu bằng cách tạo bài học mới</p>
                 <button onClick={() => setActiveTab('CREATE_LESSON')} className="btn-primary px-6 py-3 cursor-pointer">Tạo Bài Học Ngay</button>
               </div>
             ) : filteredLessons.length === 0 ? (
               <div className="ui-card p-8 flex flex-col items-center text-center">
-                <img src="/images/illustrations/empty-state.svg" alt="Không tìm thấy bài học" width={220} height={165} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
+                <img src="/images/photos/app/illus/empty-state.webp" alt="Không tìm thấy bài học" width={220} height={165} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
                 <h2 className="text-xl font-bold text-primary mb-2">Không tìm thấy bài học phù hợp</h2>
                 <p className="text-muted">Thử đổi từ khóa tìm kiếm hoặc bộ lọc lớp học</p>
               </div>
@@ -3685,7 +3606,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 md:gap-6">
                   {lessonsPagination.pageItems.map((lesson: any) => (
                     <div key={lesson.id} className="ui-card ui-card-hover flex flex-col h-full overflow-hidden">
-                      <CardThumb src="/images/thumbs/lesson.svg" alt={`Bài học ${lesson.title}`} />
+                      <CardThumb src="/images/photos/app/lesson.webp" alt={`Bài học ${lesson.title}`} />
                       <div className="p-5 flex flex-col gap-3 flex-1">
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-3 mb-2">
@@ -3860,14 +3781,14 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
 
             {allExams.length === 0 ? (
               <div className="ui-card p-8 flex flex-col items-center text-center">
-                <img src="/images/illustrations/empty-state.svg" alt="Chưa có đề thi" width={220} height={165} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
+                <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có đề thi" width={220} height={165} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
                 <h2 className="text-2xl font-extrabold text-primary mb-2">Chưa có đề thi nào</h2>
                 <p className="text-muted mb-6">Bắt đầu bằng cách tạo đề thủ công</p>
                 <button onClick={() => setActiveTab('CREATE')} className="btn-primary px-6 py-3 cursor-pointer">Tạo Đề Ngay</button>
               </div>
             ) : filteredExams.length === 0 ? (
               <div className="ui-card p-8 flex flex-col items-center text-center">
-                <img src="/images/illustrations/empty-state.svg" alt="Không tìm thấy đề thi" width={220} height={165} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
+                <img src="/images/photos/app/illus/empty-state.webp" alt="Không tìm thấy đề thi" width={220} height={165} loading="lazy" className="w-full max-w-[220px] h-auto mb-4" />
                 <h2 className="text-xl font-bold text-primary mb-2">Không tìm thấy đề thi phù hợp</h2>
                 <p className="text-muted">Thử đổi từ khóa tìm kiếm hoặc bộ lọc lớp học</p>
               </div>
@@ -4687,7 +4608,7 @@ function PageBanner({ title, description, illustration, illustrationAlt, childre
 function EmptyState({ message, children }: { message: React.ReactNode; children?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-10 px-4 gap-3">
-      <img src="/images/illustrations/empty-state.svg" alt="Chưa có dữ liệu" width={220} height={165} loading="lazy" className="w-full max-w-[220px] h-auto" />
+      <img src="/images/photos/app/illus/empty-state.webp" alt="Chưa có dữ liệu" width={220} height={165} loading="lazy" className="w-full max-w-[220px] h-auto" />
       <div className="text-muted text-sm">{message}</div>
       {children}
     </div>
@@ -4758,7 +4679,7 @@ function ClassCard({ c, onEdit, onDelete }: { c: any; onEdit?: () => void; onDel
 
   return (
     <div className="ui-card ui-card-hover flex flex-col h-full group overflow-hidden">
-      <CardThumb src="/images/thumbs/classroom.svg" alt={`Lớp học ${c.name}`} />
+      <CardThumb src="/images/photos/app/classroom.webp" alt={`Lớp học ${c.name}`} />
       <div className="p-5 flex flex-col gap-3 flex-1">
         <div className="flex items-start justify-between gap-2">
           <h4 className="font-bold text-lg text-primary leading-snug min-w-0 break-words">{c.name}</h4>
@@ -4796,7 +4717,7 @@ function ExamCard({ title, type, detail, questions, onClick, onEdit, onDelete, o
   return (
     <div className="ui-card ui-card-hover flex flex-col h-full overflow-hidden">
       <div className="cursor-pointer" onClick={onClick}>
-        <CardThumb src="/images/thumbs/exam.svg" alt={`${type}: ${title}`}>
+        <CardThumb src="/images/photos/app/exam.webp" alt={`${type}: ${title}`}>
           <span className={`absolute top-3 left-3 text-xs px-2.5 py-1 rounded-full font-bold shadow-sm ${type === 'Đề thi' ? 'bg-highlight text-white' : 'bg-white text-primary'}`}>
             {type}
           </span>

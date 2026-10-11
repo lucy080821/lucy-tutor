@@ -25,6 +25,8 @@ import { usePagination } from "@/lib/usePagination";
 import Pagination from "@/components/Pagination";
 import { compressImageToBase64 } from "@/lib/imageCompress";
 import LatestBlogPosts from "@/components/blog/LatestBlogPosts";
+import SidebarNav, { SidebarUserCard, type NavItem, type NavSection } from "@/components/nav/SidebarNav";
+import type { NavIconName } from "@/components/nav/NavIcon";
 
 // Daily check-in is a non-idempotent POST (adds XP) — share one in-flight request per user/day so
 // React StrictMode's double-mounted effect (dev) or a quick re-visit doesn't fire it twice.
@@ -357,24 +359,6 @@ export default function StudentDashboard() {
     return () => { clearInterval(interval); document.removeEventListener('visibilitychange', onVisible); };
   }, [activeTab, user?.id, user?.accessLocked]);
 
-  const [expandedNav, setExpandedNav] = useState<Record<string, boolean>>({
-    'LEARNING': true,
-    'GAMES': true,
-  });
-
-  const toggleNavGroup = (id: string) => {
-    setExpandedNav(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  // Once we know the account has no classroom, default-open the self-practice groups instead
-  // of the (still-empty) "Học Tập" group — only runs once per login, so it doesn't fight a
-  // student's own manual expand/collapse afterwards.
-  useEffect(() => {
-    if (user?.id && !user?.classroomsJoined?.length) {
-      setExpandedNav(prev => ({ ...prev, FOUR_SKILLS: true, TRAINING_CENTER: true }));
-    }
-  }, [user?.id, user?.classroomsJoined?.length]);
-
   const learningGroup = {
     id: "LEARNING", label: "Học Tập", icon: "🎓",
     subItems: [
@@ -413,19 +397,6 @@ export default function StudentDashboard() {
       { id: "GAMES_G3_LINK", label: "Tiếng Anh Lớp 3", icon: "🎮", isLink: true, href: '/games/lop-3' },
     ]
   };
-  // Học viên chưa tham gia lớp nào chưa dùng được nhóm "Học Tập" (phụ thuộc giáo viên giao) —
-  // đưa 2 nhóm tự luyện (không cần lớp) lên trước để chúng là thứ đầu tiên nhìn thấy.
-  const isClassless = !user?.classroomsJoined?.length;
-  const navGroups = [
-    { id: "OVERVIEW", label: "Tổng Quan", icon: "📊" },
-    ...(isClassless ? [fourSkillsGroup, trainingCenterGroup, learningGroup] : [learningGroup, fourSkillsGroup, trainingCenterGroup]),
-    gamesGroup,
-    { id: "CALENDAR", label: "Thời Khóa Biểu", icon: "📅" },
-    { id: "NOTEBOOK", label: "Sổ Tay Lỗi Sai", icon: "📔" },
-    { id: "LEADERBOARD", label: "Bảng Xếp Hạng", icon: "🏆" },
-    { id: "SETTINGS", label: "Cài Đặt", icon: "⚙️" },
-  ];
-
   // Compute union of enabled features across all joined classrooms.
   // Empty array in a classroom = all features enabled for that classroom.
   const ALL_FEATURES = ["gym", "grammar_gym", "reading", "writing", "speaking_conversation", "listening", "study_plan", "phonetics", "pronunciation", "mock_test", "ielts"];
@@ -440,6 +411,53 @@ export default function StudentDashboard() {
     }
     return union.size === 0 ? new Set(ALL_FEATURES) : union;
   })();
+
+  const isClassless = !user?.classroomsJoined?.length;
+  // Sidebar: gom theo mục tiêu học (Lớp của tôi / 4 kỹ năng / Luyện thi / Nền tảng / Tiến độ). Mục là trang
+  // riêng (href) bị ẩn nếu lớp học tắt tính năng đó (featureKey ∉ enabledFeatures). Học viên chưa vào lớp nào:
+  // nhóm "Lớp Của Tôi" xuống cuối vì chưa có nội dung giáo viên giao.
+  const tabItem = (id: string, label: string, icon: NavIconName): NavItem =>
+    ({ id, label, icon, active: activeTab === id, onClick: () => setActiveTab(id) });
+  const linkItems = (list: [string, string, NavIconName, string, string?][]): NavItem[] =>
+    list.filter(([, , , , fk]) => !fk || enabledFeatures.has(fk)).map(([id, label, icon, href]) => ({ id, label, icon, href }));
+  const classSection: NavSection = {
+    id: "CLASS", label: "Lớp Của Tôi", items: [
+      tabItem("LESSONS", "Bài Học", "book"),
+      tabItem("PRACTICE", "Bài Tập", "pencil"),
+      tabItem("EXAMS", "Bài Kiểm Tra", "clipboard"),
+      tabItem("DOCUMENTS", "Tài Liệu", "folder"),
+      tabItem("ATTENDANCE", "Chuyên Cần", "checkSquare"),
+      tabItem("CALENDAR", "Thời Khóa Biểu", "calendar"),
+    ]
+  };
+  const practiceSections: NavSection[] = [
+    { id: "SKILLS", label: "Luyện 4 Kỹ Năng", items: linkItems([
+      ["LISTENING_LINK", "Luyện Nghe", "headphones", "/listening", "listening"],
+      ["CONVERSATION_LINK", "Luyện Nói", "message", "/conversation", "speaking_conversation"],
+      ["READING_LINK", "Luyện Đọc", "bookOpen", "/reading", "reading"],
+      ["WRITING_LINK", "Luyện Viết", "penLine", "/writing", "writing"],
+    ]) },
+    { id: "EXAM_PREP", label: "Luyện Thi", items: linkItems([
+      ["MOCK_TEST_LINK", "Đề Thi Thử THPT", "flag", "/mock-test", "mock_test"],
+      ["IELTS_LINK", "IELTS Cambridge", "award", "/ielts", "ielts"],
+    ]) },
+    { id: "FOUNDATION", label: "Phòng Gym & Phát Âm", items: linkItems([
+      ["GYM_LINK", "Phòng Gym Từ Vựng", "letters", "/gym", "gym"],
+      ["GRAMMAR_GYM_LINK", "Phòng Gym Ngữ Pháp", "layers", "/grammar-gym", "grammar_gym"],
+      ["PRONUNCIATION_LINK", "Luyện Phát Âm", "mic", "/pronunciation", "pronunciation"],
+      ["PHONETICS_LINK", "Bảng Âm IPA", "volume", "/phonetics", "phonetics"],
+      ["GAMES_G3_LINK", "Trò Chơi Lớp 3", "gamepad", "/games/lop-3"],
+    ]) },
+    { id: "PROGRESS", label: "Tiến Độ", items: [
+      ...linkItems([["STUDY_PLAN_LINK", "Lộ Trình Học", "route", "/study-plan", "study_plan"]]),
+      tabItem("NOTEBOOK", "Sổ Tay Lỗi Sai", "notebook"),
+      tabItem("LEADERBOARD", "Bảng Xếp Hạng", "trophy"),
+    ] },
+  ];
+  const navSections: NavSection[] = [
+    { id: "MAIN", items: [tabItem("OVERVIEW", "Tổng Quan", "dashboard")] },
+    ...(isClassless ? [...practiceSections, classSection] : [classSection, ...practiceSections]),
+  ];
 
   const [expandedTopic, setExpandedTopic] = useState<string | null>(null);
   const [chartViewMode, setChartViewMode] = useState<'day' | 'week' | 'month'>('day');
@@ -704,7 +722,7 @@ export default function StudentDashboard() {
     <div className="flex h-[calc(100vh-80px)] w-full items-center justify-center bg-background p-4 sm:p-6">
       <div className="max-w-md w-full ui-card p-6 sm:p-8 text-center">
         <img
-          src="/images/illustrations/locked.svg"
+          src="/images/photos/app/illus/locked.webp"
           alt="Minh hoạ tài khoản đang tạm khóa"
           width={800}
           height={600}
@@ -745,78 +763,25 @@ export default function StudentDashboard() {
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-64 ui-sidebar flex flex-col shrink-0 h-full overflow-y-auto shadow-2xl md:shadow-none transform transition-transform duration-300 md:relative md:translate-x-0 pt-5 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div className={`fixed inset-y-0 left-0 z-50 md:z-auto w-64 ui-sidebar flex flex-col shrink-0 h-full shadow-2xl md:shadow-none transform transition-transform duration-300 md:relative md:translate-x-0 pt-5 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
-        <div className="mb-3 mx-3 px-2 pb-4 border-b border-line flex items-center gap-3">
-          <label className="w-10 h-10 rounded-full bg-primary-soft text-primary flex items-center justify-center font-bold text-lg shrink-0 cursor-pointer relative overflow-hidden hover:ring-2 hover:ring-primary/30 transition-all group">
-            <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-            {user?.avatar ? (
-              <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
-            ) : (
-              user?.name?.charAt(0)?.toUpperCase() || 'H'
-            )}
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-              <span className="text-[10px] font-bold text-white tracking-wider">ĐỔI</span>
-            </div>
-          </label>
-          <div className="overflow-hidden">
-            <h2 className="text-sm font-bold text-primary truncate">{user?.name || 'Học viên'}</h2>
-            <p className="text-[10px] text-muted font-semibold uppercase tracking-widest">Học viên</p>
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-0.5 px-3">
-          {navGroups.map((group: any, index) => (
-            <div key={group.id} className={`flex flex-col ${index > 0 && (group.subItems || (navGroups[index - 1] as any).subItems) ? 'mt-3 pt-3 border-t border-line' : ''}`}>
-              {group.subItems ? (
-                <>
-                  {/* Section label — muted, không phải nav item */}
-                  <button
-                    onClick={() => toggleNavGroup(group.id)}
-                    className="ui-nav-group-label flex items-center justify-between gap-2 py-1.5 mb-0.5 transition-colors duration-150 cursor-pointer text-left hover:text-primary"
-                  >
-                    <span className="flex items-center gap-1.5">
-                      {group.label}
-                    </span>
-                    <span className={`transform transition-transform ${expandedNav[group.id] ? 'rotate-180' : ''}`}>▾</span>
-                  </button>
-                  {expandedNav[group.id] && (
-                    <div className="flex flex-col gap-0.5">
-                      {group.subItems.filter((item: any) => !item.featureKey || enabledFeatures.has(item.featureKey)).map((item: any) => (
-                        item.isLink ? (
-                          <Link key={item.id} href={item.href}
-                            className="ui-nav-item text-sm">
-                            <span className="truncate">{item.label}</span>
-                          </Link>
-                        ) : (
-                          <button key={item.id} onClick={() => { setActiveTab(item.id); setIsMobileMenuOpen(false); }}
-                            className={`ui-nav-item text-sm cursor-pointer ${activeTab === item.id ? 'ui-nav-item-active' : ''}`}>
-                            <span className="truncate">{item.label}</span>
-                          </button>
-                        )
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                /* Top-level nav item — rõ hơn section label */
-                <button onClick={() => { setActiveTab(group.id); setIsMobileMenuOpen(false); }}
-                  className={`ui-nav-item text-sm cursor-pointer ${activeTab === group.id ? 'ui-nav-item-active' : ''}`}>
-                  <span className="truncate">{group.label}</span>
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-auto border-t border-line px-3 py-3">
-          <button
-            onClick={() => { clearSession(); router.push('/'); }}
-            className="btn-ghost w-full px-3 py-2.5 text-sm cursor-pointer hover:text-red-600 hover:bg-red-50"
-          >
-            Đăng xuất
-          </button>
-        </div>
+        <SidebarNav
+          sections={navSections}
+          collapsible
+          storageKey="lucy_student_nav_collapsed"
+          onNavigate={() => setIsMobileMenuOpen(false)}
+          footer={
+            <SidebarUserCard
+              name={user?.name || 'Học viên'}
+              role="Học viên"
+              avatar={user?.avatar}
+              onAvatarChange={handleAvatarUpload}
+              onSettings={() => { setActiveTab("SETTINGS"); setIsMobileMenuOpen(false); }}
+              settingsActive={activeTab === "SETTINGS"}
+              onLogout={() => { clearSession(); router.push('/'); }}
+            />
+          }
+        />
       </div>
 
       {/* Main Content Area */}
@@ -927,7 +892,7 @@ export default function StudentDashboard() {
               <InstallPWAButton />
               {activeTab === "OVERVIEW" && (
                 <img
-                  src="/images/illustrations/study-progress.svg"
+                  src="/images/photos/app/illus/study-progress.webp"
                   alt="Minh hoạ học viên theo dõi tiến độ học tập"
                   width={800}
                   height={600}
@@ -1052,7 +1017,7 @@ export default function StudentDashboard() {
                     )}
                     <div className={`aspect-video overflow-hidden ${featured ? 'bg-[#fdf6e3]' : 'bg-primary-soft'}`}>
                       <img
-                        src={`/images/thumbs/${PRACTICE_THUMBS[item.href] || 'reading'}.svg`}
+                        src={`/images/photos/app/${PRACTICE_THUMBS[item.href] || 'reading'}.webp`}
                         alt={`Ảnh minh hoạ ${item.label}`}
                         width={640}
                         height={360}
@@ -1242,7 +1207,7 @@ export default function StudentDashboard() {
                   return (
                     <div key={lesson.id} className="ui-card ui-card-hover overflow-hidden flex flex-col">
                       <div className="aspect-video bg-primary-soft overflow-hidden">
-                        <img src="/images/thumbs/lesson.svg" alt="Ảnh minh hoạ bài học" width={640} height={360} loading="lazy" className="w-full h-full object-cover" />
+                        <img src="/images/photos/app/lesson.webp" alt="Ảnh minh hoạ bài học" width={640} height={360} loading="lazy" className="w-full h-full object-cover" />
                       </div>
                       <div className="p-5 flex flex-col flex-1 gap-4">
                         <div className="min-w-0">
@@ -1294,7 +1259,7 @@ export default function StudentDashboard() {
                   {practicePagination.pageItems.map((e: any) => (
                     <div key={e.id} className="ui-card ui-card-hover overflow-hidden flex flex-col">
                       <div className="aspect-video bg-primary-soft overflow-hidden">
-                        <img src="/images/thumbs/exam.svg" alt="Ảnh minh hoạ bài tập" width={640} height={360} loading="lazy" className="w-full h-full object-cover" />
+                        <img src="/images/photos/app/exam.webp" alt="Ảnh minh hoạ bài tập" width={640} height={360} loading="lazy" className="w-full h-full object-cover" />
                       </div>
                       <div className="p-5 flex flex-col flex-1 gap-4">
                         <div className="min-w-0">
@@ -1353,7 +1318,7 @@ export default function StudentDashboard() {
                   {examsPagination.pageItems.map((e: any) => (
                     <div key={e.id} className="ui-card ui-card-hover overflow-hidden flex flex-col">
                       <div className="aspect-video bg-primary-soft overflow-hidden">
-                        <img src="/images/thumbs/exam.svg" alt="Ảnh minh hoạ bài kiểm tra" width={640} height={360} loading="lazy" className="w-full h-full object-cover" />
+                        <img src="/images/photos/app/exam.webp" alt="Ảnh minh hoạ bài kiểm tra" width={640} height={360} loading="lazy" className="w-full h-full object-cover" />
                       </div>
                       <div className="p-5 flex flex-col flex-1 gap-4">
                         <div className="min-w-0">
@@ -2065,7 +2030,7 @@ const PRACTICE_GROUPS: { id: string; label: string; description: string; hrefs: 
   { id: 'GAMES', label: 'Trò Chơi', description: 'Vừa chơi vừa ôn từ vựng và mẫu câu theo sách', hrefs: ['/games/lop-3'] },
 ];
 
-// Thumbnail per self-practice route for the OVERVIEW "Luyện tập" grid (files under /public/images/thumbs/)
+// Thumbnail per self-practice route for the OVERVIEW "Luyện tập" grid (ảnh chụp WebP trong /public/images/photos/app/)
 const PRACTICE_THUMBS: Record<string, string> = {
   '/listening': 'listening',
   '/conversation': 'conversation',
@@ -2085,7 +2050,7 @@ const PRACTICE_THUMBS: Record<string, string> = {
 function EmptyIllustration() {
   return (
     <img
-      src="/images/illustrations/empty-state.svg"
+      src="/images/photos/app/illus/empty-state.webp"
       alt="Minh hoạ chưa có dữ liệu"
       width={800}
       height={600}
