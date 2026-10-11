@@ -3051,6 +3051,11 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
                             <Link key={t.id} href={`/teacher/ielts/${t.id}`} className="flex items-center gap-2 px-4 py-2 rounded-full border border-line-strong bg-white text-foreground hover:border-primary hover:bg-primary-soft hover:text-primary transition-colors text-sm font-semibold">
                               {t.title} {t.testType ? `(${t.testType === 'ACADEMIC' ? 'Academic' : 'General Training'})` : ''}
                               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${testStatus.className}`}>{testStatus.label}</span>
+                              {t.status === 'PUBLISHED' && t._count && (
+                                <span className="text-[10px] font-semibold text-muted" title="Phạm vi giao — bấm để cập nhật">
+                                  {[t._count.classrooms ? `${t._count.classrooms} lớp` : '', t._count.assignedStudents ? `${t._count.assignedStudents} HV` : ''].filter(Boolean).join(' + ') || 'giao kiểu cũ'}
+                                </span>
+                              )}
                               {t._count && (
                                 <span className="flex items-center gap-1">
                                   {IELTS_SKILL_INFO.map(s => {

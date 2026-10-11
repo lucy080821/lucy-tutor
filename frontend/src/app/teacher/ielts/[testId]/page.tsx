@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from "sweetalert2";
 import { QUESTION_TYPE_META, FILL_TYPES, QuestionType } from "@/lib/readingGrading";
+import IeltsAssignPanel from "@/components/ielts/IeltsAssignPanel";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
@@ -24,7 +25,7 @@ export default function IeltsTestReviewPage() {
   const [loading, setLoading] = useState(true);
   const [classrooms, setClassrooms] = useState<any[]>([]);
   const [savingTestConfig, setSavingTestConfig] = useState(false);
-  const [publishing, setPublishing] = useState(false);
+  const [freeStudents, setFreeStudents] = useState<any[]>([]);
   const [skillTab, setSkillTab] = useState<SkillTab>("READING");
 
   const fetchTest = useCallback(async () => {
@@ -44,7 +45,8 @@ export default function IeltsTestReviewPage() {
     if (!uid) { router.push("/"); return; }
     // Trang rà soát đề chỉ dành cho giáo viên
     fetch(`${API}/api/auth/me?userId=${uid}`).then((r) => r.json()).then((u) => { if (u?.id && u.role !== "TEACHER") redirectToOwnArea(u.role, router); }).catch(() => {});
-    fetch(`${API}/api/classroom/teacher/${uid}`).then((r) => r.json()).then(setClassrooms).catch(() => {});
+    fetch(`${API}/api/classroom/teacher/${uid}`).then((r) => r.json()).then((d) => setClassrooms(Array.isArray(d) ? d : [])).catch(() => {});
+    fetch(`${API}/api/free-students/teacher/${uid}`).then((r) => r.json()).then((d) => setFreeStudents(Array.isArray(d) ? d : [])).catch(() => {});
     fetchTest();
   }, [fetchTest, router]);
 
@@ -153,17 +155,6 @@ export default function IeltsTestReviewPage() {
     } catch (err) { console.error(err); }
   };
 
-  const handlePublish = async () => {
-    setPublishing(true);
-    try {
-      const res = await fetch(`${API}/api/ielts/tests/${testId}/publish`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) { Swal.fire("Chưa thể publish", data.error, "warning"); return; }
-      setTest((prev: any) => ({ ...prev, status: data.status }));
-      Swal.fire("Đã publish!", "Đề thi này đã sẵn sàng cho học viên.", "success");
-    } catch (err) { console.error(err); } finally { setPublishing(false); }
-  };
-
   if (loading) return <div className="min-h-screen flex items-center justify-center text-primary font-bold animate-pulse">Đang tải...</div>;
   if (!test) return null;
 
@@ -210,62 +201,20 @@ export default function IeltsTestReviewPage() {
                 <option value="GENERAL_TRAINING">General Training</option>
               </select>
             </div>
-            <div>
-              <label className="ui-label text-xs">Cách giao đề</label>
-              <select value={test.deliveryMode} onChange={(e) => patchTest({ deliveryMode: e.target.value })} className="w-full p-2.5 ui-input font-bold">
-                <option value="LIBRARY">Thư viện tự luyện (không hạn nộp)</option>
-                <option value="ASSIGNED">Giao bài có hạn nộp</option>
-              </select>
-            </div>
           </div>
 
-          {test.deliveryMode === "LIBRARY" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="ui-label text-xs">Lớp học được xem</label>
-                <select value={test.libraryClassroomId || ""} onChange={(e) => patchTest({ libraryClassroomId: e.target.value || null, libraryStudentId: null })} className="w-full p-2.5 ui-input">
-                  <option value="">-- Không chọn --</option>
-                  {classrooms.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="ui-label text-xs">Hoặc 1 học viên cụ thể</label>
-                <select value={test.libraryStudentId || ""} onChange={(e) => patchTest({ libraryStudentId: e.target.value || null, libraryClassroomId: null })} className="w-full p-2.5 ui-input">
-                  <option value="">-- Không chọn --</option>
-                  {classrooms.flatMap((c) => c.students || []).map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="ui-label text-xs">Lớp học</label>
-                <select value={test.assignedClassroomId || ""} onChange={(e) => patchTest({ assignedClassroomId: e.target.value || null })} className="w-full p-2.5 ui-input">
-                  <option value="">-- Chọn lớp --</option>
-                  {classrooms.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="ui-label text-xs">Hạn nộp</label>
-                <input type="datetime-local" defaultValue={test.deadline ? test.deadline.slice(0, 16) : ""} onBlur={(e) => patchTest({ deadline: e.target.value || null })} className="w-full p-2.5 ui-input" />
-              </div>
-              <div>
-                <label className="ui-label text-xs">Số lần làm tối đa</label>
-                <input type="number" min={1} defaultValue={test.maxAttempts} onBlur={(e) => patchTest({ maxAttempts: e.target.value })} className="w-full p-2.5 ui-input" />
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <button
-              onClick={handlePublish}
-              disabled={publishing || test.status === "PUBLISHED"}
-              className="btn-primary px-5 py-2 text-sm cursor-pointer"
-            >
-              {test.status === "PUBLISHED" ? "✓ Đã publish" : publishing ? "Đang publish..." : "Publish"}
-            </button>
-          </div>
           {savingTestConfig && <p className="text-xs text-muted">Đang lưu...</p>}
+        </div>
+
+        {/* ── Giao đề (cập nhật được cả khi đã publish) ── */}
+        <div className="ui-card p-5 space-y-4">
+          <h2 className="ui-section-title text-lg">Giao đề cho học viên</h2>
+          <IeltsAssignPanel
+            test={test}
+            classrooms={classrooms}
+            freeStudents={freeStudents}
+            onUpdated={(patch) => setTest((prev: any) => ({ ...prev, ...patch }))}
+          />
         </div>
 
         {/* ── Skill tabs ── */}

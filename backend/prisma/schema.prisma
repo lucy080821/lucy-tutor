@@ -261,6 +261,7 @@ model Classroom {
 
   ieltsLibraryTests  IeltsTest[] @relation("IeltsTestLibraryClassroom")
   ieltsAssignedTests IeltsTest[] @relation("IeltsTestAssignedClassroom")
+  ieltsTests         IeltsTest[] @relation("IeltsTestClassrooms")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -673,7 +674,7 @@ model IeltsTest {
   libraryStudentId   String?
   libraryStudent     User?      @relation("IeltsTestLibraryStudent", fields: [libraryStudentId], references: [id], onDelete: SetNull)
 
-  // ASSIGNED mode: scoped like Exam — a classroom (bookkeeping) + explicit assigned students + deadline/maxAttempts.
+  // ASSIGNED mode: deadline/maxAttempts apply. assignedStudents = individually picked students (both modes).
   assignedClassroomId String?
   assignedClassroom   Classroom? @relation("IeltsTestAssignedClassroom", fields: [assignedClassroomId], references: [id], onDelete: SetNull)
   assignedStudents    User[]     @relation("IeltsTestAssignedStudents")
@@ -681,7 +682,13 @@ model IeltsTest {
   deadline            DateTime?
   maxAttempts         Int        @default(1)
 
-  book              IeltsBook               @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  // Phạm vi giao đề hiện hành (dùng cho CẢ 2 chế độ): nhiều lớp (học viên vào lớp sau vẫn thấy)
+  // + nhiều học viên lẻ qua `assignedStudents` (kể cả học viên tự do). libraryClassroomId /
+  // libraryStudentId / assignedClassroomId là cách giao cũ — vẫn được tính khi lọc quyền xem
+  // cho dữ liệu cũ, và được chuyển sang 2 field này khi giáo viên lưu lại phạm vi giao.
+  classrooms Classroom[] @relation("IeltsTestClassrooms")
+
+  book              IeltsBook              @relation(fields: [bookId], references: [id], onDelete: Cascade)
   listeningSections IeltsListeningSection[]
   readingPassages   IeltsReadingPassage[]
   questions         IeltsQuestion[]

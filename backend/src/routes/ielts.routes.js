@@ -121,7 +121,7 @@ router.get('/books', async (req, res) => {
           select: {
             id: true, testNumber: true, title: true, testType: true, status: true, deliveryMode: true,
             // Per-skill counts so the library list shows at a glance which of the 4 skills were extracted.
-            _count: { select: { listeningSections: true, readingPassages: true, writingTasks: true, speakingParts: true } }
+            _count: { select: { listeningSections: true, readingPassages: true, writingTasks: true, speakingParts: true, classrooms: true, assignedStudents: true } }
           },
           orderBy: { testNumber: 'asc' }
         }
@@ -210,7 +210,8 @@ router.get('/tests/:id', async (req, res) => {
         listeningSections: { orderBy: { sectionNumber: 'asc' }, include: { questions: { orderBy: { questionNumber: 'asc' } } } },
         writingTasks: { orderBy: { taskNumber: 'asc' } },
         speakingParts: { orderBy: { partNumber: 'asc' } },
-        assignedStudents: { select: { id: true, name: true, email: true } }
+        assignedStudents: { select: { id: true, name: true, email: true } },
+        classrooms: { select: { id: true, name: true } }
       }
     });
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề' });
@@ -226,8 +227,14 @@ router.patch('/tests/:id', async (req, res) => {
     const {
       title, testType, deliveryMode,
       libraryClassroomId, libraryStudentId,
-      assignedClassroomId, assignedStudentIds, publishTime, deadline, maxAttempts
+      assignedClassroomId, assignedStudentIds, classroomIds, publishTime, deadline, maxAttempts
     } = req.body;
+    if (classroomIds !== undefined && !Array.isArray(classroomIds)) {
+      return res.status(400).json({ error: 'classroomIds phải là mảng' });
+    }
+    if (assignedStudentIds !== undefined && !Array.isArray(assignedStudentIds)) {
+      return res.status(400).json({ error: 'assignedStudentIds phải là mảng' });
+    }
 
     if (testType !== undefined && testType !== null && !['ACADEMIC', 'GENERAL_TRAINING'].includes(testType)) {
       return res.status(400).json({ error: 'testType không hợp lệ' });
@@ -251,10 +258,25 @@ router.patch('/tests/:id', async (req, res) => {
       ...(maxAttempts !== undefined && { maxAttempts: parseInt(maxAttempts) || 1 })
     };
     if (Array.isArray(assignedStudentIds)) {
-      data.assignedStudents = { set: assignedStudentIds.map((id) => ({ id })) };
+      data.assignedStudents = { set: [...new Set(assignedStudentIds)].map((id) => ({ id })) };
+    }
+    if (Array.isArray(classroomIds)) {
+      data.classrooms = { set: [...new Set(classroomIds)].map((id) => ({ id })) };
+    }
+    // Lưu phạm vi giao theo kiểu mới (nhiều lớp + học viên lẻ) → bỏ hẳn cách giao 1 lớp/1 học viên
+    // cũ, nếu không học viên đã bị gỡ khỏi phạm vi vẫn thấy đề qua field cũ.
+    if (Array.isArray(assignedStudentIds) || Array.isArray(classroomIds)) {
+      Object.assign(data, { libraryClassroomId: null, libraryStudentId: null, assignedClassroomId: null });
     }
 
-    const test = await prisma.ieltsTest.update({ where: { id: req.params.id }, data });
+    const test = await prisma.ieltsTest.update({
+      where: { id: req.params.id },
+      data,
+      include: {
+        assignedStudents: { select: { id: true, name: true, email: true } },
+        classrooms: { select: { id: true, name: true } }
+      }
+    });
     res.json(test);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -435,7 +457,8 @@ router.post('/tests/:id/publish', async (req, res) => {
       // Only the fields the publish gate checks (was: full rows incl. transcripts/prompt text)
       include: {
         questions: { select: { skill: true, questionNumber: true, correctIndex: true, correctAnswer: true } },
-        listeningSections: { select: { audioUrl: true } }
+        listeningSections: { select: { audioUrl: true } },
+        _count: { select: { classrooms: true, assignedStudents: true } }
       }
     });
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề' });
@@ -453,13 +476,27 @@ router.post('/tests/:id/publish', async (req, res) => {
       return res.status(400).json({ error: `Còn ${missingAudio.length} phần Listening chưa gắn audio` });
     }
 
-    if (test.deliveryMode === 'LIBRARY' && !test.libraryClassroomId && !test.libraryStudentId) {
-      return res.status(400).json({ error: 'Chế độ thư viện cần chọn 1 lớp học hoặc 1 học sinh' });
+    const hasScope = test._count.classrooms > 0 || test._count.assignedStudents > 0
+      || (test.deliveryMode === 'LIBRARY' && (test.libraryClassroomId || test.libraryStudentId))
+      || (test.deliveryMode === 'ASSIGNED' && test.assignedClassroomId);
+    if (!hasScope) {
+      return res.status(400).json({ error: 'Chưa giao đề cho ai — chọn ít nhất 1 lớp học hoặc 1 học viên rồi bấm Lưu phạm vi giao' });
     }
 
     const updated = await prisma.ieltsTest.update({ where: { id: req.params.id }, data: { status: 'PUBLISHED' } });
     res.json(updated);
   } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+// 9b. Gỡ publish — học viên không còn thấy đề (lịch sử làm bài giữ nguyên); sửa xong publish lại.
+router.post('/tests/:id/unpublish', async (req, res) => {
+  try {
+    const updated = await prisma.ieltsTest.update({ where: { id: req.params.id }, data: { status: 'REVIEWED' } });
+    res.json(updated);
+  } catch (err) {
+    if (err.code === 'P2025') return res.status(404).json({ error: 'Không tìm thấy đề' });
     res.status(400).json({ error: err.message });
   }
 });

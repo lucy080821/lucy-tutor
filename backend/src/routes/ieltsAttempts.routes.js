@@ -41,9 +41,8 @@ const uploadAudio = multer({
 
 // ── Access control — shared by every student-facing endpoint below ─────────────────────────
 
-// A student can see a PUBLISHED test if: LIBRARY mode scoped to a classroom they've joined or
-// to them specifically, OR ASSIGNED mode where they're in assignedStudents. Mirrors
-// ListeningClip's classroom-or-student library scoping + Exam's assignedStudents scoping.
+// A student can see a PUBLISHED test if they're in one of its `classrooms` or in
+// `assignedStudents` (both delivery modes), or matched by the legacy single-field scoping.
 // Visibility filter shared by findAccessibleTest and /available. Classroom membership is
 // resolved via a relation filter inside the same query (was: a separate user+classrooms
 // lookup first, i.e. extra sequential round trips on every student IELTS request).
@@ -51,9 +50,13 @@ function accessibleTestWhere(userId) {
   return {
     status: 'PUBLISHED',
     OR: [
+      // Phạm vi hiện hành (cả 2 chế độ): nhiều lớp + học viên lẻ
+      { classrooms: { some: { students: { some: { id: userId } } } } },
+      { assignedStudents: { some: { id: userId } } },
+      // Cách giao cũ (đề chưa được lưu lại phạm vi theo kiểu mới)
       { deliveryMode: 'LIBRARY', libraryClassroom: { students: { some: { id: userId } } } },
       { deliveryMode: 'LIBRARY', libraryStudentId: userId },
-      { deliveryMode: 'ASSIGNED', assignedStudents: { some: { id: userId } } }
+      { deliveryMode: 'ASSIGNED', assignedClassroom: { students: { some: { id: userId } } } }
     ]
   };
 }
