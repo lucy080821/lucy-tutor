@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef, useMemo, createRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback, createRef } from "react";
 import { getSessionUserId, clearSession, redirectToOwnArea } from "@/lib/session";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -419,16 +419,16 @@ export default function TeacherDashboard() {
     return () => clearInterval(interval);
   }, [activeTab, listeningClips]);
 
-  // ── IELTS Cambridge module (thư viện sách) ──
+  // ── IELTS: thư viện bộ đề giáo viên tự soạn (không còn trích xuất từ sách PDF) ──
   const [ieltsBooks, setIeltsBooks] = useState<any[]>([]);
   const [ibTitle, setIbTitle] = useState("");
-  const [ibPdfFile, setIbPdfFile] = useState<File | null>(null);
-  const [isUploadingBook, setIsUploadingBook] = useState(false);
+  const [isCreatingBook, setIsCreatingBook] = useState(false);
+  const IELTS_API = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/ielts`;
 
   const fetchIeltsBooks = async () => {
     if (!user) return;
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/ielts/books?teacherId=${user.id}`);
+      const res = await fetch(`${IELTS_API}/books?teacherId=${user.id}`);
       if (res.ok) setIeltsBooks(await res.json());
     } catch (err) { console.error(err); }
   };
@@ -437,100 +437,82 @@ export default function TeacherDashboard() {
     if (activeTab === "IELTS_LIBRARY" && user) fetchIeltsBooks();
   }, [activeTab, user?.id]);
 
-  // Poll while any book is still being analyzed (Pass 1) or any of its tests is still being
-  // extracted (Pass 2/3), so status badges update without needing a manual refresh — same
-  // pattern as the Listening Studio's PROCESSING-clip polling above.
-  useEffect(() => {
-    if (activeTab !== "IELTS_LIBRARY") return;
-    const stillWorking = ieltsBooks.some(b =>
-      b.extractionStatus === 'PENDING' || b.extractionStatus === 'EXTRACTING' ||
-      (b.tests || []).some((t: any) => t.status === 'PENDING_EXTRACTION' && b.extractionStatus !== 'BOUNDARIES_EXTRACTED')
-    );
-    if (!stillWorking) return;
-    const interval = setInterval(fetchIeltsBooks, 4000);
-    return () => clearInterval(interval);
-  }, [activeTab, ieltsBooks]);
-
-  const handleUploadIeltsBook = async (e: React.FormEvent) => {
+  const handleCreateIeltsBook = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user?.id || !ibPdfFile) return;
-    setIsUploadingBook(true);
+    if (!user?.id || !ibTitle.trim()) return;
+    setIsCreatingBook(true);
     try {
-      const formData = new FormData();
-      formData.append('pdf', ibPdfFile);
-      formData.append('title', ibTitle);
-      formData.append('teacherId', user.id);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/ielts/books`, { method: 'POST', body: formData });
+      const res = await fetch(`${IELTS_API}/books`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: ibTitle, teacherId: user.id })
+      });
       const data = await res.json();
-      if (!res.ok) { Swal.fire('Lỗi', data.error || 'Không thể tải sách lên', 'error'); return; }
+      if (!res.ok) { Swal.fire('Lỗi', data.error || 'Không thể tạo bộ đề', 'error'); return; }
       setIbTitle("");
-      setIbPdfFile(null);
-      const fileInput = document.getElementById('ielts-book-file-input') as HTMLInputElement | null;
-      if (fileInput) fileInput.value = '';
-      fetchIeltsBooks();
-      Swal.fire('Đã tải lên!', 'Đang phân tích cấu trúc sách (tìm các đề thi bên trong) — quá trình này có thể mất vài phút.', 'success');
+      setIeltsBooks(prev => [data, ...prev]);
     } catch (err) {
       console.error(err);
-      Swal.fire('Lỗi', 'Không thể tải sách lên', 'error');
+      Swal.fire('Lỗi', 'Không thể tạo bộ đề', 'error');
     } finally {
-      setIsUploadingBook(false);
+      setIsCreatingBook(false);
     }
   };
 
-  const handleTriggerExtraction = async (bookId: string) => {
+  // Thêm đề trống vào bộ đề rồi mở ngay trang soạn đề
+  const handleAddIeltsTest = async (bookId: string) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/ielts/books/${bookId}/extract-tests`, { method: 'POST' });
+      const res = await fetch(`${IELTS_API}/books/${bookId}/tests`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       const data = await res.json();
-      if (!res.ok) { Swal.fire('Lỗi', data.error || 'Không thể bắt đầu trích xuất', 'error'); return; }
-      fetchIeltsBooks();
-      Swal.fire({ title: 'Đang trích xuất', text: data.message, icon: 'success', timer: 2000, toast: true, position: 'top-end' });
-    } catch (err) { console.error(err); Swal.fire('Lỗi', 'Không thể bắt đầu trích xuất', 'error'); }
+      if (!res.ok) { Swal.fire('Lỗi', data.error || 'Không thể tạo đề', 'error'); return; }
+      router.push(`/teacher/ielts/${data.id}`);
+    } catch (err) { console.error(err); Swal.fire('Lỗi', 'Không thể tạo đề', 'error'); }
   };
 
-  const handleDeleteIeltsBook = (bookId: string, title: string) => {
+  const handleRenameIeltsBook = async (bookId: string, current: string) => {
+    const { value } = await Swal.fire({ title: 'Đổi tên bộ đề', input: 'text', inputValue: current, showCancelButton: true, confirmButtonText: 'Lưu', cancelButtonText: 'Huỷ', inputValidator: (v) => (!v.trim() ? 'Tên không được để trống' : undefined) });
+    if (!value) return;
+    const res = await fetch(`${IELTS_API}/books/${bookId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title: value }) });
+    if (res.ok) setIeltsBooks(prev => prev.map(b => (b.id === bookId ? { ...b, title: value.trim() } : b)));
+    else Swal.fire('Lỗi', 'Không thể đổi tên', 'error');
+  };
+
+  const handleDeleteIeltsBook = (bookId: string, title: string, testCount: number) => {
     Swal.fire({
-      title: 'Xác nhận xóa sách',
-      html: `Xóa sách <b>${title}</b> sẽ xóa toàn bộ đề thi đã trích xuất từ sách này. Không thể hoàn tác.`,
+      title: 'Xác nhận xóa bộ đề',
+      html: `Xóa bộ đề <b>${title.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] as string))}</b> sẽ xóa luôn ${testCount} đề bên trong và toàn bộ bài làm của học viên với các đề đó. Không thể hoàn tác.`,
       icon: 'warning', showCancelButton: true, confirmButtonText: 'Xóa', cancelButtonText: 'Hủy', confirmButtonColor: '#e11d48'
     }).then(async (result) => {
       if (!result.isConfirmed) return;
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/ielts/books/${bookId}`, { method: 'DELETE' });
+        const res = await fetch(`${IELTS_API}/books/${bookId}`, { method: 'DELETE' });
         if (res.ok) { setIeltsBooks(prev => prev.filter(b => b.id !== bookId)); Swal.fire('Đã xóa!', '', 'success'); }
-        else Swal.fire('Lỗi', 'Xóa sách thất bại', 'error');
-      } catch (err) { console.error(err); Swal.fire('Lỗi', 'Xóa sách thất bại', 'error'); }
+        else Swal.fire('Lỗi', 'Xóa bộ đề thất bại', 'error');
+      } catch (err) { console.error(err); Swal.fire('Lỗi', 'Xóa bộ đề thất bại', 'error'); }
     });
   };
 
-  const IELTS_BOOK_STATUS_LABEL: Record<string, { label: string; className: string }> = {
-    PENDING: { label: 'Đang phân tích cấu trúc...', className: 'bg-amber-50 text-amber-700' },
-    BOUNDARIES_EXTRACTED: { label: 'Đã tìm thấy cấu trúc', className: 'bg-primary-soft text-primary' },
-    EXTRACTING: { label: 'Đang trích xuất đề...', className: 'bg-amber-50 text-amber-700' },
-    EXTRACTED: { label: 'Đã trích xuất', className: 'bg-emerald-50 text-emerald-700' },
-    FAILED: { label: 'Lỗi phân tích', className: 'bg-red-50 text-red-700' }
-  };
-  // The 4 IELTS skills the Cambridge extraction pipeline produces (see ieltsExtraction.js).
+// 4 kỹ năng của 1 đề IELTS: giáo viên nhập tay, AI chỉ chấm + làm bước "Học đề".
 // `countKey` matches the `_count` fields returned by GET /api/ielts/books.
 const IELTS_SKILL_INFO = [
-  { key: "LISTENING", label: "Listening", vi: "Nghe", short: "L", countKey: "listeningSections", unit: "section",
-    extracted: "AI tách 4 Section, câu hỏi và khớp đáp án theo Answer Key.",
-    manual: "gắn file audio cho từng Section." },
-  { key: "READING", label: "Reading", vi: "Đọc", short: "R", countKey: "readingPassages", unit: "đoạn văn",
-    extracted: "AI tách 3 đoạn văn, câu hỏi và khớp đáp án theo Answer Key.",
-    manual: "rà soát đoạn văn nhiều cột và đáp án." },
-  { key: "WRITING", label: "Writing", vi: "Viết", short: "W", countKey: "writingTasks", unit: "task",
-    extracted: "AI tách đề Task 1 và Task 2; bài làm được AI chấm theo 4 tiêu chí band.",
-    manual: "gắn ảnh biểu đồ/hình cho Task 1." },
-  { key: "SPEAKING", label: "Speaking", vi: "Nói", short: "S", countKey: "speakingParts", unit: "part",
-    extracted: "AI tách câu hỏi Part 1, 2, 3; học viên ghi âm và được AI chấm band.",
-    manual: "kiểm tra lại cue card Part 2." },
+  { key: "LISTENING", label: "Listening", vi: "Nghe", short: "L", countKey: "listeningSections", unit: "Part",
+    teacher: "Tải audio từng Part, nhập câu hỏi, đáp án và lời thoại (transcript).",
+    ai: "Chấm tự động theo đáp án; Học đề dùng transcript để giải thích câu sai." },
+  { key: "READING", label: "Reading", vi: "Đọc", short: "R", countKey: "readingPassages", unit: "bài đọc",
+    teacher: "Dán bài đọc, thêm nhóm câu hỏi theo dạng, dán đáp án nhanh.",
+    ai: "Chấm tự động theo đáp án, giải thích câu sai + từ vựng ở bước Học đề." },
+  { key: "WRITING", label: "Writing", vi: "Viết", short: "W", countKey: "writingTasks", unit: "Task",
+    teacher: "Nhập đề Task 1, Task 2 và gắn ảnh biểu đồ cho Task 1.",
+    ai: "Chấm band theo 4 tiêu chí, sửa lỗi và viết bài mẫu." },
+  { key: "SPEAKING", label: "Speaking", vi: "Nói", short: "S", countKey: "speakingParts", unit: "Part",
+    teacher: "Nhập câu hỏi Part 1, cue card Part 2, câu hỏi Part 3.",
+    ai: "Học viên ghi âm, AI chấm band theo 4 tiêu chí." },
 ] as const;
 
 const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string }> = {
+    DRAFT: { label: 'Bản nháp', className: 'bg-slate-100 text-muted' },
     PENDING_EXTRACTION: { label: 'Chưa trích xuất', className: 'bg-slate-100 text-muted' },
     EXTRACTED_DRAFT: { label: 'Cần rà soát', className: 'bg-amber-50 text-amber-700' },
     NEEDS_ATTENTION: { label: 'Lỗi — cần xem lại', className: 'bg-red-50 text-red-700' },
-    REVIEWED: { label: 'Đã rà soát', className: 'bg-primary-soft text-primary' },
+    REVIEWED: { label: 'Bản nháp', className: 'bg-slate-100 text-muted' }, // đã gỡ publish
     PUBLISHED: { label: 'Đã publish', className: 'bg-emerald-50 text-emerald-700' }
   };
 
@@ -1546,10 +1528,30 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
 
   useEffect(() => {
     if (selectedExamForView && !selectedExamForView.questions) {
-      fetch(`${process.env.NEXT_PUBLIC_API_URL || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}`}/api/exams/${selectedExamForView.id}`)
-        .then(res => res.json()).then(data => { if (data?.id) setSelectedExamForView(data); }).catch(console.error);
+      fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/${selectedExamForView.id}`)
+        // GET /api/exams/:id cố ý không trả `results` → giữ lại results đã có từ danh sách lớp
+        .then(res => res.json()).then(data => { if (data?.id) setSelectedExamForView((prev: any) => ({ ...data, results: prev?.results })); }).catch(console.error);
     }
   }, [selectedExamForView]);
+
+  // Kết quả nộp bài của đề đang xem — tải mới mỗi lần mở tab Kết quả (danh sách lớp/đề chỉ tải 1 lần
+  // khi vào dashboard nên bài học viên vừa nộp sẽ chưa có trong đó)
+  const [examResultsData, setExamResultsData] = useState<{ examId: string; assignedStudents: any[]; results: any[] } | null>(null);
+  const [examResultsLoading, setExamResultsLoading] = useState(false);
+  const selectedExamId = selectedExamForView?.id;
+  const fetchExamResults = useCallback(async () => {
+    if (!selectedExamId || !user?.id) return;
+    setExamResultsLoading(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/exams/${selectedExamId}/results?teacherId=${user.id}`);
+      const data = await res.json();
+      if (res.ok) setExamResultsData({ examId: data.id, assignedStudents: data.assignedStudents || [], results: data.results || [] });
+    } catch (err) { console.error(err); } finally { setExamResultsLoading(false); }
+  }, [selectedExamId, user?.id]);
+
+  useEffect(() => {
+    if (examViewTab === 'RESULTS' && selectedExamId) fetchExamResults();
+  }, [examViewTab, selectedExamId, fetchExamResults]);
 
   const handleDeleteExam = async (examId: string) => {
     Swal.fire({
@@ -2983,7 +2985,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
         {/* ── IELTS LIBRARY (Thư Viện Đề Cambridge) ── */}
         {activeTab === "IELTS_LIBRARY" && (
           <div className="space-y-6 w-full max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <PageBanner title="Thư Viện Đề Cambridge" description="Tải lên file PDF của cả cuốn sách Cambridge IELTS (bản số hoá, copy chữ được) — AI sẽ tự tách các đề thi (Test 1, Test 2...) và trích xuất đủ 4 kỹ năng Nghe - Nói - Đọc - Viết, kèm đáp án Listening/Reading theo Answer Key của sách. Vui lòng rà soát kỹ trước khi publish cho học viên — AI có thể sai sót, đặc biệt với đoạn văn nhiều cột và khớp đáp án." />
+            <PageBanner title="Thư Viện Đề IELTS" description="Tự soạn đề IELTS đủ 4 kỹ năng: tạo bộ đề, thêm đề, rồi nhập bài đọc, audio, câu hỏi và đáp án. AI chấm bài và giúp học viên học lại đề sau khi làm." />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
               {IELTS_SKILL_INFO.map(s => (
@@ -2992,64 +2994,51 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
                     <h3 className="font-bold text-primary">{s.label}</h3>
                     <span className="ui-badge">{s.vi}</span>
                   </div>
-                  <p className="text-sm text-muted leading-relaxed">{s.extracted}</p>
-                  <p className="text-xs text-foreground mt-2"><span className="font-bold">Giáo viên bổ sung:</span> {s.manual}</p>
+                  <p className="text-sm text-foreground leading-relaxed"><span className="font-bold">Giáo viên:</span> {s.teacher}</p>
+                  <p className="text-sm text-muted leading-relaxed mt-1.5"><span className="font-bold">AI:</span> {s.ai}</p>
                 </div>
               ))}
             </div>
 
             <div className="ui-card p-6 mb-8">
-              <h2 className="ui-section-title mb-5">Tải sách lên</h2>
-              <form onSubmit={handleUploadIeltsBook} className="flex flex-wrap gap-4 items-end">
+              <h2 className="ui-section-title mb-5">Tạo bộ đề mới</h2>
+              <form onSubmit={handleCreateIeltsBook} className="flex flex-wrap gap-4 items-end">
                 <div className="flex-1 min-w-[220px]">
-                  <label className="ui-label">Tên sách</label>
-                  <input type="text" value={ibTitle} onChange={e => setIbTitle(e.target.value)} placeholder="VD: Cambridge IELTS 18" className="ui-input" required />
+                  <label className="ui-label">Tên bộ đề</label>
+                  <input type="text" value={ibTitle} onChange={e => setIbTitle(e.target.value)} placeholder="VD: Cambridge IELTS 18, Đề luyện tháng 11" className="ui-input" required />
                 </div>
-                <div className="flex-1 min-w-[220px]">
-                  <label className="ui-label">File PDF (bản số hoá, copy chữ được)</label>
-                  <input id="ielts-book-file-input" type="file" accept=".pdf" onChange={e => setIbPdfFile(e.target.files?.[0] || null)} className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-primary-soft file:text-primary hover:file:bg-primary hover:file:text-white file:cursor-pointer file:transition-colors" required />
-                </div>
-                <button type="submit" disabled={isUploadingBook} className="btn-primary px-6 py-3 disabled:opacity-50 min-w-[120px]">
-                  {isUploadingBook ? 'Đang tải lên...' : 'Tải lên'}
+                <button type="submit" disabled={isCreatingBook} className="btn-primary px-6 py-3 disabled:opacity-50 min-w-[120px] cursor-pointer">
+                  {isCreatingBook ? 'Đang tạo...' : 'Tạo bộ đề'}
                 </button>
               </form>
             </div>
 
-            <h2 className="ui-section-title mb-5">Sách đã tải lên</h2>
+            <h2 className="ui-section-title mb-5">Bộ đề của tôi</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 md:gap-6">
-              {ieltsBooks.length === 0 && <div className="ui-card col-span-full"><EmptyState message="Chưa có sách nào" /></div>}
-              {ieltsBooks.map((book: any) => {
-                const bookStatus = IELTS_BOOK_STATUS_LABEL[book.extractionStatus] || IELTS_BOOK_STATUS_LABEL.PENDING;
-                return (
-                  <div key={book.id} className="ui-card ui-card-hover flex flex-col overflow-hidden">
-                    <CardThumb src="/images/photos/app/ielts.webp" alt={`Sách IELTS ${book.title}`}>
-                      <span className={`absolute top-3 right-3 text-[10px] px-2 py-1 rounded-full font-bold uppercase shadow-sm ${bookStatus.className}`}>{bookStatus.label}</span>
-                    </CardThumb>
-                    <div className="p-5 sm:p-6 flex flex-col flex-1">
-                    <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                      <div>
-                        <h3 className="font-bold text-lg text-primary">{book.title}</h3>
+              {ieltsBooks.length === 0 && <div className="ui-card col-span-full"><EmptyState message="Chưa có bộ đề nào — tạo bộ đề đầu tiên ở trên" /></div>}
+              {ieltsBooks.map((book: any) => (
+                <div key={book.id} className="ui-card ui-card-hover flex flex-col overflow-hidden">
+                  <CardThumb src="/images/photos/app/ielts.webp" alt={`Bộ đề IELTS ${book.title}`}>
+                    <span className="absolute top-3 right-3 text-[10px] px-2 py-1 rounded-full font-bold uppercase shadow-sm bg-white text-primary">{(book.tests || []).length} đề</span>
+                  </CardThumb>
+                  <div className="p-5 sm:p-6 flex flex-col flex-1 gap-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-lg text-primary break-words">{book.title}</h3>
                         <p className="text-xs text-muted">{new Date(book.createdAt).toLocaleDateString('vi-VN')}</p>
                       </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {(book.extractionStatus === 'BOUNDARIES_EXTRACTED' || book.extractionStatus === 'EXTRACTED') && (
-                          <button onClick={() => handleTriggerExtraction(book.id)} className="btn-primary px-4 py-2 text-xs cursor-pointer">
-                            Trích xuất đề
-                          </button>
-                        )}
-                        <button onClick={() => handleDeleteIeltsBook(book.id, book.title)} className="px-4 py-2 text-xs font-bold bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors cursor-pointer rounded-full" title="Xóa">Xóa</button>
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => handleRenameIeltsBook(book.id, book.title)} className="px-3 py-2 text-xs font-bold text-primary hover:bg-primary-soft transition-colors cursor-pointer rounded-full">Đổi tên</button>
+                        <button onClick={() => handleDeleteIeltsBook(book.id, book.title, (book.tests || []).length)} className="px-3 py-2 text-xs font-bold bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-colors cursor-pointer rounded-full">Xóa</button>
                       </div>
                     </div>
-                    {book.extractionStatus === 'FAILED' && book.errorMessage && (
-                      <p className="text-xs text-red-500 italic mb-3">{book.errorMessage}</p>
-                    )}
                     {(book.tests || []).length > 0 && (
-                      <div className="flex flex-wrap gap-2">
+                      <div className="flex flex-col gap-2">
                         {book.tests.map((t: any) => {
-                          const testStatus = IELTS_TEST_STATUS_LABEL[t.status] || IELTS_TEST_STATUS_LABEL.PENDING_EXTRACTION;
+                          const testStatus = IELTS_TEST_STATUS_LABEL[t.status] || IELTS_TEST_STATUS_LABEL.DRAFT;
                           return (
-                            <Link key={t.id} href={`/teacher/ielts/${t.id}`} className="flex items-center gap-2 px-4 py-2 rounded-full border border-line-strong bg-white text-foreground hover:border-primary hover:bg-primary-soft hover:text-primary transition-colors text-sm font-semibold">
-                              {t.title} {t.testType ? `(${t.testType === 'ACADEMIC' ? 'Academic' : 'General Training'})` : ''}
+                            <Link key={t.id} href={`/teacher/ielts/${t.id}`} className="flex flex-wrap items-center gap-2 px-4 py-2.5 rounded-2xl border border-line-strong bg-white text-foreground hover:border-primary hover:bg-primary-soft hover:text-primary transition-colors text-sm font-semibold">
+                              <span className="mr-auto">{t.title}{t.testType ? ` · ${t.testType === 'ACADEMIC' ? 'Academic' : 'General Training'}` : ''}</span>
                               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${testStatus.className}`}>{testStatus.label}</span>
                               {t.status === 'PUBLISHED' && t._count && (
                                 <span className="text-[10px] font-semibold text-muted" title="Phạm vi giao — bấm để cập nhật">
@@ -3073,10 +3062,10 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
                         })}
                       </div>
                     )}
-                    </div>
+                    <button onClick={() => handleAddIeltsTest(book.id)} className="btn-outline mt-auto px-4 py-2.5 text-sm cursor-pointer">+ Thêm đề</button>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -4430,18 +4419,35 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
               {examViewTab === 'RESULTS' && (
                 <div className="space-y-4">
                   {(() => {
+                    const fresh = examResultsData?.examId === selectedExamForView.id ? examResultsData : null;
+                    if (!fresh && examResultsLoading) return <p className="text-center text-muted py-8 animate-pulse">Đang tải kết quả...</p>;
+                    const examResults: any[] = fresh?.results ?? selectedExamForView.results ?? [];
+                    const assigned: any[] = fresh?.assignedStudents ?? selectedExamForView.assignedStudents ?? [];
                     const crm = classrooms.find(c => c.id === selectedExamForView.classroomId);
-                    let targetStudents = crm?.students || [];
-                    if (selectedExamForView.assignMode === 'STUDENT' && selectedExamForView.assignedStudents) {
-                      targetStudents = targetStudents.filter((s: any) => selectedExamForView.assignedStudents.some((a: any) => a.id === s.id));
-                    }
+                    // Học viên chỉ thấy đề qua danh sách được giao (assignedStudents) — giao cả lớp cũng lưu
+                    // từng học viên vào đây. Thêm người đã nộp nhưng không còn trong danh sách (vd rời lớp);
+                    // đề cũ không có danh sách giao thì lấy cả lớp.
+                    const studentById = new Map<string, any>();
+                    classrooms.forEach((c: any) => (c.students || []).forEach((s: any) => studentById.set(s.id, s)));
+                    const ids = new Set<string>(assigned.length ? assigned.map((a: any) => a.id) : (crm?.students || []).map((s: any) => s.id));
+                    examResults.forEach((r: any) => ids.add(r.userId));
+                    const targetStudents = [...ids].map((id) => studentById.get(id) || {
+                      id,
+                      name: assigned.find((a: any) => a.id === id)?.name || examResults.find((r: any) => r.userId === id)?.user?.name || 'Học viên',
+                      avatar: null
+                    });
                     
                     if (targetStudents.length === 0) return <p className="text-center text-muted py-8">Không có học viên nào được giao bài.</p>;
                     
-                    const submittedCount = targetStudents.filter((s: any) => selectedExamForView.results?.some((r: any) => r.userId === s.id)).length;
+                    const submittedCount = targetStudents.filter((s: any) => examResults.some((r: any) => r.userId === s.id)).length;
                     
                     return (
                       <>
+                        <div className="flex justify-end -mb-2">
+                          <button onClick={fetchExamResults} disabled={examResultsLoading} className="btn-ghost px-4 py-2 text-xs cursor-pointer">
+                            {examResultsLoading ? 'Đang tải...' : 'Làm mới'}
+                          </button>
+                        </div>
                         <div className="flex gap-4 p-4 bg-primary-soft rounded-xl mb-4">
                           <div className="flex-1 text-center">
                             <p className="text-sm font-bold text-primary mb-1">Tổng Giao</p>
@@ -4470,7 +4476,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
                             </thead>
                             <tbody>
                               {targetStudents.map((s: any) => {
-                                const userResults = selectedExamForView.results?.filter((r: any) => r.userId === s.id) || [];
+                                const userResults = examResults.filter((r: any) => r.userId === s.id);
                                 const hasSubmitted = userResults.length > 0;
                                 const bestResult = hasSubmitted ? userResults.reduce((prev: any, current: any) => (prev.score > current.score) ? prev : current) : null;
                                 const latestResult = hasSubmitted ? userResults.reduce((prev: any, current: any) => (new Date(prev.createdAt) > new Date(current.createdAt)) ? prev : current) : null;

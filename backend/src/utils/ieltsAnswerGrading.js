@@ -33,12 +33,47 @@ function matchesFreeText(userAnswer, candidate) {
   return cleanUser === cleanCandidate || levenshteinDistance(cleanUser, cleanCandidate) <= maxTypoDistance;
 }
 
+// AI trích xuất hay bỏ trống `options` của True/False/Not Given (đáp án vẫn là correctIndex 0/1/2)
+// → điền sẵn bộ lựa chọn chuẩn của đề thật, thứ tự khớp với correctIndex.
+const DEFAULT_OPTIONS = {
+  TRUE_FALSE: ['TRUE', 'FALSE', 'NOT GIVEN'],
+  YES_NO_NOTGIVEN: ['YES', 'NO', 'NOT GIVEN']
+};
+
+function parseOptions(question) {
+  let opts = null;
+  try { opts = question.options ? JSON.parse(question.options) : null; } catch { opts = null; }
+  if (Array.isArray(opts) && opts.length) return opts;
+  return DEFAULT_OPTIONS[question.type] || null;
+}
+
+// Câu trả lời bằng chữ: dạng điền từ, hoặc dạng chọn đáp án nhưng không có lựa chọn nào
+// (vd Summary Completion không có ngân hàng từ — sách yêu cầu lấy từ trong bài đọc).
+function isTextAnswerQuestion(question) {
+  if (FILL_TYPES.includes(question.type)) return true;
+  return !parseOptions(question) || (question.correctIndex == null && question.correctAnswer != null);
+}
+
+// Dạng câu hỏi gửi cho học viên — không kèm đáp án
+function studentQuestionView(q) {
+  const answerMode = isTextAnswerQuestion(q) ? 'TEXT' : 'CHOICE';
+  const opts = parseOptions(q);
+  // Câu điền có danh sách nhãn ngắn (vd ngân hàng từ A–I, đáp án là chữ cái) → vẫn gửi nhãn để
+  // học viên bấm chọn thay vì gõ; đáp án gửi lên là chính chữ cái đó nên chấm kiểu điền từ vẫn đúng.
+  const letterOptions = opts && opts.every((o) => String(o).trim().length <= 3) ? opts : null;
+  return {
+    id: q.id, questionNumber: q.questionNumber, type: q.type, groupInstruction: q.groupInstruction,
+    promptText: q.promptText, options: answerMode === 'CHOICE' ? opts : letterOptions, answerMode,
+    wordLimit: q.wordLimit, imageUrl: q.imageUrl
+  };
+}
+
 // question: an IeltsQuestion row (type, correctIndex, correctAnswer, acceptableAnswers JSON string)
-// userAnswer: number (option index) for non-fill types, string for FILL_TYPES
+// userAnswer: number (option index) for choice questions, string for text questions
 function isIeltsAnswerCorrect(question, userAnswer) {
   if (userAnswer === undefined || userAnswer === null || userAnswer === '') return false;
 
-  if (FILL_TYPES.includes(question.type)) {
+  if (isTextAnswerQuestion(question)) {
     if (matchesFreeText(userAnswer, question.correctAnswer)) return true;
     let acceptable = [];
     try { acceptable = question.acceptableAnswers ? JSON.parse(question.acceptableAnswers) : []; } catch { acceptable = []; }
@@ -48,4 +83,4 @@ function isIeltsAnswerCorrect(question, userAnswer) {
   return Number(userAnswer) === question.correctIndex;
 }
 
-module.exports = { isIeltsAnswerCorrect, cleanString, levenshteinDistance };
+module.exports = { isIeltsAnswerCorrect, isTextAnswerQuestion, parseOptions, studentQuestionView, cleanString, levenshteinDistance };

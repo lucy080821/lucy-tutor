@@ -144,6 +144,29 @@ router.get('/cheat-logs/:teacherId', async (req, res) => {
   }
 });
 
+// Kết quả nộp bài của 1 đề — chỉ giáo viên sở hữu đề (qua lớp hoặc người tạo) mới xem được.
+// Tab "Kết quả" ở /teacher gọi mỗi lần mở để luôn thấy bài vừa nộp (GET /:id cố ý không trả
+// `results`, còn danh sách lớp/đề ở dashboard chỉ tải 1 lần).
+router.get('/:id/results', async (req, res) => {
+  try {
+    const { teacherId } = req.query;
+    if (!teacherId) return res.status(400).json({ error: 'Thiếu teacherId' });
+    const exam = await prisma.exam.findFirst({
+      where: { id: req.params.id, OR: [{ classroom: { teacherId } }, { uploadedById: teacherId }] },
+      select: {
+        id: true,
+        // Học viên chỉ thấy đề qua assignedStudents (user.assignedExams) → đây là danh sách "được giao" thật
+        assignedStudents: { select: { id: true, name: true } },
+        results: { select: { userId: true, score: true, createdAt: true, timeSpent: true, user: { select: { name: true } } }, orderBy: { createdAt: 'desc' } }
+      }
+    });
+    if (!exam) return res.status(404).json({ error: 'Không tìm thấy đề hoặc bạn không có quyền xem' });
+    res.json(exam);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
 // Get an exam with its questions
 router.get('/:id', async (req, res) => {
   try {

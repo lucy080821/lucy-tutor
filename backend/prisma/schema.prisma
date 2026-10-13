@@ -81,6 +81,7 @@ model User {
 
   blogPosts         BlogPost[]         @relation("BlogPostAuthor")
   blogRevisions     BlogPostRevision[] @relation("BlogRevisionEditor")
+  blogComments      BlogComment[]      @relation("BlogCommentUser")
   // Hồ sơ tác giả blog (/blog/tac-gia/[authorSlug]) — tự gán slug khi giáo viên đứng tên bài đầu tiên
   authorSlug  String? @unique
   authorTitle String? // Chức danh tự khai, vd "Giáo viên IELTS"
@@ -715,6 +716,7 @@ model IeltsListeningSection {
   sectionNumber Int // 1-4
   instructions  String?
   audioUrl      String? // null until teacher manually tags it in review (not auto-detected from filename)
+  transcript    String? // lời thoại (audioscript) của Part — giáo viên dán tay; AI dùng để giải thích câu sai ở bước "Học đề"
 
   test      IeltsTest       @relation(fields: [testId], references: [id], onDelete: Cascade)
   questions IeltsQuestion[]
@@ -986,6 +988,7 @@ model BlogPost {
   category   BlogCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   revisions BlogPostRevision[]
+  comments  BlogComment[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1009,6 +1012,49 @@ model BlogPostRevision {
   @@index([postId, createdAt])
 }
 
+
+// Bình luận dưới bài blog (xem backend/src/routes/blogComments.routes.js).
+// - Người đã đăng nhập (STUDENT/TEACHER): userId, tên/avatar lấy theo tài khoản, hiện ngay.
+// - Khách: guestName (+ guestEmail không hiển thị công khai), mặc định chờ duyệt (BLOG_GUEST_COMMENT_MODE).
+//   guestTokenHash = sha256 của mã khách (visitorId lưu localStorage) → khách tự xoá được bình luận của mình.
+// Trả lời chỉ 1 cấp (kiểu Facebook): parentId luôn trỏ tới bình luận gốc, replyToName ghi "@Tên" người được trả lời.
+model BlogComment {
+  id             String        @id @default(uuid())
+  postId         String
+  post           BlogPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentId       String?
+  parent         BlogComment?  @relation("BlogCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        BlogComment[] @relation("BlogCommentReplies")
+  replyToName    String?
+  userId         String?
+  user           User?         @relation("BlogCommentUser", fields: [userId], references: [id], onDelete: SetNull)
+  guestName      String?
+  guestEmail     String?
+  guestTokenHash String?
+  content        String
+  status         String        @default("APPROVED") // "APPROVED" | "PENDING" (chờ duyệt) | "DELETED" (xoá mềm — giữ chỗ cho các trả lời)
+  reactions      BlogCommentReaction[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([postId, status, createdAt])
+  @@index([parentId])
+  @@index([status, createdAt])
+}
+
+// Emoji thả vào bình luận (kiểu GitHub/Slack: mỗi người bật/tắt từng emoji, được thả nhiều emoji khác nhau).
+// voterKey = "u:<userId>" (đã đăng nhập) hoặc "g:<sha256 visitorId>" (khách) — chỉ dùng phía server, không trả ra ngoài.
+model BlogCommentReaction {
+  id        String      @id @default(uuid())
+  commentId String
+  comment   BlogComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  voterKey  String
+  emoji     String
+  createdAt DateTime    @default(now())
+
+  @@unique([commentId, voterKey, emoji])
+  @@index([commentId])
+}
 
 // Sổ thu chi của trang quản trị /administrator — admin tự nhập tay (thu nhập, chi phí) để tính lợi nhuận theo tháng.
 // Học phí thu qua app (TuitionPayment, FreeStudentPayment) KHÔNG tự cộng vào đây, chỉ hiện ở trang admin để tham khảo.

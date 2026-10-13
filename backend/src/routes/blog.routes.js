@@ -9,6 +9,7 @@ const { slugify } = require('../utils/slugify');
 const { Groq } = require('groq-sdk');
 const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
 const tts = require('../utils/elevenlabsTts');
+const { isBlogAdmin } = require('../utils/blogAccess');
 
 const router = express.Router();
 
@@ -104,12 +105,8 @@ const MAX_RELATED_POSTS = 6;
 const AUTOSAVE_REVISION_GAP_MS = 10 * 60 * 1000;
 
 // ─── Phân quyền ─────────────────────────────────────────────────────────────
-// BLOG_ADMIN_EMAILS = danh sách email (phân tách bằng dấu phẩy) được duyệt/đăng bài, sửa bài của người khác,
-// xoá danh mục. Để trống = mọi giáo viên đều là admin blog (không ai bị khoá khi chưa cấu hình).
+// Admin blog theo BLOG_ADMIN_EMAILS (xem utils/blogAccess.js).
 // Giáo viên thường: chỉ thấy/sửa/xoá bài của mình; bấm "Đăng" sẽ thành "Gửi duyệt" (status PENDING).
-const BLOG_ADMIN_EMAILS = (process.env.BLOG_ADMIN_EMAILS || '')
-  .split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
-const isBlogAdmin = (user) => BLOG_ADMIN_EMAILS.length === 0 || BLOG_ADMIN_EMAILS.includes(String(user.email).toLowerCase());
 
 // Không có token — cùng mô hình xác thực theo userId như các route khác của dự án.
 async function requireTeacher(req, res, next) {

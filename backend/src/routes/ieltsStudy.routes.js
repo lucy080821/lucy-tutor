@@ -24,6 +24,8 @@ const ATTEMPT_MODEL = {
   WRITING: () => prisma.ieltsWritingAttempt,
   SPEAKING: () => prisma.ieltsSpeakingAttempt
 };
+const { isTextAnswerQuestion, parseOptions } = require('../utils/ieltsAnswerGrading');
+
 // Same free-text types as frontend readingGrading.ts's FILL_TYPES.
 const FILL_TYPES = ['FILL_BLANK', 'SENTENCE_COMPLETION', 'SHORT_ANSWER'];
 const QUESTION_TYPES = ['MULTIPLE_CHOICE', 'TRUE_FALSE', 'FILL_BLANK', 'YES_NO_NOTGIVEN', 'MATCHING_HEADING', 'MATCHING_INFORMATION', 'MATCHING_FEATURES', 'SUMMARY_COMPLETION', 'SENTENCE_COMPLETION', 'SHORT_ANSWER'];
@@ -52,13 +54,13 @@ async function loadOwnAttempt(skill, attemptId, userId) {
 
 function answerLabel(q, answer) {
   if (answer === undefined || answer === null || answer === '') return '(bỏ trống)';
-  if (FILL_TYPES.includes(q.type)) return String(answer);
-  const options = parseJson(q.options, []);
+  if (isTextAnswerQuestion(q)) return String(answer);
+  const options = parseOptions(q) || [];
   return options[answer] ?? String(answer);
 }
 function correctLabel(q) {
-  if (FILL_TYPES.includes(q.type)) return q.correctAnswer || '';
-  return parseJson(q.options, [])[q.correctIndex] ?? '';
+  if (isTextAnswerQuestion(q)) return q.correctAnswer || '';
+  return (parseOptions(q) || [])[q.correctIndex] ?? '';
 }
 
 // Best-effort cut of this test's (and this section's) part of the book-wide Audioscript — pure
@@ -98,7 +100,7 @@ const OBJECTIVE_SECTION_SHAPE = `{
 async function analyzeObjectiveSection({ skill, title, sourceLabel, sourceText, questions, answers }) {
   const wrong = questions.filter((q) => !q.correct);
   const questionLines = questions.map((q) => {
-    const opts = parseJson(q.options, null);
+    const opts = isTextAnswerQuestion(q) ? null : parseOptions(q);
     return `Câu ${q.questionNumber} [${q.type}]${q.groupInstruction ? ` (${q.groupInstruction})` : ''}: ${q.promptText}` +
       (opts ? `\n  Lựa chọn: ${opts.map((o, i) => `${i}. ${o}`).join(' | ')}` : '') +
       `\n  Đáp án đúng: ${correctLabel(q)} — Học viên trả lời: ${answerLabel(q, answers[q.questionNumber])} — ${q.correct ? 'ĐÚNG' : 'SAI'}`;
@@ -206,7 +208,8 @@ async function buildAnalysis(skill, attempt) {
       return analyzeObjectiveSection({
         skill, title, questions, answers,
         sourceLabel: skill === 'READING' ? 'Bài đọc' : 'Transcript (Audioscript) của phần nghe',
-        sourceText: skill === 'READING' ? g.bodyText : listeningTranscriptFor(book?.audioscriptText, test.testNumber, g.sectionNumber)
+        // Transcript giáo viên nhập cho từng Part; đề cũ trích xuất từ sách thì cắt từ audioscript của sách
+        sourceText: skill === 'READING' ? g.bodyText : (g.transcript || listeningTranscriptFor(book?.audioscriptText, test.testNumber, g.sectionNumber))
       });
     }));
     const total = groups.reduce((s, g) => s + g.questions.length, 0);

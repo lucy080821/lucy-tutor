@@ -5,6 +5,18 @@ import DOMPurify from 'dompurify';
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Swal from 'sweetalert2';
+import HighlightableHtml, { type StoredHighlight } from "@/components/highlight/HighlightableHtml";
+
+// Mỗi khối đề bài (heading / content của 1 câu) — chụp highlight đã lưu 1 lần lúc mount để
+// HighlightableHtml không vẽ lại DOM (mất vùng đang bôi đen) mỗi khi đồng hồ re-render.
+function ExamHighlightBlock({ blockKey, html, store, onSave, className }: {
+  blockKey: string; html: string; className?: string;
+  store: React.MutableRefObject<Record<string, StoredHighlight[]>>;
+  onSave: (blockKey: string, list: StoredHighlight[]) => void;
+}) {
+  const [initial] = useState(() => store.current[blockKey] || []);
+  return <HighlightableHtml html={html} initialHighlights={initial} onChange={(list) => onSave(blockKey, list)} className={className} />;
+}
 
 export default function ExamPage() {
   const params = useParams();
@@ -33,232 +45,26 @@ export default function ExamPage() {
   const lastCheatTimeRef = useRef(0);
   const handleSubmitRef = useRef<any>(null);
 
-  // ── Highlight đề bài + Ghi chú theo từng highlight (không tính điểm, chỉ hỗ trợ tư duy lúc làm bài) ──
-  // Bôi đen rồi bấm chuột phải (desktop) / ấn giữ (điện thoại) mới hiện menu màu + ghi chú — không
-  // dùng sự kiện 'copy' nên không đụng tới chống gian lận copy/paste (preventCopyPaste bên dưới vẫn
-  // chặn Ctrl+C/X/V như cũ); ta chỉ tự vẽ menu riêng thay cho menu chuột phải mặc định của trình
-  // duyệt đúng trong lúc đang chọn/nhắm vào 1 highlight trong vùng đề bài.
-  const [highlightToolbar, setHighlightToolbar] = useState<{ top: number; left: number; markId?: string } | null>(null);
-  const [noteEditor, setNoteEditor] = useState<{ markId: string; top: number; left: number; text: string } | null>(null);
-  const [highlightNotes, setHighlightNotes] = useState<Record<string, string>>({});
-  const [highlightColor, setHighlightColor] = useState('#fde68a');
-  // React re-renders question.heading/content from the pristine (un-highlighted) source HTML
-  // every time `currentQ` changes — going to another question and back would otherwise wipe
-  // out every <mark> just added, since they only ever existed as live DOM mutations, never in
-  // React state. Snapshotting the mutated innerHTML per question after each highlight/note
-  // change and feeding it back into dangerouslySetInnerHTML keeps them across navigation.
-  const [questionHtmlOverrides, setQuestionHtmlOverrides] = useState<Record<string, { heading?: string; content?: string }>>({});
-  const contentAreaRef = useRef<HTMLDivElement>(null);
-  const highlightToolbarRef = useRef<HTMLDivElement>(null);
-  const noteEditorRef = useRef<HTMLDivElement>(null);
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-  const highlightSeq = useRef(0);
-
-  // Bảng màu highlight — nhớ màu dùng gần nhất qua localStorage để lần sau mở đề vẫn giữ lựa chọn.
-  const HIGHLIGHT_COLORS = [
-    { name: 'Vàng', value: '#fde68a' },
-    { name: 'Xanh Lá', value: '#bbf7d0' },
-    { name: 'Xanh Dương', value: '#bfdbfe' },
-    { name: 'Hồng', value: '#fbcfe8' },
-    { name: 'Cam', value: '#fed7aa' },
-  ];
+  // ── Highlight đề bài + ghi chú (dùng chung HighlightableHtml với IELTS Reading) ──
+  // Bôi đen → chuột phải (điện thoại: ấn giữ) → chọn màu / ghi chú; chuột phải vào highlight → đổi màu,
+  // sửa ghi chú, xoá. Không tính điểm. Lưu theo từng khối đề bài vào localStorage của máy này
+  // (key lucy_exam_hl_<examId>_<userId>) nên chuyển câu / tải lại trang / chế độ xem lại vẫn còn.
+  const hlStoreRef = useRef<Record<string, StoredHighlight[]>>({});
+  const hlStoreKey = userId ? `lucy_exam_hl_${examId}_${userId}` : null;
+  const [hlLoaded, setHlLoaded] = useState(false);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('examHighlightColor');
-      if (saved) setHighlightColor(saved);
-    } catch {}
-  }, []);
+    if (!hlStoreKey) return;
+    try { hlStoreRef.current = JSON.parse(localStorage.getItem(hlStoreKey) || '{}') || {}; } catch { hlStoreRef.current = {}; }
+    setHlLoaded(true);
+  }, [hlStoreKey]);
 
-  // Wraps each text node intersecting the selection Range in its own <mark> — safer than
-  // Range.surroundContents() on the whole range, which throws the moment a selection spans
-  // more than one element (very common here since đề bài is HTML from ReactQuill). Every fragment
-  // created from the same highlight action shares `hlId` so color change/ghi chú/xoá can target
-  // the whole logical highlight at once, not just the one DOM fragment under the cursor.
-  const wrapRangeAsHighlight = (range: Range, color: string, hlId: string) => {
-    if (range.collapsed) return;
-    let root: Node = range.commonAncestorContainer;
-    if (root.nodeType === Node.TEXT_NODE) root = root.parentNode as Node;
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-      acceptNode(node) {
-        return range.intersectsNode(node) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
-      }
-    });
-    const textNodes: Text[] = [];
-    let node: Node | null;
-    while ((node = walker.nextNode())) textNodes.push(node as Text);
-    textNodes.forEach((textNode) => {
-      const start = textNode === range.startContainer ? range.startOffset : 0;
-      const end = textNode === range.endContainer ? range.endOffset : textNode.length;
-      if (start >= end || !textNode.parentNode) return;
-      const subRange = document.createRange();
-      subRange.setStart(textNode, start);
-      subRange.setEnd(textNode, end);
-      const mark = document.createElement('mark');
-      mark.className = 'exam-user-highlight';
-      mark.dataset.hlId = hlId;
-      mark.style.backgroundColor = color;
-      mark.style.borderRadius = '3px';
-      mark.style.padding = '0 1px';
-      mark.style.cursor = 'pointer';
-      mark.title = 'Bấm để bỏ highlight · Bấm chuột phải để đổi màu/ghi chú';
-      try { subRange.surroundContents(mark); } catch {}
-    });
-  };
-
-  // Reads back the (already-mutated, DOMPurify-safe) heading/content DOM after a highlight
-  // change and stores it so the next time this question is rendered, it starts from this
-  // state instead of the pristine source HTML — see questionHtmlOverrides above.
-  const snapshotQuestionHtml = (questionId?: string) => {
-    if (!questionId) return;
-    const headingEl = contentAreaRef.current?.querySelector('[data-hl-block="heading"]') as HTMLElement | null;
-    const bodyEl = contentAreaRef.current?.querySelector('[data-hl-block="content"]') as HTMLElement | null;
-    setQuestionHtmlOverrides((prev) => ({
-      ...prev,
-      [questionId]: {
-        heading: headingEl ? headingEl.innerHTML : prev[questionId]?.heading,
-        content: bodyEl ? bodyEl.innerHTML : prev[questionId]?.content,
-      }
-    }));
-  };
-
-  const removeHighlightById = (hlId: string, questionId?: string) => {
-    contentAreaRef.current?.querySelectorAll(`mark.exam-user-highlight[data-hl-id="${hlId}"]`).forEach((mark) => {
-      const parent = mark.parentNode;
-      if (!parent) return;
-      while (mark.firstChild) parent.insertBefore(mark.firstChild, mark);
-      parent.removeChild(mark);
-      parent.normalize();
-    });
-    setHighlightNotes((prev) => {
-      if (!(hlId in prev)) return prev;
-      const next = { ...prev };
-      delete next[hlId];
-      return next;
-    });
-    snapshotQuestionHtml(questionId);
-  };
-
-  const openHighlightMenu = (clientX: number, clientY: number, markId?: string) => {
-    setHighlightToolbar({ top: clientY - 48, left: clientX, markId });
-  };
-
-  // Bấm chuột phải trong vùng đề bài: nếu đang có đoạn bôi đen, hoặc đang nhắm vào 1 highlight có
-  // sẵn, mở menu tuỳ chỉnh (màu + ghi chú) thay cho menu mặc định của trình duyệt.
-  const handleContentContextMenu = (e: React.MouseEvent<HTMLDivElement>) => {
-    const markEl = (e.target as HTMLElement).closest('mark.exam-user-highlight') as HTMLElement | null;
-    const sel = window.getSelection();
-    const hasSelection = !!sel && !sel.isCollapsed && sel.rangeCount > 0 &&
-      !!contentAreaRef.current?.contains(sel.getRangeAt(0).commonAncestorContainer);
-    if (!markEl && !hasSelection) return;
-    e.preventDefault();
-    openHighlightMenu(e.clientX, e.clientY, markEl?.dataset.hlId);
-  };
-
-  // Ấn giữ trên điện thoại = tương đương bấm chuột phải (contextmenu không đáng tin cậy trên mọi
-  // trình duyệt di động, đặc biệt Safari iOS, nên tự đo thời gian giữ thay vì chỉ dựa vào sự kiện đó).
-  const handleContentTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    const t = e.touches[0];
-    touchStartRef.current = { x: t.clientX, y: t.clientY, time: Date.now() };
-  };
-
-  const handleContentTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    const start = touchStartRef.current;
-    touchStartRef.current = null;
-    if (!start) return;
-    const t = e.changedTouches[0];
-    const moved = Math.hypot(t.clientX - start.x, t.clientY - start.y);
-    const heldLongEnough = Date.now() - start.time >= 450;
-    if (moved > 10 || !heldLongEnough) return;
-    const markEl = (e.target as HTMLElement).closest('mark.exam-user-highlight') as HTMLElement | null;
-    const sel = window.getSelection();
-    const hasSelection = !!sel && !sel.isCollapsed && sel.rangeCount > 0 &&
-      !!contentAreaRef.current?.contains(sel.getRangeAt(0).commonAncestorContainer);
-    if (!markEl && !hasSelection) return;
-    e.preventDefault();
-    openHighlightMenu(t.clientX, t.clientY, markEl?.dataset.hlId);
-  };
-
-  useEffect(() => {
-    if (!highlightToolbar) return;
-    const onMouseDown = (e: MouseEvent) => {
-      if (highlightToolbarRef.current?.contains(e.target as Node)) return;
-      setHighlightToolbar(null);
-    };
-    document.addEventListener('mousedown', onMouseDown);
-    return () => document.removeEventListener('mousedown', onMouseDown);
-  }, [highlightToolbar]);
-
-  useEffect(() => {
-    if (!noteEditor) return;
-    const onMouseDown = (e: MouseEvent) => {
-      if (noteEditorRef.current?.contains(e.target as Node)) return;
-      setNoteEditor(null);
-    };
-    document.addEventListener('mousedown', onMouseDown);
-    return () => document.removeEventListener('mousedown', onMouseDown);
-  }, [noteEditor]);
-
-  const handlePickColor = (color: string) => {
-    if (highlightToolbar?.markId) {
-      contentAreaRef.current?.querySelectorAll(`mark.exam-user-highlight[data-hl-id="${highlightToolbar.markId}"]`)
-        .forEach((m) => { (m as HTMLElement).style.backgroundColor = color; });
-    } else {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        wrapRangeAsHighlight(sel.getRangeAt(0), color, `hl-${Date.now()}-${highlightSeq.current++}`);
-        sel.removeAllRanges();
-      }
-    }
-    setHighlightColor(color);
-    try { localStorage.setItem('examHighlightColor', color); } catch {}
-    setHighlightToolbar(null);
-    snapshotQuestionHtml(question?.id);
-  };
-
-  // "Ghi chú" trong menu: nếu đang tạo highlight mới từ 1 đoạn vừa bôi đen thì tạo highlight bằng
-  // màu hiện tại trước, rồi mới mở ô nhỏ để gõ ghi chú gắn theo highlight đó (không phải theo câu).
-  const handleOpenNoteEditor = () => {
-    if (!highlightToolbar) return;
-    let hlId = highlightToolbar.markId;
-    if (!hlId) {
-      const sel = window.getSelection();
-      if (!sel || sel.rangeCount === 0) { setHighlightToolbar(null); return; }
-      hlId = `hl-${Date.now()}-${highlightSeq.current++}`;
-      wrapRangeAsHighlight(sel.getRangeAt(0), highlightColor, hlId);
-      sel.removeAllRanges();
-    }
-    setNoteEditor({ markId: hlId, top: highlightToolbar.top, left: highlightToolbar.left, text: highlightNotes[hlId] || '' });
-    setHighlightToolbar(null);
-  };
-
-  const handleSaveNote = () => {
-    if (!noteEditor) return;
-    const text = noteEditor.text.trim();
-    setHighlightNotes((prev) => {
-      const next = { ...prev };
-      if (text) next[noteEditor.markId] = text; else delete next[noteEditor.markId];
-      return next;
-    });
-    contentAreaRef.current?.querySelectorAll(`mark.exam-user-highlight[data-hl-id="${noteEditor.markId}"]`).forEach((m) => {
-      const el = m as HTMLElement;
-      el.style.borderBottom = text ? '2px dotted #92400e' : 'none';
-      el.title = text ? `📝 ${text}\n\nBấm để bỏ highlight · Bấm chuột phải để sửa` : 'Bấm để bỏ highlight · Bấm chuột phải để đổi màu/ghi chú';
-    });
-    setNoteEditor(null);
-    snapshotQuestionHtml(question?.id);
-  };
-
-  const handleRemoveHighlight = () => {
-    if (highlightToolbar?.markId) removeHighlightById(highlightToolbar.markId, question?.id);
-    setHighlightToolbar(null);
-  };
-
-  // Bấm (không phải bấm chuột phải) vào 1 highlight có sẵn = bỏ luôn highlight đó, kèm ghi chú nếu có.
-  const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const mark = (e.target as HTMLElement).closest('mark.exam-user-highlight') as HTMLElement | null;
-    if (mark?.dataset.hlId) removeHighlightById(mark.dataset.hlId, question?.id);
-  };
+  const saveBlockHighlights = useCallback((blockKey: string, list: StoredHighlight[]) => {
+    const next = { ...hlStoreRef.current };
+    if (list.length) next[blockKey] = list; else delete next[blockKey];
+    hlStoreRef.current = next;
+    if (hlStoreKey) { try { localStorage.setItem(hlStoreKey, JSON.stringify(next)); } catch {} }
+  }, [hlStoreKey]);
 
   useEffect(() => {
     const fetchExam = async () => {
@@ -648,17 +454,16 @@ export default function ExamPage() {
             </div>
 
             <p className="text-xs text-muted mb-2">Bôi đen đề bài rồi bấm chuột phải (hoặc ấn giữ trên điện thoại) để chọn màu highlight hoặc thêm ghi chú riêng cho đoạn đó</p>
-            <div
-              ref={contentAreaRef}
-              onContextMenu={handleContentContextMenu}
-              onTouchStart={handleContentTouchStart}
-              onTouchEnd={handleContentTouchEnd}
-              onClick={handleContentClick}
-              className="select-text"
-            >
-              {question?.heading && (
-                <div data-hl-block="heading" className="mb-6 p-4 bg-primary-soft border-l-4 border-primary rounded-xl text-primary font-bold whitespace-pre-wrap leading-relaxed break-words quill-content [&>p]:m-0" dangerouslySetInnerHTML={{ __html: questionHtmlOverrides[question.id]?.heading ?? DOMPurify.sanitize(question.heading) }}>
-                </div>
+            <div className="select-text">
+              {question?.heading && hlLoaded && (
+                <ExamHighlightBlock
+                  key={`${question.id}-heading`}
+                  blockKey={`${question.id}:heading`}
+                  html={question.heading}
+                  store={hlStoreRef}
+                  onSave={saveBlockHighlights}
+                  className="mb-6 p-4 bg-primary-soft border-l-4 border-primary rounded-xl text-primary font-bold whitespace-pre-wrap leading-relaxed break-words quill-content [&>p]:m-0"
+                />
               )}
 
               {question?.imageUrl && (
@@ -669,7 +474,16 @@ export default function ExamPage() {
 
               <div className="text-xl leading-relaxed mb-8 break-words min-w-0 text-foreground">
                 {question?.content ? (
-                  <div className="quill-content" data-hl-block="content" dangerouslySetInnerHTML={{__html: questionHtmlOverrides[question.id]?.content ?? DOMPurify.sanitize(question.content)}}></div>
+                  hlLoaded && (
+                    <ExamHighlightBlock
+                      key={`${question.id}-content`}
+                      blockKey={`${question.id}:content`}
+                      html={question.content}
+                      store={hlStoreRef}
+                      onSave={saveBlockHighlights}
+                      className="quill-content"
+                    />
+                  )
                 ) : (
                   <div className="text-muted italic text-base">Nội dung trống</div>
                 )}
@@ -839,73 +653,6 @@ export default function ExamPage() {
         </aside>
       </div>
 
-      {highlightToolbar && (
-        <div
-          ref={highlightToolbarRef}
-          style={{ position: 'fixed', top: highlightToolbar.top, left: highlightToolbar.left, transform: 'translateX(-50%)', zIndex: 300 }}
-          className="px-2.5 py-2 bg-foreground text-background rounded-full shadow-2xl flex items-center gap-1.5 animate-in fade-in zoom-in-95 duration-150"
-        >
-          <span className="text-xs mr-0.5">🖍</span>
-          {HIGHLIGHT_COLORS.map(c => (
-            <button
-              key={c.value}
-              onClick={() => handlePickColor(c.value)}
-              title={c.name}
-              style={{ backgroundColor: c.value }}
-              className={`w-6 h-6 rounded-full cursor-pointer transition-transform hover:scale-110 ${highlightColor === c.value ? 'ring-2 ring-background ring-offset-2 ring-offset-foreground' : ''}`}
-            />
-          ))}
-          <span className="w-px h-5 bg-background/20 mx-0.5" />
-          <button
-            onClick={handleOpenNoteEditor}
-            title="Ghi chú"
-            className="px-2 py-1 rounded-full text-xs font-bold cursor-pointer hover:bg-background/10 transition-colors whitespace-nowrap"
-          >
-            📝 Ghi chú
-          </button>
-          {highlightToolbar.markId && (
-            <button
-              onClick={handleRemoveHighlight}
-              title="Bỏ highlight"
-              className="px-2 py-1 rounded-full text-xs font-bold cursor-pointer hover:bg-background/10 transition-colors"
-            >
-              🗑
-            </button>
-          )}
-        </div>
-      )}
-
-      {noteEditor && (
-        <div
-          ref={noteEditorRef}
-          style={{ position: 'fixed', top: noteEditor.top, left: noteEditor.left, transform: 'translateX(-50%)', zIndex: 301 }}
-          className="w-64 bg-surface border border-line rounded-2xl shadow-card-hover p-3 animate-in fade-in zoom-in-95 duration-150"
-        >
-          <p className="text-xs font-bold text-amber-600 mb-2">📝 Ghi chú cho đoạn đã highlight</p>
-          <textarea
-            autoFocus
-            value={noteEditor.text}
-            onChange={(e) => setNoteEditor(prev => prev ? { ...prev, text: e.target.value } : prev)}
-            rows={3}
-            placeholder="Gõ ghi chú của bạn ở đây..."
-            className="w-full p-2 rounded-xl border border-amber-500/20 bg-background text-sm resize-none focus:outline-none focus:border-amber-500/50"
-          />
-          <div className="flex justify-end gap-2 mt-2">
-            <button
-              onClick={() => setNoteEditor(null)}
-              className="px-3 py-2 text-xs font-bold rounded-full border border-line-strong text-muted hover:bg-primary-soft hover:text-primary transition-colors cursor-pointer"
-            >
-              Huỷ
-            </button>
-            <button
-              onClick={handleSaveNote}
-              className="px-3 py-2 text-xs font-bold rounded-full bg-primary text-white hover:bg-primary/90 transition-colors cursor-pointer"
-            >
-              Lưu
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

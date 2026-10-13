@@ -9,15 +9,20 @@ import { SkillReportPDF, SkillReportRubricItem } from "@/components/reports/Skil
 import { exportNodeToPDF } from "@/lib/pdfExport";
 import IeltsStudyPanel from "@/components/ielts/IeltsStudyPanel";
 import { IeltsProgressNotice } from "@/components/ielts/IeltsProgress";
-import { QuestionAnswerForm } from "@/components/ielts/QuestionAnswerForm";
+import { ExamFrame, ExamIntro, ExamTopBar, QuestionNavigator, SplitPane, focusQuestion, type MobilePane } from "@/components/ielts/exam/ExamChrome";
+import { ExamQuestionGroups, type AnswerValue } from "@/components/ielts/exam/ExamQuestions";
+import { ExamReview } from "@/components/ielts/exam/ExamReview";
+import { confirmSubmit, isAnswered, useCountdown, useExamDraft, useFontScale } from "@/components/ielts/exam/examHooks";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const DURATION_SEC = 60 * 60; // real IELTS Reading is 60 minutes
 
-// Student Reading test-taking page — timed (60 min, auto-submit at 0), passages shown with
-// their question groups, graded deterministically against the book's own answer key
-// (backend-side, via ieltsAttempts.routes.js's /reading/submit) — the raw score → band
-// conversion depends on test.testType (Academic vs GT use different concordance tables).
+type Answers = Record<number, AnswerValue>;
+
+// Student Reading test-taking page — giao diện mô phỏng IELTS trên máy: mỗi lần 1 Part, chia đôi
+// bài đọc | câu hỏi, thanh điều hướng câu ở đáy, đánh dấu xem lại, chỉnh cỡ chữ. Bài làm dở được
+// lưu nháp trên trình duyệt (examHooks.ts) nên tải lại trang không mất bài. Chấm ở backend
+// (ieltsAttempts.routes.js's /reading/submit) — band theo test.testType (Academic vs GT).
 export default function IeltsReadingTakingPage() {
   const params = useParams<{ testId: string }>();
   const router = useRouter();
@@ -26,15 +31,19 @@ export default function IeltsReadingTakingPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [data, setData] = useState<{ testType: string | null; passages: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [answers, setAnswers] = useState<Record<number, number | string>>({});
-  const [timeLeft, setTimeLeft] = useState(DURATION_SEC);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [userName, setUserName] = useState("Học viên");
   const [exportingPdf, setExportingPdf] = useState(false);
-  const startedAtRef = useRef(Date.now());
-  const submitRef = useRef<() => void>(() => {});
+  const [activePart, setActivePart] = useState("");
+  const [current, setCurrent] = useState<number | null>(null);
+  const [mobilePane, setMobilePane] = useState<MobilePane>("left");
+  const submitRef = useRef<(auto?: boolean) => void>(() => {});
   const pdfRef = useRef<HTMLDivElement>(null);
+
+  const exam = useExamDraft<Answers>(userId ? `lucy_ielts_draft_READING_${testId}_${userId}` : null, {}, DURATION_SEC);
+  const font = useFontScale();
+  const timeLeft = useCountdown(exam.endAt, exam.running && !result, () => submitRef.current(true));
 
   // ── Lưu highlight/ghi chú lên server: gom thao tác liên tiếp (0,6s) rồi gửi 1 lần / bài đọc ──
   const pendingHlRef = useRef<Record<string, StoredHighlight[]>>({});
@@ -82,48 +91,64 @@ export default function IeltsReadingTakingPage() {
     fetch(`${API}/api/auth/me?userId=${uid}`).then((r) => r.json()).then((u) => setUserName(u.name || "Học viên")).catch(() => {});
     fetch(`${API}/api/ielts-attempts/tests/${testId}/reading?userId=${uid}`)
       .then((r) => r.json())
-      .then((d) => { if (d.error) { Swal.fire("Lỗi", d.error, "error"); router.push("/ielts"); return; } setData(d); })
+      .then((d) => {
+        if (d.error) { Swal.fire("Lỗi", d.error, "error"); router.push("/ielts"); return; }
+        setData(d);
+        if (d.passages?.[0]) setActivePart(d.passages[0].id);
+      })
       .catch(() => { Swal.fire("Lỗi", "Không kết nối được máy chủ. Vui lòng thử lại sau.", "error"); })
       .finally(() => setLoading(false));
   }, [testId, router]);
 
-  const handleSubmit = useCallback(async () => {
+  const answers = exam.answers;
+  const allNumbers: number[] = data ? data.passages.flatMap((p) => p.questions.map((q: any) => q.questionNumber)) : [];
+
+  const handleSubmit = async (auto = false) => {
     if (!userId || submitting) return;
+    if (!auto) {
+      const unanswered = allNumbers.filter((n) => !isAnswered(answers[n]));
+      if (!(await confirmSubmit({ unanswered, flagged: exam.flags, total: allNumbers.length }))) return;
+    }
     setSubmitting(true);
     try {
-      const timeSpentSec = Math.round((Date.now() - startedAtRef.current) / 1000);
+      const timeSpentSec = Math.min(DURATION_SEC, Math.round((Date.now() - exam.startedAt) / 1000));
       const res = await fetch(`${API}/api/ielts-attempts/tests/${testId}/reading/submit`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, answers, timeSpentSec })
       });
       const resData = await res.json();
       if (!res.ok) { Swal.fire("Lỗi", resData.error || "Không thể nộp bài", "error"); return; }
+      exam.clear();
       setResult(resData);
-    } catch (err) { console.error(err); Swal.fire("Lỗi", "Không thể nộp bài", "error"); } finally { setSubmitting(false); }
-  }, [userId, testId, answers, submitting]);
+      window.scrollTo(0, 0);
+    } catch (err) { console.error(err); Swal.fire("Lỗi", "Không thể nộp bài — bài làm vẫn được lưu trên máy, hãy thử nộp lại.", "error"); } finally { setSubmitting(false); }
+  };
   submitRef.current = handleSubmit;
 
-  useEffect(() => {
-    if (!data || result) return;
-    const interval = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) { clearInterval(interval); submitRef.current(); return 0; }
-        return t - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [data, result]);
+  const setAnswer = exam.setAnswers;
+  const onAnswer = useCallback((n: number, v: AnswerValue | undefined) => {
+    setAnswer((prev) => {
+      const next = { ...prev };
+      if (v === undefined || v === "") delete next[n]; else next[n] = v;
+      return next;
+    });
+  }, [setAnswer]);
+
+  const jumpTo = useCallback((n: number) => {
+    const part = data?.passages.find((p) => p.questions.some((q: any) => q.questionNumber === n));
+    if (part) setActivePart(part.id);
+    setCurrent(n);
+    setMobilePane("right");
+    focusQuestion(n);
+  }, [data]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center text-primary font-bold animate-pulse">Đang tải...</div>;
   if (!data) return null;
+  if (!data.passages.length) return <div className="min-h-screen flex items-center justify-center text-muted italic px-4 text-center">Đề này chưa có phần Reading.</div>;
 
-  const totalQuestions = data.passages.reduce((s, p) => s + p.questions.length, 0);
-  const answeredCount = Object.keys(answers).length;
-  const mm = String(Math.floor(timeLeft / 60)).padStart(2, "0");
-  const ss = String(timeLeft % 60).padStart(2, "0");
+  const totalQuestions = allNumbers.length;
+  const partLabel = (p: any, i: number) => (p.passageIndex > 1 ? `Part ${p.sectionNumber}.${p.passageIndex}` : `Part ${data.passages.length === 3 ? i + 1 : p.sectionNumber}`);
 
   if (result) {
-    const reviewByNumber: Record<number, any> = {};
-    (result.review || []).forEach((r: any) => { reviewByNumber[r.questionNumber] = r; });
     return (
       <div className="min-h-screen bg-background">
         <div className="max-w-3xl mx-auto px-4 py-10 text-center space-y-6">
@@ -154,21 +179,11 @@ export default function IeltsReadingTakingPage() {
             <IeltsStudyPanel skill="READING" attemptId={result.id} userId={userId} />
           </div>
         )}
-        <div className="max-w-3xl mx-auto px-4 pb-16 space-y-6">
-          {data.passages.map((p) => (
-            <div key={p.id} className="ui-card p-5 space-y-3">
-              <h3 className="font-bold text-primary">Section {p.sectionNumber}{p.passageIndex > 1 ? `.${p.passageIndex}` : ""}</h3>
-              {p.questions.map((q: any) => {
-                const r = reviewByNumber[q.questionNumber];
-                return (
-                  <div key={q.id} className={`p-3 rounded-xl border text-sm ${r?.correct ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-red-200 bg-red-50 text-red-900"}`}>
-                    <p className="font-bold">{r?.correct ? "✓" : "✗"} Câu {q.questionNumber}: {q.promptText}</p>
-                    <p className="text-muted mt-0.5">Đáp án đúng: {r?.options ? r.options[r.correctIndex] : r?.correctAnswer}</p>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
+        <div className="max-w-3xl mx-auto px-4 pb-16">
+          <ExamReview
+            review={result.review || []}
+            parts={data.passages.map((p, i) => ({ key: p.id, label: `${partLabel(p, i)}${p.title ? ` — ${p.title}` : ""}`, questions: p.questions, sourceHtml: p.bodyText, sourceLabel: "Xem lại bài đọc" }))}
+          />
         </div>
 
         <div style={{ position: "fixed", top: 0, left: "-9999px", zIndex: -1 }}>
@@ -182,10 +197,10 @@ export default function IeltsReadingTakingPage() {
             scoreScale="9"
             contextTitle={`Đúng ${result.rawScore}/${totalQuestions} câu`}
             overallComment={`Học viên đạt band ${result.band?.toFixed(1)} cho phần Reading, đúng ${result.rawScore}/${totalQuestions} câu.`}
-            rubric={data.passages.map((p): SkillReportRubricItem => {
-              const qs = p.questions.map((q: any) => reviewByNumber[q.questionNumber]);
-              const correct = qs.filter((r: any) => r?.correct).length;
-              return { label: `Section ${p.sectionNumber}${p.passageIndex > 1 ? `.${p.passageIndex}` : ""}`, note: `Đúng ${correct}/${qs.length} câu` };
+            rubric={data.passages.map((p, i): SkillReportRubricItem => {
+              const reviewByNumber = new Map<number, any>((result.review || []).map((r: any) => [r.questionNumber, r]));
+              const correct = p.questions.filter((q: any) => reviewByNumber.get(q.questionNumber)?.correct).length;
+              return { label: partLabel(p, i), note: `Đúng ${correct}/${p.questions.length} câu` };
             })}
             suggestions={[]}
             transcriptTitle="Đề bài"
@@ -196,44 +211,88 @@ export default function IeltsReadingTakingPage() {
     );
   }
 
+  if (!exam.running) {
+    const draft = exam.savedDraft;
+    return (
+      <ExamIntro
+        title="IELTS Reading"
+        durationMin={DURATION_SEC / 60}
+        facts={[`${data.passages.length} bài đọc`, `${totalQuestions} câu`, ...(data.testType ? [data.testType === "GENERAL_TRAINING" ? "General Training" : "Academic"] : [])]}
+        tips={[
+          "Mỗi lần hiện 1 Part: bài đọc bên trái, câu hỏi bên phải (điện thoại: chuyển bằng 2 tab).",
+          "Bôi đen chữ trong bài đọc rồi bấm chuột phải (điện thoại: ấn giữ) để highlight hoặc ghi chú.",
+          "Bấm biểu tượng lá cờ cạnh câu hỏi để đánh dấu câu cần xem lại; thanh dưới cùng cho biết câu nào đã làm.",
+          "Bài làm được tự lưu trên máy này — tải lại trang vẫn làm tiếp được. Hết giờ hệ thống tự nộp bài.",
+        ]}
+        draft={draft ? { timeLeft: Math.max(0, Math.ceil((draft.endAt - Date.now()) / 1000)), answered: Object.values(draft.answers || {}).filter(isAnswered).length, total: totalQuestions } : null}
+        onStart={() => { exam.startFresh(); setActivePart(data.passages[0]?.id || ""); }}
+        onResume={exam.resume}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="sticky top-0 z-20 bg-surface border-b border-line px-4 sm:px-6 py-2.5 flex items-center gap-3 flex-wrap shadow-[0_2px_10px_rgba(30,58,138,0.06)]">
-        <h1 className="font-bold text-primary text-sm sm:text-base">IELTS Reading</h1>
-        <span className="text-xs font-semibold text-muted">{answeredCount}/{totalQuestions} câu đã trả lời</span>
-        <span className={`ml-auto font-mono font-black text-base sm:text-lg px-4 py-1.5 rounded-full ${timeLeft < 300 ? "bg-red-50 text-red-600 ring-1 ring-red-200 animate-pulse" : "bg-primary text-white shadow-[0_4px_12px_rgba(30,58,138,0.25)]"}`}>{mm}:{ss}</span>
-        <button onClick={handleSubmit} disabled={submitting} className="btn-primary px-5 py-2 text-sm cursor-pointer">
-          {submitting ? "Đang nộp..." : "Nộp bài"}
-        </button>
-      </div>
+    <ExamFrame fontSize={font.size}>
+      <ExamTopBar
+        title="IELTS Reading"
+        parts={data.passages.map((p, i) => ({
+          key: p.id,
+          label: partLabel(p, i),
+          sub: `${p.questions.filter((q: any) => isAnswered(answers[q.questionNumber])).length}/${p.questions.length}`
+        }))}
+        activePart={activePart}
+        onPart={setActivePart}
+        timeLeft={timeLeft}
+        font={font}
+        onSubmit={() => handleSubmit(false)}
+        submitting={submitting}
+      />
 
-      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-6 space-y-6">
-        {data.passages.map((passage: any) => (
-          <div key={passage.id} className="ui-card p-5 sm:p-6 space-y-4">
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <h2 className="ui-section-title text-lg">Section {passage.sectionNumber}{passage.passageIndex > 1 ? `.${passage.passageIndex}` : ""}{passage.title ? ` — ${passage.title}` : ""}</h2>
-              <p className="text-xs text-muted">Bôi đen rồi bấm chuột phải (điện thoại: ấn giữ) để highlight hoặc ghi chú</p>
-            </div>
-            <div className="lg:grid lg:grid-cols-2 lg:gap-6 lg:items-start space-y-4 lg:space-y-0">
-            <div className="space-y-3 lg:sticky lg:top-20">
-            <HighlightableHtml
-              html={passage.bodyText || ""}
-              initialHighlights={passage.highlights}
-              onChange={(list) => saveHighlights(passage.id, list)}
-              className="text-[15px] leading-relaxed whitespace-pre-wrap max-h-96 lg:max-h-[calc(100vh-8rem)] overflow-y-auto p-4 sm:p-5 bg-background rounded-xl border border-line text-foreground"
-            />
-            {passage.imageUrl && <img src={passage.imageUrl} alt="" className="max-h-72 rounded-lg border border-line" />}
-            </div>
-
-            <div className="space-y-3">
-              {passage.questions.map((q: any) => (
-                <QuestionAnswerForm key={q.id} question={q} value={answers[q.questionNumber]} onChange={(v) => setAnswers((prev) => ({ ...prev, [q.questionNumber]: v }))} />
-              ))}
-            </div>
+      <SplitPane
+        leftLabel="Bài đọc"
+        rightLabel="Câu hỏi"
+        mobileTab={mobilePane}
+        onMobileTab={setMobilePane}
+        left={data.passages.map((p, i) => (
+          <div key={p.id} className={p.id === activePart ? "flex-1 min-h-0 overflow-y-auto" : "hidden"}>
+            <div className="px-4 sm:px-6 py-5 max-w-[46rem] mx-auto">
+              <p className="text-[0.75em] font-bold uppercase tracking-widest text-muted">{partLabel(p, i)} · Questions {p.questions[0]?.questionNumber}–{p.questions[p.questions.length - 1]?.questionNumber}</p>
+              {p.title && <h2 className="text-[1.35em] font-bold text-foreground mt-1 mb-4 leading-snug">{p.title}</h2>}
+              <HighlightableHtml
+                html={p.bodyText || ""}
+                initialHighlights={p.highlights}
+                onChange={(list) => saveHighlights(p.id, list)}
+                className="text-[1em] leading-[1.75] whitespace-pre-wrap text-foreground"
+              />
+              {p.imageUrl && <img src={p.imageUrl} alt={`Hình minh hoạ ${partLabel(p, i)}`} className="max-h-80 rounded-xl border border-line mt-4 bg-white" />}
             </div>
           </div>
         ))}
-      </div>
-    </div>
+        right={data.passages.map((p) => (
+          <div key={p.id} className={p.id === activePart ? "flex-1 min-h-0 overflow-y-auto bg-surface lg:border-l border-line" : "hidden"}>
+            <div className="px-4 sm:px-6 py-5 max-w-[46rem] mx-auto">
+              <ExamQuestionGroups
+                questions={p.questions}
+                answers={answers}
+                onAnswer={onAnswer}
+                flags={exam.flags}
+                onToggleFlag={exam.toggleFlag}
+                current={current}
+                onCurrent={setCurrent}
+              />
+            </div>
+          </div>
+        ))}
+      />
+
+      <QuestionNavigator
+        parts={data.passages.map((p, i) => ({ key: p.id, label: partLabel(p, i), numbers: p.questions.map((q: any) => q.questionNumber) }))}
+        activePart={activePart}
+        answered={(n) => isAnswered(answers[n])}
+        flags={exam.flags}
+        current={current}
+        onJump={jumpTo}
+      />
+    </ExamFrame>
   );
 }

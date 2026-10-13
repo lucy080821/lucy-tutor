@@ -8,19 +8,23 @@ import { SkillReportPDF, SkillReportRubricItem } from "@/components/reports/Skil
 import { exportNodeToPDF } from "@/lib/pdfExport";
 import IeltsStudyPanel from "@/components/ielts/IeltsStudyPanel";
 import { IeltsProgressNotice } from "@/components/ielts/IeltsProgress";
+import { ExamFrame, ExamIntro, ExamTopBar, SplitPane, type MobilePane } from "@/components/ielts/exam/ExamChrome";
+import { useCountdown, useExamDraft, useFontScale } from "@/components/ielts/exam/examHooks";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 const DURATION_SEC = 60 * 60; // real IELTS Writing = 60 min total for both tasks
+
+type Texts = { t1: string; t2: string };
 
 function countWords(text: string) {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
 }
 
-// Student Writing test-taking page — both tasks shown together (student manages their own
-// time within the 60-min total, same as the real test), graded via 2 parallel Groq calls
-// (ieltsAttempts.routes.js's /writing/submit) against the real official IELTS Writing
-// criteria (Task Achievement/Response, Coherence & Cohesion, Lexical Resource, Grammatical
-// Range & Accuracy), combined per the official 1/3 + 2/3 Task weighting.
+// Student Writing test-taking page — giao diện như IELTS trên máy: tab Task 1 / Task 2, chia đôi
+// đề bài | khung viết (biểu đồ Task 1 luôn trong tầm mắt), đếm từ trực tiếp, không kiểm tra chính
+// tả của trình duyệt (đề thật cũng không có). Bài viết dở được lưu nháp trên trình duyệt.
+// Chấm bằng 2 lệnh Groq song song (ieltsAttempts.routes.js's /writing/submit) theo 4 tiêu chí
+// chính thức, gộp band theo trọng số Task 1 × 1/3 + Task 2 × 2/3.
 export default function IeltsWritingTakingPage() {
   const params = useParams<{ testId: string }>();
   const router = useRouter();
@@ -29,15 +33,18 @@ export default function IeltsWritingTakingPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [task1Text, setTask1Text] = useState("");
-  const [task2Text, setTask2Text] = useState("");
-  const [timeLeft, setTimeLeft] = useState(DURATION_SEC);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [userName, setUserName] = useState("Học viên");
   const [exportingPdf, setExportingPdf] = useState(false);
-  const submitRef = useRef<() => void>(() => {});
+  const [activeTask, setActiveTask] = useState("1");
+  const [mobilePane, setMobilePane] = useState<MobilePane>("right");
+  const submitRef = useRef<(auto?: boolean) => void>(() => {});
   const pdfRef = useRef<HTMLDivElement>(null);
+
+  const exam = useExamDraft<Texts>(userId ? `lucy_ielts_draft_WRITING_${testId}_${userId}` : null, { t1: "", t2: "" }, DURATION_SEC);
+  const font = useFontScale();
+  const timeLeft = useCountdown(exam.endAt, exam.running && !result, () => submitRef.current(true));
 
   useEffect(() => {
     const uid = getSessionUserId();
@@ -53,12 +60,34 @@ export default function IeltsWritingTakingPage() {
 
   const task1 = tasks.find((t) => t.taskNumber === 1);
   const task2 = tasks.find((t) => t.taskNumber === 2);
+  const { t1: task1Text, t2: task2Text } = exam.answers;
+  const setText = (key: keyof Texts, v: string) => exam.setAnswers((prev) => ({ ...prev, [key]: v }));
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (auto = false) => {
     if (!userId || submitting) return;
     if (!task1Text.trim() || !task2Text.trim()) {
-      Swal.fire("Chưa hoàn thành", "Vui lòng viết cả 2 Task trước khi nộp bài.", "warning");
+      Swal.fire(
+        auto ? "Hết giờ làm bài" : "Chưa hoàn thành",
+        auto ? "Bài chưa có đủ 2 Task nên chưa chấm được. Bài viết vẫn được lưu trên máy này." : "Vui lòng viết cả 2 Task trước khi nộp bài.",
+        "warning"
+      );
       return;
+    }
+    if (!auto) {
+      const short = [task1, task2].filter((t) => t && countWords(t.taskNumber === 1 ? task1Text : task2Text) < t.minWords);
+      const r = await Swal.fire({
+        title: "Nộp bài?",
+        html: (short.length
+          ? `<p style="margin:0 0 8px"><b style="color:#b45309">Chưa đủ số từ tối thiểu:</b> ${short.map((t) => `Task ${t.taskNumber} (${countWords(t.taskNumber === 1 ? task1Text : task2Text)}/${t.minWords} từ)`).join(", ")}</p><p style="margin:0 0 8px">Bài thiếu số từ sẽ bị trừ điểm Task Achievement/Response.</p>`
+          : "") + `<p style="margin:0">Sau khi nộp sẽ không sửa được nữa. AI chấm mất khoảng 20–40 giây.</p>`,
+        icon: short.length ? "warning" : "question",
+        showCancelButton: true,
+        confirmButtonText: "Nộp bài",
+        cancelButtonText: "Viết tiếp",
+        reverseButtons: true,
+        focusCancel: true,
+      });
+      if (!r.isConfirmed) return;
     }
     setSubmitting(true);
     try {
@@ -67,27 +96,15 @@ export default function IeltsWritingTakingPage() {
       });
       const data = await res.json();
       if (!res.ok) { Swal.fire("Lỗi", data.error || "Không thể chấm bài", "error"); return; }
+      exam.clear();
       setResult(data);
-    } catch (err) { console.error(err); Swal.fire("Lỗi", "Không thể chấm bài lúc này", "error"); } finally { setSubmitting(false); }
+      window.scrollTo(0, 0);
+    } catch (err) { console.error(err); Swal.fire("Lỗi", "Không thể chấm bài lúc này — bài viết vẫn được lưu trên máy, hãy thử nộp lại.", "error"); } finally { setSubmitting(false); }
   };
   submitRef.current = handleSubmit;
 
-  useEffect(() => {
-    if (!tasks.length || result) return;
-    const interval = setInterval(() => {
-      setTimeLeft((t) => {
-        if (t <= 1) { clearInterval(interval); submitRef.current(); return 0; }
-        return t - 1;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [tasks, result]);
-
   if (loading) return <div className="min-h-screen flex items-center justify-center text-primary font-bold animate-pulse">Đang tải...</div>;
   if (!task1 || !task2) return <div className="min-h-screen flex items-center justify-center text-muted italic">Đề này chưa có đủ 2 Task Writing.</div>;
-
-  const mm = String(Math.floor(timeLeft / 60)).padStart(2, "0");
-  const ss = String(timeLeft % 60).padStart(2, "0");
 
   if (result) {
     const f1 = JSON.parse(result.task1Feedback);
@@ -156,43 +173,114 @@ export default function IeltsWritingTakingPage() {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background pb-20">
-      <div className="sticky top-0 z-20 bg-surface border-b border-line px-4 sm:px-6 py-2.5 flex items-center gap-3 flex-wrap shadow-[0_2px_10px_rgba(30,58,138,0.06)]">
-        <h1 className="font-bold text-primary text-sm sm:text-base">IELTS Writing</h1>
-        <span className={`ml-auto font-mono font-black text-base sm:text-lg px-4 py-1.5 rounded-full ${timeLeft < 300 ? "bg-red-50 text-red-600 ring-1 ring-red-200 animate-pulse" : "bg-primary text-white shadow-[0_4px_12px_rgba(30,58,138,0.25)]"}`}>{mm}:{ss}</span>
-        <button onClick={handleSubmit} disabled={submitting} className="btn-primary px-5 py-2 text-sm cursor-pointer">
-          {submitting ? "Đang chấm bài..." : "Nộp bài"}
-        </button>
-      </div>
-
-      <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 space-y-6">
-        <WritingTaskEditor task={task1} value={task1Text} onChange={setTask1Text} />
-        <WritingTaskEditor task={task2} value={task2Text} onChange={setTask2Text} />
-      </div>
-    </div>
-  );
-}
-
-function WritingTaskEditor({ task, value, onChange }: { task: any; value: string; onChange: (v: string) => void }) {
-  const words = countWords(value);
-  return (
-    <div className="ui-card p-5 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="ui-section-title text-lg">Task {task.taskNumber}</h2>
-        <span className="text-xs text-muted">{task.minWords} từ tối thiểu · {task.timeMinutes} phút gợi ý</span>
-      </div>
-      <p className="text-sm leading-relaxed whitespace-pre-wrap text-foreground bg-background border border-line rounded-lg p-4">{task.promptText}</p>
-      {task.imageUrl && <img src={task.imageUrl} alt="" className="max-h-72 rounded-lg border border-line" />}
-      <textarea
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        rows={10}
-        className="ui-input p-3 text-sm leading-relaxed"
-        placeholder="Viết bài của bạn tại đây..."
+  if (!exam.running) {
+    const draft = exam.savedDraft;
+    const draftWords = draft ? countWords(draft.answers?.t1 || "") + countWords(draft.answers?.t2 || "") : 0;
+    return (
+      <ExamIntro
+        title="IELTS Writing"
+        durationMin={DURATION_SEC / 60}
+        facts={[`Task 1 ≥ ${task1.minWords} từ`, `Task 2 ≥ ${task2.minWords} từ`]}
+        tips={[
+          `Gợi ý chia giờ: Task 1 khoảng ${task1.timeMinutes || 20} phút, Task 2 khoảng ${task2.timeMinutes || 40} phút. Task 2 chiếm 2/3 điểm.`,
+          "Đề bài bên trái, khung viết bên phải (điện thoại: chuyển bằng 2 tab). Chuyển Task bằng tab trên cùng.",
+          "Số từ được đếm trực tiếp. Không có kiểm tra chính tả tự động — giống phòng thi.",
+          "Bài viết được tự lưu trên máy này — tải lại trang vẫn viết tiếp được.",
+        ]}
+        draft={draft ? { timeLeft: Math.max(0, Math.ceil((draft.endAt - Date.now()) / 1000)), answered: draftWords, summary: `đã viết ${draftWords} từ` } : null}
+        onStart={() => { exam.startFresh(); setActiveTask("1"); }}
+        onResume={exam.resume}
       />
-      <p className={`text-xs font-bold ${words < task.minWords ? "text-amber-600" : "text-emerald-600"}`}>{words} từ {words < task.minWords ? `(cần tối thiểu ${task.minWords})` : "✓"}</p>
-    </div>
+    );
+  }
+
+  const task = activeTask === "1" ? task1 : task2;
+  const words1 = countWords(task1Text);
+  const words2 = countWords(task2Text);
+
+  return (
+    <ExamFrame fontSize={font.size}>
+      <ExamTopBar
+        title="IELTS Writing"
+        parts={[
+          { key: "1", label: "Task 1", sub: `${words1} từ` },
+          { key: "2", label: "Task 2", sub: `${words2} từ` },
+        ]}
+        activePart={activeTask}
+        onPart={setActiveTask}
+        timeLeft={timeLeft}
+        font={font}
+        onSubmit={() => handleSubmit(false)}
+        submitting={submitting}
+        submitLabel={submitting ? "Đang chấm..." : "Nộp bài"}
+      />
+
+      <SplitPane
+        leftLabel="Đề bài"
+        rightLabel="Bài viết"
+        mobileTab={mobilePane}
+        onMobileTab={setMobilePane}
+        left={[task1, task2].map((t) => (
+          <div key={t.taskNumber} className={String(t.taskNumber) === activeTask ? "flex-1 min-h-0 overflow-y-auto" : "hidden"}>
+            <div className="px-4 sm:px-6 py-5 max-w-[46rem] mx-auto space-y-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-[1.2em] font-bold text-primary">Writing Task {t.taskNumber}</h2>
+                <span className="ui-badge">≥ {t.minWords} từ</span>
+                {t.timeMinutes && <span className="ui-badge">~{t.timeMinutes} phút</span>}
+              </div>
+              <div className="rounded-xl border border-line bg-surface p-4 sm:p-5 leading-relaxed whitespace-pre-wrap">{t.promptText}</div>
+              {t.imageUrl && <img src={t.imageUrl} alt={`Biểu đồ / hình minh hoạ Writing Task ${t.taskNumber}`} className="w-full rounded-xl border border-line bg-white" />}
+            </div>
+          </div>
+        ))}
+        right={[task1, task2].map((t) => {
+          const key: keyof Texts = t.taskNumber === 1 ? "t1" : "t2";
+          const text = exam.answers[key];
+          const words = countWords(text);
+          const enough = words >= t.minWords;
+          return (
+            <div key={t.taskNumber} className={String(t.taskNumber) === activeTask ? "flex-1 min-h-0 flex flex-col bg-surface lg:border-l border-line" : "hidden"}>
+              <textarea
+                value={text}
+                onChange={(e) => setText(key, e.target.value)}
+                aria-label={`Bài viết Task ${t.taskNumber}`}
+                spellCheck={false}
+                autoCorrect="off"
+                autoCapitalize="sentences"
+                placeholder={`Viết bài Task ${t.taskNumber} tại đây...`}
+                className="flex-1 min-h-0 w-full resize-none bg-surface px-4 sm:px-6 py-5 leading-[1.8] text-foreground focus:outline-none"
+              />
+              <div className="shrink-0 border-t border-line px-4 sm:px-6 py-2.5 flex items-center gap-3 text-[15px]">
+                <div className="flex-1 h-1.5 rounded-full bg-primary-soft overflow-hidden">
+                  <div className={`h-full transition-[width] ${enough ? "bg-emerald-500" : "bg-amber-500"}`} style={{ width: `${Math.min(100, (words / t.minWords) * 100)}%` }} />
+                </div>
+                <span className={`text-sm font-bold tabular-nums whitespace-nowrap ${enough ? "text-emerald-700" : "text-amber-700"}`}>
+                  {words} / {t.minWords} từ {enough ? "✓" : ""}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      />
+
+      {/* Thanh dưới: chuyển nhanh giữa 2 Task */}
+      <div className="shrink-0 bg-surface border-t border-line px-3 sm:px-5 py-2 flex items-center gap-2 text-[15px]">
+        {[task1, task2].map((t) => {
+          const w = t.taskNumber === 1 ? words1 : words2;
+          const on = String(t.taskNumber) === activeTask;
+          return (
+            <button
+              key={t.taskNumber}
+              onClick={() => { setActiveTask(String(t.taskNumber)); setMobilePane("right"); }}
+              className={`flex-1 sm:flex-none px-4 h-10 rounded-full border text-sm font-bold cursor-pointer ${on ? "bg-primary text-white border-primary" : "border-line-strong text-foreground hover:border-primary"}`}
+            >
+              Task {t.taskNumber} · {w}/{t.minWords} từ
+            </button>
+          );
+        })}
+        <span className="hidden sm:block ml-auto text-xs text-muted">Đang viết: {task.taskNumber === 1 ? "Task 1" : "Task 2"}</span>
+      </div>
+    </ExamFrame>
   );
 }
 

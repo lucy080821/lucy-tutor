@@ -12,6 +12,7 @@ import {
   type BlogCategory, type BlogPostSummary, type BlogReadStats,
 } from "@/lib/blog";
 import { ScrollBars, readPercentTone } from "./BlogStatsWidgets";
+import BlogCommentsPanel from "./BlogCommentsPanel";
 
 type ManagedPost = BlogPostSummary & BlogReadStats & { status: "DRAFT" | "PENDING" | "PUBLISHED"; updatedAt: string };
 type StatsSort = "views" | "clicks" | "readSessions" | "avgSeconds" | "readPercent" | "finish";
@@ -327,6 +328,8 @@ export default function TeacherBlogPage() {
             </>
           )}
         </section>
+
+        {userId && <BlogCommentsPanel userId={userId} />}
       </div>
 
       <div className="max-w-6xl mx-auto px-4 md:px-8 py-6 grid gap-6 lg:grid-cols-[1fr_280px]">

@@ -18,6 +18,10 @@ function AuthForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialRole = searchParams.get('role') || 'STUDENT';
+  // ?next=/blog/... — quay lại bài blog đang đọc sau khi đăng nhập (vd để bình luận). Chỉ nhận đường dẫn blog nội bộ
+  // (chặn open redirect kiểu //domain-khac.com)
+  const nextParam = searchParams.get('next') || '';
+  const nextPath = /^\/blog\/[^/\\]/.test(nextParam) && !nextParam.startsWith('//') ? nextParam : null;
 
   const [role, setRole] = useState(initialRole);
   const [isLogin, setIsLogin] = useState(true);
@@ -56,7 +60,7 @@ function AuthForm() {
         .then(data => {
           // Phiên của tài khoản không thuộc luồng học viên/giáo viên (vd ADMIN) -> bỏ phiên, ở lại trang đăng nhập
           const home = homeForRole(data.role);
-          if (home) router.replace(home);
+          if (home) router.replace(nextPath || home);
           else clearSession();
         })
         .catch(() => {
@@ -95,13 +99,13 @@ function AuthForm() {
       if (!home) throw new Error('Tài khoản này không đăng nhập được ở đây.');
 
       if (isLogin && data.mustChangePassword) {
-        setPendingLogin({ id: data.id, home, password });
+        setPendingLogin({ id: data.id, home: nextPath || home, password });
         return;
       }
 
       // Luôn xoá phiên cũ ở cả 2 storage trước khi ghi phiên mới (xem lib/session.ts)
       setSessionUserId(data.id, rememberMe);
-      router.replace(home);
+      router.replace(nextPath || home);
     } catch (err: any) {
       setError(err.message);
     } finally {

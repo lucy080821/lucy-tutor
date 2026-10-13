@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import PostCard from "@/components/blog/PostCard";
 import AuthorAvatar from "@/components/blog/AuthorAvatar";
 import BlogAudioPlayer from "@/components/blog/BlogAudioPlayer";
+import BlogComments from "@/components/blog/BlogComments";
 import { baseOpenGraph, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { authorHref, blogFetch, categoryHref, formatBlogDate, slugify, stripHtml, type BlogPost, type BlogPostSummary } from "@/lib/blog";
 import { ShareButtons } from "./BlogClientBits";
@@ -202,6 +203,9 @@ export default async function BlogPostPage({ params }: { params: Params }) {
               )}
             </div>
           </div>
+
+          {/* Bình luận: tải phía client (không nằm trong HTML server-render) — xem components/blog/BlogComments.tsx */}
+          <BlogComments slug={post.slug} />
 
           {/* CTA cuối bài — chỉ nhắc tính năng có thật (dùng thử 3 ngày), không số liệu/testimonial */}
           <div className="ui-hero mt-10 rounded-2xl p-6 md:p-8 flex flex-col sm:flex-row sm:items-center gap-4">

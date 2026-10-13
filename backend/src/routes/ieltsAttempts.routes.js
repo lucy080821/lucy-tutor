@@ -11,7 +11,7 @@ const { Groq, toFile } = require('groq-sdk');
 const prisma = require('../lib/prisma');
 const router = express.Router();
 
-const { isIeltsAnswerCorrect } = require('../utils/ieltsAnswerGrading');
+const { isIeltsAnswerCorrect, parseOptions, studentQuestionView } = require('../utils/ieltsAnswerGrading');
 const { LISTENING_BAND_TABLE, READING_BAND_TABLE_ACADEMIC, READING_BAND_TABLE_GT, rawScoreToBand } = require('../utils/ieltsBandTables');
 const { combineWritingBand, combineSpeakingBand, averageCriteriaBands } = require('../utils/ieltsRounding');
 const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
@@ -173,12 +173,10 @@ router.get('/tests/:id/listening', async (req, res) => {
       })
     ]);
     if (!test) return res.status(404).json({ error: 'Không tìm thấy đề hoặc bạn không có quyền truy cập' });
-    const safe = sections.map((s) => ({
+    // Không gửi transcript (lời thoại) cho học viên khi đang làm bài — chỉ AI dùng ở bước Học đề
+    const safe = sections.map(({ transcript, ...s }) => ({
       ...s,
-      questions: s.questions.map((q) => ({
-        id: q.id, questionNumber: q.questionNumber, type: q.type, groupInstruction: q.groupInstruction,
-        promptText: q.promptText, options: q.options ? JSON.parse(q.options) : null, wordLimit: q.wordLimit, imageUrl: q.imageUrl
-      }))
+      questions: s.questions.map(studentQuestionView)
     }));
     res.json({ testId: test.id, testType: test.testType, sections: safe });
   } catch (err) {
@@ -207,10 +205,7 @@ router.get('/tests/:id/reading', async (req, res) => {
     const safe = passages.map((p) => ({
       id: p.id, sectionNumber: p.sectionNumber, passageIndex: p.passageIndex, title: p.title, bodyText: p.bodyText, imageUrl: p.imageUrl,
       highlights: highlightsByPassage.get(p.id) || [],
-      questions: p.questions.map((q) => ({
-        id: q.id, questionNumber: q.questionNumber, type: q.type, groupInstruction: q.groupInstruction,
-        promptText: q.promptText, options: q.options ? JSON.parse(q.options) : null, wordLimit: q.wordLimit, imageUrl: q.imageUrl
-      }))
+      questions: p.questions.map(studentQuestionView)
     }));
     res.json({ testId: test.id, testType: test.testType, passages: safe });
   } catch (err) {
@@ -310,7 +305,7 @@ router.post('/tests/:id/listening/submit', async (req, res) => {
       questionNumber: q.questionNumber,
       userAnswer: answers?.[q.questionNumber] ?? null,
       correct: isIeltsAnswerCorrect(q, answers?.[q.questionNumber]),
-      correctIndex: q.correctIndex, correctAnswer: q.correctAnswer, options: q.options ? JSON.parse(q.options) : null
+      correctIndex: q.correctIndex, correctAnswer: q.correctAnswer, options: parseOptions(q)
     }));
     const rawScore = review.filter((r) => r.correct).length;
     const band = rawScoreToBand(rawScore, LISTENING_BAND_TABLE);
@@ -345,7 +340,7 @@ router.post('/tests/:id/reading/submit', async (req, res) => {
       questionNumber: q.questionNumber,
       userAnswer: answers?.[q.questionNumber] ?? null,
       correct: isIeltsAnswerCorrect(q, answers?.[q.questionNumber]),
-      correctIndex: q.correctIndex, correctAnswer: q.correctAnswer, options: q.options ? JSON.parse(q.options) : null
+      correctIndex: q.correctIndex, correctAnswer: q.correctAnswer, options: parseOptions(q)
     }));
     const rawScore = review.filter((r) => r.correct).length;
     const table = test.testType === 'GENERAL_TRAINING' ? READING_BAND_TABLE_GT : READING_BAND_TABLE_ACADEMIC;
