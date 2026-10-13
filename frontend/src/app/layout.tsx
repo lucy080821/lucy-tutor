@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Link from "next/link";
 import PWARegister from "@/components/PWARegister";
+import AnalyticsTracker from "@/components/analytics/AnalyticsTracker";
 import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, baseOpenGraph } from "@/lib/seo";
 
 export const metadata: Metadata = {
@@ -88,6 +89,7 @@ export default function RootLayout({
     <html lang="vi" suppressHydrationWarning>
       <body suppressHydrationWarning className="antialiased min-h-screen flex flex-col bg-background">
         <PWARegister />
+        <AnalyticsTracker />
 
         {/* Global Header — phong cách ieltsonlinetests: trắng, mảnh, viền dưới nhạt */}
         <header className="sticky top-0 z-50 bg-white border-b border-line shadow-[0_2px_12px_rgba(30,58,138,0.05)]">

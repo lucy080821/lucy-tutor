@@ -93,3 +93,61 @@ export const FREE_STATUS_LABEL: Record<FreeStatus, string> = {
   LOCKED: "Đã khoá",
   EXEMPT: "Miễn trừ",
 };
+
+// ===== Lượt truy cập & sức khoẻ kinh doanh (backend: routes/adminAnalytics.routes.js) =====
+
+export type RangeDays = 7 | 30 | 90;
+export type NamedCount = { name: string; sessions: number };
+export type TrafficTotals = {
+  views: number; visitors: number; sessions: number; bounceRate: number; pagesPerSession: number; avgSessionSec: number;
+};
+export type Traffic = {
+  days: number;
+  current: TrafficTotals;
+  previous: TrafficTotals;
+  series: { day: string; views: number; visitors: number; sessions: number }[];
+  topPages: { path: string; views: number; visitors: number; avgSec: number | null }[];
+  landingPages: { path: string; sessions: number; bounceRate: number }[];
+  channels: NamedCount[]; referrers: NamedCount[]; campaigns: NamedCount[]; devices: NamedCount[]; browsers: NamedCount[];
+  visitorsNew: number; visitorsReturning: number;
+  hours: { hour: number; views: number }[];
+  roles: { role: string; sessions: number; users: number }[];
+};
+export type Realtime = {
+  activeVisitors: number; activeUsers: number; mobile: number;
+  pages: { path: string; visitors: number }[];
+  perMinute: { ago: number; views: number }[];
+};
+export type FeatureUsage = { name: string; uses: number; users: number; prevUses: number; prevUsers: number };
+export type Business = {
+  days: number;
+  revenue: {
+    ym: string; label: string; classTuition: number; freeStudent: number; total: number; payers: number; arppu: number;
+    manualIncome: number; manualExpense: number; activeStudents: number; activeTeachers: number;
+  }[];
+  active: { dau: number; wau: number; mau: number; prevMau: number; avgDau: number; stickiness: number; series: { day: string; dau: number; wau: number }[] };
+  features: FeatureUsage[];
+  signups: { students: number; teachers: number; prevStudents: number; prevTeachers: number };
+  funnel: { visitors: number; authVisitors: number; signups: number; activated: number; paid: number; joinedClass: number };
+  cohorts: { cohort: string; label: string; size: number; retention: (number | null)[] }[];
+  trial: { started: number; inTrial: number; ended: number; paid: number; joinedClass: number; lockedNeverPaid: number };
+  subscriptions: { everPaid: number; active: number; lapsed: number; expiringIn7: number };
+  teachers: { total: number; active30: number; withStudents: number; classStudents: number; emptyClassrooms: number };
+};
+
+export const formatPct = (ratio: number, digits = 1) => `${(ratio * 100).toLocaleString("vi-VN", { maximumFractionDigits: digits })}%`;
+export const formatDuration = (sec: number | null | undefined) => {
+  if (sec === null || sec === undefined || !Number.isFinite(sec)) return "—";
+  const s = Math.round(sec);
+  if (s < 60) return `${s} giây`;
+  const m = Math.floor(s / 60);
+  return m < 60 ? `${m} phút ${s % 60 ? `${s % 60} giây` : ""}`.trim() : `${Math.floor(m / 60)} giờ ${m % 60} phút`;
+};
+// Gọn cho thẻ KPI: 154 -> "2:34" (phút:giây), 3725 -> "1:02:05"
+export const formatClock = (sec: number) => {
+  const s = Math.max(0, Math.round(sec));
+  const hh = Math.floor(s / 3600), mm = Math.floor((s % 3600) / 60), ss = s % 60;
+  return hh ? `${hh}:${String(mm).padStart(2, "0")}:${String(ss).padStart(2, "0")}` : `${mm}:${String(ss).padStart(2, "0")}`;
+};
+// "2026-10-13" -> "13/10"
+export const shortDay = (ymd: string) => `${ymd.slice(8, 10)}/${ymd.slice(5, 7)}`;

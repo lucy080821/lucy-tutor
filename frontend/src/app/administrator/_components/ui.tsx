@@ -85,3 +85,45 @@ export function ErrorBlock({ message, onRetry }: { message: string; onRetry?: ()
     </div>
   );
 }
+
+// Danh sách xếp hạng có thanh tỉ lệ (nguồn truy cập, trang phổ biến...) — gọn hơn biểu đồ tròn, đọc được số ngay
+export function BarList({ items, valueLabel, empty = "Chưa có dữ liệu", format = (n: number) => n.toLocaleString("vi-VN") }: {
+  items: { name: string; value: number; hint?: string }[]; valueLabel?: string; empty?: string; format?: (n: number) => string;
+}) {
+  if (!items.length) return <p className="text-sm text-muted py-4 text-center">{empty}</p>;
+  const max = Math.max(...items.map((i) => i.value), 1);
+  const total = items.reduce((s, i) => s + i.value, 0);
+  return (
+    <div>
+      {valueLabel && <p className="text-xs text-muted text-right mb-1">{valueLabel}</p>}
+      <ul className="space-y-1.5">
+        {items.map((i) => (
+          <li key={i.name} className="relative rounded-lg overflow-hidden" title={`${i.name}: ${format(i.value)}`}>
+            <span aria-hidden="true" className="absolute inset-y-0 left-0 bg-primary-soft" style={{ width: `${(i.value / max) * 100}%` }} />
+            <span className="relative flex items-center justify-between gap-3 px-3 py-1.5 text-sm">
+              <span className="min-w-0 truncate text-foreground">{i.name}{i.hint && <span className="text-muted"> · {i.hint}</span>}</span>
+              <span className="shrink-0 font-bold text-foreground">
+                {format(i.value)}
+                <span className="font-normal text-muted text-xs ml-1.5">{total ? `${Math.round((i.value / total) * 100)}%` : ""}</span>
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+// Chọn khoảng thời gian (7/30/90 ngày) dạng chip
+export function RangeChips<T extends number>({ value, options, onChange }: {
+  value: T; options: T[]; onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Khoảng thời gian">
+      {options.map((o) => (
+        <button key={o} onClick={() => onChange(o)} aria-pressed={o === value}
+          className={`ui-chip cursor-pointer ${o === value ? "ui-chip-active" : ""}`}>{o} ngày</button>
+      ))}
+    </div>
+  );
+}

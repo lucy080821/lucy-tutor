@@ -5,15 +5,19 @@ import { adminFetch, AdminAuthError, API_URL, clearAdminToken, getAdminToken, se
 import OverviewTab from "./_components/OverviewTab";
 import FinanceTab from "./_components/FinanceTab";
 import UsersTab from "./_components/UsersTab";
+import TrafficTab from "./_components/TrafficTab";
+import BusinessTab from "./_components/BusinessTab";
 
 // Trang quản trị toàn app (/administrator). 3 loại tài khoản tách biệt: chỉ tài khoản role ADMIN (tài khoản riêng,
 // tạo bằng backend/scripts/createAdmin.js) đăng nhập được ở đây; tài khoản học viên/giáo viên không vào được, và
 // tài khoản ADMIN không vào được /dashboard hay /teacher. Phiên admin tách khỏi phiên userId của lib/session.ts.
 // Xem backend/src/routes/admin.routes.js.
 
-type Tab = "OVERVIEW" | "FINANCE" | "USERS";
+type Tab = "OVERVIEW" | "BUSINESS" | "TRAFFIC" | "FINANCE" | "USERS";
 const TABS: { id: Tab; label: string; description: string }[] = [
   { id: "OVERVIEW", label: "Tổng quan", description: "Số liệu toàn hệ thống" },
+  { id: "BUSINESS", label: "Sức khoẻ kinh doanh", description: "Doanh thu, người dùng hoạt động, chuyển đổi, giữ chân và mức dùng tính năng" },
+  { id: "TRAFFIC", label: "Lượt truy cập", description: "Khách, phiên, nguồn truy cập và trang được xem trên website" },
   { id: "FINANCE", label: "Thu chi & lợi nhuận", description: "Sổ thu chi nhập tay, lợi nhuận theo tháng" },
   { id: "USERS", label: "Người dùng", description: "Tài khoản học viên, giáo viên" },
 ];
@@ -122,6 +126,8 @@ export default function AdministratorPage() {
             <p className="ui-page-subtitle">{active.description}</p>
           </div>
           {tab === "OVERVIEW" && <OverviewTab onAuthLost={onAuthLost} onOpenFinance={() => changeTab("FINANCE")} />}
+          {tab === "BUSINESS" && <BusinessTab onAuthLost={onAuthLost} />}
+          {tab === "TRAFFIC" && <TrafficTab onAuthLost={onAuthLost} />}
           {tab === "FINANCE" && <FinanceTab onAuthLost={onAuthLost} />}
           {tab === "USERS" && <UsersTab onAuthLost={onAuthLost} />}
         </main>

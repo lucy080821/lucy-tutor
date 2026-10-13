@@ -48,6 +48,7 @@ const blogCommentRoutes = require('./routes/blogComments.routes');
 const adminRoutes = require('./routes/admin.routes');
 const passwordResetRoutes = require('./routes/passwordReset.routes');
 const freeToolsRoutes = require('./routes/freeTools.routes');
+const trackRoutes = require('./routes/track.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
@@ -77,6 +78,7 @@ app.use('/api/blog-comments', blogCommentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/free-tools', freeToolsRoutes);
+app.use('/api/track', trackRoutes);
 
 // Every route in this app returns JSON errors as { error: '...' } — but multer's fileFilter/
 // limits errors (bad file type, file too large) and malformed-JSON body-parser errors are

@@ -82,6 +82,9 @@ router.post('/login', async (req, res) => {
 
 router.use(requireAdmin);
 
+// Lượt truy cập + sức khoẻ kinh doanh (xem adminAnalytics.routes.js)
+router.use('/analytics', require('./adminAnalytics.routes'));
+
 router.get('/me', async (req, res) => {
   try {
     const user = await prisma.user.findUnique({ where: { id: req.admin.uid }, select: { email: true, name: true } });

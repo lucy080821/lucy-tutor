@@ -1072,3 +1072,29 @@ model AdminTransaction {
 
   @@index([date])
 }
+
+// Lượt xem trang tự ghi (thay cho Google Analytics) — nuôi tab "Lượt truy cập" + "Sức khoẻ kinh doanh" ở /administrator.
+// Không lưu IP; visitorId/sessionId là mã ngẫu nhiên phía trình duyệt (localStorage/sessionStorage), id do client sinh
+// để beacon "rời trang" cập nhật được durationSec. Ghi theo lô (routes/track.routes.js), tự xoá dòng cũ hơn 400 ngày.
+model PageView {
+  id           String   @id // uuid do client sinh
+  createdAt    DateTime @default(now())
+  path         String // chỉ pathname, không query
+  visitorId    String
+  sessionId    String
+  isEntry      Boolean  @default(false) // trang đầu tiên của phiên (landing page)
+  userId       String? // đã đăng nhập (STUDENT/TEACHER) — không FK để xoá tài khoản không vướng
+  role         String   @default("ANON") // ANON | STUDENT | TEACHER
+  referrerHost String? // host trang trước (khác lucytutor.online)
+  utmSource    String?
+  utmMedium    String?
+  utmCampaign  String?
+  device       String   @default("desktop") // mobile | tablet | desktop
+  browser      String?
+  durationSec  Int? // thời gian xem thật (tab đang hiện), cập nhật khi rời trang
+
+  @@index([createdAt])
+  @@index([visitorId])
+  @@index([sessionId])
+  @@index([userId, createdAt])
+}
