@@ -198,14 +198,18 @@ export default function Home() {
               </Link>
             </div>
             {/* Link nội bộ tới các công cụ miễn phí ngay trong hero (anchor text = từ khoá của từng trang) */}
-            <nav aria-label="Công cụ học tiếng Anh miễn phí" className="lp-enter text-sm text-muted" style={d(350)}>
-              <span className="font-semibold text-foreground">Dùng ngay miễn phí, không cần đăng nhập: </span>
-              {FREE_TOOLS.map((t, i) => (
-                <span key={t.href}>
-                  {i > 0 && <span aria-hidden="true"> · </span>}
-                  <Link href={t.href} className="text-primary underline-offset-2 hover:underline">{t.title}</Link>
-                </span>
-              ))}
+            <nav aria-label="Công cụ học tiếng Anh miễn phí" className="lp-enter" style={d(350)}>
+              <p className="text-sm font-semibold text-foreground mb-2">Dùng ngay miễn phí, không cần đăng nhập:</p>
+              <ul className="flex flex-wrap justify-center lg:justify-start gap-2">
+                {FREE_TOOLS.map((t) => (
+                  <li key={t.href}>
+                    <Link href={t.href} className="ui-chip px-3.5 py-1.5 text-[13px] text-primary hover:bg-primary-soft">
+                      {t.title}
+                      <span aria-hidden="true" className="text-muted">→</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </nav>
             {/* Trial callout — ưu đãi thật, không phải số liệu dàn dựng */}
             <p className="lp-enter flex flex-wrap items-center justify-center lg:justify-start gap-2 text-sm text-muted" style={d(400)}>
