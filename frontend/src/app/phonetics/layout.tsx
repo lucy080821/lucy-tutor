@@ -6,7 +6,7 @@ import { ToolJsonLd } from "@/components/tools/ToolPage";
 const PATH = "/phonetics";
 const TITLE = "Bảng Phiên Âm IPA Tiếng Anh 44 Âm và Cách Đọc";
 const DESCRIPTION =
-  "Bảng phiên âm IPA tiếng Anh đầy đủ 44 âm theo bố cục Adrian Underhill: bấm để nghe từng âm, xem cách đặt miệng lưỡi, so sánh với âm tiếng Việt và phân biệt âm hữu thanh, vô thanh. Miễn phí, không cần đăng nhập.";
+  "Bảng phiên âm IPA tiếng Anh 44 âm theo bố cục Adrian Underhill: bấm nghe từng âm, xem cách đặt miệng lưỡi, phân biệt âm hữu thanh, vô thanh. Miễn phí.";
 
 export const metadata = pageMetadata({
   title: TITLE,

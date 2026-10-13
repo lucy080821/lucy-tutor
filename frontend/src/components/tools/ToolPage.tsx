@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import Link from "next/link";
 import { SITE_URL, SITE_NAME } from "@/lib/seo";
 import { FREE_TOOLS } from "@/lib/freeTools";
@@ -16,8 +16,10 @@ const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 /** Banner đầu trang kiểu landing page: tiêu đề lớn bên trái, ảnh người (tách nền) cỡ lớn bên phải đứng trên
  *  vòng tròn navy + 2 thẻ nổi nêu điểm chính. Trên mobile ảnh xếp dưới chữ. Hiệu ứng vào trang dùng lại class
  *  lp-* của trang chủ (CSS thuần, tự tắt khi người dùng bật "giảm chuyển động"). */
-export function ToolBanner({ crumbs, title, subtitle, photo, highlights, cta = "Dùng ngay miễn phí" }: {
+export function ToolBanner({ crumbs, title, subtitle, photo, highlights, cta = "Dùng ngay miễn phí", actions }: {
   crumbs: Crumb[]; title: string; subtitle: string; photo: Photo; highlights: [string, string]; cta?: string;
+  /** Thay nút CTA mặc định bằng nhóm nút riêng (vd nút tải PDF ngay đầu trang) */
+  actions?: ReactNode;
 }) {
   return (
     <section className="relative overflow-hidden bg-primary-soft border-b border-line">
@@ -43,7 +45,9 @@ export function ToolBanner({ crumbs, title, subtitle, photo, highlights, cta = "
           </p>
           <h1 className="lp-enter mt-3 text-3xl sm:text-4xl lg:text-[2.75rem] font-extrabold tracking-tight leading-tight text-primary" style={d(100)}>{title}</h1>
           <p className="lp-enter mt-4 text-base sm:text-lg text-muted leading-relaxed max-w-xl" style={d(200)}>{subtitle}</p>
-          <a href="#bat-dau" className="lp-enter btn-primary lp-shine mt-6 px-7 py-3.5 text-base" style={d(300)}>{cta}</a>
+          {actions
+            ? <div className="lp-enter mt-6" style={d(300)}>{actions}</div>
+            : <a href="#bat-dau" className="lp-enter btn-primary lp-shine mt-6 px-7 py-3.5 text-base" style={d(300)}>{cta}</a>}
         </div>
 
         <div className="relative h-[300px] sm:h-[360px] md:h-[440px]">
@@ -141,8 +145,10 @@ export function ToolCta({ text }: { text: string }) {
   );
 }
 
-export function RelatedTools({ current }: { current: string }) {
-  const tools = FREE_TOOLS.filter((t) => t.href !== current);
+/** `featured`: công cụ liên quan trực tiếp tới trang hiện tại — xếp lên đầu danh sách. */
+export function RelatedTools({ current, featured = [] }: { current: string; featured?: string[] }) {
+  const rank = (href: string) => { const i = featured.indexOf(href); return i < 0 ? featured.length : i; };
+  const tools = FREE_TOOLS.filter((t) => t.href !== current).sort((a, b) => rank(a.href) - rank(b.href));
   return (
     <section aria-labelledby="related-tools" className="mt-12">
       <h2 id="related-tools" className="ui-section-title text-xl mb-5">Công cụ miễn phí khác</h2>
@@ -163,3 +169,22 @@ export function RelatedTools({ current }: { current: string }) {
   );
 }
 
+
+/** Link nội bộ theo ngữ cảnh giữa các trang công cụ liên quan (anchor text mô tả rõ trang đích). */
+export function ToolNextSteps({ title = "Học tiếp với công cụ liên quan", links }: {
+  title?: string; links: { href: string; label: string; text: string }[];
+}) {
+  return (
+    <section aria-labelledby="tool-next" className="mt-12 ui-card p-5 sm:p-6">
+      <h2 id="tool-next" className="ui-section-title text-xl mb-4">{title}</h2>
+      <ul className="space-y-3">
+        {links.map((l) => (
+          <li key={l.href} className="text-foreground/90 leading-relaxed">
+            <Link href={l.href} className="font-bold text-primary underline-offset-2 hover:underline">{l.label}</Link>
+            <span className="text-muted"> — {l.text}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}

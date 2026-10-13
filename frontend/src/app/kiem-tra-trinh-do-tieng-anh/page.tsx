@@ -1,15 +1,17 @@
 import { pageMetadata } from "@/lib/seo";
-import { ToolBanner, ToolJsonLd, ToolFaq, ToolCta, RelatedTools, type Faq } from "@/components/tools/ToolPage";
+import { ToolBanner, ToolJsonLd, ToolFaq, ToolCta, RelatedTools, ToolNextSteps, type Faq } from "@/components/tools/ToolPage";
 import { PHOTOS } from "@/lib/photos";
 import PlacementTest from "@/components/tools/PlacementTest";
 
 // Từ khoá chính: "kiểm tra trình độ tiếng anh online miễn phí"
 // Từ khoá phụ: test trình độ tiếng anh online, test trình độ tiếng anh a1 a2 b1 b2, kiểm tra trình độ tiếng anh cefr,
 // test trình độ tiếng anh đầu vào, kiểm tra trình độ tiếng anh cho người mất gốc, trình độ tiếng anh hiện tại
+// Search Console 10/2026: top 4 nhưng 0 click → title/description nêu rõ miễn phí, 15 phút, có kết quả ngay, CEFR.
+// Có lượt hiển thị từ nước ngoài → thêm từ khoá + mục giới thiệu tiếng Anh (free english level test, cefr)
 const PATH = "/kiem-tra-trinh-do-tieng-anh";
-const TITLE = "Kiểm Tra Trình Độ Tiếng Anh Online Miễn Phí (CEFR A1–C1)";
+const TITLE = "Kiểm Tra Trình Độ Tiếng Anh Miễn Phí 15 Phút (CEFR)";
 const DESCRIPTION =
-  "Test trình độ tiếng Anh online miễn phí, không cần đăng nhập: 30 câu ngữ pháp, từ vựng, đọc hiểu, khoảng 15 phút. Biết ngay trình độ CEFR A1, A2, B1, B2, C1 kèm đáp án và gợi ý ôn tập.";
+  "Test trình độ tiếng Anh online miễn phí, không cần đăng nhập: 30 câu trong 15 phút, có kết quả ngay theo CEFR A1–C1 kèm đáp án giải thích từng câu.";
 
 export const metadata = pageMetadata({
   title: TITLE,
@@ -20,6 +22,7 @@ export const metadata = pageMetadata({
     "kiểm tra trình độ tiếng anh", "kiểm tra trình độ tiếng anh online miễn phí", "test trình độ tiếng anh online",
     "test trình độ tiếng anh miễn phí", "test trình độ tiếng anh a1 a2 b1 b2", "kiểm tra trình độ tiếng anh cefr",
     "test trình độ tiếng anh đầu vào", "kiểm tra trình độ tiếng anh cho người mất gốc", "trình độ tiếng anh của bạn",
+    "free english level test", "english placement test cefr", "cefr english test online free",
   ],
 });
 
@@ -37,8 +40,8 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-background">
       <ToolJsonLd name={TITLE} path={PATH} description={DESCRIPTION} crumbs={CRUMBS} faqs={FAQS} image={PHOTOS.placement} />
-      <ToolBanner crumbs={CRUMBS} title="Kiểm Tra Trình Độ Tiếng Anh Online Miễn Phí"
-        subtitle="30 câu, khoảng 15 phút — biết ngay trình độ CEFR A1–C1 của bạn, kèm đáp án và giải thích."
+      <ToolBanner crumbs={CRUMBS} title="Kiểm Tra Trình Độ Tiếng Anh Online Miễn Phí (CEFR)"
+        subtitle="30 câu, khoảng 15 phút — có kết quả ngay theo khung CEFR A1–C1, kèm đáp án và giải thích. Không cần đăng nhập."
         photo={PHOTOS.placement} highlights={["30 câu · khoảng 15 phút", "Biết ngay trình độ A1–C1"]} cta="Làm bài kiểm tra ngay" />
 
       <div id="bat-dau" className="max-w-5xl mx-auto px-4 py-6 sm:py-8 scroll-mt-16">
@@ -71,9 +74,27 @@ export default function Page() {
           </p>
         </section>
 
+          <section lang="en" aria-labelledby="english-level-test" className="pt-4 space-y-3">
+            <h2 id="english-level-test" className="ui-section-title text-xl">Free English Level Test (CEFR A1–C1)</h2>
+            <p>
+              Take a free online English placement test in about 15 minutes — no sign-up required. The test has 30
+              questions on grammar, vocabulary and reading, six for each CEFR level from A1 to C1. You get your result
+              instantly, with the correct answer and an explanation for every question (explanations are in Vietnamese).
+            </p>
+            <p>
+              You reach a level when you answer at least 4 of its 6 questions correctly and have passed every lower level.
+              The result is an estimate for study planning, not an official certificate.
+            </p>
+          </section>
+
+        <ToolNextSteps links={[
+          { href: "/cham-writing-mien-phi", label: "Chấm IELTS Writing miễn phí bằng AI", text: "biết trình độ rồi, thử viết 1 bài để AI ước tính band và sửa lỗi từng câu." },
+          { href: "/ielts-band-calculator", label: "IELTS Band Calculator", text: "quy đổi số câu đúng Listening, Reading /40 ra band và tính điểm Overall." },
+          { href: "/bang-dong-tu-bat-quy-tac", label: "Bảng động từ bất quy tắc", text: "ôn lại V2, V3 nếu bạn sai nhiều câu thì quá khứ, hoàn thành." },
+        ]} />
         <ToolFaq faqs={FAQS} />
         <ToolCta text="Lucy Tutor có bài luyện Reading, Listening, Writing, Speaking theo từng cấp A1–C1 và AI chấm chi tiết." />
-        <RelatedTools current={PATH} />
+        <RelatedTools current={PATH} featured={["/cham-writing-mien-phi", "/ielts-band-calculator"]} />
       </div>
     </div>
   );

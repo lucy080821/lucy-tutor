@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { baseOpenGraph } from "@/lib/seo";
+import BreadcrumbJsonLd from "@/components/seo/BreadcrumbJsonLd";
 
 export const metadata: Metadata = {
   title: "Đăng nhập / Đăng ký",
@@ -15,5 +16,10 @@ export const metadata: Metadata = {
 };
 
 export default function Layout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <BreadcrumbJsonLd items={[{ name: "Đăng nhập / Đăng ký", href: "/auth" }]} />
+      {children}
+    </>
+  );
 }

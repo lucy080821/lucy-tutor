@@ -10,9 +10,9 @@ import { IRREGULAR_VERBS } from "@/lib/tools/irregularVerbs";
 const PATH = "/bang-dong-tu-bat-quy-tac";
 const TOTAL = IRREGULAR_VERBS.length;
 const COMMON = IRREGULAR_VERBS.filter((v) => v.common).length;
-const TITLE = `Bảng Động Từ Bất Quy Tắc Tiếng Anh Thông Dụng (V1 V2 V3) – Tải PDF`;
+const TITLE = `Bảng Động Từ Bất Quy Tắc V1 V2 V3 – Tải PDF`;
 const DESCRIPTION =
-  `Bảng ${TOTAL} động từ bất quy tắc tiếng Anh thông dụng đầy đủ V1, V2, V3 và nghĩa tiếng Việt: tra cứu nhanh, nghe phát âm, luyện tập và tải bảng động từ bất quy tắc PDF miễn phí.`;
+  `Bảng ${TOTAL} động từ bất quy tắc tiếng Anh thông dụng đủ V1, V2, V3 kèm nghĩa tiếng Việt: tra cứu nhanh, nghe phát âm, luyện tập và tải PDF miễn phí.`;
 
 export const metadata = pageMetadata({
   title: TITLE,

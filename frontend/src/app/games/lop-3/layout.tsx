@@ -7,7 +7,7 @@ import { ToolJsonLd } from "@/components/tools/ToolPage";
 const PATH = "/games/lop-3";
 const TITLE = "Trò Chơi Tiếng Anh Lớp 3 Miễn Phí – Global Success";
 const DESCRIPTION =
-  "5 trò chơi tiếng Anh lớp 3 miễn phí theo sách Global Success (Starter đến Unit 9): lật thẻ ghép cặp, ong đánh vần, xếp câu, đua với thời gian, nghe và chọn. Vừa học vừa chơi, không cần đăng nhập.";
+  "5 trò chơi tiếng Anh lớp 3 miễn phí theo sách Global Success (Starter–Unit 9): lật thẻ, đánh vần, xếp câu, đua giờ, nghe và chọn. Không cần đăng nhập.";
 
 export const metadata = pageMetadata({
   title: TITLE,

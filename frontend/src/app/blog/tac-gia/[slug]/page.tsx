@@ -5,6 +5,7 @@ import BlogListView from "@/components/blog/BlogListView";
 import AuthorAvatar from "@/components/blog/AuthorAvatar";
 import { baseOpenGraph, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { authorAvatarUrl, authorHref, blogFetch, type BlogAuthor } from "@/lib/blog";
+import BreadcrumbJsonLd from "@/components/seo/BreadcrumbJsonLd";
 
 type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<{ page?: string }>;
@@ -55,6 +56,7 @@ export default async function BlogAuthorPage({ params, searchParams }: { params:
   return (
     <div className="flex-1">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(personLd).replace(/</g, "\\u003c") }} />
+      <BreadcrumbJsonLd items={[{ name: "Blog", href: "/blog" }, { name: author.name, href: authorHref(slug) }]} />
       <BlogBanner
         crumbs={[{ label: "Blog", href: "/blog" }, { label: "Tác giả" }, { label: author.name }]}
         title={author.name}

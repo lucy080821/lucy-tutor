@@ -4,6 +4,7 @@ import BlogBanner from "@/components/blog/BlogBanner";
 import BlogListView from "@/components/blog/BlogListView";
 import { baseOpenGraph } from "@/lib/seo";
 import { categoryHref } from "@/lib/blog";
+import BreadcrumbJsonLd from "@/components/seo/BreadcrumbJsonLd";
 
 type SearchParams = Promise<{ category?: string; tag?: string; q?: string; page?: string }>;
 
@@ -12,7 +13,7 @@ const DESCRIPTION =
 
 export async function generateMetadata({ searchParams }: { searchParams: SearchParams }): Promise<Metadata> {
   const { tag, q, page } = await searchParams;
-  const title = tag ? `#${tag} — Blog` : "Blog";
+  const title = tag ? `#${tag} — Blog` : "Blog Học Tiếng Anh, Luyện Thi THPT & IELTS";
   return {
     title,
     description: DESCRIPTION,
@@ -30,6 +31,7 @@ export default async function BlogPage({ searchParams }: { searchParams: SearchP
 
   return (
     <div className="flex-1">
+      <BreadcrumbJsonLd items={[{ name: "Blog", href: "/blog" }]} />
       <BlogBanner
         crumbs={[{ label: "Blog" }]}
         title={tag ? `#${tag}` : "Blog Lucy Tutor"}

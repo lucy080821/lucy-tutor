@@ -7,12 +7,15 @@ import { SITE_URL, SITE_NAME, SITE_DESCRIPTION, baseOpenGraph } from "@/lib/seo"
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Lucy Tutor | Luyện thi Tiếng Anh THPT Quốc Gia & IELTS",
+    // Trang chủ: từ khoá chính "học tiếng Anh online miễn phí" (< 60 ký tự)
+    default: "Học Tiếng Anh Online Miễn Phí cùng AI | Lucy Tutor",
     template: "%s | Lucy Tutor",
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   keywords: [
+    "học tiếng anh online miễn phí",
+    "học tiếng anh online cùng AI",
     "luyện thi tiếng Anh THPT Quốc Gia",
     "đề thi thử tiếng Anh THPT",
     "luyện thi IELTS",
@@ -32,12 +35,12 @@ export const metadata: Metadata = {
   openGraph: {
     ...baseOpenGraph,
     url: "/",
-    title: "Lucy Tutor | Luyện thi Tiếng Anh THPT Quốc Gia & IELTS",
+    title: "Học Tiếng Anh Online Miễn Phí cùng AI | Lucy Tutor",
     description: SITE_DESCRIPTION,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Lucy Tutor | Luyện thi Tiếng Anh THPT Quốc Gia & IELTS",
+    title: "Học Tiếng Anh Online Miễn Phí cùng AI | Lucy Tutor",
     description: SITE_DESCRIPTION,
   },
   robots: {
@@ -115,7 +118,7 @@ export default function RootLayout({
                 <Link href="/#lien-he" className="text-[13px] sm:text-sm font-bold text-foreground hover:text-primary transition-colors px-1 sm:px-2 py-2">Liên hệ</Link>
               </nav>
               <p className="hidden lg:block text-sm text-muted font-semibold border-l-[3px] border-primary pl-3 py-0.5">
-                "Học tập không ngừng, vươn tới thành công"
+                &ldquo;Học tập không ngừng, vươn tới thành công&rdquo;
               </p>
             </div>
           </div>

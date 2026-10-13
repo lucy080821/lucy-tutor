@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { pageMetadata } from "@/lib/seo";
-import { ToolBanner, ToolJsonLd, ToolFaq, ToolCta, RelatedTools, type Faq } from "@/components/tools/ToolPage";
-import FlashcardViewer from "@/components/tools/FlashcardViewer";
+import { ToolBanner, ToolJsonLd, ToolFaq, ToolCta, RelatedTools, ToolNextSteps, type Faq } from "@/components/tools/ToolPage";
+import FlashcardViewer, { FlashcardPdfButton } from "@/components/tools/FlashcardViewer";
 import { GRADE_NUMBERS, UPDATING_TEXT, getFlashGrade, gradeSlug, gradeWordCount, readyUnits } from "@/lib/tools/flashcards";
 import { PHOTOS } from "@/lib/photos";
 
-// Từ khoá chính mỗi trang: "flashcard tiếng anh lớp N global success"
-// Từ khoá phụ: flashcard tiếng anh lớp N global success pdf, từ vựng tiếng anh lớp N, từ vựng tiếng anh lớp N theo unit
+// Từ khoá chính mỗi trang: "flashcard global success N pdf" (Search Console 10/2026: "flashcard global success 1 pdf")
+// Từ khoá phụ: flashcard tiếng anh lớp N global success (pdf), từ vựng tiếng anh lớp N, từ vựng tiếng anh lớp N theo unit
 type Params = Promise<{ lop: string }>;
 const HUB = "/flashcard-tieng-anh";
 
@@ -23,14 +23,16 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   const g = await getFlashGrade(lop);
   if (!g) return {};
   const words = gradeWordCount(g);
+  const units = readyUnits(g).length;
   const meta = pageMetadata({
-    title: `Flashcard Tiếng Anh Lớp ${g.grade} Global Success (PDF) – Từ Vựng Theo Unit`,
+    title: `Flashcard Global Success ${g.grade} PDF – Tải Miễn Phí`,
     description: words
-      ? `Flashcard tiếng Anh lớp ${g.grade} Global Success: ${words} thẻ từ vựng theo Unit, có phiên âm và câu ví dụ, lật thẻ online, nghe phát âm và tải PDF miễn phí để in.`
-      : `Flashcard tiếng Anh lớp ${g.grade} Global Success theo từng Unit — từ vựng đang được cập nhật.`,
+      ? `Tải miễn phí flashcard Global Success ${g.grade} PDF (tiếng Anh lớp ${g.grade}): ${words} thẻ từ vựng theo ${units} Unit, có phiên âm, lật thẻ online và in 12 thẻ/trang A4.`
+      : `Flashcard Global Success ${g.grade} PDF (tiếng Anh lớp ${g.grade}) theo từng Unit — từ vựng đang được cập nhật, tải miễn phí khi có.`,
     path: `${HUB}/${g.slug}`,
     image: PHOTOS.flashcard,
     keywords: [
+      `flashcard global success ${g.grade} pdf`, `flashcard global success ${g.grade}`,
       `flashcard tiếng anh lớp ${g.grade}`, `flashcard tiếng anh lớp ${g.grade} global success`,
       `flashcard tiếng anh ${g.grade} global success pdf`, `từ vựng tiếng anh lớp ${g.grade}`,
       `từ vựng tiếng anh lớp ${g.grade} theo unit`, `từ vựng tiếng anh ${g.grade} global success`,
@@ -49,7 +51,7 @@ export default async function Page({ params }: { params: Params }) {
   const ready = readyUnits(g);
   const path = `${HUB}/${g.slug}`;
   const crumbs = [{ name: "Flashcard tiếng Anh", href: HUB }, { name: `Lớp ${g.grade}`, href: path }];
-  const title = `Flashcard Tiếng Anh Lớp ${g.grade} Global Success`;
+  const title = `Flashcard Global Success ${g.grade} PDF – Tiếng Anh Lớp ${g.grade}`;
   const description = words
     ? `${words} thẻ từ vựng tiếng Anh lớp ${g.grade} theo ${ready.length} Unit sách Global Success, tải PDF miễn phí.`
     : `Flashcard tiếng Anh lớp ${g.grade} Global Success theo Unit — ${UPDATING_TEXT}`;
@@ -60,6 +62,7 @@ export default async function Page({ params }: { params: Params }) {
         ? `Hiện đã có ${ready.length}/${g.units.length} Unit: ${ready.map((u) => `${u.label} ${u.title}`).join("; ")}. Các Unit còn lại đang được cập nhật.`
         : `Từ vựng lớp ${g.grade} đang được cập nhật. Hệ thống tự kiểm tra mỗi ngày và bổ sung ngay khi có Unit mới.`,
     },
+    { q: `Tải flashcard Global Success ${g.grade} PDF ở đâu?`, a: `Bấm "Tải PDF lớp ${g.grade} miễn phí" ở đầu trang để tải toàn bộ các Unit đã có, không cần đăng nhập. File in trên giấy A4, mỗi trang 12 thẻ.` },
     { q: "Có tải PDF từng Unit được không?", a: "Có. Chọn Unit rồi bấm \"Tải PDF\" để tải riêng Unit đó, hoặc bấm \"Tải PDF cả lớp\" để tải toàn bộ các Unit đã có. Mỗi trang A4 có 12 thẻ kiểu gấp đôi." },
     { q: "Từ vựng lấy từ đâu?", a: "Từ vựng do giáo viên Lucy Tutor soạn cho từng Unit sách Global Success trong bài học trên lớp, kèm phiên âm và câu ví dụ. Hệ thống tự kiểm tra mỗi cuối ngày và cập nhật thêm Unit mới." },
   ];
@@ -69,7 +72,13 @@ export default async function Page({ params }: { params: Params }) {
       <ToolJsonLd name={title} path={path} description={description} crumbs={crumbs} faqs={faqs} image={PHOTOS.flashcard} />
       <ToolBanner crumbs={crumbs} title={title}
         subtitle={words ? `${words} thẻ từ vựng theo Unit — lật thẻ, nghe phát âm và tải PDF để in.` : UPDATING_TEXT}
-        photo={PHOTOS.flashcard} highlights={[words ? `${ready.length}/${g.units.length} Unit · ${words} thẻ` : UPDATING_TEXT, "Tải PDF miễn phí"]} cta="Học flashcard ngay" />
+        photo={PHOTOS.flashcard} highlights={[words ? `${ready.length}/${g.units.length} Unit · ${words} thẻ` : UPDATING_TEXT, "Tải PDF miễn phí"]}
+        actions={words ? (
+          <div className="flex flex-col sm:flex-row gap-3">
+            <FlashcardPdfButton grade={g.grade} />
+            <a href="#bat-dau" className="btn-outline bg-white px-6 py-3.5 text-base text-center">Học flashcard online</a>
+          </div>
+        ) : undefined} cta="Xem các Unit" />
 
       <div id="bat-dau" className="max-w-5xl mx-auto px-4 py-6 sm:py-8 scroll-mt-16">
         <nav aria-label="Chọn lớp khác" className="flex flex-wrap gap-2 mb-6">
@@ -118,9 +127,15 @@ export default async function Page({ params }: { params: Params }) {
           </p>
         </section>
 
+        <ToolNextSteps links={[
+          { href: "/cach-phat-am-ed-s-es", label: "Cách phát âm đuôi s, es, ed", text: "đọc đúng âm cuối khi học từ số nhiều và động từ quá khứ trong flashcard." },
+          { href: "/phonetics", label: "Bảng phiên âm IPA 44 âm", text: "bấm nghe từng âm để đọc được phiên âm in trên thẻ." },
+          { href: "/bang-dong-tu-bat-quy-tac", label: "Bảng động từ bất quy tắc", text: "V1 – V2 – V3 kèm nghĩa, tải PDF để học cùng flashcard." },
+          ...(g.grade === 3 ? [{ href: "/games/lop-3", label: "Trò chơi tiếng Anh lớp 3", text: "ôn lại đúng từ vựng Global Success 3 bằng 5 trò chơi." }] : []),
+        ]} />
         <ToolFaq faqs={faqs} />
         <ToolCta text="Ôn từ vựng theo lịch SM-2, luyện phát âm cùng AI và chơi trò chơi ôn bài ngay trên điện thoại." />
-        <RelatedTools current={HUB} />
+        <RelatedTools current={HUB} featured={["/cach-phat-am-ed-s-es", "/phonetics", "/bang-dong-tu-bat-quy-tac"]} />
       </div>
     </div>
   );

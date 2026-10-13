@@ -1,15 +1,15 @@
 import { pageMetadata } from "@/lib/seo";
-import { ToolBanner, ToolJsonLd, ToolFaq, ToolCta, RelatedTools, type Faq } from "@/components/tools/ToolPage";
+import { ToolBanner, ToolJsonLd, ToolFaq, ToolCta, RelatedTools, ToolNextSteps, type Faq } from "@/components/tools/ToolPage";
 import { PHOTOS } from "@/lib/photos";
 import FreeWritingChecker from "@/components/tools/FreeWritingChecker";
 
-// Từ khoá chính: "chấm điểm writing online free" / "chấm ielts writing ai"
+// Từ khoá chính: "chấm IELTS Writing miễn phí bằng AI" (+ "chấm điểm writing online free" / "chấm ielts writing ai")
 // Từ khoá phụ: chấm ielts writing task 2, chấm ielts writing task 1, chấm điểm writing ielts free,
 // chấm writing online miễn phí, chấm bài writing tiếng anh, sửa bài writing ielts, chấm điểm writing free
 const PATH = "/cham-writing-mien-phi";
-const TITLE = "Chấm Điểm IELTS Writing Online Free Bằng AI (Task 1, Task 2)";
+const TITLE = "Chấm IELTS Writing Miễn Phí Bằng AI";
 const DESCRIPTION =
-  "Chấm IELTS Writing Task 1, Task 2 và đoạn văn tiếng Anh miễn phí bằng AI, không cần đăng nhập. Ước tính band theo 4 tiêu chí IELTS, chỉ ra lỗi sai từng câu kèm bản sửa và gợi ý tăng điểm.";
+  "Chấm IELTS Writing miễn phí bằng AI cho Task 1, Task 2 và đoạn văn, không cần đăng nhập: ước tính band theo 4 tiêu chí, sửa lỗi từng câu và gợi ý tăng điểm.";
 
 export const metadata = pageMetadata({
   title: TITLE,
@@ -17,7 +17,7 @@ export const metadata = pageMetadata({
   path: PATH,
   image: PHOTOS.writing,
   keywords: [
-    "chấm điểm writing online free", "chấm ielts writing ai", "chấm ielts writing task 2", "chấm ielts writing task 1",
+    "chấm ielts writing miễn phí bằng ai", "chấm ielts writing miễn phí", "chấm điểm writing online free", "chấm ielts writing ai", "chấm ielts writing task 2", "chấm ielts writing task 1",
     "chấm điểm writing ielts free", "chấm writing online miễn phí", "chấm bài writing tiếng anh", "sửa bài writing ielts",
     "chấm ielts writing free", "chấm điểm writing",
   ],
@@ -37,7 +37,7 @@ export default function Page() {
   return (
     <div className="min-h-screen bg-background">
       <ToolJsonLd name={TITLE} path={PATH} description={DESCRIPTION} crumbs={CRUMBS} faqs={FAQS} image={PHOTOS.writing} />
-      <ToolBanner crumbs={CRUMBS} title="Chấm Writing Miễn Phí Bằng AI"
+      <ToolBanner crumbs={CRUMBS} title="Chấm IELTS Writing Miễn Phí Bằng AI – Task 1 & Task 2"
         subtitle="Dán bài IELTS Task 1, Task 2 hoặc đoạn văn tiếng Anh — AI ước tính band theo 4 tiêu chí và sửa lỗi từng câu."
         photo={PHOTOS.writing} highlights={["Chấm theo 4 tiêu chí IELTS", "Sửa lỗi từng câu"]} cta="Chấm bài ngay" />
 
@@ -67,9 +67,14 @@ export default function Page() {
           </div>
         </section>
 
+        <ToolNextSteps links={[
+          { href: "/ielts-band-calculator", label: "IELTS Band Calculator", text: "ghép band Writing vừa chấm với điểm Listening, Reading /40 để tính band Overall." },
+          { href: "/kiem-tra-trinh-do-tieng-anh", label: "Kiểm tra trình độ tiếng Anh miễn phí", text: "30 câu, 15 phút, biết ngay trình độ CEFR A1–C1." },
+          { href: "/bang-dong-tu-bat-quy-tac", label: "Bảng động từ bất quy tắc", text: "sửa nhanh lỗi chia V2, V3 hay gặp trong bài viết." },
+        ]} />
         <ToolFaq faqs={FAQS} />
         <ToolCta text="Học viên được AI ra đề theo cấp độ A1–C1, chấm chi tiết không giới hạn lượt và lưu lịch sử bài viết." />
-        <RelatedTools current={PATH} />
+        <RelatedTools current={PATH} featured={["/ielts-band-calculator", "/kiem-tra-trinh-do-tieng-anh"]} />
       </div>
     </div>
   );

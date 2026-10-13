@@ -140,7 +140,7 @@ const TEACHER_FEATURES = [
   "Xuất hóa đơn học phí PDF và báo cáo Excel",
   "Soạn đề thi, nhập câu hỏi hàng loạt từ file Excel mẫu",
   "Studio Luyện Nghe: đưa audio và script lên, gán cho lớp hoặc học viên",
-  "Trích xuất đề IELTS Cambridge từ PDF, rà soát rồi giao cho học viên",
+  "Tự soạn đề IELTS đủ 4 kỹ năng, AI chấm band và giao cho học viên",
   "Kiểm soát gian lận khi làm bài: ghi nhận rời tab, copy/paste",
   "Tổng quan doanh thu, tỷ lệ nộp bài và gợi ý theo dữ liệu lớp",
 ];
@@ -180,7 +180,7 @@ export default function Home() {
           <div className="space-y-6 text-center lg:text-left">
             <span className="ui-badge uppercase tracking-wide lp-enter" style={d(0)}>Nền tảng luyện thi Tiếng Anh toàn diện</span>
             <h1 id="hero-title" style={d(100)} className="lp-enter text-4xl sm:text-5xl lg:text-[3.4rem] font-extrabold tracking-tight leading-tight text-primary">
-              Chinh phục Tiếng Anh bằng{" "}
+              Học Tiếng Anh online miễn phí cùng{" "}
               <span className="relative inline-block">
                 <span className="relative z-10">AI thế hệ mới</span>
                 <span aria-hidden="true" className="lp-underline absolute left-0 right-0 bottom-1 h-3 sm:h-4 bg-highlight/40 rounded-sm" />
@@ -197,6 +197,16 @@ export default function Home() {
                 Dành cho Giáo Viên
               </Link>
             </div>
+            {/* Link nội bộ tới các công cụ miễn phí ngay trong hero (anchor text = từ khoá của từng trang) */}
+            <nav aria-label="Công cụ học tiếng Anh miễn phí" className="lp-enter text-sm text-muted" style={d(350)}>
+              <span className="font-semibold text-foreground">Dùng ngay miễn phí, không cần đăng nhập: </span>
+              {FREE_TOOLS.map((t, i) => (
+                <span key={t.href}>
+                  {i > 0 && <span aria-hidden="true"> · </span>}
+                  <Link href={t.href} className="text-primary underline-offset-2 hover:underline">{t.title}</Link>
+                </span>
+              ))}
+            </nav>
             {/* Trial callout — ưu đãi thật, không phải số liệu dàn dựng */}
             <p className="lp-enter flex flex-wrap items-center justify-center lg:justify-start gap-2 text-sm text-muted" style={d(400)}>
               <span className="ui-badge-new">Dùng thử miễn phí 3 ngày</span>

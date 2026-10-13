@@ -13,6 +13,17 @@ export default function JsonLd() {
         url: SITE_URL,
         logo: `${SITE_URL}/logo.png`,
         description: SITE_DESCRIPTION,
+        // Liên hệ thật (giống khối #lien-he trên trang chủ)
+        email: "admin@lucytutor.online",
+        telephone: "+84869603164",
+        contactPoint: {
+          "@type": "ContactPoint",
+          contactType: "customer support",
+          telephone: "+84869603164",
+          email: "admin@lucytutor.online",
+          areaServed: "VN",
+          availableLanguage: ["Vietnamese", "English"],
+        },
       },
       {
         "@type": "WebSite",

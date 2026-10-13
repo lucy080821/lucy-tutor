@@ -2,8 +2,9 @@
 // Domain thật: lucytutor.online. NEXT_PUBLIC_SITE_URL (nếu set) sẽ ghi đè giá trị này.
 export const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || "https://lucytutor.online").replace(/\/+$/, "");
 export const SITE_NAME = "Lucy Tutor";
+// < 160 ký tự (meta description trang chủ)
 export const SITE_DESCRIPTION =
-  "Lucy Tutor – nền tảng luyện thi Tiếng Anh THPT Quốc Gia và IELTS cho học sinh Việt Nam: luyện nghe, đọc, viết, nói cùng AI, đề thi thử, từ vựng SRS và công cụ quản lý lớp học cho giáo viên.";
+  "Học tiếng Anh online miễn phí cùng AI: kiểm tra trình độ, chấm IELTS Writing, flashcard Global Success, luyện thi THPT & IELTS 4 kỹ năng. Dùng thử 3 ngày.";
 
 // openGraph của layout con sẽ ghi đè toàn bộ openGraph của layout cha (merge nông),
 // nên các layout con spread object này để giữ siteName/locale/type.
@@ -19,10 +20,14 @@ export function pageMetadata({ title, description, path, keywords, ogTitle, imag
   /** Ảnh chia sẻ mạng xã hội — bỏ trống thì dùng ảnh OG chung (app/opengraph-image.tsx) */
   image?: { src: string; alt: string; width: number; height: number };
 }) {
-  const fullTitle = ogTitle || `${title} | ${SITE_NAME}`;
+  // Title trên Google nên < 60 ký tự: thêm hậu tố " | Lucy Tutor" (template ở layout gốc) chỉ khi còn đủ chỗ,
+  // ngược lại dùng title tuyệt đối để không bị cắt cụt giữa từ khoá.
+  const withSuffix = `${title} | ${SITE_NAME}`;
+  const fitsSuffix = withSuffix.length < 60;
+  const fullTitle = ogTitle || (fitsSuffix ? withSuffix : title);
   const images = image ? [{ url: image.src, width: image.width, height: image.height, alt: image.alt }] : undefined;
   return {
-    title,
+    title: fitsSuffix ? title : { absolute: title },
     description,
     keywords,
     alternates: { canonical: path },

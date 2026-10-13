@@ -39,6 +39,25 @@ function PrintPage({ grade, unit, cards, page, pages }: { grade: number; unit: F
   );
 }
 
+const PDF_REQUEST_EVENT = "lucy:flashcard-pdf";
+const PDF_STATUS_EVENT = "lucy:flashcard-pdf-status";
+
+/** Nút tải PDF cả lớp đặt trên banner đầu trang (above the fold) — FlashcardViewer cùng trang thực hiện việc xuất. */
+export function FlashcardPdfButton({ grade }: { grade: number }) {
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const onStatus = (e: Event) => setBusy(Boolean((e as CustomEvent<boolean>).detail));
+    window.addEventListener(PDF_STATUS_EVENT, onStatus);
+    return () => window.removeEventListener(PDF_STATUS_EVENT, onStatus);
+  }, []);
+  return (
+    <button type="button" disabled={busy} onClick={() => window.dispatchEvent(new Event(PDF_REQUEST_EVENT))}
+      className="btn-primary lp-shine px-7 py-3.5 text-base disabled:opacity-60">
+      {busy ? "Đang tạo PDF..." : `Tải PDF lớp ${grade} miễn phí`}
+    </button>
+  );
+}
+
 export default function FlashcardViewer({ data }: { data: FlashGrade }) {
   const firstReady = Math.max(0, data.units.findIndex((u) => u.cards.length > 0));
   const readyList = data.units.filter((u) => u.cards.length > 0);
@@ -98,6 +117,16 @@ export default function FlashcardViewer({ data }: { data: FlashGrade }) {
 
   const exportPdf = (units: FlashUnit[]) => { setExporting(true); setPrintUnits(units); };
 
+  // Nút "Tải PDF cả lớp" trên banner đầu trang (FlashcardPdfButton) gọi sang đây qua sự kiện window
+  useEffect(() => {
+    const onRequest = () => { if (!exporting && readyList.length) exportPdf(readyList); };
+    window.addEventListener(PDF_REQUEST_EVENT, onRequest);
+    return () => window.removeEventListener(PDF_REQUEST_EVENT, onRequest);
+  });
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(PDF_STATUS_EVENT, { detail: exporting }));
+  }, [exporting]);
+
   if (!readyList.length) {
     return (
       <div className="ui-card p-8 sm:p-10 text-center">
@@ -109,6 +138,17 @@ export default function FlashcardViewer({ data }: { data: FlashGrade }) {
 
   return (
     <div className="ui-card p-5 sm:p-8">
+      {/* Tải PDF */}
+      <div id="tai-pdf" className="scroll-mt-20 mb-6 pb-6 border-b border-line flex flex-col sm:flex-row sm:items-center gap-3">
+        <p className="text-sm text-muted flex-1">Tải flashcard PDF để in: 12 thẻ mỗi trang A4, cắt rời và gấp đôi là dùng được.</p>
+        <button onClick={() => exportPdf([unit])} disabled={exporting || !card} className="btn-primary px-5 py-2.5 disabled:opacity-50">
+          {exporting ? "Đang tạo PDF..." : `Tải PDF ${unit.label}`}
+        </button>
+        <button onClick={() => exportPdf(readyList)} disabled={exporting} className="btn-outline px-5 py-2.5 disabled:opacity-50">
+          Tải PDF cả lớp {data.grade}
+        </button>
+      </div>
+
       <h2 className="text-lg font-bold text-primary">Chọn Unit</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         {data.units.map((u, i) => (
@@ -156,17 +196,6 @@ export default function FlashcardViewer({ data }: { data: FlashGrade }) {
         <p className="mt-2 text-center text-sm text-muted">Thẻ {pos + 1}/{order.length}</p>
       </div>
       )}
-
-      {/* Tải PDF */}
-      <div className="mt-6 pt-6 border-t border-line flex flex-col sm:flex-row sm:items-center gap-3">
-        <p className="text-sm text-muted flex-1">Tải flashcard PDF để in: 12 thẻ mỗi trang A4, cắt rời và gấp đôi là dùng được.</p>
-        <button onClick={() => exportPdf([unit])} disabled={exporting || !card} className="btn-primary px-5 py-2.5 disabled:opacity-50">
-          {exporting ? "Đang tạo PDF..." : `Tải PDF ${unit.label}`}
-        </button>
-        <button onClick={() => exportPdf(readyList)} disabled={exporting} className="btn-outline px-5 py-2.5 disabled:opacity-50">
-          Tải PDF cả lớp {data.grade}
-        </button>
-      </div>
 
       {printUnits && (
         <div ref={printRef} aria-hidden="true" style={{ position: "fixed", left: -10000, top: 0, pointerEvents: "none" }}>
