@@ -200,10 +200,10 @@ export default function Home() {
             {/* Link nội bộ tới các công cụ miễn phí ngay trong hero (anchor text = từ khoá của từng trang) */}
             <nav aria-label="Công cụ học tiếng Anh miễn phí" className="lp-enter" style={d(350)}>
               <p className="text-sm font-semibold text-foreground mb-2">Dùng ngay miễn phí, không cần đăng nhập:</p>
-              <ul className="flex flex-wrap justify-center lg:justify-start gap-2">
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-w-xl mx-auto lg:mx-0">
                 {FREE_TOOLS.map((t) => (
                   <li key={t.href}>
-                    <Link href={t.href} className="ui-chip px-3.5 py-1.5 text-[13px] text-primary hover:bg-primary-soft">
+                    <Link href={t.href} className="ui-chip w-full justify-between whitespace-normal text-left px-4 py-2 text-[13px] text-primary hover:bg-primary-soft">
                       {t.title}
                       <span aria-hidden="true" className="text-muted">→</span>
                     </Link>
