@@ -42,12 +42,14 @@ async function aggregate(dimension, prevStart, curStart, end) {
   }));
 }
 
-async function buildSeoSummary(days) {
+// endDate (YYYY-MM-DD, tuỳ chọn): kết thúc kỳ sớm hơn — dùng để vẽ lại đúng kỳ của 1 bài phân tích cũ
+async function buildSeoSummary(days, endDate) {
   const latest = await prisma.seoMetric.findFirst({ where: { dimension: 'TOTAL' }, orderBy: { date: 'desc' }, select: { date: true } });
   const sync = getSyncStatus();
   if (!latest) return { configured: sync.configured, sync, hasData: false, days };
 
-  const end = latest.date;
+  const wanted = endDate ? new Date(`${endDate}T00:00:00Z`) : null;
+  const end = wanted && wanted < latest.date ? wanted : latest.date;
   const curStart = addDays(end, -(days - 1));
   const prevStart = addDays(curStart, -days);
   const prevEnd = addDays(curStart, -1);

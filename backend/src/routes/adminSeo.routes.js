@@ -9,7 +9,7 @@ const { buildSeoSummary } = require('../utils/seoSummary');
 const router = express.Router();
 const RANGES = [7, 28, 90];
 
-// Cache 60 giây theo số ngày; xoá khi vừa đồng bộ xong
+// Cache 60 giây theo số ngày + ngày kết thúc; xoá khi vừa đồng bộ xong
 const cache = new Map();
 const sendError = (res, err) => {
   console.error('[admin-seo]', err);
@@ -18,11 +18,14 @@ const sendError = (res, err) => {
 
 router.get('/summary', async (req, res) => {
   const days = RANGES.includes(Number(req.query.days)) ? Number(req.query.days) : 28;
+  // ?end=YYYY-MM-DD: kỳ kết thúc ở ngày đó (biểu đồ của 1 bài phân tích tuần cũ)
+  const end = /^\d{4}-\d{2}-\d{2}$/.test(req.query.end || '') ? req.query.end : undefined;
+  const key = `${days}:${end || ''}`;
   try {
-    const hit = cache.get(days);
+    const hit = cache.get(key);
     if (hit && Date.now() - hit.at < 60_000) return res.json(hit.value);
-    const value = await buildSeoSummary(days);
-    cache.set(days, { at: Date.now(), value });
+    const value = await buildSeoSummary(days, end);
+    cache.set(key, { at: Date.now(), value });
     res.json(value);
   } catch (err) { sendError(res, err); }
 });

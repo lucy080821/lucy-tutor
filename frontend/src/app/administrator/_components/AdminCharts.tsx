@@ -1,6 +1,6 @@
 "use client";
 // Recharts nặng (~100KB gzip) — tách riêng để page.tsx tải lười qua next/dynamic (giống teacher/_components/OverviewCharts.tsx)
-import { Bar, BarChart, CartesianGrid, ComposedChart, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { formatShortVND, formatVND, shortDay } from "@/lib/adminApi";
 
 const tooltipStyle = { borderRadius: "12px", border: "1px solid #eaecef", boxShadow: "0 8px 20px rgba(30,58,138,0.08)", fontSize: "13px" };
@@ -161,6 +161,52 @@ export function SeoMetricChart({ data, metric, label, format }: {
         <Tooltip labelFormatter={(d) => shortDay(String(d))} formatter={(v) => [v === null ? "—" : format(Number(v)), label]} contentStyle={tooltipStyle} />
         <Line dataKey="value" name={label} type="monotone" stroke={NAVY} strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} connectNulls />
       </LineChart>
+    </ResponsiveContainer>
+  );
+}
+
+/** SEO: biểu đồ mini theo ngày trong ô chỉ số (không trục, chỉ tooltip). Vị trí đảo trục: đường đi lên = thứ hạng tốt lên */
+export function SeoSparkline({ id, data, reversed = false, label, format }: {
+  id: string; data: { date: string; value: number | null }[]; reversed?: boolean; label: string; format: (v: number) => string;
+}) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={data} margin={{ top: 4, right: 2, left: 2, bottom: 0 }}>
+        <defs>
+          <linearGradient id={`spark-${id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={NAVY} stopOpacity={0.22} />
+            <stop offset="100%" stopColor={NAVY} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <XAxis dataKey="date" hide />
+        <YAxis hide reversed={reversed} domain={["auto", "auto"]} />
+        <Tooltip labelFormatter={(d) => shortDay(String(d))} formatter={(v) => [v === null || v === undefined ? "—" : format(Number(v)), label]}
+          contentStyle={{ ...tooltipStyle, padding: "4px 8px" }} />
+        <Area dataKey="value" type="monotone" stroke={NAVY} strokeWidth={2} fill={reversed ? "none" : `url(#spark-${id})`}
+          dot={false} activeDot={{ r: 4 }} connectNulls isAnimationActive={false} />
+      </AreaChart>
+    </ResponsiveContainer>
+  );
+}
+
+// Thang 1 màu navy nhạt → đậm: nhóm vị trí càng tốt càng đậm
+const POSITION_RAMP = ["#1E3A8A", "#3556a8", "#5f7fc4", "#93aadb", "#c7d3ee"];
+
+/** SEO: lượt hiển thị chia theo nhóm vị trí (Top 3, 4–10, 11–20, 21–50, > 50) — 1 chuỗi, màu theo thứ hạng */
+export function SeoPositionChart({ data }: { data: { name: string; impressions: number; clicks: number }[] }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={data} margin={{ top: 18, right: 6, left: -18, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eaecef" />
+        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={axisTick} interval={0} />
+        <YAxis axisLine={false} tickLine={false} tick={axisTick} allowDecimals={false} width={40} />
+        <Tooltip cursor={{ fill: "#eef2fb" }} contentStyle={tooltipStyle}
+          formatter={(v, _n, item) => [`${nf(v)} lượt hiển thị · ${nf((item?.payload as { clicks: number })?.clicks ?? 0)} click`, "Vị trí " + (item?.payload as { name: string })?.name]}
+          labelFormatter={() => ""} />
+        <Bar dataKey="impressions" radius={[4, 4, 0, 0]} maxBarSize={56} label={{ position: "top", fontSize: 12, fill: "#334155", formatter: (v: unknown) => (Number(v) ? nf(v) : "") }}>
+          {data.map((_, i) => <Cell key={i} fill={POSITION_RAMP[i] ?? POSITION_RAMP[POSITION_RAMP.length - 1]} />)}
+        </Bar>
+      </BarChart>
     </ResponsiveContainer>
   );
 }

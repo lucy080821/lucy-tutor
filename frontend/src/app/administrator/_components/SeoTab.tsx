@@ -15,6 +15,12 @@ import MiniMarkdown from "./MiniMarkdown";
 const SeoMetricChart = dynamic(() => import("./AdminCharts").then((m) => m.SeoMetricChart), {
   ssr: false, loading: () => <div className="skeleton w-full h-full" />,
 });
+const SeoSparkline = dynamic(() => import("./AdminCharts").then((m) => m.SeoSparkline), {
+  ssr: false, loading: () => <div className="skeleton w-full h-full" />,
+});
+const SeoPositionChart = dynamic(() => import("./AdminCharts").then((m) => m.SeoPositionChart), {
+  ssr: false, loading: () => <div className="skeleton w-full h-full" />,
+});
 
 const RANGES: SeoRange[] = [7, 28, 90];
 const RANGE_KEY = "lucy_admin_seo_days";
@@ -187,10 +193,130 @@ function ReportsCard({ onAuthLost }: { onAuthLost: () => void }) {
             <p className="text-xs text-muted mb-3">
               Kỳ {label(report)} · {report.author} viết lúc {new Date(report.createdAt).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit", year: "numeric" })}
             </p>
-            <div className="max-h-[70vh] overflow-y-auto pr-1"><MiniMarkdown source={report.content} /></div>
+            <ReportVisuals key={report.id} periodEnd={report.periodEnd.slice(0, 10)} onAuthLost={onAuthLost} />
+            <CollapsibleText key={`t-${report.id}`}><MiniMarkdown source={report.content} /></CollapsibleText>
           </article>
         )}
     </SectionCard>
+  );
+}
+
+// Phần chữ của bài: mặc định chỉ hiện đoạn đầu, bấm "Đọc toàn bài" để mở
+function CollapsibleText({ children }: { children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="mt-6">
+      <p className="text-xs font-bold uppercase tracking-wide text-muted mb-2">Nhận xét & đề xuất</p>
+      <div className={`relative ${open ? "" : "max-h-72 overflow-hidden"}`}>
+        {children}
+        {!open && <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white to-transparent" />}
+      </div>
+      <button onClick={() => setOpen((o) => !o)} className="btn-outline mt-3 px-4 py-2 text-sm cursor-pointer">
+        {open ? "Thu gọn" : "Đọc toàn bài"}
+      </button>
+    </div>
+  );
+}
+
+// Đủ mọi ngày trong kỳ (ngày không có lượt hiển thị: click/hiển thị = 0, CTR/vị trí bỏ trống)
+function fillDays(series: (SeoMetrics & { date: string })[], start: string, end: string) {
+  const byDate = new Map(series.map((r) => [r.date, r]));
+  const out: (SeoMetrics & { date: string })[] = [];
+  for (let t = Date.parse(`${start}T00:00:00Z`); t <= Date.parse(`${end}T00:00:00Z`); t += 86_400_000) {
+    const date = new Date(t).toISOString().slice(0, 10);
+    out.push(byDate.get(date) ?? { date, clicks: 0, impressions: 0, ctr: 0, position: null });
+  }
+  return out;
+}
+
+// Lượt hiển thị theo nhóm vị trí — tính từ các truy vấn có tên (Google ẩn truy vấn quá hiếm nên tổng nhỏ hơn KPI)
+const POSITION_BUCKETS: { name: string; max: number }[] = [
+  { name: "Top 3", max: 3.5 }, { name: "4–10", max: 10.5 }, { name: "11–20", max: 20.5 }, { name: "21–50", max: 50.5 }, { name: "> 50", max: Infinity },
+];
+function positionBuckets(rows: SeoRow[]) {
+  const out = POSITION_BUCKETS.map((b) => ({ name: b.name, impressions: 0, clicks: 0 }));
+  for (const r of rows) {
+    if (!r.position || !r.impressions) continue;
+    const i = POSITION_BUCKETS.findIndex((b) => r.position! <= b.max);
+    out[i].impressions += r.impressions;
+    out[i].clicks += r.clicks;
+  }
+  return out;
+}
+
+// "Bức tranh tuần" ở đầu mỗi bài phân tích: số liệu đúng kỳ của bài (7 ngày kết thúc ở periodEnd)
+function ReportVisuals({ periodEnd, onAuthLost }: { periodEnd: string; onAuthLost: () => void }) {
+  const [data, setData] = useState<SeoSummary | null>(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    adminFetch<SeoSummary>(`/seo/summary?days=7&end=${periodEnd}`)
+      .then((d) => { if (!cancelled) setData(d); })
+      .catch((err) => { if (cancelled) return; if (err instanceof AdminAuthError) onAuthLost(); else setError((err as Error).message); });
+    return () => { cancelled = true; };
+  }, [periodEnd, onAuthLost]);
+
+  if (error) return <ErrorBlock message={error} />;
+  if (!data) return <div className="skeleton w-full h-48 rounded-xl" />;
+  if (!data.hasData || !data.totals) return null;
+
+  const c = data.totals.current;
+  const p = data.totals.previous;
+  const hasPrev = p.impressions > 0;
+  const days = fillDays(data.series!, data.period!.start, data.period!.end);
+  const tiles: { id: Metric; label: string; value: string; delta: number | null; invert?: boolean; format: (v: number) => string }[] = [
+    { id: "clicks", label: "Click", value: nf(c.clicks), delta: hasPrev ? pctChange(c.clicks, p.clicks) : null, format: nf },
+    { id: "impressions", label: "Lượt hiển thị", value: nf(c.impressions), delta: hasPrev ? pctChange(c.impressions, p.impressions) : null, format: nf },
+    { id: "ctr", label: "CTR", value: formatPct(c.ctr), delta: hasPrev ? pctChange(c.ctr, p.ctr) : null, format: (v) => formatPct(v) },
+    { id: "position", label: "Vị trí TB", value: formatPosition(c.position), invert: true,
+      delta: hasPrev && c.position && p.position ? pctChange(c.position, p.position) : null, format: (v) => formatPosition(v) },
+  ];
+  const buckets = positionBuckets(data.queries!);
+  const topQueries = data.queries!.slice(0, 6);
+  const topPages = data.pages!.slice(0, 6);
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {tiles.map((t) => {
+          const good = t.delta !== null && (t.invert ? t.delta < 0 : t.delta > 0);
+          return (
+            <div key={t.id} className="rounded-xl border border-line p-3 min-w-0">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs font-bold uppercase tracking-wide text-muted">{t.label}</p>
+                {t.delta !== null && Number.isFinite(t.delta) && Math.abs(t.delta) >= 0.5 && (
+                  <span className={`text-[11px] font-bold rounded-full px-1.5 py-0.5 ${good ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+                    {t.delta > 0 ? "▲" : "▼"} {Math.abs(t.delta).toLocaleString("vi-VN", { maximumFractionDigits: 0 })}%
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 text-xl font-extrabold text-foreground">{t.value}</p>
+              <div className="h-10 mt-1">
+                <SeoSparkline id={t.id} label={t.label} format={t.format} reversed={t.id === "position"}
+                  data={days.map((d) => ({ date: d.date, value: t.id === "position" ? d.position : t.id === "ctr" ? (d.impressions ? d.ctr : null) : d[t.id] }))} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {!hasPrev && <p className="text-xs text-muted">Kỳ trước chưa có dữ liệu nên chưa có % thay đổi.</p>}
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-line p-4 min-w-0">
+          <p className="text-sm font-bold text-foreground">Truy vấn đang ở vị trí nào</p>
+          <p className="text-xs text-muted mb-2">Lượt hiển thị theo nhóm vị trí — màu càng đậm là thứ hạng càng tốt</p>
+          <div className="h-44"><SeoPositionChart data={buckets} /></div>
+        </div>
+        <div className="rounded-xl border border-line p-4 min-w-0">
+          <p className="text-sm font-bold text-foreground mb-2">Top truy vấn</p>
+          <BarList valueLabel="Lượt hiển thị" items={topQueries.map((q) => ({ name: q.key, value: q.impressions }))} />
+        </div>
+        <div className="rounded-xl border border-line p-4 min-w-0">
+          <p className="text-sm font-bold text-foreground mb-2">Top trang</p>
+          <BarList valueLabel="Lượt hiển thị" items={topPages.map((pg) => ({ name: shortUrl(pg.key), value: pg.impressions }))} />
+        </div>
+      </div>
+    </div>
   );
 }
 

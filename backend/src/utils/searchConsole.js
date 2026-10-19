@@ -130,7 +130,9 @@ async function syncSearchConsole() {
     return lastSync;
   })()
     .catch((err) => {
-      lastSync = { ...lastSync, error: err.message };
+      // Lỗi Prisma kèm cả đoạn code + stack → chỉ giữ câu ngắn để hiện ở trang admin
+      const dbError = /^Prisma/.test(err.name || '') || /database server/i.test(err.message);
+      lastSync = { ...lastSync, error: dbError ? 'Không kết nối được database, sẽ thử lại ở lần đồng bộ sau' : String(err.message).slice(0, 300) };
       console.error('[seo] Đồng bộ thất bại:', err.message);
       throw err;
     })
