@@ -84,6 +84,8 @@ router.use(requireAdmin);
 
 // Lượt truy cập + sức khoẻ kinh doanh (xem adminAnalytics.routes.js)
 router.use('/analytics', require('./adminAnalytics.routes'));
+// SEO Performance: số liệu Google Search Console + bài phân tích tuần (xem adminSeo.routes.js)
+router.use('/seo', require('./adminSeo.routes'));
 
 router.get('/me', async (req, res) => {
   try {

@@ -1098,3 +1098,34 @@ model PageView {
   @@index([sessionId])
   @@index([userId, createdAt])
 }
+
+// Số liệu Google Search Console theo ngày — tab "SEO Performance" ở /administrator. Đồng bộ qua Search Console API
+// (utils/searchConsole.js, mỗi ngày 06:00 giờ VN + lúc khởi động), mỗi lần ghi đè lại ~10 ngày gần nhất vì Google
+// còn chỉnh số liệu mấy ngày cuối. dimension: TOTAL (key "") | QUERY | PAGE | COUNTRY | DEVICE | APPEARANCE |
+// QUERY_PAGE (key = "truy vấn\turl"). position = vị trí TB trong ngày; gộp nhiều ngày phải lấy trung bình có
+// trọng số theo impressions (như Search Console).
+model SeoMetric {
+  id          String   @id @default(uuid())
+  date        DateTime @db.Date
+  dimension   String
+  key         String   @default("")
+  clicks      Int
+  impressions Int
+  position    Float
+
+  @@unique([date, dimension, key])
+  @@index([dimension, date])
+}
+
+// Bài phân tích SEO hằng tuần (Markdown) — do routine Claude chạy trên cloud gửi lên qua POST /api/seo-report/reports
+// (token SEO_REPORT_TOKEN), hiện ở tab "SEO Performance"
+model SeoReport {
+  id          String   @id @default(uuid())
+  periodStart DateTime @db.Date
+  periodEnd   DateTime @db.Date
+  content     String
+  author      String   @default("Claude")
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}

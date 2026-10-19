@@ -143,3 +143,24 @@ export function MonthlyActiveChart({ data }: { data: { label: string; activeStud
     </ResponsiveContainer>
   );
 }
+
+/** SEO: 1 chỉ số theo ngày (click / lượt hiển thị / CTR / vị trí). Vị trí đảo trục: càng nhỏ càng tốt nên vẽ càng cao */
+export function SeoMetricChart({ data, metric, label, format }: {
+  data: { date: string; value: number | null }[]; metric: "clicks" | "impressions" | "ctr" | "position"; label: string;
+  format: (v: number) => string;
+}) {
+  const isPosition = metric === "position";
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eaecef" />
+        <XAxis dataKey="date" tickFormatter={shortDay} axisLine={false} tickLine={false} tick={axisTick} minTickGap={18} />
+        <YAxis axisLine={false} tickLine={false} tick={axisTick} width={44} reversed={isPosition}
+          allowDecimals={metric === "ctr" || isPosition} tickFormatter={(v) => format(Number(v))}
+          domain={isPosition ? [1, "auto"] : [0, "auto"]} />
+        <Tooltip labelFormatter={(d) => shortDay(String(d))} formatter={(v) => [v === null ? "—" : format(Number(v)), label]} contentStyle={tooltipStyle} />
+        <Line dataKey="value" name={label} type="monotone" stroke={NAVY} strokeWidth={2} dot={{ r: 3 }} activeDot={{ r: 5 }} connectNulls />
+      </LineChart>
+    </ResponsiveContainer>
+  );
+}

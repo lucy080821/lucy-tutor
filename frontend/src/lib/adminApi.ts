@@ -151,3 +151,28 @@ export const formatClock = (sec: number) => {
 };
 // "2026-10-13" -> "13/10"
 export const shortDay = (ymd: string) => `${ymd.slice(8, 10)}/${ymd.slice(5, 7)}`;
+
+// ===== SEO Performance (backend: routes/adminSeo.routes.js, utils/seoSummary.js) =====
+
+export type SeoRange = 7 | 28 | 90;
+export type SeoMetrics = { clicks: number; impressions: number; ctr: number; position: number | null };
+export type SeoRow = SeoMetrics & { key: string; prev: SeoMetrics };
+export type SeoSync = { configured: boolean; syncing: boolean; at: string | null; error: string | null; rows: number; from: string | null; to: string | null };
+export type SeoSummary = {
+  configured: boolean; sync: SeoSync; hasData: boolean; days: number;
+  period?: { start: string; end: string }; previousPeriod?: { start: string; end: string };
+  totals?: { current: SeoMetrics; previous: SeoMetrics };
+  series?: (SeoMetrics & { date: string })[];
+  namedQueryImpressions?: number;
+  queries?: SeoRow[]; pages?: SeoRow[]; countries?: SeoRow[]; devices?: SeoRow[]; appearances?: SeoRow[];
+  queryPages?: (SeoRow & { query: string; page: string })[];
+  opportunities?: SeoRow[]; newQueries?: SeoRow[];
+  lostQueries?: { key: string; prev: SeoMetrics }[];
+  movers?: (SeoRow & { positionChange: number })[];
+};
+export type SeoReportMeta = { id: string; periodStart: string; periodEnd: string; author: string; createdAt: string };
+export type SeoReport = SeoReportMeta & { content: string };
+
+// Vị trí TB: 1 chữ số thập phân; null = không có lượt hiển thị
+export const formatPosition = (p: number | null | undefined) =>
+  p === null || p === undefined ? "—" : p.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 });

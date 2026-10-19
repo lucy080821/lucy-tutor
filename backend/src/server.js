@@ -49,6 +49,7 @@ const adminRoutes = require('./routes/admin.routes');
 const passwordResetRoutes = require('./routes/passwordReset.routes');
 const freeToolsRoutes = require('./routes/freeTools.routes');
 const trackRoutes = require('./routes/track.routes');
+const seoReportRoutes = require('./routes/seoReport.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
@@ -79,6 +80,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/password-reset', passwordResetRoutes);
 app.use('/api/free-tools', freeToolsRoutes);
 app.use('/api/track', trackRoutes);
+app.use('/api/seo-report', seoReportRoutes);
 
 // Every route in this app returns JSON errors as { error: '...' } — but multer's fileFilter/
 // limits errors (bad file type, file too large) and malformed-JSON body-parser errors are
@@ -99,4 +101,6 @@ app.listen(PORT, () => {
   require('./lib/prisma').$connect().catch(err => console.error('Prisma warm-up failed:', err.message));
   // Quét từ vựng cho trang /flashcard-tieng-anh ngay lúc khởi động, sau đó mỗi ngày 23:30 giờ VN
   require('./utils/flashcardCatalog').startFlashcardScanner();
+  // Đồng bộ số liệu Google Search Console (tab SEO Performance) 30 giây sau khởi động, sau đó mỗi ngày 06:00 giờ VN
+  require('./utils/searchConsole').startSearchConsoleSync();
 });
