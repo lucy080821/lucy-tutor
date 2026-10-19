@@ -28,8 +28,10 @@ const DIMENSIONS = {
 const APPEARANCE = ['searchAppearance'];
 
 function readConfig() {
-  const raw = process.env.GSC_SERVICE_ACCOUNT_JSON;
-  const siteUrl = process.env.GSC_SITE_URL;
+  // Ô biến môi trường của hosting (Hostinger...) giữ nguyên ký tự → bỏ cặp nháy bọc ngoài nếu lỡ chép cả từ .env
+  const unquote = (v) => (v || '').trim().replace(/^(['"])([\s\S]*)\1$/, '$2');
+  const raw = unquote(process.env.GSC_SERVICE_ACCOUNT_JSON);
+  const siteUrl = unquote(process.env.GSC_SITE_URL);
   if (!raw || !siteUrl) return null;
   try {
     const sa = JSON.parse(raw);
