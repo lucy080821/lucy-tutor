@@ -83,7 +83,8 @@ export default async function Page({ params }: { params: Params }) {
       <div id="bat-dau" className="max-w-5xl mx-auto px-4 py-6 sm:py-8 scroll-mt-16">
         <nav aria-label="Chọn lớp khác" className="flex flex-wrap gap-2 mb-6">
           {GRADE_NUMBERS.map((n) => (
-            <Link key={n} href={`${HUB}/${gradeSlug(n)}`} className={`ui-chip ${n === g.grade ? "ui-chip-active" : ""}`} aria-current={n === g.grade ? "page" : undefined}>
+            <Link key={n} href={`${HUB}/${gradeSlug(n)}`} className={`ui-chip ${n === g.grade ? "ui-chip-active" : ""}`} aria-current={n === g.grade ? "page" : undefined}
+              title={`Flashcard Global Success ${n} PDF`}>
               Lớp {n}
             </Link>
           ))}

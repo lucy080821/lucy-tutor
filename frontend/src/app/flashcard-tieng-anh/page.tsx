@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { pageMetadata } from "@/lib/seo";
 import { ToolBanner, ToolJsonLd, ToolFaq, ToolCta, RelatedTools, ToolNextSteps, type Faq } from "@/components/tools/ToolPage";
@@ -38,6 +39,9 @@ const FAQS: Faq[] = [
 
 export default async function Page() {
   const grades = await getFlashGrades();
+  // Lớp đã có từ vựng (trang /lop-N được index) — link chữ đúng từ khoá để Google chuyển dần thứ hạng
+  // của truy vấn "flashcard global success N pdf" từ trang này sang đúng trang lớp
+  const readyGrades = grades.filter((g) => gradeWordCount(g) > 0);
   return (
     <div className="min-h-screen bg-background">
       <ToolJsonLd name={TITLE} path={PATH} description={DESCRIPTION} crumbs={CRUMBS} faqs={FAQS} image={PHOTOS.flashcard} />
@@ -60,6 +64,18 @@ export default async function Page() {
 
       <div id="bat-dau" className="max-w-5xl mx-auto px-4 py-6 sm:py-8 scroll-mt-16">
         <h2 className="ui-section-title text-xl mb-5">Chọn lớp để tải flashcard Global Success PDF</h2>
+        {readyGrades.length > 0 && (
+          <p className="-mt-1 mb-5 text-sm text-foreground/80 leading-relaxed">
+            Đã có từ vựng để tải ngay:{" "}
+            {readyGrades.map((g, i) => (
+              <Fragment key={g.slug}>
+                {i > 0 && ", "}
+                <Link href={`${PATH}/${g.slug}`} className="font-semibold text-primary hover:underline">Flashcard Global Success {g.grade} PDF</Link>
+              </Fragment>
+            ))}
+            . Các lớp còn lại đang được cập nhật theo từng Unit.
+          </p>
+        )}
         <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {grades.map((g) => {
             const words = gradeWordCount(g);

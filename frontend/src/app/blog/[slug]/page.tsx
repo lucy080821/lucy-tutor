@@ -7,6 +7,7 @@ import BlogAudioPlayer from "@/components/blog/BlogAudioPlayer";
 import BlogComments from "@/components/blog/BlogComments";
 import { baseOpenGraph, SITE_NAME, SITE_URL } from "@/lib/seo";
 import { authorHref, blogFetch, categoryHref, formatBlogDate, slugify, stripHtml, type BlogPost, type BlogPostSummary } from "@/lib/blog";
+import { pickToolsForPost } from "@/lib/blogToolLinks";
 import { ShareButtons } from "./BlogClientBits";
 import { BlogPostStats, BlogReadTracker, BlogViewTracker } from "@/components/blog/BlogStats";
 
@@ -75,6 +76,7 @@ export default async function BlogPostPage({ params }: { params: Params }) {
   const { post, related } = data;
   const { html, toc } = addHeadingIds(post.content);
   const url = `${SITE_URL}/blog/${post.slug}`;
+  const tools = pickToolsForPost({ title: post.title, tags: post.tags, excerpt: post.excerpt, contentText: stripHtml(post.content) });
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -182,6 +184,22 @@ export default async function BlogPostPage({ params }: { params: Params }) {
                 <Link key={t} href={`/blog?tag=${encodeURIComponent(t)}`} className="ui-chip text-sm">#{t}</Link>
               ))}
             </div>
+          )}
+
+          {/* Link nội bộ theo ngữ cảnh sang trang công cụ miễn phí (SEO) — chọn theo từ khoá trong bài, xem lib/blogToolLinks.ts */}
+          {tools.length > 0 && (
+            <aside aria-labelledby="cong-cu-lien-quan" className="ui-card p-5 mt-8">
+              <p id="cong-cu-lien-quan" className="font-bold text-foreground mb-3">Công cụ miễn phí liên quan</p>
+              <ul className="space-y-3">
+                {tools.map((t) => (
+                  <li key={t.href} className="text-sm leading-relaxed">
+                    <Link href={t.href} className="font-semibold text-primary hover:underline">{t.title}</Link>
+                    <span className="text-foreground/80"> — {t.desc}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-muted">Miễn phí, không cần đăng nhập.</p>
+            </aside>
           )}
 
           <div className="mt-8 pt-6 border-t border-line">

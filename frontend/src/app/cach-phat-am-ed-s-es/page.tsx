@@ -8,6 +8,8 @@ import EndingSoundsTool from "@/components/tools/EndingSoundsTool";
 // cách phát âm s es bằng câu thần chú, cách phát âm ed mẹo, bài tập phát âm ed s es, quy tắc phát âm s/es/ed
 // Search Console 10/2026: top ~100 → title/H1/H2 dùng đúng cụm người Việt hay gõ ("cách phát âm s es",
 // "cách phát âm đuôi ed", "quy tắc phát âm s/es/ed"), thêm IPA cho ví dụ, mẹo nhớ và bài tập có đáp án
+// Search Console 19/10/2026: có truy vấn về CHÍNH TẢ ("đuôi s es", "mẹo nhớ cách thêm s es bằng câu thần chú")
+// → thêm mục "Quy tắc thêm s, es" (o/s/x/z/ch/sh, y → ies, f/fe → ves, ngoại lệ) + 1 câu FAQ
 const PATH = "/cach-phat-am-ed-s-es";
 const TITLE = "Cách Phát Âm S, ES, ED: Quy Tắc & Mẹo Nhớ";
 const DESCRIPTION =
@@ -22,6 +24,7 @@ export const metadata = pageMetadata({
     "cách phát âm ed", "cách phát âm đuôi ed", "cách phát âm s es", "cách phát âm đuôi s es",
     "cách phát âm ed bằng câu thần chú", "cách phát âm s es bằng câu thần chú", "cách phát âm ed mẹo",
     "bài tập phát âm ed", "bài tập phát âm s es", "phát âm ed s es", "quy tắc phát âm s/es/ed", "quy tắc phát âm s es ed",
+    "quy tắc thêm s es", "cách thêm s es", "đuôi s es", "mẹo nhớ cách thêm s es", "câu thần chú thêm es",
   ],
 });
 
@@ -41,6 +44,7 @@ const EXERCISES: { words: [string, string][]; answer: number; why: string }[] = 
 const FAQS: Faq[] = [
   { q: "Câu thần chú phát âm đuôi -ed là gì?", a: "Đuôi -ed đọc là /t/ khi từ gốc tận cùng bằng các âm trong câu \"Khi Sang Sông Phải Chờ Thu Phí\" (k, s, sh, p, ch, th, f). Đọc /ɪd/ khi từ gốc tận cùng bằng /t/ hoặc /d/. Các trường hợp còn lại đọc /d/." },
   { q: "Câu thần chú phát âm đuôi -s/-es là gì?", a: "Đuôi -s đọc là /s/ khi từ gốc tận cùng bằng các âm trong câu \"Thời Phong Kiến Phương Tây\" (th, p, k, f, t). Đọc /ɪz/ khi từ gốc tận cùng bằng âm gió: s, ss, x, z, sh, ch, ce, se, ge. Các trường hợp còn lại đọc /z/." },
+  { q: "Khi nào thêm -es, khi nào thêm -s?", a: "Thêm -es khi từ tận cùng bằng o, s, x, z, ch, sh (câu thần chú \"Ông Sáu Xài Zà CHanh SHả\"): goes, buses, boxes, quizzes, watches, dishes. Phụ âm + y → bỏ y thêm -ies (study → studies), nguyên âm + y chỉ thêm -s (play → plays). Nhiều từ tận cùng f/fe → -ves (leaf → leaves). Các trường hợp còn lại thêm -s." },
   { q: "Vì sao phải dựa vào âm cuối chứ không phải chữ cái cuối?", a: "Vì chữ viết tiếng Anh không luôn khớp với âm. Ví dụ laugh viết bằng \"gh\" nhưng đọc /f/ nên laughed đọc /t/; house có âm /s/ nhưng houses đọc /ˈhaʊzɪz/. Công cụ trên trang đã tính sẵn các trường hợp này." },
   { q: "Những tính từ đuôi -ed nào đọc là /ɪd/?", a: "Một số tính từ đọc /ɪd/ dù âm cuối không phải t/d: naked, wicked, beloved, crooked, ragged, rugged, sacred, wretched, dogged, learned (uyên bác), aged (cao tuổi), blessed, cursed. Đây là ngoại lệ hay gặp trong đề thi." },
   { q: "Công cụ có chính xác 100% không?", a: "Công cụ dựa trên quy tắc chính tả và danh sách ngoại lệ phổ biến nên đúng với hầu hết từ trong sách giáo khoa và đề thi. Với từ hiếm, bạn nên tra thêm phiên âm trong từ điển." },
@@ -104,6 +108,34 @@ export default function Page() {
             </table>
           </div>
           <p><b>Câu thần chú -s/-es:</b> &ldquo;<b>Th</b>ời <b>Ph</b>ong <b>K</b>iến <b>Ph</b>ương <b>T</b>ây&rdquo; → th, p, k, f, t đọc <b>/s/</b>. Âm gió (s, ss, x, z, sh, ch, ce, ge) đọc <b>/ɪz/</b>; còn lại đọc <b>/z/</b>.</p>
+
+          <h2 className="ui-section-title text-xl pt-4">Quy tắc thêm s, es (chính tả) và câu thần chú</h2>
+          <p>
+            Phần trên là cách <b>đọc</b>; phần này là cách <b>viết</b> — khi nào thêm -s, khi nào thêm -es cho danh từ số nhiều
+            và động từ ngôi thứ ba số ít (he/she/it) ở thì hiện tại đơn.
+          </p>
+          <div className="overflow-x-auto">
+            <table className="ui-table w-full text-sm">
+              <thead><tr><th>Từ tận cùng bằng</th><th>Cách thêm</th><th>Ví dụ</th></tr></thead>
+              <tbody>
+                <tr><td><b>o, s, x, z, ch, sh</b></td><td>Thêm <b>-es</b></td><td>go → goes, bus → buses, box → boxes, quiz → quizzes, watch → watches, wash → washes</td></tr>
+                <tr><td><b>Phụ âm + y</b></td><td>Bỏ y, thêm <b>-ies</b></td><td>study → studies, baby → babies, fly → flies, city → cities</td></tr>
+                <tr><td><b>Nguyên âm + y</b> (ay, ey, oy, uy)</td><td>Chỉ thêm <b>-s</b></td><td>play → plays, key → keys, boy → boys, buy → buys</td></tr>
+                <tr><td><b>f, fe</b> (nhiều danh từ)</td><td>Đổi thành <b>-ves</b></td><td>leaf → leaves, knife → knives, wife → wives, half → halves, wolf → wolves</td></tr>
+                <tr><td>Các trường hợp còn lại</td><td>Thêm <b>-s</b></td><td>book → books, pen → pens, read → reads, cake → cakes</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            <b>Câu thần chú thêm -es:</b> &ldquo;<b>Ô</b>ng <b>S</b>áu <b>X</b>ài <b>Z</b>à <b>CH</b>anh <b>SH</b>ả&rdquo; → o, s, x, z, ch, sh thì thêm <b>-es</b>.
+            Gặp y thì nhìn chữ đứng trước: phụ âm → <b>-ies</b>, nguyên âm → <b>-s</b>.
+          </p>
+          <ul className="list-disc pl-6 space-y-1">
+            <li><b>Ngoại lệ -o chỉ thêm -s:</b> photos, pianos, radios, videos, zoos, kilos, kangaroos (từ mượn, từ viết tắt, hoặc trước o là nguyên âm).</li>
+            <li><b>Ngoại lệ -f chỉ thêm -s:</b> roofs, chiefs, cliffs, beliefs, chefs, proofs.</li>
+            <li><b>Danh từ số nhiều bất quy tắc</b> (không thêm s): man → men, woman → women, child → children, foot → feet, tooth → teeth, mouse → mice, person → people; sheep, fish, deer giữ nguyên.</li>
+            <li><b>Liên hệ với cách đọc:</b> thêm -es sau s, x, z, ch, sh thì đọc <b>/ɪz/</b> (boxes /ˈbɒksɪz/); nhưng thêm -es sau o thì <b>không</b> thêm âm tiết, đọc /z/ (goes /ɡəʊz/, potatoes /pəˈteɪtəʊz/).</li>
+          </ul>
 
           <h2 className="ui-section-title text-xl pt-4">Mẹo nhớ cách phát âm s, es, ed</h2>
           <ul className="list-disc pl-6 space-y-1">
