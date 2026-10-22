@@ -176,30 +176,72 @@ const LIMITS = {
 };
 const vnDay = (d = new Date()) => new Date(d.getTime() + 7 * 3600_000).toISOString().slice(0, 10);
 
-async function aiUsage(userId) {
-  const rows = await prisma.noteAiUsage.findMany({ where: { userId, day: vnDay() }, select: { kind: true, count: true } });
+// Khách chưa đăng nhập (ghi chú lưu trên trình duyệt) vẫn dùng được AI với hạn mức thấp hơn theo IP + trần tổng mỗi ngày
+const GUEST_LIMITS = {
+  TEXT: Number(process.env.NOTES_GUEST_AI_DAILY) || 10,
+  AUDIO: Number(process.env.NOTES_GUEST_AUDIO_DAILY) || 1,
+};
+const GUEST_TOTAL_CAP = { TEXT: Number(process.env.NOTES_GUEST_DAILY_CAP) || 500, AUDIO: Number(process.env.NOTES_GUEST_AUDIO_CAP) || 60 };
+const GUEST_ALL = 'guest:*';
+const limitsFor = (user) => (user.guest ? GUEST_LIMITS : LIMITS);
+
+function clientIp(req) {
+  // Server không bật trust proxy → lấy IP gốc từ x-forwarded-for (giống freeTools/passwordReset)
+  return String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim() || 'unknown';
+}
+
+/** Người dùng đăng nhập (userId) hoặc khách (nhận diện bằng IP đã băm, không lưu IP gốc). */
+async function loadNoteActor(req) {
+  const userId = req.query.userId || req.body?.userId;
+  if (userId) return loadNoteUser(userId);
+  const ipHash = crypto.createHash('sha256').update(`lucy-notes:${clientIp(req)}`).digest('hex').slice(0, 24);
+  return { id: `guest:${ipHash}`, guest: true, role: 'GUEST', name: 'Khách', accessLocked: false, classroomsJoined: [], classroomsOwned: [] };
+}
+
+function requireAccount(user, what = 'Tính năng này') {
+  if (user.guest) throw httpError(401, `${what} cần đăng nhập (nối với dữ liệu trong tài khoản Lucy Tutor). Ghi chú thường vẫn dùng miễn phí không cần đăng nhập.`);
+}
+
+async function aiUsage(userIdOrUser) {
+  const user = typeof userIdOrUser === 'string' ? { id: userIdOrUser } : userIdOrUser;
+  const limits = limitsFor(user);
+  const rows = await prisma.noteAiUsage.findMany({ where: { userId: user.id, day: vnDay() }, select: { kind: true, count: true } });
   const used = Object.fromEntries(rows.map((r) => [r.kind, r.count]));
-  return Object.fromEntries(Object.entries(LIMITS).map(([k, limit]) => [k, { used: used[k] || 0, limit, left: Math.max(0, limit - (used[k] || 0)) }]));
+  return Object.fromEntries(Object.entries(limits).map(([k, limit]) => [k, { used: used[k] || 0, limit, left: Math.max(0, limit - (used[k] || 0)) }]));
 }
 
 /** Kiểm tra + trừ 1 lượt trước khi gọi AI; gọi refund() nếu AI lỗi (lượt lỗi không bị tính). */
-async function consumeAi(user, kind = 'TEXT', amount = 1) {
-  if (user.accessLocked) throw httpError(403, 'Tài khoản đang bị khoá — AI tạm ngưng. Ghi chú của bạn vẫn xem và sửa được bình thường.');
+async function bump(userId, kind, amount, limit) {
   const day = vnDay();
   const row = await prisma.noteAiUsage.upsert({
-    where: { userId_day_kind: { userId: user.id, day, kind } },
-    create: { userId: user.id, day, kind, count: amount },
+    where: { userId_day_kind: { userId, day, kind } },
+    create: { userId, day, kind, count: amount },
     update: { count: { increment: amount } },
   });
-  if (row.count > LIMITS[kind]) {
-    await prisma.noteAiUsage.update({ where: { id: row.id }, data: { count: { decrement: amount } } });
+  const undo = () => prisma.noteAiUsage.update({ where: { id: row.id }, data: { count: { decrement: amount } } }).catch(() => {});
+  return { over: row.count > limit, undo };
+}
+
+async function consumeAi(user, kind = 'TEXT', amount = 1) {
+  if (user.accessLocked) throw httpError(403, 'Tài khoản đang bị khoá — AI tạm ngưng. Ghi chú của bạn vẫn xem và sửa được bình thường.');
+  const limits = limitsFor(user);
+  const mine = await bump(user.id, kind, amount, limits[kind]);
+  if (mine.over) {
+    await mine.undo();
+    const tail = user.guest ? ' Đăng nhập (miễn phí) để có thêm lượt AI mỗi ngày.' : ' Quay lại vào ngày mai nhé.';
     throw httpError(429, kind === 'AUDIO'
-      ? `Bạn đã dùng hết ${LIMITS.AUDIO} lượt chuyển ghi âm thành ghi chú hôm nay. Quay lại vào ngày mai nhé.`
-      : `Bạn đã dùng hết ${LIMITS.TEXT} lượt AI hôm nay. Quay lại vào ngày mai nhé.`);
+      ? `Bạn đã dùng hết ${limits.AUDIO} lượt chuyển ghi âm thành ghi chú hôm nay.${tail}`
+      : `Bạn đã dùng hết ${limits.TEXT} lượt AI hôm nay.${tail}`);
   }
-  return async () => {
-    await prisma.noteAiUsage.update({ where: { id: row.id }, data: { count: { decrement: amount } } }).catch(() => {});
-  };
+  let all = null;
+  if (user.guest) {
+    all = await bump(GUEST_ALL, kind, amount, GUEST_TOTAL_CAP[kind]);
+    if (all.over) {
+      await Promise.all([mine.undo(), all.undo()]);
+      throw httpError(429, 'AI miễn phí cho khách đã hết lượt hôm nay. Đăng nhập để tiếp tục dùng AI, hoặc quay lại vào ngày mai.');
+    }
+  }
+  return async () => { await Promise.all([mine.undo(), all?.undo()]); };
 }
 
 // ── Groq ────────────────────────────────────────────────────────────────────────────────────
@@ -272,7 +314,7 @@ const sendError = (res, err, tag) => {
 };
 
 module.exports = {
-  prisma, groq, httpError, removeAccents, normalizeSearch, loadNoteUser,
+  prisma, groq, httpError, removeAccents, normalizeSearch, loadNoteUser, loadNoteActor, requireAccount,
   sanitizeDoc, docBlocks, docPlainText, docTasks, docLinkedPageIds, setTaskChecked, contentHash, walk,
   aiUsage, consumeAi, askJson, uploadNoteFile, removeNoteFiles, storageUsed, STORAGE_QUOTA_BYTES,
   ownPage, aiDisabledForPage, sendError, vnDay, LIMITS,

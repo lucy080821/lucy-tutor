@@ -643,6 +643,10 @@ router.patch('/attachments/:id', async (req, res) => {
     if (!att) throw httpError(404, 'Không tìm thấy file');
     const data = {};
     if (req.body.ocrText !== undefined) data.ocrText = String(req.body.ocrText || '').slice(0, 50000);
+    // Bản chép lời ghi âm (khi đưa ghi chú làm trên máy lên tài khoản — ghi âm của khách đã được chép lời sẵn)
+    if (Array.isArray(req.body.transcript)) {
+      data.transcript = req.body.transcript.slice(0, 5000).map((x) => ({ start: Number(x?.start) || 0, end: Number(x?.end) || 0, text: String(x?.text || '').slice(0, 2000) })).filter((x) => x.text);
+    }
     if (req.body.pageId !== undefined) data.pageId = req.body.pageId ? (await ownPage(user.id, req.body.pageId, { id: true })).id : null;
     await prisma.noteAttachment.update({ where: { id: att.id }, data });
     const pageId = data.pageId ?? att.pageId;

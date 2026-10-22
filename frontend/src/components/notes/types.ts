@@ -6,7 +6,7 @@ export type Notebook = { id: string; name: string; color: string; order: number;
 export type Usage = Record<"TEXT" | "AUDIO", { used: number; limit: number; left: number }>;
 
 export type Bootstrap = {
-  user: { id: string; name: string; role: "STUDENT" | "TEACHER"; accessLocked: boolean; classrooms: { id: string; name: string }[]; canLink: boolean };
+  user: { id: string; name: string; role: "STUDENT" | "TEACHER" | "GUEST"; accessLocked: boolean; classrooms: { id: string; name: string }[]; canLink: boolean; guest?: boolean };
   notebooks: Notebook[];
   counts: { inbox: number; pinned: number; archived: number; trash: number; overdue: number; today: number; studyDue: number; sharedIn: number };
   reminders: { id: string; title: string; remindAt: string }[];

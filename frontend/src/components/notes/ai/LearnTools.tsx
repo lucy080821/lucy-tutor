@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Swal from "sweetalert2";
 import type { Editor } from "@tiptap/react";
-import { aiApi, errMsg } from "../api";
+import { aiApi, errMsg, isGuest } from "../api";
 import { Spinner } from "../ui";
 import { isReadingAnswerCorrect, readingCorrectAnswerLabel, FILL_TYPES, type ReadingQuestion } from "@/lib/readingGrading";
 
@@ -48,7 +48,7 @@ export function FlashcardTool({ pageId, editor, isStudent, flush, onUsed }: { pa
   if (loading) return <Spinner label="AI đang rút thẻ từ trang…" />;
   if (!cards) return (
     <div>
-      <p className="text-sm text-muted">AI đọc trang này và rút ra từ vựng/khái niệm đáng học thành thẻ. {isStudent ? "Bạn chọn thẻ để đưa vào deck ôn tập SRS (lịch ôn tự động ở Phòng Gym Từ Vựng)." : "Bạn có thể chèn thành bảng từ vựng trong trang."}</p>
+      <p className="text-sm text-muted">AI đọc trang này và rút ra từ vựng/khái niệm đáng học thành thẻ. {isStudent ? "Bạn chọn thẻ để đưa vào deck ôn tập SRS (lịch ôn tự động ở Phòng Gym Từ Vựng)." : isGuest() ? "Lật thẻ ôn ngay tại đây hoặc chèn thành bảng từ vựng. Đăng nhập tài khoản học viên để đưa thẻ vào deck ôn tập tự động (SRS)." : "Bạn có thể chèn thành bảng từ vựng trong trang."}</p>
       <button type="button" onClick={run} className="btn-primary w-full mt-3 py-2.5">Tạo flashcard từ trang</button>
     </div>
   );

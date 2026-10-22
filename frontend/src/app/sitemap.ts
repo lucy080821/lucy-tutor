@@ -12,8 +12,6 @@ import { PHOTOS } from "@/lib/photos";
 const PUBLIC_ROUTES: { path: string; priority: number; changeFrequency: "weekly" | "monthly" }[] = [
   { path: "", priority: 1, changeFrequency: "weekly" },
   { path: "/blog", priority: 0.8, changeFrequency: "weekly" },
-  // Trang giới thiệu Ghi chú AI (công khai) — bản thân /notes cần đăng nhập nên noindex, không vào đây
-  { path: "/ghi-chu-ai", priority: 0.9, changeFrequency: "monthly" },
   { path: "/auth", priority: 0.5, changeFrequency: "monthly" },
 ];
 
@@ -32,6 +30,7 @@ const PAGE_IMAGES: Record<string, string[]> = {
   "/flashcard-tieng-anh": [PHOTOS.flashcard.src],
   "/bang-dong-tu-bat-quy-tac": [PHOTOS.irregularVerbs.src],
   "/blog": [PHOTOS.blog.src],
+  "/ghi-chu-ai": ["/images/photos/home/ghi-chu-ai-ghi-am-flashcard.webp"],
 };
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

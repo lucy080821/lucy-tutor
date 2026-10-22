@@ -406,7 +406,7 @@ export default function Home() {
           <div data-reveal="left">
             <p className="ui-badge-new inline-block">Mới</p>
             <h2 id="notes-title" className="ui-section-title text-2xl md:text-3xl font-extrabold mt-3">Ghi chú AI cho mọi thứ bạn học</h2>
-            <p className="text-muted mt-4 leading-relaxed">Sổ ghi chú đầy đủ như một app chuyên nghiệp — sổ tay, mục, trang con, việc cần làm có hạn chót — kèm AI làm phần việc tốn thời gian nhất.</p>
+            <p className="text-muted mt-4 leading-relaxed">Sổ ghi chú miễn phí, không cần đăng nhập — sổ tay, mục, trang con, việc cần làm có hạn chót, 67 mẫu trang — kèm AI làm phần việc tốn thời gian nhất.</p>
             <ul className="mt-5 space-y-3">
               {[
                 ["Ghi âm bài giảng, nhận ngay ghi chú", "AI chép lời, chia ý chính, mỗi ý có mốc thời gian bấm để nghe lại."],
@@ -419,7 +419,10 @@ export default function Home() {
                 </li>
               ))}
             </ul>
-            <Link href="/ghi-chu-ai" className="btn-primary mt-6 px-6 py-3">Tìm hiểu Ghi chú AI</Link>
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <Link href="/notes" className="btn-primary px-6 py-3 text-center">Dùng ngay — không cần đăng nhập</Link>
+              <Link href="/ghi-chu-ai" className="btn-outline px-6 py-3 text-center">Tìm hiểu Ghi chú AI</Link>
+            </div>
           </div>
           <div data-reveal="right" className="pb-8"><NotesMockup /></div>
         </div>

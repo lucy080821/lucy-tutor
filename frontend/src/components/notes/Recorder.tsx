@@ -13,7 +13,7 @@ const MAX_BYTES = 24 * 1024 * 1024;
 const STYLES = [["lecture", "Ghi chép bài giảng"], ["meeting", "Biên bản họp"], ["cornell", "Cornell (câu hỏi · ý chính · tóm tắt)"], ["outline", "Dàn ý theo thời gian"]] as const;
 const fmt = (s: number) => `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-export type RecordResult = { attachment: Attachment; transcript: Segment[]; title: string; html: string };
+export type RecordResult = { attachment: Attachment | null; transcript: Segment[]; title: string; html: string; warning?: string };
 
 export default function Recorder({ open, onClose, pageId, usage, onDone }: {
   open: boolean; onClose: () => void; pageId: string | null; usage: Usage; onDone: (r: RecordResult) => void;

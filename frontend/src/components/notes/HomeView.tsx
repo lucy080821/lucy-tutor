@@ -81,7 +81,7 @@ export default function HomeView({ boot, onOpen, onNewPage, onRecordNew, onOcrNe
         <div>
           <p className="text-sm text-muted">Trang chủ / Ghi chú</p>
           <h1 className="ui-page-title mt-1">{greet}, {boot.user.name.split(" ").slice(-1)[0]}</h1>
-          <p className="ui-page-subtitle">Ghi mọi thứ ở một nơi — AI giúp sắp xếp, tóm tắt và biến ghi chú thành bài ôn.</p>
+          <p className="ui-page-subtitle">Ghi mọi thứ ở một nơi — AI giúp sắp xếp, tóm tắt và biến ghi chú thành bài ôn.{boot.user.guest ? " Miễn phí, không cần đăng nhập." : ""}</p>
         </div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -97,7 +97,12 @@ export default function HomeView({ boot, onOpen, onNewPage, onRecordNew, onOcrNe
 
         <div className="grid lg:grid-cols-2 gap-5">
           <Card title="Bản tin tuần">
-            {!digest ? <Spinner label="Đang tổng hợp…" /> : digest.empty ? (
+            {!digest ? <Spinner label="Đang tổng hợp…" /> : boot.user.guest ? (
+              <div className="text-sm text-muted space-y-2">
+                <p>Tuần này: {digest.stats.pagesEdited} trang · {digest.stats.words.toLocaleString("vi-VN")} từ · {digest.stats.openTasks} việc chưa xong.</p>
+                <p>Đăng nhập để AI tự tổng hợp chủ đề chính và gợi ý cho tuần tới mỗi thứ Hai.</p>
+              </div>
+            ) : digest.empty ? (
               <p className="text-sm text-muted">Tuần này bạn mới sửa {digest.stats.pagesEdited} trang. Ghi thêm vài trang, bản tin AI sẽ tự tổng hợp chủ đề chính và gợi ý cho tuần tới.</p>
             ) : (
               <div className="space-y-2 text-sm">
@@ -175,7 +180,9 @@ export default function HomeView({ boot, onOpen, onNewPage, onRecordNew, onOcrNe
           </Card>
           <Card title="Sắp xếp bằng lời">
             <p className="text-sm text-muted mb-3">Ví dụ: "Gắn thẻ ielts cho mọi trang có chữ writing rồi chuyển vào sổ IELTS". Xem trước rồi mới làm, hoàn tác được.</p>
-            <button type="button" disabled={boot.user.accessLocked} onClick={onAgent} className="btn-outline w-full py-2 text-sm">Mở trợ lý</button>
+            {boot.user.guest
+              ? <a href="/auth?role=STUDENT&next=/notes" className="btn-outline block text-center w-full py-2 text-sm">Đăng nhập để dùng</a>
+              : <button type="button" disabled={boot.user.accessLocked} onClick={onAgent} className="btn-outline w-full py-2 text-sm">Mở trợ lý</button>}
           </Card>
         </div>
       </div>

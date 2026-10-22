@@ -59,6 +59,14 @@ export const FREE_TOOLS: FreeTool[] = [
     tag: "Ngữ pháp",
   },
   {
+    href: "/ghi-chu-ai",
+    title: "Ghi Chú AI Miễn Phí",
+    desc: "Sổ ghi chú online không cần đăng nhập: ghi âm thành ghi chú, tự tạo flashcard, hỏi lại chính sổ ghi chú của bạn.",
+    thumb: "/images/photos/home/ghi-chu-ai-ghi-am-flashcard.webp",
+    alt: "Giao diện Lucy Notes: bài giảng ghi âm có mốc thời gian, việc cần làm và hỏi sổ ghi chú",
+    tag: "AI · Ghi chú",
+  },
+  {
     href: "/phonetics",
     title: "Bảng Phiên Âm IPA 44 Âm",
     desc: "Bảng IPA theo bố cục Adrian Underhill: bấm để nghe từng âm và xem cách đặt miệng, lưỡi.",

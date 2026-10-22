@@ -91,7 +91,12 @@ export default function LinksPanel({ page, boot, onChange, onOpenPage, onClose }
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         <section>
           <h3 className="ui-label">Nội dung lớp học</h3>
-          {!boot.user.canLink ? (
+          {boot.user.guest ? (
+            <div className="text-sm text-muted space-y-2">
+              <p>Đăng nhập để liên kết ghi chú với bài học, đề thi, tài liệu của lớp và chia sẻ với giáo viên. Ghi chú thường vẫn dùng miễn phí không cần đăng nhập.</p>
+              <Link href="/auth?role=STUDENT&next=/notes" className="btn-primary inline-block px-4 py-2 text-sm">Đăng nhập / Đăng ký</Link>
+            </div>
+          ) : !boot.user.canLink ? (
             <p className="text-sm text-muted">Tham gia một lớp học để liên kết ghi chú với bài học, đề thi, tài liệu của lớp.</p>
           ) : (
             <>
@@ -113,7 +118,7 @@ export default function LinksPanel({ page, boot, onChange, onOpenPage, onClose }
 
         <section>
           <h3 className="ui-label">Chia sẻ</h3>
-          {privateNote ? (
+          {boot.user.guest ? <p className="text-sm text-muted">Chia sẻ trang cần đăng nhập.</p> : privateNote ? (
             <p className="text-sm rounded-xl bg-amber-50 text-amber-800 p-3">Trang có ghi chú về học viên nên luôn riêng tư, không chia sẻ được.</p>
           ) : (
             <>

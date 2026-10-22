@@ -12,6 +12,7 @@ const TOOL_KEYWORDS: Record<string, string[]> = {
   "/cham-writing-mien-phi": ["writing", "bai viet", "luyen viet", "nhat ky", "doan van", "essay", "sua loi viet"],
   "/ielts-band-calculator": ["ielts", "band"],
   "/bang-dong-tu-bat-quy-tac": ["dong tu bat quy tac", "phrasal verb", "dong tu", "v2", "v3", "qua khu"],
+  "/ghi-chu-ai": ["ghi chu", "ghi chep", "cornell", "so tay", "tom tat bai", "on bai", "pomodoro", "ke hoach hoc", "ghi am bai giang", "mind map", "so do tu duy"],
   "/flashcard-tieng-anh": ["tu vung", "flashcard", "lap lai ngat quang", "spaced repetition", "tu dien", "ghi nho tu"],
   // Không dùng "tieu hoc": bỏ dấu thì "mục tiêu học" cũng thành "muc tieu hoc"
   "/games/lop-3": ["lop 3", "hoc sinh tieu hoc", "bac tieu hoc", "tre em", "be hoc", "tro choi"],

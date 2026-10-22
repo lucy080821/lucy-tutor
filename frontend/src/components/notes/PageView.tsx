@@ -250,10 +250,14 @@ export default function PageView({ pageId, boot, onOpenPage, onChanged, onRemove
 
   const onRecorded = (r: RecordResult) => {
     const ed = editorRef.current;
-    setPage((p) => (p ? { ...p, attachments: [...p.attachments.filter((a) => a.id !== r.attachment.id), { ...r.attachment, transcript: r.transcript }] } : p));
+    const att = r.attachment;
+    if (att) setPage((p) => (p ? { ...p, attachments: [...p.attachments.filter((a) => a.id !== att.id), { ...att, transcript: r.transcript }] } : p));
     if (ed) {
-      ed.chain().focus("end").insertContent([{ type: "audioNote", attrs: { attachmentId: r.attachment.id, url: r.attachment.url, name: r.attachment.name } }]).insertContent(r.html).run();
+      const chain = ed.chain().focus("end");
+      if (att) chain.insertContent([{ type: "audioNote", attrs: { attachmentId: att.id, url: att.url, name: att.name } }]);
+      chain.insertContent(r.html).run();
     }
+    if (r.warning) Swal.fire({ icon: "warning", text: r.warning });
     if (!s.current.title.trim() && r.title) { setTitle(r.title); s.current.title = r.title; markDirty(); }
     refreshBoot();
   };

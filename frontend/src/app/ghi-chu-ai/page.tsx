@@ -4,7 +4,8 @@ import { ToolFaq, type Faq } from "@/components/tools/ToolPage";
 import { NotesMockup } from "@/components/landing/NotesMockup";
 import ScrollReveal from "@/components/landing/ScrollReveal";
 
-// Trang giới thiệu công khai (được index) cho tính năng Ghi chú — /notes cần đăng nhập nên noindex.
+// Trang giới thiệu công khai (được index) cho tính năng Ghi chú. /notes dùng miễn phí không cần đăng nhập (khách: ghi chú
+// lưu trên trình duyệt) nhưng là giao diện app nên vẫn noindex — trang này mới là trang đích từ Google.
 // Từ khoá chính: "app ghi chú có AI" / "ghi chú AI" (+ "ghi âm bài giảng thành văn bản", "tạo flashcard từ ghi chú")
 // Từ khoá phụ: ứng dụng ghi chú online, app ghi chú miễn phí, ghi âm thành văn bản tiếng việt, app ghi chép bài giảng,
 // cách ghi chép cornell, ghi chú học tiếng anh, sổ tay từ vựng tiếng anh online, app ghi chú cho học sinh
@@ -13,14 +14,17 @@ import ScrollReveal from "@/components/landing/ScrollReveal";
 const PATH = "/ghi-chu-ai";
 const TITLE = "Ghi Chú AI: Ghi Âm Thành Ghi Chú, Tự Tạo Flashcard";
 const DESCRIPTION =
-  "App ghi chú online có AI: ghi âm bài giảng thành ghi chú có mốc thời gian, tự tạo flashcard, quiz và hỏi lại chính sổ ghi chú của bạn. Dùng thử 3 ngày.";
+  "App ghi chú online miễn phí có AI, không cần đăng nhập: ghi âm bài giảng thành ghi chú, tự tạo flashcard, quiz và hỏi lại sổ ghi chú của bạn.";
+const APP = "/notes";
 const SIGNUP = "/auth?role=STUDENT&next=/notes";
 
 export const metadata = pageMetadata({
   title: TITLE,
   description: DESCRIPTION,
   path: PATH,
+  image: { src: "/images/photos/home/ghi-chu-ai-ghi-am-flashcard.webp", alt: "Giao diện Lucy Notes: ghi âm thành ghi chú có mốc thời gian, việc cần làm, hỏi sổ ghi chú", width: 960, height: 540 },
   keywords: [
+    "app ghi chú miễn phí không cần đăng nhập", "ghi chú online miễn phí",
     "app ghi chú có ai", "ghi chú ai", "ứng dụng ghi chú online", "app ghi chú miễn phí", "ghi âm bài giảng thành văn bản",
     "ghi âm thành văn bản tiếng việt", "tạo flashcard từ ghi chú", "app ghi chép bài giảng", "cách ghi chép cornell",
     "ghi chú học tiếng anh", "sổ tay từ vựng tiếng anh online", "app ghi chú cho học sinh",
@@ -28,12 +32,13 @@ export const metadata = pageMetadata({
 });
 
 const FAQS: Faq[] = [
-  { q: "Lucy Notes có miễn phí không?", a: "Tạo tài khoản học viên là miễn phí và được dùng thử đầy đủ tính năng AI trong 3 ngày. Hết thời gian dùng thử, ghi chú của bạn vẫn xem, sửa và xuất ra file được bình thường; các tính năng AI cần tài khoản còn hạn (tham gia lớp học hoặc gia hạn với giáo viên phụ trách)." },
+  { q: "Lucy Notes có miễn phí không? Có cần đăng nhập không?", a: "Miễn phí và không cần đăng nhập: mở trang Ghi chú là dùng được ngay, ghi chú được lưu trên trình duyệt của bạn. AI cũng dùng được khi chưa đăng nhập (10 lượt AI và 1 lượt chuyển ghi âm mỗi ngày). Chỉ cần đăng nhập khi muốn nối ghi chú với dữ liệu trong Lucy Tutor: đồng bộ nhiều thiết bị, đưa từ vựng vào deck ôn tập, liên kết bài học/đề thi của lớp, gửi trang cho giáo viên góp ý." },
+  { q: "Ghi chú khi chưa đăng nhập được lưu ở đâu?", a: "Trên chính trình duyệt bạn đang dùng (bộ nhớ IndexedDB), không gửi lên máy chủ trừ khi bạn bấm dùng tính năng AI. Nếu xoá dữ liệu trình duyệt hoặc dùng chế độ ẩn danh thì ghi chú có thể mất — hãy xuất file định kỳ hoặc đăng nhập. Khi đăng nhập, bạn có thể đưa toàn bộ ghi chú trên máy lên tài khoản chỉ với 1 lần bấm." },
   { q: "Ghi âm bài giảng thành ghi chú hoạt động thế nào?", a: "Bạn bấm ghi âm ngay trong trang (hoặc chọn file ghi âm có sẵn), tối đa 30 phút mỗi bản. AI chép lời tiếng Việt hoặc tiếng Anh, chia thành ý chính, từ vựng, việc cần làm và câu hỏi cần làm rõ. Mỗi ý có mốc thời gian — bấm vào là nghe lại đúng đoạn đó. AI có thể nghe nhầm tên riêng hoặc thuật ngữ hiếm, nên hãy đối chiếu với bản ghi khi cần." },
   { q: "“Hỏi sổ ghi chú” có tự bịa câu trả lời không?", a: "AI chỉ trả lời dựa trên các đoạn tìm được trong ghi chú của chính bạn (gồm cả chữ trong ảnh và bản chép lời ghi âm), kèm nguồn để bấm mở đúng trang. Nếu ghi chú không có thông tin, AI sẽ nói là không tìm thấy thay vì tự trả lời." },
   { q: "Giáo viên có đọc được ghi chú của tôi không?", a: "Không. Mọi trang mặc định là riêng tư. Giáo viên chỉ đọc được trang khi bạn chủ động bấm “Gửi cho giáo viên” để nhờ góp ý, và bạn có thể ngừng chia sẻ bất cứ lúc nào. Liên kết một trang với bài học hay đề thi của lớp chỉ để bạn mở nhanh nội dung gốc, không làm lộ trang." },
   { q: "AI có đọc toàn bộ ghi chú của tôi không?", a: "Nội dung chỉ được gửi cho AI khi bạn bấm dùng một tính năng AI (tóm tắt, tạo flashcard, hỏi sổ ghi chú…). Bạn có thể bật “Tắt AI cho sổ này” với từng sổ tay — nội dung sổ đó sẽ không bao giờ được gửi cho AI, kể cả khi hỏi sổ ghi chú." },
-  { q: "Có giới hạn số ghi chú hay dung lượng không?", a: "Mỗi tài khoản được tối đa 5.000 trang, 200MB file đính kèm (ảnh được nén tự động trước khi tải lên), 40 lượt AI chữ và 6 lượt chuyển ghi âm thành ghi chú mỗi ngày. Lượt AI bị lỗi không bị tính." },
+  { q: "Có giới hạn số ghi chú hay dung lượng không?", a: "Khi chưa đăng nhập: 200MB trên trình duyệt, 10 lượt AI và 1 lượt chuyển ghi âm mỗi ngày. Có tài khoản: tối đa 5.000 trang, 200MB file đính kèm (ảnh được nén tự động), 40 lượt AI chữ và 6 lượt chuyển ghi âm mỗi ngày. Lượt AI bị lỗi không bị tính." },
   { q: "Tôi có lấy dữ liệu ra được không?", a: "Có. Mỗi trang tải được dạng Markdown hoặc PDF, và nút “Xuất toàn bộ” tải về 1 file ZIP gồm tất cả trang dạng Markdown theo thư mục sổ tay/mục cùng file dữ liệu gốc JSON." },
   { q: "Dùng trên điện thoại được không?", a: "Được. Giao diện tự chuyển sang 1 cột trên điện thoại, chụp vở bằng camera và ghi âm trực tiếp trên trình duyệt. Bạn có thể cài Lucy Tutor lên màn hình chính như một ứng dụng." },
 ];
@@ -94,6 +99,8 @@ function JsonLd() {
       {
         "@type": "WebApplication", name: "Lucy Notes — Ghi chú AI", url, description: DESCRIPTION,
         applicationCategory: "ProductivityApplication", operatingSystem: "Web", inLanguage: "vi-VN",
+        isAccessibleForFree: true, offers: { "@type": "Offer", price: "0", priceCurrency: "VND" },
+        image: `${SITE_URL}/images/photos/home/ghi-chu-ai-ghi-am-flashcard.webp`,
         featureList: POWER.map((p) => p.title).concat(FULL.map(([t]) => t)),
         provider: { "@type": "EducationalOrganization", name: SITE_NAME, url: SITE_URL },
       },
@@ -121,7 +128,7 @@ export default function Page() {
                 <li className="flex items-center gap-1"><span aria-hidden="true">/</span><span aria-current="page" className="text-foreground">Ghi chú AI</span></li>
               </ol>
             </nav>
-            <p className="lp-enter mt-5 flex flex-wrap gap-2"><span className="ui-badge-new">Mới</span><span className="ui-badge bg-white">Dùng thử 3 ngày</span></p>
+            <p className="lp-enter mt-5 flex flex-wrap gap-2"><span className="ui-badge-new">Miễn phí</span><span className="ui-badge bg-white">Không cần đăng nhập</span></p>
             <h1 className="lp-enter mt-3 text-3xl sm:text-4xl lg:text-[2.75rem] font-extrabold tracking-tight leading-tight text-primary">
               Ghi Chú AI: Ghi Âm Thành Ghi Chú, Tự Tạo Flashcard, Hỏi Lại Sổ Ghi Chú
             </h1>
@@ -129,10 +136,10 @@ export default function Page() {
               Lucy Notes là sổ ghi chú online cho mọi thứ — bài giảng, công việc, kế hoạch, nhật ký — có AI giúp ghi chép, sắp xếp và biến ghi chú thành bài ôn tập.
             </p>
             <div className="lp-enter mt-6 flex flex-col sm:flex-row gap-3">
-              <Link href={SIGNUP} className="btn-primary lp-shine px-7 py-3.5 text-base text-center">Bắt đầu ghi chú miễn phí</Link>
-              <Link href="/notes" className="btn-outline px-7 py-3.5 text-base text-center bg-white">Đã có tài khoản — mở Ghi chú</Link>
+              <Link href={APP} className="btn-primary lp-shine px-7 py-3.5 text-base text-center">Mở Ghi chú ngay — miễn phí</Link>
+              <Link href={SIGNUP} className="btn-outline px-7 py-3.5 text-base text-center bg-white">Đăng nhập để đồng bộ</Link>
             </div>
-            <p className="mt-4 text-sm text-muted">Có sẵn trong tài khoản Lucy Tutor của học viên và giáo viên.</p>
+            <p className="mt-4 text-sm text-muted">Không cần tài khoản: ghi chú lưu ngay trên trình duyệt. Đăng nhập khi muốn đồng bộ, đưa từ vựng vào deck ôn tập hay liên kết bài học của lớp.</p>
           </div>
           <div className="lp-enter-zoom pb-6"><NotesMockup /></div>
         </div>
@@ -174,6 +181,7 @@ export default function Page() {
         </section>
 
         <section aria-labelledby="class-title" className="grid lg:grid-cols-2 gap-6">
+          <p className="lg:col-span-2 text-center text-muted -mb-2">Các tính năng dưới đây cần đăng nhập vì nối ghi chú với dữ liệu lớp học trong Lucy Tutor.</p>
           <div className="ui-card p-6 sm:p-8" data-reveal="left">
             <h2 id="class-title" className="text-xl sm:text-2xl font-extrabold text-primary">Dành cho học viên trong lớp</h2>
             <ul className="mt-4 space-y-2.5 text-foreground/90 leading-relaxed list-disc pl-5">
@@ -208,9 +216,9 @@ export default function Page() {
 
         <section className="ui-card p-6 sm:p-10 text-center" data-reveal="zoom">
           <h2 className="text-2xl md:text-3xl font-extrabold text-primary">Ghi chép thông minh hơn từ buổi học tới</h2>
-          <p className="text-muted mt-3 max-w-xl mx-auto">Tạo tài khoản học viên miễn phí, dùng thử đầy đủ AI trong 3 ngày. Ghi chú luôn là của bạn.</p>
+          <p className="text-muted mt-3 max-w-xl mx-auto">Mở là dùng, không cần đăng nhập. Ghi chú luôn là của bạn — xuất ra Markdown, PDF, ảnh bất cứ lúc nào.</p>
           <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href={SIGNUP} className="btn-primary px-7 py-3.5 text-base">Bắt đầu ghi chú miễn phí</Link>
+            <Link href={APP} className="btn-primary px-7 py-3.5 text-base">Mở Ghi chú ngay — miễn phí</Link>
             <Link href="/#cong-cu-mien-phi" className="btn-outline px-7 py-3.5 text-base">Xem công cụ học miễn phí</Link>
           </div>
         </section>

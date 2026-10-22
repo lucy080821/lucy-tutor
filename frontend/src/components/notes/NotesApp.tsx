@@ -4,7 +4,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
-import { notesApi, errMsg, ApiError } from "./api";
+import Link from "next/link";
+import { notesApi, errMsg, ApiError, isGuest } from "./api";
+import { clearGuestNotes, localStats, migrateGuestNotes } from "./localStore";
 import { Spinner } from "./ui";
 import Sidebar from "./Sidebar";
 import PageList from "./PageList";
@@ -53,13 +55,13 @@ export default function NotesApp() {
 
   const refreshBoot = useCallback(() => {
     notesApi<Bootstrap>("/bootstrap").then(setBoot).catch((err) => {
-      if (err instanceof ApiError && err.status === 401) { clearSession(); router.replace("/auth?next=/notes"); return; }
+      // Phiên hỏng (tài khoản không còn / ADMIN) → bỏ phiên, dùng tiếp ở chế độ khách
+      if (err instanceof ApiError && err.status === 401 && !isGuest()) { clearSession(); notesApi<Bootstrap>("/bootstrap").then(setBoot).catch((e) => setFatal(errMsg(e))); return; }
       if (!boot) setFatal(errMsg(err));
     });
-  }, [router, boot]);
+  }, [boot]);
 
   useEffect(() => {
-    if (!getSessionUserId()) { router.replace("/auth?next=/notes"); return; }
     refreshBoot();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -119,12 +121,46 @@ export default function NotesApp() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Vừa đăng nhập mà trình duyệt còn ghi chú làm lúc chưa đăng nhập → hỏi đưa lên tài khoản
+  useEffect(() => {
+    if (!boot || boot.user.guest || !getSessionUserId()) return;
+    let skip = false;
+    try { skip = sessionStorage.getItem("lucy_notes_migrate_later") === "1"; } catch { /* bỏ qua */ }
+    if (skip) return;
+    localStats().then(async ({ pages }) => {
+      if (!pages) return;
+      const r = await Swal.fire({
+        icon: "question", title: "Đưa ghi chú trên máy lên tài khoản?",
+        text: `Trình duyệt này còn ${pages} trang ghi chú bạn tạo khi chưa đăng nhập. Đưa lên tài khoản để dùng trên mọi thiết bị?`,
+        showDenyButton: true, showCancelButton: true, confirmButtonText: "Đưa lên tài khoản", denyButtonText: "Xoá khỏi máy", cancelButtonText: "Để sau",
+      });
+      if (r.isConfirmed) {
+        Swal.fire({ title: "Đang đưa ghi chú lên…", html: "Chuẩn bị", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        try {
+          const res = await migrateGuestNotes((path, opts) => notesApi(path, opts), (d, t) => Swal.update({ html: `${d}/${t} trang` }));
+          await clearGuestNotes();
+          refreshBoot(); setListKey((k) => k + 1);
+          Swal.fire({ icon: "success", text: `Đã đưa ${res.pages} trang lên tài khoản.` });
+        } catch (err) { Swal.fire({ icon: "error", text: errMsg(err) }); }
+      } else if (r.isDenied) {
+        const ok = await Swal.fire({ icon: "warning", text: `Xoá vĩnh viễn ${pages} trang trên trình duyệt này?`, showCancelButton: true, confirmButtonText: "Xoá", cancelButtonText: "Huỷ", confirmButtonColor: "#dc2626" });
+        if (ok.isConfirmed) await clearGuestNotes();
+      } else {
+        try { sessionStorage.setItem("lucy_notes_migrate_later", "1"); } catch { /* bỏ qua */ }
+      }
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boot?.user.id]);
+
+  const [hideGuestBar, setHideGuestBar] = useState(false);
+  useEffect(() => { try { setHideGuestBar(localStorage.getItem("lucy_notes_guest_bar") === "0"); } catch { /* bỏ qua */ } }, []);
+
   const commands = useMemo(() => [
     { label: "Trang mới", run: () => setDialog("template") },
     { label: "Ghi âm thành ghi chú", run: () => createPage({ tool: "record" }) },
     { label: "Chụp vở / bảng", run: () => createPage({ tool: "ocr" }) },
     { label: "Hỏi sổ ghi chú", run: () => setDialog("ask") },
-    { label: "Sắp xếp bằng lời", run: () => setDialog("agent") },
+    ...(boot?.user.guest ? [] : [{ label: "Sắp xếp bằng lời", run: () => setDialog("agent") }]),
     { label: "Việc cần làm", run: () => setView({ kind: "tasks" }) },
     { label: "Ôn hôm nay", run: () => setView({ kind: "study" }) },
     { label: "Hộp thư ghi nhanh", run: () => setView({ kind: "inbox" }) },
@@ -161,7 +197,18 @@ export default function NotesApp() {
   );
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100dvh-3.5rem)] md:h-[calc(100dvh-4rem)] bg-background overflow-hidden">
+    <div className="flex flex-col h-[calc(100dvh-3.5rem)] md:h-[calc(100dvh-4rem)] bg-background overflow-hidden">
+      {boot.user.guest && !hideGuestBar && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 bg-primary-soft border-b border-line text-sm">
+          <span className="ui-badge-new shrink-0">Miễn phí</span>
+          <span className="text-foreground/80 min-w-0">Bạn đang dùng Ghi chú không cần đăng nhập — ghi chú lưu trên trình duyệt này. <b>Đăng nhập</b> để đồng bộ mọi thiết bị, đưa từ vựng vào deck ôn tập và liên kết bài học của lớp.</span>
+          <span className="flex items-center gap-2 ml-auto">
+            <Link href="/auth?role=STUDENT&next=/notes" className="btn-primary px-4 py-1.5 text-xs">Đăng nhập / Đăng ký</Link>
+            <button type="button" onClick={() => { setHideGuestBar(true); try { localStorage.setItem("lucy_notes_guest_bar", "0"); } catch { /* bỏ qua */ } }} className="btn-ghost w-8 h-8 p-0" aria-label="Ẩn thông báo">×</button>
+          </span>
+        </div>
+      )}
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0">
       {/* Thanh trên cùng cho điện thoại */}
       <div className="lg:hidden flex items-center gap-2 px-3 py-2 bg-white border-b border-line">
         <button type="button" onClick={() => setMenuOpen(true)} className="btn-ghost w-10 h-10 p-0" aria-label="Mở menu sổ tay">
@@ -183,6 +230,7 @@ export default function NotesApp() {
       {isList && <section className={`${pageId ? "hidden lg:block" : "block"} w-full lg:w-[330px] shrink-0 bg-white lg:border-r border-line min-h-0 flex-1 lg:flex-none`}>{listPane}</section>}
       <main className={`${isList && !pageId ? "hidden lg:block" : "block"} flex-1 min-w-0 min-h-0 bg-white`}>{mainPane}</main>
 
+      </div>
       <AskModal open={dialog === "ask"} onClose={() => setDialog("")} boot={boot} onOpen={openPage} currentSectionId={view.kind === "section" ? view.id : null} onUsed={refreshBoot} />
       <AgentModal open={dialog === "agent"} onClose={() => setDialog("")} onDone={() => { refreshBoot(); setListKey((k) => k + 1); }} />
       <CommandPalette open={dialog === "palette"} onClose={() => setDialog("")} commands={commands} onOpen={openPage} />

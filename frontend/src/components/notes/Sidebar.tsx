@@ -121,7 +121,7 @@ export default function Sidebar({ boot, view, onView, onNewPage, onAsk, onAgent,
         <Row label="Đã ghim" count={c.pinned} active={view.kind === "pinned"} onClick={() => go({ kind: "pinned" })} />
         <Row label="Việc cần làm" count={c.overdue || c.today} alert={c.overdue > 0} active={view.kind === "tasks"} onClick={() => go({ kind: "tasks" })} />
         <Row label="Ôn hôm nay" count={c.studyDue} alert={c.studyDue > 0} active={view.kind === "study"} onClick={() => go({ kind: "study" })} />
-        <Row label={boot.user.role === "TEACHER" ? "Học viên gửi" : "Được chia sẻ"} count={c.sharedIn} alert={boot.user.role === "TEACHER" && c.sharedIn > 0} active={view.kind === "shared"} onClick={() => go({ kind: "shared" })} />
+        {!boot.user.guest && <Row label={boot.user.role === "TEACHER" ? "Học viên gửi" : "Được chia sẻ"} count={c.sharedIn} alert={boot.user.role === "TEACHER" && c.sharedIn > 0} active={view.kind === "shared"} onClick={() => go({ kind: "shared" })} />}
 
         <div className="flex items-center pt-4 pb-1 px-3">
           <span className="ui-nav-group-label p-0">Sổ tay</span>
@@ -168,15 +168,17 @@ export default function Sidebar({ boot, view, onView, onNewPage, onAsk, onAgent,
         </div>
       </div>
       <div className="p-3 border-t border-line space-y-2 text-xs text-muted">
-        <button type="button" onClick={onAgent} className="btn-ghost w-full py-1.5 text-xs justify-start">Sắp xếp bằng lời (trợ lý)</button>
+        {!boot.user.guest && <button type="button" onClick={onAgent} className="btn-ghost w-full py-1.5 text-xs justify-start">Sắp xếp bằng lời (trợ lý)</button>}
         <div>
-          <div className="flex justify-between"><span>File đính kèm</span><span>{fmtBytes(boot.storage.used)} / {fmtBytes(boot.storage.quota)}</span></div>
+          <div className="flex justify-between"><span>{boot.user.guest ? "Lưu trên trình duyệt" : "File đính kèm"}</span><span>{fmtBytes(boot.storage.used)} / {fmtBytes(boot.storage.quota)}</span></div>
           <div className="h-1.5 rounded-full bg-line mt-1 overflow-hidden"><div className={`h-full ${used > 85 ? "bg-red-500" : "bg-primary"}`} style={{ width: `${used}%` }} /></div>
         </div>
         <p>AI hôm nay: còn {boot.usage.TEXT.left}/{boot.usage.TEXT.limit} lượt · ghi âm {boot.usage.AUDIO.left}/{boot.usage.AUDIO.limit}</p>
         <div className="flex gap-3">
           <button type="button" onClick={onExport} className="font-bold text-primary hover:underline">Xuất toàn bộ (.zip)</button>
-          <Link href={boot.user.role === "TEACHER" ? "/teacher" : "/dashboard"} className="font-bold text-primary hover:underline ml-auto">← Dashboard</Link>
+          {boot.user.guest
+            ? <Link href="/auth?role=STUDENT&next=/notes" className="font-bold text-primary hover:underline ml-auto">Đăng nhập để đồng bộ</Link>
+            : <Link href={boot.user.role === "TEACHER" ? "/teacher" : "/dashboard"} className="font-bold text-primary hover:underline ml-auto">← Dashboard</Link>}
         </div>
       </div>
     </nav>

@@ -13,7 +13,7 @@ const multer = require('multer');
 const sanitizeHtml = require('sanitize-html');
 const { toFile } = require('groq-sdk');
 const {
-  prisma, groq, httpError, normalizeSearch, loadNoteUser, sanitizeDoc, docBlocks, contentHash,
+  prisma, groq, httpError, normalizeSearch, loadNoteUser, loadNoteActor, requireAccount, sanitizeDoc, docBlocks, contentHash,
   aiUsage, consumeAi, askJson, uploadNoteFile, removeNoteFiles, ownPage, aiDisabledForPage, sendError, vnDay,
 } = require('../utils/notesCore');
 const { helpers } = require('./notes.routes');
@@ -53,8 +53,14 @@ async function withQuota(user, fn, kind = 'TEXT') {
   }
 }
 
-/** Trang của chính người dùng + kiểm tra "Tắt AI cho sổ này". */
-async function aiPage(user, pageId) {
+/** Trang của chính người dùng + kiểm tra "Tắt AI cho sổ này". Khách (ghi chú nằm trên trình duyệt) gửi kèm
+ *  nội dung trang: body.title, body.text (chữ thuần), body.doc (JSON Tiptap, tuỳ chọn) — trả về "trang ảo" không lưu DB. */
+async function aiPage(user, pageId, body = {}) {
+  if (user.guest) {
+    const plainText = str(body.text, MAX_INPUT * 2);
+    if (plainText.length < 10) throw httpError(400, 'Trang còn quá ít nội dung để AI xử lý');
+    return { id: null, title: str(body.title, 300), plainText, contentJson: body.doc ? sanitizeDoc(body.doc) : null, linkedPageIds: [], aiCache: null };
+  }
   const page = await ownPage(user.id, pageId);
   if (await aiDisabledForPage(page)) throw httpError(403, 'Sổ tay này đang tắt AI. Bật lại trong cài đặt sổ tay nếu muốn dùng.');
   return page;
@@ -62,7 +68,7 @@ async function aiPage(user, pageId) {
 
 /** Nội dung đầu vào: đoạn đang chọn (text) hoặc cả trang (pageId). */
 async function inputText(user, body) {
-  if (body.text && String(body.text).trim()) return { text: String(body.text).slice(0, MAX_INPUT), page: body.pageId ? await aiPage(user, body.pageId) : null };
+  if (body.text && String(body.text).trim()) return { text: String(body.text).slice(0, MAX_INPUT), page: body.pageId && !user.guest ? await aiPage(user, body.pageId) : null };
   if (!body.pageId) throw httpError(400, 'Thiếu nội dung');
   const page = await aiPage(user, body.pageId);
   const text = `${page.title ? `# ${page.title}\n` : ''}${page.plainText}`.trim();
@@ -72,6 +78,7 @@ async function inputText(user, body) {
 
 /** Cache kết quả AI theo hash nội dung trang — trang chưa đổi thì không gọi AI lại. */
 async function cached(page, key, compute) {
+  if (!page.id) return compute(); // trang của khách không lưu server → không cache
   const hash = contentHash(page.title, page.plainText);
   const cache = page.aiCache && typeof page.aiCache === 'object' ? page.aiCache : {};
   if (cache[key]?.hash === hash) return { ...cache[key].data, cached: true };
@@ -104,7 +111,7 @@ const COMMANDS = {
 
 router.post('/command', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     const action = String(req.body.action || '');
     const custom = str(req.body.prompt, 500);
     if (!COMMANDS[action] && !(action === 'custom' && custom)) throw httpError(400, 'Lệnh AI không hợp lệ');
@@ -122,7 +129,7 @@ router.post('/command', async (req, res) => {
 
 router.post('/title-tags', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     const { text } = await inputText(user, req.body);
     const data = await withQuota(user, () => askJson(
       'You name and tag notes for a Vietnamese note-taking app.',
@@ -135,7 +142,7 @@ router.post('/title-tags', async (req, res) => {
 // ── Ghi chú → flashcard SRS ─────────────────────────────────────────────────────────────────
 router.post('/flashcards', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     const { text } = await inputText(user, req.body);
     const data = await withQuota(user, () => askJson(
       'You extract study flashcards from notes for Vietnamese learners of English.',
@@ -163,7 +170,8 @@ JSON: {"cards": [{"word": "...", "meaning": "nghĩa tiếng Việt ngắn gọn"
 // Lưu thẻ đã chọn vào deck SRS (cùng bảng với "Từ Của Tôi" ở /gym) — 2 lệnh createMany thay vì N lần gọi API
 router.post('/flashcards/save', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
+    requireAccount(user, 'Đưa thẻ vào deck ôn tập SRS');
     if (user.role !== 'STUDENT') throw httpError(403, 'Deck ôn tập SRS dành cho tài khoản học viên');
     const rows = await prisma.userVocabProgress.findMany({ where: { userId: user.id }, select: { vocab: { select: { word: true } } } });
     const existing = new Set(rows.map((r) => r.vocab.word.trim().toLowerCase()));
@@ -202,8 +210,8 @@ function cleanQuestion(q) {
 
 router.post('/quiz', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
-    const page = await aiPage(user, req.body.pageId);
+    const user = await loadNoteActor(req);
+    const page = await aiPage(user, req.body.pageId, req.body);
     if (page.plainText.length < 80) throw httpError(400, 'Trang cần nhiều nội dung hơn để tạo câu hỏi');
     const fresh = !!req.body.fresh;
     const compute = () => withQuota(user, () => askJson(
@@ -224,8 +232,8 @@ JSON: {"questions": [{"type": "MULTIPLE_CHOICE|TRUE_FALSE|FILL_BLANK|SHORT_ANSWE
 // ── Ôn kiểu Feynman: AI hỏi → người học giải thích lại → AI chỉ ra chỗ hiểu sai/thiếu ─────────
 router.post('/feynman', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
-    const page = await aiPage(user, req.body.pageId);
+    const user = await loadNoteActor(req);
+    const page = await aiPage(user, req.body.pageId, req.body);
     const notes = page.plainText.slice(0, MAX_INPUT);
     if (req.body.mode === 'grade') {
       const question = str(req.body.question, 600);
@@ -263,7 +271,7 @@ function cleanTree(node, depth = 0) {
 }
 router.post('/mindmap', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     const { text } = await inputText(user, req.body);
     const data = await withQuota(user, () => askJson(
       `You turn notes into concise mind maps. ${LANG_RULE}`,
@@ -279,7 +287,8 @@ router.post('/mindmap', async (req, res) => {
 const STUDY_STEPS = [1, 3, 7, 14, 30, 60];
 router.post('/study/:pageId/review', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
+    requireAccount(user, 'Lịch ôn trên máy chủ');
     const page = await ownPage(user.id, req.params.pageId, { id: true, studyStep: true });
     const grade = req.body.grade;
     let step = page.studyStep;
@@ -298,7 +307,7 @@ router.post('/study/:pageId/review', async (req, res) => {
 const ERROR_CATEGORIES = ['Chia động từ', 'Thì', 'Mạo từ', 'Giới từ', 'Số ít/số nhiều', 'Trật tự từ', 'Từ vựng/collocation', 'Chính tả', 'Dấu câu', 'Cấu trúc câu', 'Khác'];
 router.post('/journal/correct', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     const { text, page } = await inputText(user, req.body);
     const level = ['A1', 'A2', 'B1', 'B2', 'C1'].includes(req.body.level) ? req.body.level : 'B1';
     const data = await withQuota(user, () => askJson(
@@ -318,7 +327,7 @@ JSON: {"corrections": [{"original": "câu/cụm gốc nguyên văn", "corrected"
     })).filter((c) => c.original && c.corrected && c.original !== c.corrected).slice(0, 40);
     const upgrades = arr(data.upgrades).map((u) => ({ from: str(u.from, 120), to: str(u.to, 120), level: str(u.level, 4), example: str(u.example, 300) }))
       .filter((u) => u.from && u.to).slice(0, 6);
-    if (corrections.length) {
+    if (corrections.length && !user.guest) {
       await prisma.noteWritingError.createMany({ data: corrections.map((c) => ({ ...c, userId: user.id, pageId: page?.id || null })) });
     }
     res.json({ corrections, upgrades, summary: str(data.summary, 600) });
@@ -328,7 +337,8 @@ JSON: {"corrections": [{"original": "câu/cụm gốc nguyên văn", "corrected"
 // Hồ sơ lỗi: 30 ngày gần nhất so với 30 ngày trước đó (không gọi AI)
 router.get('/journal/profile', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
+    if (user.guest) return res.json({ total: 0, categories: [], guest: true });
     const now = Date.now();
     const d30 = new Date(now - 30 * 86400_000);
     const d60 = new Date(now - 60 * 86400_000);
@@ -348,7 +358,7 @@ router.get('/journal/profile', async (req, res) => {
 // ── Từ có thể chưa biết trong 1 đoạn tiếng Anh (lọc bỏ từ đã có trong deck SRS) ──────────────
 router.post('/unknown-words', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     const { text } = await inputText(user, req.body);
     const level = ['A1', 'A2', 'B1', 'B2', 'C1'].includes(req.body.level) ? req.body.level : 'B1';
     const [data, deck] = await Promise.all([
@@ -386,15 +396,20 @@ const STYLES = {
 
 router.post('/transcribe', audioUpload.single('audio'), async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     if (!req.file) throw httpError(400, 'Thiếu file ghi âm');
-    const page = req.body.pageId ? await aiPage(user, req.body.pageId) : null;
+    const page = req.body.pageId && !user.guest ? await aiPage(user, req.body.pageId, req.body) : null;
     const style = STYLES[req.body.style] ? req.body.style : 'lecture';
     const language = ['vi', 'en'].includes(req.body.language) ? req.body.language : undefined;
     const result = await withQuota(user, async () => {
-      // 1) Lưu file ghi âm để phát lại đúng đoạn khi bấm mốc thời gian
+      // 1) Lưu file ghi âm để phát lại đúng đoạn khi bấm mốc thời gian (khách: file nằm trên trình duyệt, không lưu server)
       const stamp = new Date(Date.now() + 7 * 3600_000).toISOString().slice(0, 16).replace('T', ' ');
-      const { url, storagePath } = await uploadNoteFile(user.id, req.file, 'audio');
+      // Kho lưu trữ lỗi (vd Supabase bị khoá vì vượt egress) → vẫn chép lời và tạo ghi chú, chỉ không lưu được file để phát lại
+      let url = null; let storagePath = null; let storageError = null;
+      if (!user.guest) {
+        try { ({ url, storagePath } = await uploadNoteFile(user.id, req.file, 'audio')); }
+        catch (e) { if (e.status === 413) throw e; storageError = e.message; }
+      }
       // 2) Whisper → các đoạn có mốc thời gian
       let segments;
       try {
@@ -405,10 +420,12 @@ router.post('/transcribe', audioUpload.single('audio'), async (req, res) => {
         segments = arr(tr.segments).map((s) => ({ start: Number(s.start) || 0, end: Number(s.end) || 0, text: String(s.text || '').trim() })).filter((s) => s.text);
         if (!segments.length) throw httpError(422, 'Không nghe được nội dung trong bản ghi âm. Hãy thử nói gần micro hơn.');
       } catch (err) {
-        await removeNoteFiles([storagePath]);
+        if (storagePath) await removeNoteFiles([storagePath]);
         throw err;
       }
-      const att = await prisma.noteAttachment.create({
+      const att = user.guest
+        ? { id: str(req.body.localId, 64) || crypto.randomUUID(), kind: 'AUDIO', name: `Ghi âm ${stamp}`, url: null, size: req.file.size, mime: req.file.mimetype, createdAt: new Date() }
+        : storageError ? null : await prisma.noteAttachment.create({
         data: { userId: user.id, pageId: page?.id || null, kind: 'AUDIO', name: `Ghi âm ${stamp}`, mime: req.file.mimetype, size: req.file.size, url, storagePath, transcript: segments },
         select: { id: true, kind: true, name: true, url: true, size: true, mime: true, createdAt: true },
       });
@@ -428,12 +445,12 @@ ${lines.join('\n')}
 JSON: {"title": "tiêu đề ngắn", "summary": "2-3 câu tóm tắt", "sections": [{"heading": "...", "points": [{"text": "...", "seg": 0}]}], "vocabulary": [{"word": "...", "meaning": "..."}], "tasks": [{"text": "việc cần làm được nhắc tới", "seg": 0}], "questions": ["câu hỏi còn bỏ ngỏ/cần hỏi lại"]}`,
         { temperature: 0.3 },
       );
-      return { att, segments, data };
+      return { att, segments, data, storageError };
     }, 'AUDIO');
-    const { att, segments, data } = result;
+    const { att, segments, data, storageError } = result;
     const ts = (seg) => {
       const s = segments[Math.max(0, Math.min(segments.length - 1, Number(seg) || 0))];
-      return `<a href="#t=${Math.floor(s.start)}&amp;a=${att.id}">${fmtTime(s.start)}</a>`;
+      return att ? `<a href="#t=${Math.floor(s.start)}&amp;a=${att.id}">${fmtTime(s.start)}</a>` : `<code>${fmtTime(s.start)}</code>`;
     };
     let html = '';
     if (str(data.summary)) html += `<div data-callout="info"><p><strong>Tóm tắt:</strong> ${escapeHtml(str(data.summary, 1200))}</p></div>`;
@@ -448,14 +465,16 @@ JSON: {"title": "tiêu đề ngắn", "summary": "2-3 câu tóm tắt", "section
     if (tasks.length) html += `<h3>Việc cần làm</h3><ul data-type="taskList">${tasks.map((t) => `<li data-type="taskItem" data-checked="false"><p>${escapeHtml(str(t.text, 400))} (${ts(t.seg)})</p></li>`).join('')}</ul>`;
     const questions = arr(data.questions).map((q) => str(q, 400)).filter(Boolean).slice(0, 10);
     if (questions.length) html += `<h3>Câu hỏi cần làm rõ</h3><ul>${questions.map((q) => `<li><p>${escapeHtml(q)}</p></li>`).join('')}</ul>`;
-    if (page) await helpers.refreshSearchText(page.id);
-    res.json({ attachment: att, transcript: segments, title: str(data.title, 120), html: cleanHtml(html) });
+    if (page?.id) await helpers.refreshSearchText(page.id);
+    res.json({
+      ...(storageError ? { warning: 'Kho lưu file đang tạm lỗi nên chưa lưu được bản ghi âm để phát lại — ghi chú vẫn được tạo từ bản chép lời.' } : {}),
+      attachment: att, transcript: segments, title: str(data.title, 120), html: cleanHtml(html) });
   } catch (err) { sendError(res, err, 'transcribe'); }
 });
 
 router.post('/ocr-structure', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     const raw = str(req.body.text, MAX_INPUT);
     if (raw.length < 5) throw httpError(400, 'Không đọc được chữ trong ảnh');
     const data = await withQuota(user, () => askJson(
@@ -478,7 +497,7 @@ JSON: {"title": "tiêu đề đoán từ nội dung", "html": "..."}`,
 const WEEKDAYS = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
 router.post('/extract-tasks', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     const { text } = await inputText(user, req.body);
     const vn = new Date(Date.now() + 7 * 3600_000);
     const today = `${vn.toISOString().slice(0, 10)} (${WEEKDAYS[vn.getUTCDay()]})`;
@@ -528,23 +547,33 @@ function chunkText(text, size = 700) {
 
 router.post('/ask', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     const question = str(req.body.question, 500);
     if (question.length < 3) throw httpError(400, 'Hãy nhập câu hỏi');
     const terms = keywords(question).slice(0, 10);
-    const base = scopeWhere(user, req.body.scope);
-    const pages = await prisma.notePage.findMany({
-      where: terms.length && req.body.scope?.type !== 'page' ? { AND: [base, { OR: terms.map((t) => ({ searchText: { contains: t } })) }] } : base,
-      select: { id: true, title: true, plainText: true, updatedAt: true, attachments: { select: { ocrText: true, transcript: true, kind: true } } },
-      orderBy: { updatedAt: 'desc' }, take: 60,
-    });
+    let pages;
+    if (user.guest) {
+      let budget = 300000;
+      pages = arr(req.body.pages).slice(0, 60).map((p) => {
+        const text = str(p.text, Math.max(0, Math.min(40000, budget)));
+        budget -= text.length;
+        return { id: str(p.id, 64), title: str(p.title, 300), plainText: text, attachments: arr(p.extra).slice(0, 20).map((x) => ({ ocrText: str(x.text, 20000), kind: x.kind === 'AUDIO' ? 'AUDIO' : 'IMAGE', transcript: null })) };
+      }).filter((p) => p.id && p.plainText);
+    } else {
+      const base = scopeWhere(user, req.body.scope);
+      pages = await prisma.notePage.findMany({
+        where: terms.length && req.body.scope?.type !== 'page' ? { AND: [base, { OR: terms.map((t) => ({ searchText: { contains: t } })) }] } : base,
+        select: { id: true, title: true, plainText: true, updatedAt: true, attachments: { select: { ocrText: true, transcript: true, kind: true } } },
+        orderBy: { updatedAt: 'desc' }, take: 60,
+      });
+    }
     if (!pages.length) return res.json({ found: false, answer: '<p>Không tìm thấy nội dung liên quan trong ghi chú của bạn.</p>', citations: [] });
     // Chấm điểm từng đoạn theo số từ khoá khớp (tiêu đề khớp được cộng thêm) → lấy 14 đoạn tốt nhất
     const scored = [];
     for (const p of pages) {
       const titleHits = keywords(p.title).filter((w) => terms.includes(w)).length;
       const sources = [{ text: p.plainText, kind: '' },
-        ...p.attachments.filter((a) => a.ocrText).map((a) => ({ text: a.ocrText, kind: 'chữ trong ảnh' })),
+        ...p.attachments.filter((a) => a.ocrText).map((a) => ({ text: a.ocrText, kind: a.kind === 'AUDIO' ? 'ghi âm' : 'chữ trong ảnh' })),
         ...p.attachments.filter((a) => Array.isArray(a.transcript)).map((a) => ({ text: a.transcript.map((s) => s.text).join(' '), kind: 'ghi âm' }))];
       for (const src of sources) {
         for (const chunk of chunkText(src.text)) {
@@ -574,18 +603,20 @@ router.post('/ask', async (req, res) => {
 
 router.post('/suggest-links', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
-    const page = await aiPage(user, req.body.pageId);
+    const user = await loadNoteActor(req);
+    const page = await aiPage(user, req.body.pageId, req.body);
     const freq = {};
     for (const w of normalizeSearch(`${page.title} ${page.title} ${page.plainText}`).match(/[a-z0-9]{3,}/g) || []) {
       if (!STOPWORDS.has(w)) freq[w] = (freq[w] || 0) + 1;
     }
     const top = Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([w]) => w);
     if (!top.length) return res.json({ suggestions: [] });
-    const candidates = await prisma.notePage.findMany({
-      where: { AND: [scopeWhere(user), { id: { notIn: [page.id, ...page.linkedPageIds] } }, { OR: top.map((t) => ({ searchText: { contains: t } })) }] },
-      select: { id: true, title: true, excerpt: true }, take: 25, orderBy: { updatedAt: 'desc' },
-    });
+    const candidates = user.guest
+      ? arr(req.body.candidates).slice(0, 25).map((c) => ({ id: str(c.id, 64), title: str(c.title, 200), excerpt: str(c.excerpt, 220) })).filter((c) => c.id)
+      : await prisma.notePage.findMany({
+        where: { AND: [scopeWhere(user), { id: { notIn: [page.id, ...page.linkedPageIds] } }, { OR: top.map((t) => ({ searchText: { contains: t } })) }] },
+        select: { id: true, title: true, excerpt: true }, take: 25, orderBy: { updatedAt: 'desc' },
+      });
     if (!candidates.length) return res.json({ suggestions: [] });
     const data = await withQuota(user, () => askJson(
       'You find genuinely related notes. Reply in Vietnamese.',
@@ -600,11 +631,16 @@ router.post('/suggest-links', async (req, res) => {
 // Hộp thư ghi nhanh: AI đề xuất chuyển từng trang vào mục phù hợp + thẻ; người dùng duyệt rồi mới áp dụng
 router.post('/triage', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
-    const [pages, sections] = await Promise.all([
-      prisma.notePage.findMany({ where: { userId: user.id, deletedAt: null, archivedAt: null, sectionId: null }, select: { id: true, title: true, excerpt: true }, orderBy: { updatedAt: 'desc' }, take: 30 }),
-      prisma.noteSection.findMany({ where: { userId: user.id, notebook: { aiDisabled: false } }, select: { id: true, name: true, notebook: { select: { name: true } } } }),
-    ]);
+    const user = await loadNoteActor(req);
+    const [pages, sections] = user.guest
+      ? [
+        arr(req.body.pages).slice(0, 30).map((p) => ({ id: str(p.id, 64), title: str(p.title, 200), excerpt: str(p.excerpt, 220) })).filter((p) => p.id),
+        arr(req.body.sections).slice(0, 200).map((x) => ({ id: str(x.id, 64), name: str(x.name, 120), notebook: { name: str(x.notebook, 120) } })).filter((x) => x.id),
+      ]
+      : await Promise.all([
+        prisma.notePage.findMany({ where: { userId: user.id, deletedAt: null, archivedAt: null, sectionId: null }, select: { id: true, title: true, excerpt: true }, orderBy: { updatedAt: 'desc' }, take: 30 }),
+        prisma.noteSection.findMany({ where: { userId: user.id, notebook: { aiDisabled: false } }, select: { id: true, name: true, notebook: { select: { name: true } } } }),
+      ]);
     if (!pages.length) return res.json({ suggestions: [] });
     if (!sections.length) throw httpError(400, 'Hãy tạo ít nhất 1 sổ tay để AI có chỗ sắp xếp ghi chú vào');
     const data = await withQuota(user, () => askJson(
@@ -628,7 +664,8 @@ router.post('/triage', async (req, res) => {
 
 router.post('/triage/apply', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
+    requireAccount(user, 'Áp dụng sắp xếp trên máy chủ');
     const items = arr(req.body.items).slice(0, 50);
     const sectionIds = new Set((await prisma.noteSection.findMany({ where: { userId: user.id }, select: { id: true } })).map((s) => s.id));
     let applied = 0;
@@ -657,8 +694,8 @@ router.post('/triage/apply', async (req, res) => {
 // Xem song ngữ: dịch từng khối văn bản, hiển thị cạnh bản gốc
 router.post('/parallel', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
-    const page = await aiPage(user, req.body.pageId);
+    const user = await loadNoteActor(req);
+    const page = await aiPage(user, req.body.pageId, req.body);
     const blocks = docBlocks(page.contentJson).filter((b) => b.text.length > 1);
     const picked = [];
     let budget = 9000;
@@ -680,9 +717,9 @@ function requireTeacher(user) {
 
 router.post('/teacher/lesson-draft', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     requireTeacher(user);
-    const page = await aiPage(user, req.body.pageId);
+    const page = await aiPage(user, req.body.pageId, req.body);
     if (page.plainText.length < 50) throw httpError(400, 'Trang soạn bài còn quá ít nội dung');
     const data = await withQuota(user, () => askJson(
       `You turn a teacher's lesson-planning notes into a lesson for Vietnamese students learning English. ${HTML_RULE}`,
@@ -705,7 +742,7 @@ JSON: {"title": "...", "summary": "1 câu mô tả ngắn bài học (chữ thư
 
 router.post('/teacher/lesson-create', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     requireTeacher(user);
     const page = await ownPage(user.id, req.body.pageId, { id: true });
     const classroom = user.classroomsOwned.find((c) => c.id === req.body.classroomId);
@@ -733,9 +770,9 @@ router.post('/teacher/lesson-create', async (req, res) => {
 // Đề thi: trả các dòng đúng định dạng Excel mẫu ở tab "Tạo Đề Mới" (frontend tạo file để giáo viên Nhập Từ Excel)
 router.post('/teacher/exam-draft', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     requireTeacher(user);
-    const page = await aiPage(user, req.body.pageId);
+    const page = await aiPage(user, req.body.pageId, req.body);
     const count = Math.min(Math.max(Number(req.body.count) || 15, 5), 40);
     const data = await withQuota(user, () => askJson(
       'You write English test questions for Vietnamese high-school students from a teacher\'s notes.',
@@ -760,7 +797,7 @@ JSON: {"questions": [{"type": "TN|TL", "question": "...", "options": ["A", "B", 
 
 router.post('/teacher/student-report', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     requireTeacher(user);
     const studentId = String(req.body.studentId || '');
     const allowed = await helpers.accessibleIds(user, 'STUDENT', [studentId]);
@@ -799,7 +836,7 @@ router.post('/teacher/student-report', async (req, res) => {
 // Lỗ hổng kiến thức của lớp: chỉ đọc các trang học viên CHỦ ĐỘNG gửi cho giáo viên (NoteShare scope TEACHER)
 router.post('/teacher/class-gaps', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     requireTeacher(user);
     const classroom = user.classroomsOwned.find((c) => c.id === req.body.classroomId);
     if (!classroom) throw httpError(403, 'Hãy chọn 1 lớp bạn đang dạy');
@@ -824,7 +861,7 @@ router.post('/teacher/class-gaps', async (req, res) => {
 
 router.post('/teacher/feedback-draft', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
     requireTeacher(user);
     const share = await prisma.noteShare.findFirst({ where: { id: String(req.body.shareId || ''), scope: 'TEACHER', teacherId: user.id }, select: { page: { select: { title: true, plainText: true } } } });
     if (!share) throw httpError(404, 'Không tìm thấy trang được gửi');
@@ -845,7 +882,8 @@ function weekKey(d = new Date()) {
 }
 router.get('/digest', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
+    requireAccount(user, 'Bản tin tuần');
     const key = weekKey();
     const existing = await prisma.noteDigest.findUnique({ where: { userId_weekKey: { userId: user.id, weekKey: key } } });
     if (existing) return res.json({ weekKey: key, ...existing.content });
@@ -908,7 +946,8 @@ async function resolveSelector(user, sel, refs) {
 
 router.post('/agent/plan', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
+    requireAccount(user, 'Trợ lý sắp xếp bằng lời');
     const command = str(req.body.command, 600);
     if (command.length < 5) throw httpError(400, 'Hãy mô tả việc bạn muốn làm');
     const [notebooks, tagRows, recent] = await Promise.all([
@@ -975,7 +1014,8 @@ JSON: {"actions": [{"type": "...", "label": "mô tả ngắn bằng tiếng Vi�
 
 router.post('/agent/:runId/execute', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
+    requireAccount(user, 'Trợ lý sắp xếp bằng lời');
     const run = await prisma.noteAgentRun.findFirst({ where: { id: req.params.runId, userId: user.id } });
     if (!run) throw httpError(404, 'Không tìm thấy kế hoạch');
     if (run.executedAt) throw httpError(400, 'Kế hoạch này đã được thực hiện');
@@ -1036,7 +1076,8 @@ router.post('/agent/:runId/execute', async (req, res) => {
 
 router.post('/agent/:runId/undo', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
+    requireAccount(user, 'Trợ lý sắp xếp bằng lời');
     const run = await prisma.noteAgentRun.findFirst({ where: { id: req.params.runId, userId: user.id } });
     if (!run?.executedAt) throw httpError(404, 'Không có thao tác nào để hoàn tác');
     if (run.undoneAt) throw httpError(400, 'Đã hoàn tác rồi');
@@ -1066,7 +1107,8 @@ router.post('/agent/:runId/undo', async (req, res) => {
 
 router.get('/agent/history', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
+    const user = await loadNoteActor(req);
+    requireAccount(user, 'Trợ lý sắp xếp bằng lời');
     const runs = await prisma.noteAgentRun.findMany({ where: { userId: user.id, executedAt: { not: null } }, orderBy: { createdAt: 'desc' }, take: 10, select: { id: true, command: true, executedAt: true, undoneAt: true } });
     res.json(runs);
   } catch (err) { sendError(res, err, 'agent history'); }
@@ -1074,8 +1116,8 @@ router.get('/agent/history', async (req, res) => {
 
 router.get('/usage', async (req, res) => {
   try {
-    const user = await loadNoteUser(uid(req));
-    res.json(await aiUsage(user.id));
+    const user = await loadNoteActor(req);
+    res.json(await aiUsage(user));
   } catch (err) { sendError(res, err, 'usage'); }
 });
 
