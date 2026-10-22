@@ -176,3 +176,27 @@ export type SeoReport = SeoReportMeta & { content: string };
 // Vị trí TB: 1 chữ số thập phân; null = không có lượt hiển thị
 export const formatPosition = (p: number | null | undefined) =>
   p === null || p === undefined ? "—" : p.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+
+// ===== Mạng xã hội: YouTube + Facebook (backend: routes/adminSocial.routes.js, utils/socialSummary.js) =====
+
+export type SocialRange = 7 | 28 | 90;
+export type SocialKind = "YT_VIDEO" | "YT_SHORT" | "FB_REEL" | "FB_POST";
+export type SocialTotals = { views: number; watchHours: number; engagements: number; gained: number; lost: number; net: number; per1000: number | null };
+export type SocialItem = {
+  id: string; kind: SocialKind; title: string; url: string; thumbnail: string; publishedAt: string;
+  views: number; reach: number | null; likes: number; comments: number; shares: number; watchMinutes: number | null;
+  followsGained: number | null; followsLost: number | null; convViews: number | null; per1000: number | null; metricsAt: string;
+};
+export type SocialSync = { configured: boolean; syncing: boolean; at: string | null; error: string | null; items: number; notes: string[] };
+export type SocialPlatform = {
+  platform: "YOUTUBE" | "FACEBOOK"; configured: boolean; sync: SocialSync; hasData: boolean;
+  followers?: number | null; lifetimeViews?: number; period?: { start: string; end: string };
+  totals?: { current: SocialTotals; previous: SocialTotals };
+  series?: { date: string; views: number; gained: number; lost: number; net: number; per1000: number | null }[];
+  items: SocialItem[];
+};
+export type SocialSummary = { days: number; youtube: SocialPlatform; facebook: SocialPlatform };
+
+// Chuyển đổi: hiện theo 1.000 lượt xem (tỷ lệ thật thường 0,1–1%, đọc phần trăm khó so sánh)
+export const formatPer1000 = (v: number | null | undefined) =>
+  v === null || v === undefined ? "—" : v.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 2 });

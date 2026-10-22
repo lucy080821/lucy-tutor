@@ -86,6 +86,8 @@ router.use(requireAdmin);
 router.use('/analytics', require('./adminAnalytics.routes'));
 // SEO Performance: số liệu Google Search Console + bài phân tích tuần (xem adminSeo.routes.js)
 router.use('/seo', require('./adminSeo.routes'));
+// Mạng xã hội: YouTube + Facebook (xem adminSocial.routes.js)
+router.use('/social', require('./adminSocial.routes'));
 
 router.get('/me', async (req, res) => {
   try {

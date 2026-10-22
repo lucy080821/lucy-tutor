@@ -1357,3 +1357,45 @@ model NoteTemplate {
 
   @@index([userId])
 }
+
+// Mạng xã hội (tab "Mạng xã hội" ở /administrator): từng video/Reel/bài viết YouTube + Facebook, đồng bộ qua API chính thức
+// (utils/social/*). views là tổng tích luỹ mới nhất; followsGained/convViews lấy cùng 1 nguồn để tính tỷ lệ chuyển đổi
+// (null = nền tảng không trả số follow cho mục này).
+model SocialItem {
+  id            String   @id @default(uuid())
+  platform      String // YOUTUBE | FACEBOOK
+  externalId    String
+  kind          String // YT_VIDEO | YT_SHORT | FB_REEL | FB_POST
+  title         String   @default("")
+  url           String   @default("")
+  thumbnail     String   @default("")
+  publishedAt   DateTime
+  views         Int      @default(0)
+  reach         Int?
+  likes         Int      @default(0)
+  comments      Int      @default(0)
+  shares        Int      @default(0)
+  watchMinutes  Float?
+  followsGained Int?
+  followsLost   Int?
+  convViews     Int?
+  metricsAt     DateTime @default(now())
+
+  @@unique([platform, externalId])
+  @@index([platform, publishedAt])
+}
+
+// Số liệu cả kênh/Page theo ngày (followers chỉ có ở các ngày đã đồng bộ; YouTube làm tròn khi kênh >1.000 người)
+model SocialDaily {
+  id           String   @id @default(uuid())
+  platform     String
+  date         DateTime @db.Date
+  views        Int      @default(0)
+  watchMinutes Float    @default(0)
+  engagements  Int      @default(0)
+  gained       Int      @default(0)
+  lost         Int      @default(0)
+  followers    Int?
+
+  @@unique([platform, date])
+}

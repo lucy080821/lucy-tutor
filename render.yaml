@@ -23,6 +23,17 @@ services:
       # "Nghe bài viết" ở /blog: giọng ElevenLabs "Trung" miền Nam (không đặt = dùng giọng trình duyệt)
       - key: ELEVENLABS_API_KEY
         sync: false
+      # Tab "Mạng xã hội" ở /administrator: YouTube (OAuth, lấy token bằng backend/scripts/youtubeAuth.js) + Facebook Page
+      - key: YT_CLIENT_ID
+        sync: false
+      - key: YT_CLIENT_SECRET
+        sync: false
+      - key: YT_REFRESH_TOKEN
+        sync: false
+      - key: FB_PAGE_ID
+        sync: false
+      - key: FB_PAGE_TOKEN
+        sync: false
 
   # 2. Frontend Service (Next.js Application)
   - type: web

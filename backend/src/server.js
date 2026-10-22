@@ -109,4 +109,6 @@ app.listen(PORT, () => {
   require('./utils/flashcardCatalog').startFlashcardScanner();
   // Đồng bộ số liệu Google Search Console (tab SEO Performance) 30 giây sau khởi động, sau đó mỗi ngày 06:00 giờ VN
   require('./utils/searchConsole').startSearchConsoleSync();
+  // Đồng bộ YouTube + Facebook (tab Mạng xã hội): 45 giây sau khởi động, mỗi 20 phút, và đầy đủ lúc 06:00 giờ VN
+  require('./utils/social').startSocialSync();
 });
