@@ -41,7 +41,7 @@ router.post('/request', async (req, res) => {
     if (rateLimited(ip)) return res.status(429).json({ error: 'Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau 15 phút.' });
 
     const user = await prisma.user.findFirst({
-      where: { email: { equals: email, mode: 'insensitive' }, role: { in: ['STUDENT', 'TEACHER'] } },
+      where: { email: { equals: email, mode: 'insensitive' }, role: { in: ['STUDENT', 'TEACHER', 'NOTES'] } },
       select: { id: true },
     });
     // Trả lời giống nhau dù email có tồn tại hay không -> không dò được tài khoản

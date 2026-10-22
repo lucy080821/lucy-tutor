@@ -32,7 +32,8 @@ async function loadNoteUser(userId) {
       classroomsOwned: { select: { id: true, name: true } },
     },
   });
-  if (!row || !['STUDENT', 'TEACHER'].includes(row.role)) throw httpError(401, 'Tài khoản không dùng được Ghi chú');
+  // STUDENT/TEACHER dùng chung tài khoản app học; NOTES = tài khoản chỉ dành cho Ghi chú (notesAuth.routes.js)
+  if (!row || !['STUDENT', 'TEACHER', 'NOTES'].includes(row.role)) throw httpError(401, 'Tài khoản không dùng được Ghi chú');
   const user = { ...row, ...computeAccessStatus(row) };
   userCache.set(userId, { user, at: Date.now() });
   return user;

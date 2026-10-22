@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { aiApi, notesApi, errMsg } from "./api";
+import { openNotesAuth, ACCOUNT_BENEFITS } from "./NotesAuth";
 import { Modal, Spinner, timeAgo } from "./ui";
 import type { Bootstrap, PageItem } from "./types";
 
@@ -93,6 +94,18 @@ export default function HomeView({ boot, onOpen, onNewPage, onRecordNew, onOcrNe
           ))}
         </div>
 
+        {boot.user.guest && (
+          <section className="ui-card p-5 border-amber-200 bg-amber-50/60 grid md:grid-cols-[1fr_auto] gap-4 items-center">
+            <div>
+              <h2 className="font-bold text-primary text-lg">Đừng để mất ghi chú — tạo tài khoản Ghi chú miễn phí</h2>
+              <ul className="mt-2 space-y-1 text-sm text-foreground/80">{ACCOUNT_BENEFITS.map((b) => <li key={b} className="flex gap-2"><span className="text-emerald-600 font-bold">✓</span>{b}</li>)}</ul>
+            </div>
+            <div className="flex md:flex-col gap-2">
+              <button type="button" onClick={() => openNotesAuth("signup")} className="btn-primary px-5 py-2.5">Tạo tài khoản</button>
+              <button type="button" onClick={() => openNotesAuth("login")} className="btn-outline px-5 py-2.5 bg-white">Đăng nhập</button>
+            </div>
+          </section>
+        )}
         {boot.user.accessLocked && <p className="rounded-xl bg-amber-50 text-amber-800 p-3 text-sm">Tài khoản đang bị khoá nên các tính năng AI tạm ngưng. Ghi chú của bạn vẫn xem, sửa và xuất được bình thường.</p>}
 
         <div className="grid lg:grid-cols-2 gap-5">
@@ -181,7 +194,7 @@ export default function HomeView({ boot, onOpen, onNewPage, onRecordNew, onOcrNe
           <Card title="Sắp xếp bằng lời">
             <p className="text-sm text-muted mb-3">Ví dụ: "Gắn thẻ ielts cho mọi trang có chữ writing rồi chuyển vào sổ IELTS". Xem trước rồi mới làm, hoàn tác được.</p>
             {boot.user.guest
-              ? <a href="/auth?role=STUDENT&next=/notes" className="btn-outline block text-center w-full py-2 text-sm">Đăng nhập để dùng</a>
+              ? <button type="button" onClick={() => openNotesAuth("signup")} className="btn-outline w-full py-2 text-sm">Tạo tài khoản để dùng</button>
               : <button type="button" disabled={boot.user.accessLocked} onClick={onAgent} className="btn-outline w-full py-2 text-sm">Mở trợ lý</button>}
           </Card>
         </div>

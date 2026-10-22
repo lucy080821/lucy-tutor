@@ -100,6 +100,10 @@ router.post('/signin', async (req, res) => {
     if (user.role === 'ADMIN') {
       return res.status(403).json({ error: 'Tài khoản quản trị không dùng để đăng nhập ở đây. Vui lòng đăng nhập tại trang quản trị.' });
     }
+    // Tài khoản Ghi chú (role NOTES, tạo ở /notes) chỉ dùng cho Lucy Notes — không vào app học, kể cả khi client không gửi role
+    if (user.role === 'NOTES') {
+      return res.status(403).json({ error: 'Đây là tài khoản Ghi chú, chỉ dùng cho Lucy Notes. Vui lòng đăng nhập tại trang Ghi chú (lucytutor.online/notes).' });
+    }
     // One account is locked to the role it registered with — a student picking "Giáo Viên"
     // (or vice versa) on the login toggle must not be let in under the wrong role.
     if (role && user.role !== role) {

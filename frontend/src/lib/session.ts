@@ -7,6 +7,8 @@
 // (dữ liệu cũ từ trước bản sửa) thì coi như phiên hỏng → xoá hết, bắt đăng nhập lại.
 
 const KEY = "userId";
+// Role của phiên (chỉ để chặn tài khoản Ghi chú vào khu app học — xem AccountAreaGuard). Không dùng để phân quyền API.
+const ROLE_KEY = "lucy_session_role";
 
 function safeGet(storage: Storage, key: string): string | null {
   try { return storage.getItem(key); } catch { return null; }
@@ -27,18 +29,25 @@ export function getSessionUserId(): string | null {
   return session || local;
 }
 
-export function setSessionUserId(userId: string, remember: boolean) {
+export function setSessionUserId(userId: string, remember: boolean, role?: string) {
   clearSession();
   try {
-    (remember ? localStorage : sessionStorage).setItem(KEY, userId);
+    const store = remember ? localStorage : sessionStorage;
+    store.setItem(KEY, userId);
+    if (role) store.setItem(ROLE_KEY, role);
   } catch { /* storage bị chặn — phiên chỉ tồn tại tới khi tải lại trang */ }
 }
 
-// 3 loại tài khoản tách biệt hoàn toàn, mỗi loại chỉ vào đúng khu vực của mình:
-// STUDENT -> /dashboard, TEACHER -> /teacher, ADMIN -> chỉ /administrator (đăng nhập riêng, không dùng phiên userId này).
-// Role khác 2 role trên (ADMIN, hoặc dữ liệu lạ) không có chỗ trong luồng userId -> null.
-export function homeForRole(role: string | null | undefined): "/dashboard" | "/teacher" | null {
-  return role === "STUDENT" ? "/dashboard" : role === "TEACHER" ? "/teacher" : null;
+export function getSessionRole(): string | null {
+  if (typeof window === "undefined") return null;
+  return safeGet(sessionStorage, ROLE_KEY) || safeGet(localStorage, ROLE_KEY);
+}
+
+// 4 loại tài khoản tách biệt, mỗi loại chỉ vào đúng khu vực của mình:
+// STUDENT -> /dashboard, TEACHER -> /teacher, NOTES (tài khoản chỉ dùng cho Ghi chú) -> /notes,
+// ADMIN -> chỉ /administrator (đăng nhập riêng, không dùng phiên userId này). Role lạ không có chỗ trong luồng userId -> null.
+export function homeForRole(role: string | null | undefined): "/dashboard" | "/teacher" | "/notes" | null {
+  return role === "STUDENT" ? "/dashboard" : role === "TEACHER" ? "/teacher" : role === "NOTES" ? "/notes" : null;
 }
 
 // Gọi khi trang phát hiện tài khoản không thuộc khu vực này: chuyển về đúng khu vực của tài khoản,
@@ -54,6 +63,8 @@ export function clearSession() {
   if (typeof window === "undefined") return;
   safeRemove(localStorage, KEY);
   safeRemove(sessionStorage, KEY);
+  safeRemove(localStorage, ROLE_KEY);
+  safeRemove(sessionStorage, ROLE_KEY);
   // Dữ liệu cá nhân hoá theo người dùng trước — không để lọt sang tài khoản sau
   safeRemove(localStorage, "lucy_previous_xp");
 }

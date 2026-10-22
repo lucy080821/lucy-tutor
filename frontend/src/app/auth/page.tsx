@@ -104,7 +104,7 @@ function AuthForm() {
       }
 
       // Luôn xoá phiên cũ ở cả 2 storage trước khi ghi phiên mới (xem lib/session.ts)
-      setSessionUserId(data.id, rememberMe);
+      setSessionUserId(data.id, rememberMe, data.role);
       router.replace(nextPath || home);
     } catch (err: any) {
       setError(err.message);

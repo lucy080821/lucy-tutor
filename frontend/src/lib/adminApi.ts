@@ -85,7 +85,7 @@ export const formatVNDate = (iso: string) => {
 };
 export const pctChange = (current: number, previous: number) => (previous ? ((current - previous) / Math.abs(previous)) * 100 : null);
 
-export const ROLE_LABEL: Record<string, string> = { STUDENT: "Học viên", TEACHER: "Giáo viên", ADMIN: "Quản trị" };
+export const ROLE_LABEL: Record<string, string> = { STUDENT: "Học viên", TEACHER: "Giáo viên", NOTES: "Tài khoản Ghi chú", ADMIN: "Quản trị" };
 
 export const FREE_STATUS_LABEL: Record<FreeStatus, string> = {
   TRIAL: "Đang dùng thử",

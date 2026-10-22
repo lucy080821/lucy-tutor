@@ -8,12 +8,13 @@ import { SITE_URL } from "@/lib/seo";
 import { ErrorBlock, LoadingBlock, Modal, SectionCard } from "./ui";
 
 const PAGE_SIZE = 20;
-type RoleFilter = "ALL" | "STUDENT" | "FREE" | "TEACHER" | "ADMIN";
+type RoleFilter = "ALL" | "STUDENT" | "FREE" | "TEACHER" | "NOTES" | "ADMIN";
 const ROLE_FILTERS: { id: RoleFilter; label: string }[] = [
   { id: "ALL", label: "Tất cả" },
   { id: "STUDENT", label: "Học viên" },
   { id: "FREE", label: "Học viên tự do" },
   { id: "TEACHER", label: "Giáo viên" },
+  { id: "NOTES", label: "Tài khoản Ghi chú" },
   { id: "ADMIN", label: "Quản trị" },
 ];
 const FREE_STATUS_STYLE: Record<FreeStatus, string> = {
@@ -86,6 +87,7 @@ export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
       if (roleFilter === "STUDENT" && u.role !== "STUDENT") return false;
       if (roleFilter === "FREE" && !u.freeStatus) return false;
       if (roleFilter === "TEACHER" && u.role !== "TEACHER") return false;
+      if (roleFilter === "NOTES" && u.role !== "NOTES") return false;
       if (roleFilter === "ADMIN" && u.role !== "ADMIN") return false;
       return !q || fold(`${u.name} ${u.email} ${u.phone || ""}`).includes(q);
     });
@@ -97,6 +99,7 @@ export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
     STUDENT: users?.filter((u) => u.role === "STUDENT").length || 0,
     FREE: users?.filter((u) => u.freeStatus).length || 0,
     TEACHER: users?.filter((u) => u.role === "TEACHER").length || 0,
+    NOTES: users?.filter((u) => u.role === "NOTES").length || 0,
     ADMIN: users?.filter((u) => u.role === "ADMIN").length || 0,
   }), [users]);
 
@@ -209,7 +212,7 @@ export default function UsersTab({ onAuthLost }: { onAuthLost: () => void }) {
                     </td>
                     <td>{u.role === "ADMIN" ? <span className="ui-badge">{ROLE_LABEL.ADMIN}</span> : ROLE_LABEL[u.role] || u.role}</td>
                     <td className="text-muted">
-                      {u.role === "TEACHER" ? `Dạy ${u.classroomsOwned} lớp` : u.role === "ADMIN" ? "—" : u.classroomsJoined ? `${u.classroomsJoined} lớp` : "Chưa vào lớp"}
+                      {u.role === "TEACHER" ? `Dạy ${u.classroomsOwned} lớp` : u.role === "ADMIN" || u.role === "NOTES" ? "—" : u.classroomsJoined ? `${u.classroomsJoined} lớp` : "Chưa vào lớp"}
                     </td>
                     <td>
                       {u.freeStatus ? (

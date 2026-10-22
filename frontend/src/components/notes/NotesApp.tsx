@@ -4,9 +4,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
-import Link from "next/link";
 import { notesApi, errMsg, ApiError, isGuest } from "./api";
 import { clearGuestNotes, localStats, migrateGuestNotes } from "./localStore";
+import NotesAuth, { openNotesAuth, ACCOUNT_BENEFITS } from "./NotesAuth";
 import { Spinner } from "./ui";
 import Sidebar from "./Sidebar";
 import PageList from "./PageList";
@@ -91,6 +91,7 @@ export default function NotesApp() {
     try {
       const page = await notesApi<PageItem>("/pages", { body });
       refreshBoot();
+      if (boot.user.guest) nudgeGuest().catch(() => {});
       if (opts.quick) { setListKey((k) => k + 1); return; }
       if (opts.tool) setAutoTool({ id: page.id, tool: opts.tool });
       setListKey((k) => k + 1);
@@ -153,7 +154,36 @@ export default function NotesApp() {
   }, [boot?.user.id]);
 
   const [hideGuestBar, setHideGuestBar] = useState(false);
-  useEffect(() => { try { setHideGuestBar(localStorage.getItem("lucy_notes_guest_bar") === "0"); } catch { /* bỏ qua */ } }, []);
+  const [isSafari, setIsSafari] = useState(false);
+  useEffect(() => {
+    try { setHideGuestBar(sessionStorage.getItem("lucy_notes_guest_bar") === "0"); } catch { /* bỏ qua */ }
+    const ua = navigator.userAgent;
+    setIsSafari(/Safari/.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR/.test(ua));
+    // ?auth=signup|login (từ trang giới thiệu /ghi-chu-ai) → mở hộp tài khoản
+    const auth = params.get("auth");
+    if (auth === "signup" || auth === "login") setTimeout(() => openNotesAuth(auth), 300);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Khách: xin trình duyệt lưu lâu dài (Chrome/Edge không tự dọn khi máy đầy bộ nhớ)
+  useEffect(() => {
+    if (boot?.user.guest && typeof navigator !== "undefined" && navigator.storage?.persist) navigator.storage.persist().catch(() => {});
+  }, [boot?.user.guest]);
+
+  /** Khách vừa có thêm trang: tới mốc 3 / 10 / 25 trang thì nhắc tạo tài khoản (mỗi mốc 1 lần) */
+  const nudgeGuest = async () => {
+    const { pages } = await localStats();
+    const milestone = [3, 10, 25].find((m) => pages >= m && (() => { try { return localStorage.getItem(`lucy_notes_nudge_${m}`) !== "1"; } catch { return false; } })());
+    if (!milestone) return;
+    try { localStorage.setItem(`lucy_notes_nudge_${milestone}`, "1"); } catch { /* bỏ qua */ }
+    const r = await Swal.fire({
+      icon: "info", title: `Bạn đã có ${pages} trang ghi chú`,
+      html: `<p style="margin:0 0 10px">Ghi chú đang chỉ nằm trên trình duyệt này. Tạo tài khoản Ghi chú miễn phí để không bao giờ mất:</p><ul style="text-align:left;margin:0;padding-left:18px;font-size:14px;line-height:1.6">${ACCOUNT_BENEFITS.map((b) => `<li>${b}</li>`).join("")}</ul>`,
+      showDenyButton: true, showCancelButton: true, confirmButtonText: "Tạo tài khoản miễn phí", denyButtonText: "Tải bản sao (.zip)", cancelButtonText: "Để sau",
+    });
+    if (r.isConfirmed) openNotesAuth("signup");
+    else if (r.isDenied) doExport();
+  };
 
   const commands = useMemo(() => [
     { label: "Trang mới", run: () => setDialog("template") },
@@ -185,7 +215,7 @@ export default function NotesApp() {
       onCreateChild={(parentId) => createPage({ parentId })}
       onBack={() => nav(view, null)} />
   ) : view.kind === "home" ? (
-    <HomeView boot={boot} onOpen={openPage} onNewPage={() => setDialog("template")} onRecordNew={() => createPage({ tool: "record" })} onOcrNew={() => createPage({ tool: "ocr" })}
+    <HomeView key={`${boot.user.id}-${listKey}`} boot={boot} onOpen={openPage} onNewPage={() => setDialog("template")} onRecordNew={() => createPage({ tool: "record" })} onOcrNew={() => createPage({ tool: "ocr" })}
       onAsk={() => setDialog("ask")} onAgent={() => setDialog("agent")} refreshBoot={refreshBoot} refreshList={() => setListKey((k) => k + 1)} />
   ) : view.kind === "tasks" ? <TasksView onOpen={openPage} refreshBoot={refreshBoot} />
     : view.kind === "shared" ? <SharedView boot={boot} onOpenOwn={openPage} refreshBoot={refreshBoot} />
@@ -199,12 +229,14 @@ export default function NotesApp() {
   return (
     <div className="flex flex-col h-[calc(100dvh-3.5rem)] md:h-[calc(100dvh-4rem)] bg-background overflow-hidden">
       {boot.user.guest && !hideGuestBar && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 bg-primary-soft border-b border-line text-sm">
-          <span className="ui-badge-new shrink-0">Miễn phí</span>
-          <span className="text-foreground/80 min-w-0">Bạn đang dùng Ghi chú không cần đăng nhập — ghi chú lưu trên trình duyệt này. <b>Đăng nhập</b> để đồng bộ mọi thiết bị, đưa từ vựng vào deck ôn tập và liên kết bài học của lớp.</span>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2 bg-amber-50 border-b border-amber-200 text-sm">
+          <span className="text-amber-900 min-w-0 flex-1">
+            <b>Ghi chú của bạn đang chỉ lưu trên trình duyệt này</b> và có thể mất khi xoá dữ liệu trình duyệt, dùng tab ẩn danh hoặc đổi máy{isSafari ? " — Safari còn tự xoá nếu bạn không mở trang này trong 7 ngày" : ""}. Tạo tài khoản Ghi chú <b>miễn phí</b> để lưu an toàn và mở trên mọi thiết bị.
+          </span>
           <span className="flex items-center gap-2 ml-auto">
-            <Link href="/auth?role=STUDENT&next=/notes" className="btn-primary px-4 py-1.5 text-xs">Đăng nhập / Đăng ký</Link>
-            <button type="button" onClick={() => { setHideGuestBar(true); try { localStorage.setItem("lucy_notes_guest_bar", "0"); } catch { /* bỏ qua */ } }} className="btn-ghost w-8 h-8 p-0" aria-label="Ẩn thông báo">×</button>
+            <button type="button" onClick={() => openNotesAuth("signup")} className="btn-primary px-4 py-1.5 text-xs">Tạo tài khoản miễn phí</button>
+            <button type="button" onClick={() => openNotesAuth("login")} className="btn-outline px-3 py-1.5 text-xs bg-white">Đăng nhập</button>
+            <button type="button" onClick={() => { setHideGuestBar(true); try { sessionStorage.setItem("lucy_notes_guest_bar", "0"); } catch { /* bỏ qua */ } }} className="btn-ghost w-8 h-8 p-0" aria-label="Ẩn thông báo">×</button>
           </span>
         </div>
       )}
@@ -231,6 +263,7 @@ export default function NotesApp() {
       <main className={`${isList && !pageId ? "hidden lg:block" : "block"} flex-1 min-w-0 min-h-0 bg-white`}>{mainPane}</main>
 
       </div>
+      <NotesAuth onLoggedIn={() => { refreshBoot(); setListKey((k) => k + 1); nav({ kind: "home" }, null); }} />
       <AskModal open={dialog === "ask"} onClose={() => setDialog("")} boot={boot} onOpen={openPage} currentSectionId={view.kind === "section" ? view.id : null} onUsed={refreshBoot} />
       <AgentModal open={dialog === "agent"} onClose={() => setDialog("")} onDone={() => { refreshBoot(); setListKey((k) => k + 1); }} />
       <CommandPalette open={dialog === "palette"} onClose={() => setDialog("")} commands={commands} onOpen={openPage} />

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Swal from "sweetalert2";
 import { notesApi, errMsg } from "./api";
+import { openNotesAuth } from "./NotesAuth";
 import { Modal, Spinner } from "./ui";
 import { LINK_TYPE_LABEL, type Bootstrap, type FullPage, type LinkType, type NoteLink, type Share } from "./types";
 
@@ -93,9 +94,11 @@ export default function LinksPanel({ page, boot, onChange, onOpenPage, onClose }
           <h3 className="ui-label">Nội dung lớp học</h3>
           {boot.user.guest ? (
             <div className="text-sm text-muted space-y-2">
-              <p>Đăng nhập để liên kết ghi chú với bài học, đề thi, tài liệu của lớp và chia sẻ với giáo viên. Ghi chú thường vẫn dùng miễn phí không cần đăng nhập.</p>
-              <Link href="/auth?role=STUDENT&next=/notes" className="btn-primary inline-block px-4 py-2 text-sm">Đăng nhập / Đăng ký</Link>
+              <p>Đăng nhập bằng tài khoản <b>học viên / giáo viên</b> Lucy Tutor để liên kết ghi chú với bài học, đề thi, tài liệu của lớp và chia sẻ với giáo viên.</p>
+              <button type="button" onClick={() => openNotesAuth("login")} className="btn-primary px-4 py-2 text-sm">Đăng nhập</button>
             </div>
+          ) : boot.user.role === "NOTES" ? (
+            <p className="text-sm text-muted">Liên kết với lớp học dành cho tài khoản học viên/giáo viên Lucy Tutor. Tài khoản Ghi chú dùng riêng cho ghi chú.</p>
           ) : !boot.user.canLink ? (
             <p className="text-sm text-muted">Tham gia một lớp học để liên kết ghi chú với bài học, đề thi, tài liệu của lớp.</p>
           ) : (
@@ -118,7 +121,7 @@ export default function LinksPanel({ page, boot, onChange, onOpenPage, onClose }
 
         <section>
           <h3 className="ui-label">Chia sẻ</h3>
-          {boot.user.guest ? <p className="text-sm text-muted">Chia sẻ trang cần đăng nhập.</p> : privateNote ? (
+          {boot.user.guest || boot.user.role === "NOTES" ? <p className="text-sm text-muted">Chia sẻ trang với lớp/giáo viên dành cho tài khoản học viên/giáo viên Lucy Tutor.</p> : privateNote ? (
             <p className="text-sm rounded-xl bg-amber-50 text-amber-800 p-3">Trang có ghi chú về học viên nên luôn riêng tư, không chia sẻ được.</p>
           ) : (
             <>

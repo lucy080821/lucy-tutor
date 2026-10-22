@@ -16,7 +16,7 @@ const TITLE = "Ghi Chú AI: Ghi Âm Thành Ghi Chú, Tự Tạo Flashcard";
 const DESCRIPTION =
   "App ghi chú online miễn phí có AI, không cần đăng nhập: ghi âm bài giảng thành ghi chú, tự tạo flashcard, quiz và hỏi lại sổ ghi chú của bạn.";
 const APP = "/notes";
-const SIGNUP = "/auth?role=STUDENT&next=/notes";
+const SIGNUP = "/notes?auth=signup";
 
 export const metadata = pageMetadata({
   title: TITLE,
@@ -33,7 +33,8 @@ export const metadata = pageMetadata({
 
 const FAQS: Faq[] = [
   { q: "Lucy Notes có miễn phí không? Có cần đăng nhập không?", a: "Miễn phí và không cần đăng nhập: mở trang Ghi chú là dùng được ngay, ghi chú được lưu trên trình duyệt của bạn. AI cũng dùng được khi chưa đăng nhập (10 lượt AI và 1 lượt chuyển ghi âm mỗi ngày). Chỉ cần đăng nhập khi muốn nối ghi chú với dữ liệu trong Lucy Tutor: đồng bộ nhiều thiết bị, đưa từ vựng vào deck ôn tập, liên kết bài học/đề thi của lớp, gửi trang cho giáo viên góp ý." },
-  { q: "Ghi chú khi chưa đăng nhập được lưu ở đâu?", a: "Trên chính trình duyệt bạn đang dùng (bộ nhớ IndexedDB), không gửi lên máy chủ trừ khi bạn bấm dùng tính năng AI. Nếu xoá dữ liệu trình duyệt hoặc dùng chế độ ẩn danh thì ghi chú có thể mất — hãy xuất file định kỳ hoặc đăng nhập. Khi đăng nhập, bạn có thể đưa toàn bộ ghi chú trên máy lên tài khoản chỉ với 1 lần bấm." },
+  { q: "Tài khoản Ghi chú khác tài khoản học viên thế nào?", a: "Tài khoản Ghi chú là tài khoản miễn phí chỉ dùng cho Lucy Notes: lưu ghi chú trên máy chủ, đồng bộ mọi thiết bị, có nhiều lượt AI hơn. Nó tách biệt với các khoá học — không vào được bài học, đề thi hay phòng luyện tập. Nếu bạn đã có tài khoản học viên hoặc giáo viên Lucy Tutor thì không cần tạo thêm: đăng nhập Ghi chú bằng chính tài khoản đó, và còn liên kết được ghi chú với bài học của lớp." },
+  { q: "Ghi chú khi chưa đăng nhập được lưu ở đâu?", a: "Trên chính trình duyệt bạn đang dùng (bộ nhớ IndexedDB), không gửi lên máy chủ trừ khi bạn bấm dùng tính năng AI. Ghi chú có thể mất nếu xoá dữ liệu trình duyệt, dùng tab ẩn danh, đổi máy, hoặc trên Safari không mở trang trong 7 ngày — nên tạo tài khoản Ghi chú miễn phí (hoặc xuất file định kỳ). Khi đăng nhập, bạn có thể đưa toàn bộ ghi chú trên máy lên tài khoản chỉ với 1 lần bấm." },
   { q: "Ghi âm bài giảng thành ghi chú hoạt động thế nào?", a: "Bạn bấm ghi âm ngay trong trang (hoặc chọn file ghi âm có sẵn), tối đa 30 phút mỗi bản. AI chép lời tiếng Việt hoặc tiếng Anh, chia thành ý chính, từ vựng, việc cần làm và câu hỏi cần làm rõ. Mỗi ý có mốc thời gian — bấm vào là nghe lại đúng đoạn đó. AI có thể nghe nhầm tên riêng hoặc thuật ngữ hiếm, nên hãy đối chiếu với bản ghi khi cần." },
   { q: "“Hỏi sổ ghi chú” có tự bịa câu trả lời không?", a: "AI chỉ trả lời dựa trên các đoạn tìm được trong ghi chú của chính bạn (gồm cả chữ trong ảnh và bản chép lời ghi âm), kèm nguồn để bấm mở đúng trang. Nếu ghi chú không có thông tin, AI sẽ nói là không tìm thấy thay vì tự trả lời." },
   { q: "Giáo viên có đọc được ghi chú của tôi không?", a: "Không. Mọi trang mặc định là riêng tư. Giáo viên chỉ đọc được trang khi bạn chủ động bấm “Gửi cho giáo viên” để nhờ góp ý, và bạn có thể ngừng chia sẻ bất cứ lúc nào. Liên kết một trang với bài học hay đề thi của lớp chỉ để bạn mở nhanh nội dung gốc, không làm lộ trang." },
@@ -137,9 +138,9 @@ export default function Page() {
             </p>
             <div className="lp-enter mt-6 flex flex-col sm:flex-row gap-3">
               <Link href={APP} className="btn-primary lp-shine px-7 py-3.5 text-base text-center">Mở Ghi chú ngay — miễn phí</Link>
-              <Link href={SIGNUP} className="btn-outline px-7 py-3.5 text-base text-center bg-white">Đăng nhập để đồng bộ</Link>
+              <Link href={SIGNUP} className="btn-outline px-7 py-3.5 text-base text-center bg-white">Tạo tài khoản lưu ghi chú</Link>
             </div>
-            <p className="mt-4 text-sm text-muted">Không cần tài khoản: ghi chú lưu ngay trên trình duyệt. Đăng nhập khi muốn đồng bộ, đưa từ vựng vào deck ôn tập hay liên kết bài học của lớp.</p>
+            <p className="mt-4 text-sm text-muted">Dùng ngay không cần tài khoản (ghi chú lưu trên trình duyệt). Tạo tài khoản Ghi chú miễn phí để lưu an toàn trên máy chủ và mở trên mọi thiết bị.</p>
           </div>
           <div className="lp-enter-zoom pb-6"><NotesMockup /></div>
         </div>

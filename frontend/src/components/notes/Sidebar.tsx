@@ -2,7 +2,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Swal from "sweetalert2";
-import { notesApi, errMsg } from "./api";
+import { notesApi, errMsg, API_URL } from "./api";
+import { openNotesAuth } from "./NotesAuth";
+import { clearSession, getSessionUserId } from "@/lib/session";
 import { fmtBytes } from "./ui";
 import { NOTE_COLORS, type Bootstrap, type Notebook, type View } from "./types";
 
@@ -27,6 +29,26 @@ async function pickColor(title: string, current: string) {
     showCancelButton: true, confirmButtonText: "Chọn", cancelButtonText: "Huỷ",
   });
   return value as string | undefined;
+}
+
+const ROLE_NAME: Record<string, string> = { NOTES: "Tài khoản Ghi chú", STUDENT: "Học viên", TEACHER: "Giáo viên" };
+
+async function changePassword() {
+  const r = await Swal.fire({
+    title: "Đổi mật khẩu",
+    html: '<input id="cp-cur" type="password" class="swal2-input" placeholder="Mật khẩu hiện tại" autocomplete="current-password"><input id="cp-new" type="password" class="swal2-input" placeholder="Mật khẩu mới (ít nhất 8 ký tự)" autocomplete="new-password"><input id="cp-new2" type="password" class="swal2-input" placeholder="Nhập lại mật khẩu mới" autocomplete="new-password">',
+    showCancelButton: true, confirmButtonText: "Đổi mật khẩu", cancelButtonText: "Huỷ", focusConfirm: false,
+    preConfirm: async () => {
+      const v = (id: string) => (document.getElementById(id) as HTMLInputElement).value;
+      if (v("cp-new").length < 8) { Swal.showValidationMessage("Mật khẩu mới cần ít nhất 8 ký tự"); return false; }
+      if (v("cp-new") !== v("cp-new2")) { Swal.showValidationMessage("Mật khẩu nhập lại không khớp"); return false; }
+      const res = await fetch(`${API_URL}/api/auth/change-password`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId: getSessionUserId(), currentPassword: v("cp-cur"), newPassword: v("cp-new") }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { Swal.showValidationMessage(data.error || "Không đổi được mật khẩu"); return false; }
+      return true;
+    },
+  });
+  if (r.isConfirmed) Swal.fire({ icon: "success", text: "Đã đổi mật khẩu.", timer: 1500, showConfirmButton: false });
 }
 
 export default function Sidebar({ boot, view, onView, onNewPage, onAsk, onAgent, onSearch, onExport, refresh, onNavigate }: {
@@ -121,7 +143,7 @@ export default function Sidebar({ boot, view, onView, onNewPage, onAsk, onAgent,
         <Row label="Đã ghim" count={c.pinned} active={view.kind === "pinned"} onClick={() => go({ kind: "pinned" })} />
         <Row label="Việc cần làm" count={c.overdue || c.today} alert={c.overdue > 0} active={view.kind === "tasks"} onClick={() => go({ kind: "tasks" })} />
         <Row label="Ôn hôm nay" count={c.studyDue} alert={c.studyDue > 0} active={view.kind === "study"} onClick={() => go({ kind: "study" })} />
-        {!boot.user.guest && <Row label={boot.user.role === "TEACHER" ? "Học viên gửi" : "Được chia sẻ"} count={c.sharedIn} alert={boot.user.role === "TEACHER" && c.sharedIn > 0} active={view.kind === "shared"} onClick={() => go({ kind: "shared" })} />}
+        {!boot.user.guest && boot.user.role !== "NOTES" && <Row label={boot.user.role === "TEACHER" ? "Học viên gửi" : "Được chia sẻ"} count={c.sharedIn} alert={boot.user.role === "TEACHER" && c.sharedIn > 0} active={view.kind === "shared"} onClick={() => go({ kind: "shared" })} />}
 
         <div className="flex items-center pt-4 pb-1 px-3">
           <span className="ui-nav-group-label p-0">Sổ tay</span>
@@ -168,6 +190,29 @@ export default function Sidebar({ boot, view, onView, onNewPage, onAsk, onAgent,
         </div>
       </div>
       <div className="p-3 border-t border-line space-y-2 text-xs text-muted">
+        {boot.user.guest ? (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 p-3 text-amber-900">
+            <p className="font-bold text-[13px]">Lưu ghi chú an toàn</p>
+            <p className="mt-0.5 leading-snug">Ghi chú đang ở trên trình duyệt này. Tạo tài khoản miễn phí để không mất và mở trên mọi thiết bị.</p>
+            <div className="flex gap-1.5 mt-2">
+              <button type="button" onClick={() => openNotesAuth("signup")} className="btn-primary flex-1 py-1.5 text-xs">Tạo tài khoản</button>
+              <button type="button" onClick={() => openNotesAuth("login")} className="btn-outline flex-1 py-1.5 text-xs bg-white">Đăng nhập</button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <span className="w-8 h-8 rounded-full bg-primary-soft text-primary font-bold flex items-center justify-center shrink-0">{(boot.user.name || "?").trim().charAt(0).toUpperCase()}</span>
+            <span className="min-w-0 flex-1"><span className="block font-bold text-foreground truncate text-[13px]">{boot.user.name}</span><span className="block truncate">{ROLE_NAME[boot.user.role] || ""}</span></span>
+            <details className="relative">
+              <summary className="btn-ghost w-8 h-8 p-0 list-none cursor-pointer flex items-center justify-center [&::-webkit-details-marker]:hidden" aria-label="Tài khoản">⋯</summary>
+              <div className="absolute bottom-full right-0 mb-1 w-48 rounded-xl border border-line bg-white p-1 shadow-card-hover z-30" onClick={(e) => { (e.currentTarget.parentElement as HTMLDetailsElement).open = false; }}>
+                {boot.user.role !== "NOTES" && <Link href={boot.user.role === "TEACHER" ? "/teacher" : "/dashboard"} className="block rounded-lg px-3 py-2 text-sm text-foreground hover:bg-primary-soft">Về Dashboard</Link>}
+                <button type="button" onClick={changePassword} className="w-full text-left rounded-lg px-3 py-2 text-sm text-foreground hover:bg-primary-soft">Đổi mật khẩu</button>
+                <button type="button" onClick={() => { clearSession(); refresh(); }} className="w-full text-left rounded-lg px-3 py-2 text-sm text-red-700 hover:bg-red-50">Đăng xuất</button>
+              </div>
+            </details>
+          </div>
+        )}
         {!boot.user.guest && <button type="button" onClick={onAgent} className="btn-ghost w-full py-1.5 text-xs justify-start">Sắp xếp bằng lời (trợ lý)</button>}
         <div>
           <div className="flex justify-between"><span>{boot.user.guest ? "Lưu trên trình duyệt" : "File đính kèm"}</span><span>{fmtBytes(boot.storage.used)} / {fmtBytes(boot.storage.quota)}</span></div>
@@ -176,9 +221,7 @@ export default function Sidebar({ boot, view, onView, onNewPage, onAsk, onAgent,
         <p>AI hôm nay: còn {boot.usage.TEXT.left}/{boot.usage.TEXT.limit} lượt · ghi âm {boot.usage.AUDIO.left}/{boot.usage.AUDIO.limit}</p>
         <div className="flex gap-3">
           <button type="button" onClick={onExport} className="font-bold text-primary hover:underline">Xuất toàn bộ (.zip)</button>
-          {boot.user.guest
-            ? <Link href="/auth?role=STUDENT&next=/notes" className="font-bold text-primary hover:underline ml-auto">Đăng nhập để đồng bộ</Link>
-            : <Link href={boot.user.role === "TEACHER" ? "/teacher" : "/dashboard"} className="font-bold text-primary hover:underline ml-auto">← Dashboard</Link>}
+
         </div>
       </div>
     </nav>

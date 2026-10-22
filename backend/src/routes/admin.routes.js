@@ -392,7 +392,7 @@ router.post('/users/teacher', async (req, res) => {
 router.post('/users/:id/reset-password', async (req, res) => {
   try {
     const user = await prisma.user.findFirst({
-      where: { id: req.params.id, role: { in: ['STUDENT', 'TEACHER'] } }, select: { id: true },
+      where: { id: req.params.id, role: { in: ['STUDENT', 'TEACHER', 'NOTES'] } }, select: { id: true },
     });
     if (!user) return res.status(404).json({ error: 'Không tìm thấy tài khoản học viên/giáo viên này' });
     res.json({ tempPassword: await issueTempPassword(user.id, req.admin.uid) });
