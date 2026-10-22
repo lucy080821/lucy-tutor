@@ -7,6 +7,7 @@ import Swal from "sweetalert2";
 import { notesApi, errMsg, ApiError, isGuest } from "./api";
 import { clearGuestNotes, localStats, migrateGuestNotes } from "./localStore";
 import NotesAuth, { openNotesAuth, ACCOUNT_BENEFITS } from "./NotesAuth";
+import { onPageChange } from "./notesBus";
 import { Spinner } from "./ui";
 import Sidebar from "./Sidebar";
 import PageList from "./PageList";
@@ -152,6 +153,9 @@ export default function NotesApp() {
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boot?.user.id]);
+
+  // Thao tác từ menu ⋯ của danh sách (đổi tên, ghim, chuyển, lưu trữ) → ghi đè bản vá tạm của trang tương ứng
+  useEffect(() => onPageChange(({ id, ...rest }) => setPatches((p) => ({ ...p, [id]: { ...p[id], ...rest } }))), []);
 
   const [hideGuestBar, setHideGuestBar] = useState(false);
   const [isSafari, setIsSafari] = useState(false);

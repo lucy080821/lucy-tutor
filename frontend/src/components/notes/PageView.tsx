@@ -13,6 +13,7 @@ import Recorder, { type RecordResult } from "./Recorder";
 import OcrCapture, { compressImage } from "./OcrCapture";
 import { downloadMarkdown, exportPagePdf, exportPagePng } from "./exportNotes";
 import StylePanel from "./StylePanel";
+import { onPageChange, onPageCommand } from "./notesBus";
 import { sheetCss, type PageStyle } from "./pageStyle";
 import { PAGE_COLORS, type Attachment, type Bootstrap, type FullPage, type PageItem } from "./types";
 
@@ -22,7 +23,8 @@ const backupKey = (id: string) => `lucy_note_backup_${id}`;
 // với JSON trình soạn tạo ra dù nội dung y hệt — không có bước này trang vừa mở đã bị coi là "chưa lưu"
 const stableKey = (v: unknown): string => {
   if (Array.isArray(v)) return `[${v.map(stableKey).join(",")}]`;
-  if (v && typeof v === "object") return `{${Object.keys(v as object).sort().filter((k) => (v as Record<string, unknown>)[k] !== undefined).map((k) => `${JSON.stringify(k)}:${stableKey((v as Record<string, unknown>)[k])}`).join(",")}}`;
+  // Bỏ qua thuộc tính null/rỗng: trình soạn tự thêm attrs mặc định (vd textAlign: null) vào nội dung chưa có
+  if (v && typeof v === "object") return `{${Object.keys(v as object).sort().map((k) => [k, stableKey((v as Record<string, unknown>)[k])] as const).filter(([, x]) => x !== "null" && x !== "{}").map(([k, x]) => `${JSON.stringify(k)}:${x}`).join(",")}}`;
   return JSON.stringify(v ?? null);
 };
 const readBackup = (id: string) => { try { return JSON.parse(localStorage.getItem(backupKey(id)) || "null"); } catch { return null; } };
@@ -173,6 +175,32 @@ export default function PageView({ pageId, boot, onOpenPage, onChanged, onRemove
       setPage(fresh); setTitle(fresh.title); setEditorKey((k) => k + 1); setSaveState("saved");
     }
   };
+
+  // Đổi tên = sửa ô tiêu đề rồi lưu theo đường lưu tự động bình thường
+  const titleRef = useRef<HTMLTextAreaElement>(null);
+  const renameViaDialog = async () => {
+    const { value } = await Swal.fire({ title: "Đổi tên trang", input: "text", inputValue: s.current.title, inputPlaceholder: "Tên trang", showCancelButton: true, confirmButtonText: "Lưu", cancelButtonText: "Huỷ", inputAttributes: { maxlength: "300" } });
+    if (value === undefined) return;
+    const t = String(value).trim().slice(0, 300);
+    if (t === s.current.title) return;
+    setTitle(t); s.current.title = t; markDirty();
+    await flush();
+  };
+
+  // Danh sách bên cạnh ghim/chuyển/lưu trữ trang này → cập nhật theo; đổi tên/xoá → giao cho trang làm
+  useEffect(() => {
+    const offChange = onPageChange((d) => {
+      if (d.id !== pageId) return;
+      setPage((p) => (p ? { ...p, ...("pinned" in d ? { pinned: !!d.pinned } : {}), ...("archivedAt" in d ? { archivedAt: d.archivedAt ?? null } : {}), ...("sectionId" in d ? { sectionId: d.sectionId ?? null } : {}), ...("parentId" in d ? { parentId: d.parentId ?? null } : {}) } : p));
+    });
+    const offCmd = onPageCommand((d) => {
+      if (d.id !== pageId) return;
+      if (d.action === "rename") renameViaDialog();
+      if (d.action === "delete") remove();
+    });
+    return () => { offChange(); offCmd(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
 
   // ── Sửa thuộc tính (không đụng version nội dung) ──
   const patchMeta = async (body: Record<string, unknown>, local: Partial<FullPage>) => {
@@ -397,7 +425,7 @@ export default function PageView({ pageId, boot, onOpenPage, onChanged, onRemove
             </div>
           )}
 
-          <textarea value={title} readOnly={readOnly} rows={1} placeholder="Tiêu đề trang"
+          <textarea ref={titleRef} value={title} readOnly={readOnly} rows={1} placeholder="Tiêu đề trang"
             onChange={(e) => { setTitle(e.target.value); s.current.title = e.target.value; markDirty(); }}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); editorRef.current?.commands.focus("start"); } }}
             onInput={(e) => { const t = e.currentTarget; t.style.height = "auto"; t.style.height = `${t.scrollHeight}px`; }}
@@ -434,7 +462,7 @@ export default function PageView({ pageId, boot, onOpenPage, onChanged, onRemove
                   <p className="px-3 pt-2 pb-1 text-xs text-muted">Màu nhãn (chấm màu ở danh sách)</p>
                   <div className="flex gap-1 px-3 pb-2">{PAGE_COLORS.map((c) => <button key={String(c)} type="button" aria-label={c ? `Màu ${c}` : "Không màu"} onClick={() => patchMeta({ color: c }, { color: c })} className={`w-6 h-6 rounded-full border ${page.color === c ? "ring-2 ring-primary" : "border-line"}`} style={{ background: c || "#fff" }} />)}</div>
                   {[
-                    ["Trang con mới", () => onCreateChild(page.id)], ["Nhân bản", duplicate], ["Chuyển tới…", moveTo], ["Lịch sử phiên bản", openHistory],
+                    ["Đổi tên", renameViaDialog], ["Trang con mới", () => onCreateChild(page.id)], ["Nhân bản", duplicate], ["Chuyển tới…", moveTo], ["Lịch sử phiên bản", openHistory],
                     ["Giao diện trang…", () => setPanel("style")], ["Lưu thành mẫu", saveAsTemplate],
                     ["Tải Markdown (.md)", async () => { await flush(); downloadMarkdown(s.current.title, editorRef.current?.getJSON() || null, page.tags); }], ["Tải ảnh PNG", exportPng], ["Tải PDF", exportPdf],
                     [page.archivedAt ? "Bỏ lưu trữ" : "Lưu trữ", () => patchMeta({ archived: !page.archivedAt }, { archivedAt: page.archivedAt ? null : new Date().toISOString() })],

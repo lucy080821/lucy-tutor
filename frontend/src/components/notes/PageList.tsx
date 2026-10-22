@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { notesApi, errMsg } from "./api";
 import { Spinner, timeAgo } from "./ui";
+import { emitPageChange, emitPageCommand } from "./notesBus";
 import type { Bootstrap, PageItem, View } from "./types";
 
 export function viewTitle(view: View, boot: Bootstrap) {
@@ -42,6 +43,21 @@ export default function PageList({ view, boot, activeId, onOpen, onNew, refreshK
   const [quick, setQuick] = useState("");
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const dragId = useRef<string | null>(null);
+  // Menu thao tác của 1 trang (nút ⋯ hoặc chuột phải)
+  const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
+  useEffect(() => {
+    if (!menu) return;
+    const close = () => setMenu(null);
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    window.addEventListener("click", close);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("click", close); window.removeEventListener("scroll", close, true); window.removeEventListener("keydown", onKey); };
+  }, [menu]);
+  const openMenu = (id: string, x: number, y: number) => {
+    const w = 220; const h = 300;
+    setMenu({ id, x: Math.max(8, Math.min(x, window.innerWidth - w - 8)), y: Math.max(8, Math.min(y, window.innerHeight - h - 8)) });
+  };
   const qs = viewQuery(view);
   const inSection = view.kind === "section" && !q;
 
@@ -87,6 +103,65 @@ export default function PageList({ view, boot, activeId, onOpen, onNew, refreshK
     siblings.splice(siblings.indexOf(targetId), 0, from);
     setPages((prev) => (prev || []).map((p) => { const i = siblings.indexOf(p.id); return i >= 0 ? { ...p, order: i } : p; }).sort((x, y) => x.order - y.order));
     try { await notesApi("/pages/reorder", { body: { ids: siblings } }); } catch (err) { Swal.fire({ icon: "error", text: errMsg(err) }); }
+  };
+
+  const patchItem = (id: string, patch: Partial<PageItem>) => setPages((prev) => (prev || []).map((x) => (x.id === id ? { ...x, ...patch } : x)));
+  const dropItem = (id: string) => { setPages((prev) => (prev || []).filter((x) => x.id !== id)); setTotal((n) => Math.max(0, n - 1)); };
+
+  const rename = async (p: PageItem) => {
+    // Trang đang mở: để PageView đổi (giữ đúng version của lần lưu tự động)
+    if (p.id === activeId) { emitPageCommand({ id: p.id, action: "rename" }); return; }
+    const { value } = await Swal.fire({ title: "Đổi tên trang", input: "text", inputValue: p.title, inputPlaceholder: "Tên trang", showCancelButton: true, confirmButtonText: "Lưu", cancelButtonText: "Huỷ", inputAttributes: { maxlength: "300" } });
+    if (value === undefined) return;
+    const title = String(value).trim().slice(0, 300);
+    if (title === p.title) return;
+    try {
+      const cur = await notesApi<{ version: number }>(`/pages/${p.id}`);
+      await notesApi(`/pages/${p.id}`, { method: "PATCH", body: { baseVersion: cur.version, title } });
+      patchItem(p.id, { title });
+      emitPageChange({ id: p.id, title });
+    } catch (err) { Swal.fire({ icon: "error", text: errMsg(err) }); }
+  };
+  const togglePin = async (p: PageItem) => {
+    try {
+      await notesApi(`/pages/${p.id}`, { method: "PATCH", body: { pinned: !p.pinned } });
+      emitPageChange({ id: p.id, pinned: !p.pinned });
+      if (view.kind === "pinned" && p.pinned) dropItem(p.id);
+      else { patchItem(p.id, { pinned: !p.pinned }); if (!inSection) load(0); }
+      refreshBoot();
+    } catch (err) { Swal.fire({ icon: "error", text: errMsg(err) }); }
+  };
+  const duplicate = async (p: PageItem) => {
+    try { await notesApi(`/pages/${p.id}/duplicate`, { body: {} }); load(0); refreshBoot(); }
+    catch (err) { Swal.fire({ icon: "error", text: errMsg(err) }); }
+  };
+  const moveTo = async (p: PageItem) => {
+    const opts: Record<string, string> = { "": "Hộp thư ghi nhanh" };
+    boot.notebooks.forEach((nb) => nb.sections.forEach((sec) => { opts[sec.id] = `${nb.name} / ${sec.name}`; }));
+    const { value, isConfirmed } = await Swal.fire({ title: "Chuyển trang tới", input: "select", inputOptions: opts, inputValue: p.sectionId || "", showCancelButton: true, confirmButtonText: "Chuyển", cancelButtonText: "Huỷ" });
+    if (!isConfirmed || (value || null) === p.sectionId) return;
+    try {
+      await notesApi(`/pages/${p.id}`, { method: "PATCH", body: { sectionId: value || null, parentId: null } });
+      emitPageChange({ id: p.id, sectionId: value || null, parentId: null });
+      if (view.kind === "section" || view.kind === "inbox") dropItem(p.id); else patchItem(p.id, { sectionId: value || null, parentId: null });
+      refreshBoot();
+    } catch (err) { Swal.fire({ icon: "error", text: errMsg(err) }); }
+  };
+  const toggleArchive = async (p: PageItem) => {
+    try {
+      const archived = !p.archivedAt;
+      await notesApi(`/pages/${p.id}`, { method: "PATCH", body: { archived } });
+      emitPageChange({ id: p.id, archivedAt: archived ? new Date().toISOString() : null });
+      dropItem(p.id);
+      refreshBoot();
+    } catch (err) { Swal.fire({ icon: "error", text: errMsg(err) }); }
+  };
+  const remove = async (p: PageItem) => {
+    if (p.id === activeId) { emitPageCommand({ id: p.id, action: "delete" }); return; }
+    const r = await Swal.fire({ icon: "warning", title: "Đưa trang vào thùng rác?", text: `"${p.title || "Không tiêu đề"}" (kèm trang con nếu có). Khôi phục được trong 30 ngày.`, showCancelButton: true, confirmButtonText: "Xoá", cancelButtonText: "Huỷ", confirmButtonColor: "#dc2626" });
+    if (!r.isConfirmed) return;
+    try { await notesApi(`/pages/${p.id}`, { method: "DELETE" }); dropItem(p.id); refreshBoot(); }
+    catch (err) { Swal.fire({ icon: "error", text: errMsg(err) }); }
   };
 
   const restore = async (id: string) => {
@@ -147,7 +222,8 @@ export default function PageList({ view, boot, activeId, onOpen, onNew, refreshK
         ) : (
           <ul className="space-y-0.5">
             {tree.map(({ item: p, depth, hasKids }) => (
-              <li key={p.id} draggable={inSection} onDragStart={() => { dragId.current = p.id; }} onDragOver={(e) => { if (inSection) e.preventDefault(); }} onDrop={() => drop(p.id)}>
+              <li key={p.id} draggable={inSection} onDragStart={() => { dragId.current = p.id; }} onDragOver={(e) => { if (inSection) e.preventDefault(); }} onDrop={() => drop(p.id)}
+                onContextMenu={(e) => { if (view.kind === "trash") return; e.preventDefault(); openMenu(p.id, e.clientX, e.clientY); }}>
                 <div className={`group flex items-stretch rounded-xl ${activeId === p.id ? "bg-primary-soft" : "hover:bg-[#f3f6fb]"}`} style={{ paddingLeft: depth * 16 }}>
                   {inSection && (
                     <button type="button" aria-label={hasKids ? (collapsed.has(p.id) ? "Mở trang con" : "Thu gọn trang con") : undefined} disabled={!hasKids}
@@ -174,14 +250,42 @@ export default function PageList({ view, boot, activeId, onOpen, onNew, refreshK
                       <button type="button" onClick={() => restore(p.id)} className="text-xs font-bold text-primary hover:underline">Khôi phục</button>
                       <button type="button" onClick={() => destroy(p.id)} className="text-xs font-bold text-red-700 hover:underline">Xoá hẳn</button>
                     </span>
-                  ) : inSection && depth < 2 && (
-                    <button type="button" onClick={() => onNew({ parentId: p.id })} className="btn-ghost w-8 h-8 p-0 self-center opacity-0 group-hover:opacity-100 focus:opacity-100 mr-1" aria-label="Thêm trang con" title="Thêm trang con">+</button>
+                  ) : (
+                    <span className="flex items-center self-center pr-1">
+                      {inSection && depth < 2 && (
+                        <button type="button" onClick={() => onNew({ parentId: p.id })} className="btn-ghost w-8 h-8 p-0 opacity-0 group-hover:opacity-100 focus:opacity-100 hidden sm:inline-flex" aria-label="Thêm trang con" title="Thêm trang con">+</button>
+                      )}
+                      <button type="button" onClick={(e) => { e.stopPropagation(); const r = e.currentTarget.getBoundingClientRect(); openMenu(p.id, r.right - 220, r.bottom + 4); }}
+                        className="btn-ghost w-8 h-8 p-0 text-lg leading-none opacity-100 sm:opacity-0 group-hover:opacity-100 focus:opacity-100" aria-label={`Thao tác với trang ${p.title || "Không tiêu đề"}`} title="Đổi tên, ghim, xoá…">⋯</button>
+                    </span>
                   )}
                 </div>
               </li>
             ))}
           </ul>
         )}
+        {menu && (() => {
+          const p = list.find((x) => x.id === menu.id);
+          if (!p) return null;
+          const items: [string, () => void, string?][] = [
+            ["Đổi tên", () => rename(p)],
+            [p.pinned ? "Bỏ ghim" : "Ghim lên đầu", () => togglePin(p)],
+            ["Nhân bản", () => duplicate(p)],
+            ["Chuyển tới…", () => moveTo(p)],
+            ...(inSection && p.parentId === null ? [["Thêm trang con", () => onNew({ parentId: p.id })] as [string, () => void]] : []),
+            [p.archivedAt ? "Bỏ lưu trữ" : "Lưu trữ", () => toggleArchive(p)],
+            ["Xoá", () => remove(p), "danger"],
+          ];
+          return (
+            <div role="menu" className="fixed z-[70] w-[220px] rounded-xl border border-line bg-white p-1 shadow-card-hover" style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()}>
+              <p className="px-3 pt-1.5 pb-1 text-[11px] text-muted truncate">{p.title || "Không tiêu đề"}</p>
+              {items.map(([label, fn, tone]) => (
+                <button key={label} type="button" role="menuitem" onClick={() => { setMenu(null); fn(); }}
+                  className={`w-full text-left rounded-lg px-3 py-2 text-sm ${tone === "danger" ? "text-red-700 hover:bg-red-50" : "hover:bg-primary-soft"}`}>{label}</button>
+              ))}
+            </div>
+          );
+        })()}
         {pages && pages.length < total && <button type="button" onClick={() => load(pages.length)} className="btn-ghost w-full py-2 text-sm mt-2">Tải thêm</button>}
       </div>
     </div>
