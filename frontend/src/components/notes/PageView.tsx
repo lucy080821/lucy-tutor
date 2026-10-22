@@ -1,7 +1,7 @@
 "use client";
 // Một trang ghi chú: tiêu đề, thẻ, trình soạn, lưu tự động 2 lớp (localStorage 1 giây + server 1,5 giây sau khi
 // ngừng gõ, kèm version để phát hiện sửa ở thiết bị/tab khác → 409), lịch sử phiên bản, ghi âm, chụp vở, AI.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import type { Editor, JSONContent } from "@tiptap/react";
 import NoteEditor, { type AiSelectionAction } from "./editor/NoteEditor";
@@ -178,6 +178,15 @@ export default function PageView({ pageId, boot, onOpenPage, onChanged, onRemove
 
   // Đổi tên = sửa ô tiêu đề rồi lưu theo đường lưu tự động bình thường
   const titleRef = useRef<HTMLTextAreaElement>(null);
+  // Ô tiêu đề tự giãn theo nội dung (cả lúc mở trang / đổi tên, không chỉ khi gõ) — tiêu đề dài trên điện thoại không bị cắt còn 1 dòng
+  useLayoutEffect(() => {
+    const t = titleRef.current;
+    if (!t) return;
+    const fit = () => { t.style.height = "auto"; t.style.height = `${t.scrollHeight}px`; };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [title, page?.id]);
   const renameViaDialog = async () => {
     const { value } = await Swal.fire({ title: "Đổi tên trang", input: "text", inputValue: s.current.title, inputPlaceholder: "Tên trang", showCancelButton: true, confirmButtonText: "Lưu", cancelButtonText: "Huỷ", inputAttributes: { maxlength: "300" } });
     if (value === undefined) return;
@@ -449,16 +458,19 @@ export default function PageView({ pageId, boot, onOpenPage, onChanged, onRemove
           </div>
 
           {!readOnly && (
-            <div className="flex flex-wrap gap-1.5 mb-4">
+            <div className="flex items-start gap-1.5 mb-4">
+              {/* Điện thoại: 1 hàng cuộn ngang; "Thêm" nằm ngoài vùng cuộn để menu không bị cắt */}
+              <div className="note-chips flex flex-nowrap sm:flex-wrap gap-1.5 overflow-x-auto sm:overflow-visible min-w-0 flex-1 sm:flex-initial -ml-4 pl-4 sm:ml-0 sm:pl-0">
               <button type="button" onClick={() => setPanel(panel === "ai" ? null : "ai")} className={`ui-chip text-xs ${panel === "ai" ? "ui-chip-active" : ""}`}>Trợ lý AI</button>
               <button type="button" onClick={() => setPanel(panel === "style" ? null : "style")} className={`ui-chip text-xs ${panel === "style" ? "ui-chip-active" : ""}`}>Giao diện</button>
               <button type="button" onClick={() => setPanel(panel === "links" ? null : "links")} className={`ui-chip text-xs ${panel === "links" ? "ui-chip-active" : ""}`}>Liên kết & chia sẻ{page.links.length + page.shares.length ? ` (${page.links.length + page.shares.length})` : ""}</button>
               <button type="button" onClick={() => patchMeta({ pinned: !page.pinned }, { pinned: !page.pinned })} className={`ui-chip text-xs ${page.pinned ? "ui-chip-active" : ""}`}>{page.pinned ? "Đã ghim" : "Ghim"}</button>
               <button type="button" onClick={remind} className="ui-chip text-xs">Nhắc tôi</button>
               <button type="button" onClick={() => patchMeta({ study: !page.studyDueAt }, { studyDueAt: page.studyDueAt ? null : new Date(Date.now() + 86400000).toISOString() })} className={`ui-chip text-xs ${page.studyDueAt ? "ui-chip-active" : ""}`} title="Nhắc ôn lại sau 1, 3, 7, 14, 30 ngày">{page.studyDueAt ? "Đang ôn lại" : "Ôn lại trang này"}</button>
-              <details className="relative">
-                <summary className="ui-chip text-xs list-none cursor-pointer [&::-webkit-details-marker]:hidden">Thêm ▾</summary>
-                <div className="absolute z-30 mt-1 w-56 rounded-xl border border-line bg-white p-1 shadow-card-hover" onClick={(e) => (e.currentTarget.parentElement as HTMLDetailsElement).open = false}>
+              </div>
+              <details className="relative shrink-0">
+                <summary className="ui-chip text-xs list-none cursor-pointer whitespace-nowrap [&::-webkit-details-marker]:hidden">Thêm ▾</summary>
+                <div className="absolute right-0 z-30 mt-1 w-56 max-h-[70vh] overflow-y-auto rounded-xl border border-line bg-white p-1 shadow-card-hover" onClick={(e) => (e.currentTarget.parentElement as HTMLDetailsElement).open = false}>
                   <p className="px-3 pt-2 pb-1 text-xs text-muted">Màu nhãn (chấm màu ở danh sách)</p>
                   <div className="flex gap-1 px-3 pb-2">{PAGE_COLORS.map((c) => <button key={String(c)} type="button" aria-label={c ? `Màu ${c}` : "Không màu"} onClick={() => patchMeta({ color: c }, { color: c })} className={`w-6 h-6 rounded-full border ${page.color === c ? "ring-2 ring-primary" : "border-line"}`} style={{ background: c || "#fff" }} />)}</div>
                   {[

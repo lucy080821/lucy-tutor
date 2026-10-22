@@ -478,3 +478,8 @@ mark.user-hl.user-hl-noted {
 .note-lined .note-content h1, .note-lined .note-content h2 { line-height: calc(var(--note-line) * 2); margin: 0; }
 .note-lined .note-content ul, .note-lined .note-content ol { margin: 0; }
 .note-lined .note-content .note-callout, .note-lined .note-content table, .note-lined .note-content pre { margin: 0; }
+
+/* Lucy Notes — hàng nút thao tác của trang: điện thoại cuộn ngang 1 hàng */
+.note-chips > * { flex-shrink: 0; white-space: nowrap; }
+.note-chips { scrollbar-width: none; }
+.note-chips::-webkit-scrollbar { display: none; }

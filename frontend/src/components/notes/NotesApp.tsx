@@ -233,14 +233,16 @@ export default function NotesApp() {
   return (
     <div className="flex flex-col h-[calc(100dvh-3.5rem)] md:h-[calc(100dvh-4rem)] bg-background overflow-hidden">
       {boot.user.guest && !hideGuestBar && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-2 bg-amber-50 border-b border-amber-200 text-sm">
-          <span className="text-amber-900 min-w-0 flex-1">
-            <b>Ghi chú của bạn đang chỉ lưu trên trình duyệt này</b> và có thể mất khi xoá dữ liệu trình duyệt, dùng tab ẩn danh hoặc đổi máy{isSafari ? " — Safari còn tự xoá nếu bạn không mở trang này trong 7 ngày" : ""}. Tạo tài khoản Ghi chú <b>miễn phí</b> để lưu an toàn và mở trên mọi thiết bị.
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 sm:px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs sm:text-sm">
+          {/* Điện thoại: 1 câu ngắn + hàng nút riêng để dải không chiếm nửa màn hình */}
+          <span className="text-amber-900 w-full sm:w-auto sm:flex-1 min-w-0">
+            <span className="sm:hidden"><b>Ghi chú chỉ lưu trên trình duyệt này</b>, có thể mất khi xoá dữ liệu hoặc đổi máy{isSafari ? " (Safari tự xoá sau 7 ngày không mở)" : ""}.</span>
+            <span className="hidden sm:inline"><b>Ghi chú của bạn đang chỉ lưu trên trình duyệt này</b> và có thể mất khi xoá dữ liệu trình duyệt, dùng tab ẩn danh hoặc đổi máy{isSafari ? " — Safari còn tự xoá nếu bạn không mở trang này trong 7 ngày" : ""}. Tạo tài khoản Ghi chú <b>miễn phí</b> để lưu an toàn và mở trên mọi thiết bị.</span>
           </span>
-          <span className="flex items-center gap-2 ml-auto">
-            <button type="button" onClick={() => openNotesAuth("signup")} className="btn-primary px-4 py-1.5 text-xs">Tạo tài khoản miễn phí</button>
-            <button type="button" onClick={() => openNotesAuth("login")} className="btn-outline px-3 py-1.5 text-xs bg-white">Đăng nhập</button>
-            <button type="button" onClick={() => { setHideGuestBar(true); try { sessionStorage.setItem("lucy_notes_guest_bar", "0"); } catch { /* bỏ qua */ } }} className="btn-ghost w-8 h-8 p-0" aria-label="Ẩn thông báo">×</button>
+          <span className="flex items-center gap-2 w-full sm:w-auto sm:ml-auto">
+            <button type="button" onClick={() => openNotesAuth("signup")} className="btn-primary h-9 px-4 text-xs">Tạo tài khoản miễn phí</button>
+            <button type="button" onClick={() => openNotesAuth("login")} className="btn-outline h-9 px-3 text-xs bg-white">Đăng nhập</button>
+            <button type="button" onClick={() => { setHideGuestBar(true); try { sessionStorage.setItem("lucy_notes_guest_bar", "0"); } catch { /* bỏ qua */ } }} className="btn-ghost w-9 h-9 p-0 ml-auto sm:ml-0" aria-label="Ẩn thông báo">×</button>
           </span>
         </div>
       )}
