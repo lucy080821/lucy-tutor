@@ -4,6 +4,7 @@ import { CEFR_LEVELS } from "@/lib/skillPractice";
 import JsonLd from "@/components/seo/JsonLd";
 import ScrollReveal from "@/components/landing/ScrollReveal";
 import FeatureVideo from "@/components/landing/FeatureVideo";
+import { NotesMockup } from "@/components/landing/NotesMockup";
 import { FREE_TOOLS } from "@/lib/freeTools";
 import { PHOTOS } from "@/lib/photos";
 
@@ -399,6 +400,31 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ── 4b. Ghi chú AI (Lucy Notes) — trang giới thiệu riêng /ghi-chu-ai ── */}
+      <section className="bg-background px-4 sm:px-6 py-14" aria-labelledby="notes-title">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+          <div data-reveal="left">
+            <p className="ui-badge-new inline-block">Mới</p>
+            <h2 id="notes-title" className="ui-section-title text-2xl md:text-3xl font-extrabold mt-3">Ghi chú AI cho mọi thứ bạn học</h2>
+            <p className="text-muted mt-4 leading-relaxed">Sổ ghi chú đầy đủ như một app chuyên nghiệp — sổ tay, mục, trang con, việc cần làm có hạn chót — kèm AI làm phần việc tốn thời gian nhất.</p>
+            <ul className="mt-5 space-y-3">
+              {[
+                ["Ghi âm bài giảng, nhận ngay ghi chú", "AI chép lời, chia ý chính, mỗi ý có mốc thời gian bấm để nghe lại."],
+                ["Ghi chú tự biến thành flashcard", "Rút từ vựng thành thẻ và đưa vào lịch ôn tập tự động, kèm quiz 8 câu."],
+                ["Hỏi lại chính sổ ghi chú của bạn", "Trả lời chỉ từ ghi chú của bạn, có nguồn bấm được — không tự bịa."],
+              ].map(([t, d]) => (
+                <li key={t} className="flex gap-3">
+                  <span aria-hidden="true" className="mt-2 w-2 h-2 rounded-full bg-primary shrink-0" />
+                  <span><b className="text-foreground">{t}</b><span className="block text-sm text-muted">{d}</span></span>
+                </li>
+              ))}
+            </ul>
+            <Link href="/ghi-chu-ai" className="btn-primary mt-6 px-6 py-3">Tìm hiểu Ghi chú AI</Link>
+          </div>
+          <div data-reveal="right" className="pb-8"><NotesMockup /></div>
+        </div>
+      </section>
+
       {/* ── 5. Dành cho giáo viên ── */}
       <section className="bg-background px-4 sm:px-6 py-14" aria-labelledby="teacher-title">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
@@ -579,6 +605,7 @@ export default function Home() {
                 <li><Link href="/exam" className="hover:text-primary transition-colors">Demo bài thi</Link></li>
                 <li><Link href="/grammar-gym" className="hover:text-primary transition-colors">Luyện ngữ pháp</Link></li>
                 <li><Link href="/gym" className="hover:text-primary transition-colors">Phòng Gym Từ Vựng</Link></li>
+                <li><Link href="/ghi-chu-ai" className="hover:text-primary transition-colors">Ghi chú AI</Link></li>
                 <li><Link href="/blog" className="hover:text-primary transition-colors">Blog chia sẻ</Link></li>
               </ul>
             </nav>

@@ -18,10 +18,10 @@ function AuthForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialRole = searchParams.get('role') || 'STUDENT';
-  // ?next=/blog/... — quay lại bài blog đang đọc sau khi đăng nhập (vd để bình luận). Chỉ nhận đường dẫn blog nội bộ
-  // (chặn open redirect kiểu //domain-khac.com)
+  // ?next=/blog/... — quay lại bài blog đang đọc sau khi đăng nhập (vd để bình luận); ?next=/notes — vào thẳng Ghi chú
+  // (từ trang giới thiệu /ghi-chu-ai). Chỉ nhận đường dẫn nội bộ này (chặn open redirect kiểu //domain-khac.com)
   const nextParam = searchParams.get('next') || '';
-  const nextPath = /^\/blog\/[^/\\]/.test(nextParam) && !nextParam.startsWith('//') ? nextParam : null;
+  const nextPath = (/^\/blog\/[^/\\]/.test(nextParam) || /^\/notes(\?[\w=&%-]*)?$/.test(nextParam)) && !nextParam.startsWith('//') ? nextParam : null;
 
   const [role, setRole] = useState(initialRole);
   const [isLogin, setIsLogin] = useState(true);

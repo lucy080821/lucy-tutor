@@ -1929,7 +1929,7 @@ const IELTS_TEST_STATUS_LABEL: Record<string, { label: string; className: string
   const navItem = (id: string, label: string, icon: NavIconName, extra?: Partial<NavItem>): NavItem =>
     ({ id, label, icon, active: activeTab === id, onClick: goTab(id), ...extra });
   const navSections: NavSection[] = [
-    { id: "MAIN", items: [navItem("OVERVIEW", "Tổng Quan", "dashboard")] },
+    { id: "MAIN", items: [navItem("OVERVIEW", "Tổng Quan", "dashboard"), { id: "NOTES", label: "Ghi Chú", icon: "stickyNote", href: "/notes" }] },
     {
       id: "CLASS", label: "Lớp Học", items: [
         navItem("CLASSES", "Lớp Học", "school"),

@@ -32,6 +32,7 @@ const PATHS = {
   flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
   gamepad: <><rect x="2" y="7" width="20" height="11" rx="5" /><path d="M7 10.5v4M5 12.5h4" /><circle cx="16" cy="11.5" r="1" /><circle cx="18" cy="14" r="1" /></>,
   notebook: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 3v18M12.5 8h3M12.5 12h3" /></>,
+  stickyNote: <path d="M5 3h14a2 2 0 0 1 2 2v9l-7 7H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM14 21v-5a2 2 0 0 1 2-2h5M7 8h10M7 12h6" />,
   chevron: <path d="M6 9l6 6 6-6" />,
 } as const;
 

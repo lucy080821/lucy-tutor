@@ -236,6 +236,8 @@ const FEATURES = [
   { table: 'PronunciationAttempt', col: 'createdAt', label: 'Luyện phát âm' },
   { table: 'LessonProgress', col: 'createdAt', label: 'Bài học đã học' },
   { table: 'UserVocabProgress', col: 'lastReviewedAt', label: 'Ôn từ vựng SRS' },
+  // Ghi chú: 1 dòng / trang theo lần sửa gần nhất (không đếm từng lần lưu tự động) — đủ để biết ai đang dùng
+  { table: 'NotePage', col: 'updatedAt', label: 'Ghi chú' },
 ];
 // Hoạt động = mọi bài luyện tập + lượt xem trang khi đã đăng nhập. $1 = mốc thời gian bắt đầu.
 const ACTIVITY_SQL = [

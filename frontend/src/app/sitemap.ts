@@ -12,6 +12,8 @@ import { PHOTOS } from "@/lib/photos";
 const PUBLIC_ROUTES: { path: string; priority: number; changeFrequency: "weekly" | "monthly" }[] = [
   { path: "", priority: 1, changeFrequency: "weekly" },
   { path: "/blog", priority: 0.8, changeFrequency: "weekly" },
+  // Trang giới thiệu Ghi chú AI (công khai) — bản thân /notes cần đăng nhập nên noindex, không vào đây
+  { path: "/ghi-chu-ai", priority: 0.9, changeFrequency: "monthly" },
   { path: "/auth", priority: 0.5, changeFrequency: "monthly" },
 ];
 

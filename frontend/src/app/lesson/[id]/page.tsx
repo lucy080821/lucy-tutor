@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { getSessionUserId } from "@/lib/session";
+import LinkedNotes from "@/components/notes/LinkedNotes";
 import { useParams, useRouter } from "next/navigation";
 import Swal from 'sweetalert2';
 import confetti from "canvas-confetti";
@@ -120,6 +121,7 @@ export default function LessonPage() {
       </div>
 
       <div className="max-w-4xl mx-auto px-4 py-8 space-y-10">
+        <LinkedNotes targetType="LESSON" targetId={lesson.id} label={lesson.title} />
         
         {/* Vocabulary Section */}
         {lesson.vocabularies?.length > 0 && (

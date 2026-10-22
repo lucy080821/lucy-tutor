@@ -8,6 +8,7 @@ import ReactMarkdown from "react-markdown";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, Radar } from 'recharts';
 import InstallPWAButton from "@/components/InstallPWAButton";
 import { useIeltsProgress } from "@/components/ielts/IeltsProgress";
+import { useNotesInsights } from "@/components/notes/useNotesInsights";
 import Swal from 'sweetalert2';
 
 // FullCalendar (+ its plugins) is only needed on the CALENDAR tab — load it on demand instead of
@@ -455,7 +456,7 @@ export default function StudentDashboard() {
     ] },
   ];
   const navSections: NavSection[] = [
-    { id: "MAIN", items: [tabItem("OVERVIEW", "Tổng Quan", "dashboard")] },
+    { id: "MAIN", items: [tabItem("OVERVIEW", "Tổng Quan", "dashboard"), { id: "NOTES_LINK", label: "Ghi Chú", icon: "stickyNote", href: "/notes" }] },
     ...(isClassless ? [...practiceSections, classSection] : [classSection, ...practiceSections]),
   ];
 
@@ -585,6 +586,7 @@ export default function StudentDashboard() {
 
   // ── Auto-generated learning insights (rule-based, computed from live profile/history/skill data) ──
   const ieltsProgress = useIeltsProgress(user?.id ?? null);
+  const notesInsights = useNotesInsights(user?.id ?? null);
   const studentInsights: StudentInsight[] = (() => {
     const items: StudentInsight[] = [];
     const numAvgScore = parseFloat(avgScore);
@@ -655,6 +657,17 @@ export default function StudentDashboard() {
     (ieltsProgress?.notifications || []).slice(0, 2).forEach((n) => {
       items.push({ level: n.level, icon: '', title: 'Tiến bộ IELTS', message: n.message, cta: { label: 'Xem Tiến Bộ IELTS', href: '/ielts' } });
     });
+
+    // Ghi chú (/notes): việc quá hạn, trang đến hạn ôn, lỗi tiếng Anh hay gặp nhất trong nhật ký
+    if (notesInsights?.overdue) {
+      items.push({ level: 'warning', icon: '', title: 'Việc quá hạn trong Ghi chú', message: `Bạn có ${notesInsights.overdue} việc cần làm đã quá hạn trong sổ ghi chú.`, cta: { label: 'Xem Việc Cần Làm', href: '/notes?v=tasks' } });
+    }
+    if (notesInsights?.studyDue) {
+      items.push({ level: 'info', icon: '', title: 'Đến hạn ôn ghi chú', message: `${notesInsights.studyDue} trang ghi chú đến hạn ôn lại hôm nay — đọc lại đúng lúc giúp nhớ lâu hơn.`, cta: { label: 'Ôn Ngay', href: '/notes?v=study' } });
+    }
+    if (notesInsights?.topError && notesInsights.topError.count >= 3) {
+      items.push({ level: 'warning', icon: '', title: 'Lỗi tiếng Anh hay lặp lại', message: `Trong 30 ngày qua, AI tìm thấy ${notesInsights.topError.count} lỗi nhóm "${notesInsights.topError.category}" trong bài viết của bạn ở Ghi chú. Ôn lại chủ điểm này để không lặp lại.`, cta: { label: 'Xem Hồ Sơ Lỗi', href: '/notes' } });
+    }
 
     const severityOrder: Record<StudentInsight['level'], number> = { critical: 0, warning: 1, success: 2, info: 3 };
     return items.sort((a, b) => severityOrder[a.level] - severityOrder[b.level]).slice(0, 6);

@@ -95,6 +95,11 @@ model User {
   tempPasswordIssuedAt  DateTime?
   passwordResetRequests PasswordResetRequest[]
 
+  // Sổ ghi chú (/notes) — xem CLAUDE.md mục "Lucy Notes"
+  noteNotebooks NoteNotebook[]
+  notePages     NotePage[]
+  noteTemplates NoteTemplate[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -1128,4 +1133,227 @@ model SeoReport {
   createdAt   DateTime @default(now())
 
   @@index([createdAt])
+}
+
+
+// ───────────────────────── Lucy Notes (/notes) ─────────────────────────
+// Sổ tay → Mục → Trang (→ trang con qua parentId). Trang có sectionId = null là "Hộp thư ghi nhanh".
+// Nội dung lưu dạng JSON của Tiptap (ProseMirror), plainText/searchText dẫn xuất lúc lưu để tìm kiếm + AI.
+model NoteNotebook {
+  id         String   @id @default(uuid())
+  userId     String
+  name       String
+  color      String   @default("#1E3A8A")
+  order      Int      @default(0)
+  aiDisabled Boolean  @default(false) // "Tắt AI cho sổ này"
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sections   NoteSection[]
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model NoteSection {
+  id         String       @id @default(uuid())
+  notebookId String
+  userId     String
+  name       String
+  color      String       @default("#3b82f6")
+  order      Int          @default(0)
+  notebook   NoteNotebook @relation(fields: [notebookId], references: [id], onDelete: Cascade)
+  pages      NotePage[]
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([notebookId])
+  @@index([userId])
+}
+
+model NotePage {
+  id            String       @id @default(uuid())
+  userId        String
+  sectionId     String?
+  parentId      String?
+  order         Int          @default(0)
+  title         String       @default("")
+  contentJson   Json?
+  plainText     String       @default("")
+  excerpt       String       @default("") // 200 ký tự đầu — danh sách không phải tải cả nội dung
+  searchText    String       @default("") // không dấu, chữ thường (tiêu đề + nội dung + thẻ + chữ OCR/transcript)
+  tags          String[]
+  color         String?
+  // Giao diện trang: { bg, paper: plain|lines|grid|dots|margin, font, size, text } — xem cleanStyle trong notes.routes.js
+  style         Json?
+  pinned        Boolean      @default(false)
+  template      String?
+  version       Int          @default(1)
+  wordCount     Int          @default(0)
+  linkedPageIds String[] // trang được liên kết tới trong nội dung (để tính backlinks)
+  remindAt      DateTime?
+  archivedAt    DateTime?
+  deletedAt     DateTime?
+  // Ôn lại trang theo đường cong quên (1/3/7/14/30 ngày)
+  studyStep     Int          @default(0)
+  studyDueAt    DateTime?
+  aiCache       Json? // { [action]: { hash, data } } — kết quả AI theo hash nội dung
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section       NoteSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
+  parent        NotePage?    @relation("NotePageTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children      NotePage[]   @relation("NotePageTree")
+  attachments   NoteAttachment[]
+  tasks         NoteTask[]
+  revisions     NoteRevision[]
+  links         NoteLink[]
+  shares        NoteShare[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([userId, deletedAt, updatedAt])
+  @@index([sectionId])
+  @@index([parentId])
+}
+
+model NoteAttachment {
+  id          String    @id @default(uuid())
+  userId      String
+  pageId      String?
+  kind        String // IMAGE | AUDIO | FILE
+  name        String
+  mime        String
+  size        Int
+  url         String
+  storagePath String
+  transcript  Json? // ghi âm: [{start, end, text}]
+  ocrText     String?
+  page        NotePage? @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+
+  @@index([userId])
+  @@index([pageId])
+}
+
+// Việc cần làm rút ra từ các taskItem trong nội dung trang mỗi lần lưu (tid = id ổn định của taskItem)
+model NoteTask {
+  id     String    @id @default(uuid())
+  pageId String
+  userId String
+  tid    String
+  text   String
+  done   Boolean   @default(false)
+  dueAt  DateTime?
+  page   NotePage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+
+  @@unique([pageId, tid])
+  @@index([userId, done, dueAt])
+}
+
+model NoteRevision {
+  id          String   @id @default(uuid())
+  pageId      String
+  title       String
+  contentJson Json?
+  page        NotePage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([pageId, createdAt])
+}
+
+// Liên kết trang với nội dung lớp học (chỉ thành viên lớp). targetId không có FK vì trỏ tới nhiều bảng.
+model NoteLink {
+  id          String   @id @default(uuid())
+  pageId      String
+  userId      String
+  targetType  String // CLASSROOM | LESSON | EXAM | IELTS_TEST | DOCUMENT | STUDENT
+  targetId    String
+  label       String
+  classroomId String?
+  page        NotePage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([pageId, targetType, targetId])
+  @@index([userId, targetType, targetId])
+}
+
+// Chia sẻ trang: giáo viên → cả lớp (CLASSROOM, chỉ đọc), học viên → giáo viên (TEACHER, góp ý)
+model NoteShare {
+  id          String    @id @default(uuid())
+  pageId      String
+  ownerId     String
+  scope       String // CLASSROOM | TEACHER
+  classroomId String?
+  teacherId   String?
+  allowCopy   Boolean   @default(false)
+  feedback    String?
+  feedbackAt  DateTime?
+  page        NotePage  @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@index([classroomId])
+  @@index([teacherId])
+  @@index([pageId])
+}
+
+// Hạn mức AI theo người / ngày (giờ VN) / loại — lưu DB để khởi động lại server không reset
+model NoteAiUsage {
+  id     String @id @default(uuid())
+  userId String
+  day    String // YYYY-MM-DD giờ VN
+  kind   String // TEXT | AUDIO
+  count  Int    @default(0)
+
+  @@unique([userId, day, kind])
+}
+
+// Lỗi tiếng Anh AI tìm thấy trong nhật ký/ghi chú — dựng "hồ sơ lỗi cá nhân"
+model NoteWritingError {
+  id          String   @id @default(uuid())
+  userId      String
+  pageId      String?
+  category    String
+  original    String
+  corrected   String
+  explanation String   @default("")
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model NoteDigest {
+  id        String   @id @default(uuid())
+  userId    String
+  weekKey   String // thứ Hai đầu tuần, YYYY-MM-DD
+  content   Json
+  createdAt DateTime @default(now())
+
+  @@unique([userId, weekKey])
+}
+
+// Trợ lý thao tác bằng lời: kế hoạch → người dùng xác nhận → thực hiện → hoàn tác được
+model NoteAgentRun {
+  id         String    @id @default(uuid())
+  userId     String
+  command    String
+  plan       Json
+  undo       Json?
+  executedAt DateTime?
+  undoneAt   DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// "Mẫu của tôi": người dùng lưu 1 trang thành mẫu để tạo trang mới giống vậy
+model NoteTemplate {
+  id          String   @id @default(uuid())
+  userId      String
+  name        String
+  description String   @default("")
+  contentJson Json
+  style       Json?
+  tags        String[]
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
 }
