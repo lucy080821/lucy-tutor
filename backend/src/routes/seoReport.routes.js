@@ -47,16 +47,15 @@ router.post('/reports', async (req, res) => {
   if (typeof content !== 'string' || content.trim().length < 200) return res.status(400).json({ error: 'Nội dung quá ngắn' });
   if (content.length > MAX_CONTENT) return res.status(400).json({ error: `Nội dung tối đa ${MAX_CONTENT} ký tự` });
   try {
-    const report = await prisma.seoReport.create({
-      data: {
-        periodStart: new Date(`${periodStart}T00:00:00Z`),
-        periodEnd: new Date(`${periodEnd}T00:00:00Z`),
-        content: content.trim(),
-        author: 'Claude',
-      },
-      select: { id: true, createdAt: true },
-    });
-    res.status(201).json({ report });
+    const start = new Date(`${periodStart}T00:00:00Z`);
+    const end = new Date(`${periodEnd}T00:00:00Z`);
+    const data = { periodStart: start, periodEnd: end, content: content.trim(), author: 'Claude' };
+    // Cùng 1 kỳ mà routine chạy lại (chạy thử, lỗi mạng rồi gửi lại...) thì ghi đè bài cũ, không tạo thêm dòng trùng trong danh sách
+    const existing = await prisma.seoReport.findFirst({ where: { periodStart: start, periodEnd: end }, select: { id: true } });
+    const report = existing
+      ? await prisma.seoReport.update({ where: { id: existing.id }, data: { ...data, createdAt: new Date() }, select: { id: true, createdAt: true } })
+      : await prisma.seoReport.create({ data, select: { id: true, createdAt: true } });
+    res.status(existing ? 200 : 201).json({ report });
   } catch (err) {
     console.error('[seo-report]', err);
     res.status(500).json({ error: 'Không lưu được bài phân tích' });

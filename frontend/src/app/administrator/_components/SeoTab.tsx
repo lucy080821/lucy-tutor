@@ -179,7 +179,7 @@ function ReportsCard({ onAuthLost }: { onAuthLost: () => void }) {
         <>
           <label className="sr-only" htmlFor="seo-report-pick">Chọn tuần</label>
           <select id="seo-report-pick" value={selected} onChange={(e) => setSelected(e.target.value)} className="ui-input !w-auto !py-2 text-sm">
-            {list.map((r) => <option key={r.id} value={r.id}>Tuần {label(r)}</option>)}
+            {list.map((r) => <option key={r.id} value={r.id}>Tuần {label(r)} · viết {new Date(r.createdAt).toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}</option>)}
           </select>
           <button onClick={remove} className="btn-ghost px-3 py-2 text-sm text-red-600 cursor-pointer">Xoá</button>
         </>
