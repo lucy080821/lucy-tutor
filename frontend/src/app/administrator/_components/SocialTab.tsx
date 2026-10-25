@@ -114,10 +114,10 @@ export default function SocialTab({ onAuthLost }: { onAuthLost: () => void }) {
   };
 
   const viewChips = (
-    <div className="flex flex-wrap gap-2" role="group" aria-label="Nội dung">
+    <div className="flex gap-6 border-b border-line" role="tablist" aria-label="Nội dung">
       {([["METRICS", "Số liệu"], ["COMMENTS", "Bình luận"]] as [View, string][]).map(([id, label]) => (
-        <button key={id} onClick={() => changeView(id)} aria-pressed={id === view}
-          className={`ui-chip cursor-pointer ${id === view ? "ui-chip-active" : ""}`}>{label}</button>
+        <button key={id} role="tab" aria-selected={id === view} onClick={() => changeView(id)}
+          className={`-mb-px px-1 py-3 text-base font-bold border-b-2 cursor-pointer transition-colors ${id === view ? "border-primary text-primary" : "border-transparent text-muted hover:text-foreground"}`}>{label}</button>
       ))}
     </div>
   );
@@ -187,7 +187,9 @@ function Body({ data, meta, days }: { data: SocialPlatform; meta: (typeof PLATFO
       {t && p && (
         <section className="grid grid-cols-2 lg:grid-cols-5 gap-3">
           <KpiCard label={`Lượt xem ${days} ngày`} value={nf(t.views)} delta={delta("views")}
-            hint={data.lifetimeViews ? `tổng từ trước tới nay: ${nf(data.lifetimeViews)}` : undefined} />
+            hint={data.platform === "TIKTOK"
+              ? `tích luỹ từ khi kết nối · tổng từ trước tới nay: ${nf(data.lifetimeViews || 0)}`
+              : data.lifetimeViews ? `tổng từ trước tới nay: ${nf(data.lifetimeViews)}` : undefined} />
           <KpiCard label="Follow mới" value={nf(t.gained)} delta={delta("gained")} hint={`mất ${nf(t.lost)}`} />
           <KpiCard label="Tăng ròng" value={`${t.net > 0 ? "+" : ""}${nf(t.net)}`} tone={t.net > 0 ? "good" : t.net < 0 ? "bad" : "default"} delta={delta("net")} />
           <KpiCard label="Chuyển đổi / 1.000 view" value={formatPer1000(t.per1000)}
