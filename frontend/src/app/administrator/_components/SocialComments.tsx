@@ -6,12 +6,11 @@ import Pagination from "@/components/Pagination";
 import { ErrorBlock, LoadingBlock, SectionCard } from "./ui";
 
 // Theo dõi bình luận YouTube + Facebook (đồng bộ cùng số liệu mỗi 20 phút — backend/src/utils/social/comments.js).
-// TikTok không có: Display API không trả nội dung bình luận.
+// Nền tảng do tab lớn của SocialTab chọn (prop `platform`); TikTok không có: Display API không trả nội dung bình luận.
 
 const REFRESH_MS = 30_000;
 const nf = (n: number) => n.toLocaleString("vi-VN");
 
-type PlatformFilter = SocialCommentPlatform | "ALL";
 type StatusFilter = "open" | "handled" | "all";
 const PLATFORM_LABEL: Record<SocialCommentPlatform, string> = { YOUTUBE: "YouTube", FACEBOOK: "Facebook" };
 const STATUS_OPTIONS: { id: StatusFilter; label: string }[] = [
@@ -26,8 +25,7 @@ function timeAgo(iso: string) {
   return new Date(iso).toLocaleDateString("vi-VN");
 }
 
-export default function SocialComments({ onAuthLost }: { onAuthLost: () => void }) {
-  const [platform, setPlatform] = useState<PlatformFilter>("ALL");
+export default function SocialComments({ platform, onAuthLost }: { platform: SocialCommentPlatform | "TIKTOK"; onAuthLost: () => void }) {
   const [status, setStatus] = useState<StatusFilter>("open");
   const [search, setSearch] = useState("");
   const [q, setQ] = useState("");
@@ -49,9 +47,10 @@ export default function SocialComments({ onAuthLost }: { onAuthLost: () => void 
   }, [search]);
 
   useEffect(() => {
+    if (platform === "TIKTOK") return; // TikTok không có API bình luận
     let cancelled = false;
     const params = new URLSearchParams({ status, page: String(page) });
-    if (platform !== "ALL") params.set("platform", platform);
+    params.set("platform", platform);
     if (q) params.set("q", q);
     adminFetch<SocialCommentsPage>(`/social/comments?${params}`)
       .then((d) => { if (!cancelled) { setData(d); setError(""); } })
@@ -82,13 +81,21 @@ export default function SocialComments({ onAuthLost }: { onAuthLost: () => void 
   const markAll = async () => {
     const r = await Swal.fire({
       title: "Đánh dấu đã xử lý?",
-      text: `Tất cả bình luận đang chờ${platform === "ALL" ? "" : ` trên ${PLATFORM_LABEL[platform]}`} sẽ chuyển sang "Đã xử lý".`,
+      text: `Tất cả bình luận đang chờ trên ${platform === "TIKTOK" ? "TikTok" : PLATFORM_LABEL[platform]} sẽ chuyển sang "Đã xử lý".`,
       icon: "question", showCancelButton: true, confirmButtonText: "Đánh dấu", cancelButtonText: "Huỷ",
     });
-    if (r.isConfirmed) mark({ all: true, ...(platform !== "ALL" ? { platform } : {}) });
+    if (r.isConfirmed) mark({ all: true, platform });
   };
 
-  const openTotal = data ? data.open.YOUTUBE + data.open.FACEBOOK : 0;
+  const openTotal = data && platform !== "TIKTOK" ? data.open[platform] : 0;
+  if (platform === "TIKTOK") {
+    return (
+      <SectionCard title="TikTok chưa hỗ trợ theo dõi bình luận" subtitle="Giới hạn của TikTok, không phải lỗi cấu hình">
+        <p className="text-sm text-muted">API công khai của TikTok (Display API) chỉ trả số lượng bình luận của mỗi video, không trả nội dung. Số bình luận từng video vẫn xem được ở tab Số liệu, cột &ldquo;Tương tác&rdquo;. Chuyển sang YouTube hoặc Facebook để xem và xử lý bình luận.</p>
+      </SectionCard>
+    );
+  }
+
   const totalPages = data ? Math.max(1, Math.ceil(data.total / data.pageSize)) : 1;
 
   return (
@@ -96,20 +103,10 @@ export default function SocialComments({ onAuthLost }: { onAuthLost: () => void 
       <SectionCard title="Bình luận" subtitle="YouTube và Facebook. TikTok không cho đọc nội dung bình luận qua API nên không có ở đây."
         actions={status === "open" && openTotal > 0 ? <button onClick={markAll} disabled={busy} className="btn-outline px-4 py-2 text-sm cursor-pointer">Đánh dấu tất cả đã xử lý</button> : undefined}>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex flex-wrap gap-2" role="group" aria-label="Nền tảng">
-            {(["ALL", "YOUTUBE", "FACEBOOK"] as PlatformFilter[]).map((p) => (
-              <button key={p} onClick={() => { setPlatform(p); setPage(1); }} aria-pressed={p === platform}
-                className={`ui-chip cursor-pointer ${p === platform ? "ui-chip-active" : ""}`}>
-                {p === "ALL" ? "Tất cả" : PLATFORM_LABEL[p]}
-                {data && status === "open" && <span className="ml-1.5 opacity-70">{nf(p === "ALL" ? openTotal : data.open[p])}</span>}
-              </button>
-            ))}
-          </div>
-          <span className="w-px h-6 bg-line mx-1 hidden sm:block" aria-hidden="true" />
           <div className="flex flex-wrap gap-2" role="group" aria-label="Trạng thái">
             {STATUS_OPTIONS.map((s) => (
               <button key={s.id} onClick={() => { setStatus(s.id); setPage(1); }} aria-pressed={s.id === status}
-                className={`ui-chip cursor-pointer ${s.id === status ? "ui-chip-active" : ""}`}>{s.label}</button>
+                className={`ui-chip cursor-pointer ${s.id === status ? "ui-chip-active" : ""}`}>{s.label}{s.id === "open" && data && <span className="ml-1.5 opacity-70">{nf(openTotal)}</span>}</button>
             ))}
           </div>
           <label className="sr-only" htmlFor="social-comment-search">Tìm bình luận</label>
@@ -139,11 +136,11 @@ export default function SocialComments({ onAuthLost }: { onAuthLost: () => void 
 function CommentRow({ c, busy, onToggle }: { c: SocialComment; busy: boolean; onToggle: () => void }) {
   return (
     <li className={`ui-card p-4 min-w-0 ${c.handled ? "opacity-70" : ""}`}>
-      <div className="flex items-start gap-3">
+      <div className="flex flex-wrap sm:flex-nowrap items-start gap-3">
         {c.authorAvatar
           ? /* eslint-disable-next-line @next/next/no-img-element */ <img src={c.authorAvatar} alt="" width={36} height={36} loading="lazy" referrerPolicy="no-referrer" className="w-9 h-9 rounded-full object-cover bg-primary-soft shrink-0" />
           : <span aria-hidden="true" className="w-9 h-9 rounded-full bg-primary-soft text-primary font-bold flex items-center justify-center shrink-0">{(c.authorName || "?").charAt(0).toUpperCase()}</span>}
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 basis-[calc(100%-3rem)] sm:basis-auto">
           <p className="text-sm flex flex-wrap items-center gap-x-2 gap-y-1">
             <b className="text-foreground break-words">{c.authorName || "Ẩn danh"}</b>
             <span className="ui-badge">{PLATFORM_LABEL[c.platform]}</span>
@@ -161,7 +158,7 @@ function CommentRow({ c, busy, onToggle }: { c: SocialComment; busy: boolean; on
           </p>
         </div>
         {!c.isOwner && (
-          <button onClick={onToggle} disabled={busy} className="btn-outline px-3 py-2 text-xs cursor-pointer shrink-0 whitespace-nowrap">
+          <button onClick={onToggle} disabled={busy} className="btn-outline px-3 py-2 text-xs cursor-pointer shrink-0 whitespace-nowrap w-full sm:w-auto">
             {c.handled ? "Bỏ đánh dấu" : "Đã xử lý"}
           </button>
         )}

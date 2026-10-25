@@ -18,6 +18,16 @@ const SocialMetricChart = dynamic(() => import("./AdminCharts").then((m) => m.Se
   ssr: false, loading: () => <div className="skeleton w-full h-full" />,
 });
 
+// Logo 3 nền tảng (SVG 24×24, đúng màu thương hiệu; trang trí nên aria-hidden)
+const LOGO_PATH: Record<PlatformId, { d: string; fill: string }> = {
+  YOUTUBE: { fill: "#FF0000", d: "M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" },
+  FACEBOOK: { fill: "#1877F2", d: "M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" },
+  TIKTOK: { fill: "#000000", d: "M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z" },
+};
+function PlatformLogo({ id, className = "w-5 h-5" }: { id: PlatformId; className?: string }) {
+  const l = LOGO_PATH[id];
+  return <svg viewBox="0 0 24 24" className={className} aria-hidden="true" focusable="false"><path d={l.d} fill={l.fill} /></svg>;
+}
 const RANGES: SocialRange[] = [7, 28, 90];
 const RANGE_KEY = "lucy_admin_social_days";
 const PLATFORM_KEY = "lucy_admin_social_platform";
@@ -113,34 +123,28 @@ export default function SocialTab({ onAuthLost }: { onAuthLost: () => void }) {
     }
   };
 
-  const viewChips = (
-    <div className="flex gap-6 border-b border-line" role="tablist" aria-label="Nội dung">
+  const all: Record<PlatformId, SocialPlatform> | null = data ? { YOUTUBE: data.youtube, FACEBOOK: data.facebook, TIKTOK: data.tiktok } : null;
+
+  // Thứ bậc bộ lọc: nền tảng (lớn nhất) → Số liệu / Bình luận (nhỏ hơn, tab gạch chân) → khoảng thời gian (chip)
+  const viewTabs = (
+    <div className="flex gap-5 border-b border-line" role="tablist" aria-label="Nội dung">
       {([["METRICS", "Số liệu"], ["COMMENTS", "Bình luận"]] as [View, string][]).map(([id, label]) => (
         <button key={id} role="tab" aria-selected={id === view} onClick={() => changeView(id)}
-          className={`-mb-px px-1 py-3 text-base font-bold border-b-2 cursor-pointer transition-colors ${id === view ? "border-primary text-primary" : "border-transparent text-muted hover:text-foreground"}`}>{label}</button>
+          className={`-mb-px px-1 py-2.5 text-sm font-bold border-b-2 cursor-pointer transition-colors ${id === view ? "border-primary text-primary" : "border-transparent text-muted hover:text-foreground"}`}>{label}</button>
       ))}
     </div>
   );
 
-  if (view === "COMMENTS") {
-    return (
-      <div className="space-y-6">
-        {viewChips}
-        <SocialComments onAuthLost={onAuthLost} />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {viewChips}
+      {all && <PlatformTabs all={all} value={platform} onChange={changePlatform} />}
+      {viewTabs}
+
+      {view === "COMMENTS" ? <SocialComments key={platform} platform={platform} onAuthLost={onAuthLost} /> : (
+      <>
+      {/* Thanh điều khiển: khoảng thời gian bên trái, trạng thái đồng bộ của nền tảng đang xem bên phải */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Nền tảng">
-          {PLATFORMS.map((p) => (
-            <button key={p.id} onClick={() => changePlatform(p.id)} aria-pressed={p.id === platform}
-              className={`ui-chip cursor-pointer ${p.id === platform ? "ui-chip-active" : ""}`}>{p.label}</button>
-          ))}
-          <span className="w-px bg-line mx-1" aria-hidden="true" />
+        <div className="flex flex-wrap gap-2" role="group" aria-label="Khoảng thời gian">
           {RANGES.map((o) => (
             <button key={o} onClick={() => changeDays(o)} aria-pressed={o === days}
               className={`ui-chip cursor-pointer ${o === days ? "ui-chip-active" : ""}`}>{o} ngày</button>
@@ -154,13 +158,46 @@ export default function SocialTab({ onAuthLost }: { onAuthLost: () => void }) {
         )}
       </div>
 
-      {current?.sync.error && <ErrorBlock message={`Lần đồng bộ gần nhất lỗi: ${current.sync.error}`} />}
-
       {error ? <ErrorBlock message={error} onRetry={() => { setError(""); setTick((t) => t + 1); }} />
         : !current ? <LoadingBlock />
-        : !current.configured && !current.hasData ? <SetupCard platform={platform} />
-        : !current.hasData ? <SectionCard title="Chưa có số liệu"><p className="text-sm text-muted">Bấm &ldquo;Đồng bộ ngay&rdquo; để lấy số liệu từ {meta.label}.</p></SectionCard>
-        : <Body data={current} meta={meta} days={days} />}
+        : (
+          <>
+            {current.sync.error && <ErrorBlock message={`Lần đồng bộ gần nhất lỗi: ${current.sync.error}`} />}
+            {!current.configured && !current.hasData ? <SetupCard platform={platform} />
+              : !current.hasData ? <SectionCard title="Chưa có số liệu"><p className="text-sm text-muted">Bấm &ldquo;Đồng bộ ngay&rdquo; để lấy số liệu từ {meta.label}.</p></SectionCard>
+              : <Body data={current} meta={meta} days={days} />}
+          </>
+        )}
+      </>
+      )}
+    </div>
+  );
+}
+
+function PlatformTabs({ all, value, onChange }: { all: Record<PlatformId, SocialPlatform>; value: PlatformId; onChange: (p: PlatformId) => void }) {
+  return (
+    <div className="grid grid-cols-3 gap-1 sm:gap-1.5 rounded-2xl bg-white border border-line p-1 sm:p-1.5" role="tablist" aria-label="Nền tảng">
+      {PLATFORMS.map((m) => {
+        const p = all[m.id];
+        const selected = m.id === value;
+        const connected = p.configured || p.hasData;
+        const dot = !connected ? "bg-slate-300" : p.sync.error ? "bg-amber-500" : "bg-emerald-500";
+        const hint = !connected ? "Chưa kết nối" : p.sync.error ? "Lỗi đồng bộ" : p.followers !== null && p.followers !== undefined ? `${nf(p.followers)} ${m.followLabel.toLowerCase()}` : "Đã kết nối";
+        return (
+          <button key={m.id} role="tab" aria-selected={selected} onClick={() => onChange(m.id)}
+            className={`flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3 rounded-xl px-2 sm:px-4 py-2.5 sm:py-3 text-center sm:text-left cursor-pointer transition-colors min-w-0 ${selected ? "bg-primary text-white" : "text-foreground hover:bg-primary-soft"}`}>
+            <span aria-hidden="true" className="w-10 h-10 rounded-full bg-white border border-line flex items-center justify-center shrink-0"><PlatformLogo id={m.id} /></span>
+            <span className="min-w-0 max-w-full">
+              <span className="flex items-center justify-center sm:justify-start gap-1.5 text-sm sm:text-base font-bold leading-tight">
+                {m.label}<span aria-hidden="true" className={`sm:hidden w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
+              </span>
+              <span className={`hidden sm:flex items-center gap-1.5 text-xs ${selected ? "text-white/80" : "text-muted"}`}>
+                <span aria-hidden="true" className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} /><span className="truncate">{hint}</span>
+              </span>
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -172,14 +209,8 @@ function Body({ data, meta, days }: { data: SocialPlatform; meta: (typeof PLATFO
 
   return (
     <>
-      {data.sync.notes.length > 0 && (
-        <div className="rounded-xl bg-amber-50 text-amber-800 text-xs px-4 py-3 space-y-1">
-          {data.sync.notes.map((n) => <p key={n}>{n}</p>)}
-        </div>
-      )}
-
       {data.period && (
-        <p className="text-xs text-muted">Số liệu theo ngày tính tới {vnDate(data.period.end)} — {data.platform === "TIKTOK"
+        <p className="text-xs text-muted -mt-3">Số liệu theo ngày tính tới {vnDate(data.period.end)} — {data.platform === "TIKTOK"
           ? "TikTok không có số liệu theo ngày nên lượt xem, follow theo ngày được tích luỹ từ chênh lệch giữa các lần đồng bộ (chỉ tính từ khi bắt đầu kết nối; follow là tăng/giảm ròng)."
           : `${PLATFORM_NAME[data.platform]} cập nhật chậm 1–3 ngày nên video mới đăng sẽ chưa có trong các ô bên dưới (xem cột “Lượt xem” trong bảng nội dung để thấy số mới nhất).`}</p>
       )}
@@ -203,22 +234,68 @@ function Body({ data, meta, days }: { data: SocialPlatform; meta: (typeof PLATFO
         </section>
       )}
 
-      <TrendCard data={data} />
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        <TrendCard data={data} className="lg:col-span-2" />
+        <TopContentCard data={data} />
+      </div>
       <ItemsCard data={data} meta={meta} />
+
+      {data.sync.notes.length > 0 && (
+        <details className="rounded-xl bg-amber-50 text-amber-800 text-xs px-4 py-3">
+          <summary className="cursor-pointer font-bold select-none">Ghi chú đồng bộ ({data.sync.notes.length})</summary>
+          <div className="mt-2 space-y-1 break-words">{data.sync.notes.map((n) => <p key={n}>{n}</p>)}</div>
+        </details>
+      )}
     </>
   );
 }
 
-function TrendCard({ data }: { data: SocialPlatform }) {
+// Top 5 nội dung theo lượt xem hoặc theo chuyển đổi (chỉ nội dung đủ lượt xem để tỷ lệ không nhiễu)
+function TopContentCard({ data }: { data: SocialPlatform }) {
+  const [by, setBy] = useState<"views" | "conv">("views");
+  const top = useMemo(() => {
+    const list = by === "views"
+      ? [...data.items].sort((a, b) => b.views - a.views)
+      : data.items.filter((i) => i.per1000 !== null && (i.convViews ?? 0) >= MIN_VIEWS_FOR_RANKING).sort((a, b) => (b.per1000 ?? 0) - (a.per1000 ?? 0));
+    return list.slice(0, 5);
+  }, [data.items, by]);
+  return (
+    <SectionCard title="Nội dung nổi bật" subtitle={by === "views" ? "Nhiều lượt xem nhất" : `Chuyển đổi cao nhất (từ ${nf(MIN_VIEWS_FOR_RANKING)} lượt xem)`}
+>
+      <div className="flex flex-wrap gap-2 mb-4" role="group" aria-label="Xếp hạng theo">
+        {([["views", "Lượt xem"], ["conv", "Chuyển đổi"]] as const).map(([id, label]) => (
+          <button key={id} onClick={() => setBy(id)} aria-pressed={id === by} className={`ui-chip cursor-pointer ${id === by ? "ui-chip-active" : ""}`}>{label}</button>
+        ))}
+      </div>
+      {!top.length ? <p className="text-sm text-muted py-6 text-center">{by === "conv" ? "Chưa có nội dung đủ dữ liệu follow để xếp hạng." : "Chưa có nội dung."}</p> : (
+        <ol className="divide-y divide-line">
+          {top.map((i, idx) => (
+            <li key={i.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+              <span className="w-5 text-sm font-extrabold text-muted shrink-0 text-center">{idx + 1}</span>
+              {i.thumbnail && /* eslint-disable-next-line @next/next/no-img-element */ <img src={i.thumbnail} alt="" width={56} height={32} loading="lazy" className="w-14 h-8 rounded-md object-cover bg-primary-soft shrink-0" />}
+              <a href={i.url} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 text-sm font-bold text-foreground hover:text-primary line-clamp-2 break-words">{i.title || "(Không có tiêu đề)"}</a>
+              <span className="text-sm font-extrabold text-foreground shrink-0 text-right">
+                {by === "views" ? nf(i.views) : formatPer1000(i.per1000)}
+                <span className="block text-[10px] font-normal text-muted">{by === "views" ? "lượt xem" : "/ 1.000 view"}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </SectionCard>
+  );
+}
+
+function TrendCard({ data, className = "" }: { data: SocialPlatform; className?: string }) {
   const [metric, setMetric] = useState<ChartMetric>("views");
   const m = CHART_METRICS.find((x) => x.id === metric)!;
   const series = useMemo(() => (data.series || []).map((r) => ({ date: r.date, value: r[metric] })), [data.series, metric]);
   return (
-    <SectionCard title="Xu hướng theo ngày" subtitle={data.period ? `${vnDate(data.period.start)} – ${vnDate(data.period.end)}` : undefined}
+    <SectionCard title="Xu hướng theo ngày" subtitle={data.period ? `${vnDate(data.period.start)} – ${vnDate(data.period.end)}` : undefined} className={className}
       actions={<div className="flex flex-wrap gap-2">{CHART_METRICS.map((o) => (
         <button key={o.id} onClick={() => setMetric(o.id)} aria-pressed={o.id === metric} className={`ui-chip cursor-pointer ${o.id === metric ? "ui-chip-active" : ""}`}>{o.label}</button>
       ))}</div>}>
-      <div className="h-64">
+      <div className="h-72">
         <SocialMetricChart data={series} metric="clicks" label={m.label} format={m.format} decimals={m.decimals} />
       </div>
     </SectionCard>
