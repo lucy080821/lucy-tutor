@@ -204,4 +204,4 @@ async function sync({ full = true } = {}) {
   return { items: rows.length, days: daily.length, notes: [...notes, `Chỉ số đang dùng: ${[...used].join(', ') || 'không có'}`] };
 }
 
-module.exports = { sync, isConfigured };
+module.exports = { sync, isConfigured, config, batchGet };

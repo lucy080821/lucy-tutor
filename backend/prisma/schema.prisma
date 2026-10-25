@@ -1399,3 +1399,34 @@ model SocialDaily {
 
   @@unique([platform, date])
 }
+
+// Refresh token của nền tảng có token xoay vòng (TikTok trả refresh token mới mỗi lần làm mới → không giữ được trong .env)
+model SocialToken {
+  platform     String   @id
+  refreshToken String
+  updatedAt    DateTime @updatedAt
+}
+
+// Bình luận (và trả lời) trên video/bài của YouTube + Facebook; `handled` do admin đánh dấu, đồng bộ không ghi đè
+model SocialComment {
+  id               String   @id @default(uuid())
+  platform         String
+  externalId       String
+  itemExternalId   String
+  itemTitle        String   @default("")
+  itemUrl          String   @default("")
+  parentExternalId String?
+  authorName       String   @default("")
+  authorAvatar     String   @default("")
+  text             String   @default("")
+  likes            Int      @default(0)
+  replyCount       Int      @default(0)
+  isOwner          Boolean  @default(false)
+  handled          Boolean  @default(false)
+  publishedAt      DateTime
+  fetchedAt        DateTime @default(now())
+
+  @@unique([platform, externalId])
+  @@index([platform, publishedAt])
+  @@index([handled, publishedAt])
+}

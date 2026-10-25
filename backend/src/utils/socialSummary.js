@@ -52,8 +52,8 @@ async function buildPlatform(platform, days, status) {
 
 async function buildSocialSummary(days) {
   const status = getStatus();
-  const [youtube, facebook] = await Promise.all(['YOUTUBE', 'FACEBOOK'].map((p) => buildPlatform(p, days, status[p])));
-  return { days, youtube, facebook };
+  const [youtube, facebook, tiktok] = await Promise.all(['YOUTUBE', 'FACEBOOK', 'TIKTOK'].map((p) => buildPlatform(p, days, status[p])));
+  return { days, youtube, facebook, tiktok };
 }
 
 module.exports = { buildSocialSummary };

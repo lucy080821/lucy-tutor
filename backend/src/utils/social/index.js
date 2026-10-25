@@ -1,13 +1,17 @@
 const youtube = require('./youtube');
 const facebook = require('./facebook');
+const tiktok = require('./tiktok');
+const comments = require('./comments');
 
 // Điều phối đồng bộ mạng xã hội (tab "Mạng xã hội" ở /administrator): mỗi 20 phút làm mới lượt xem + số follow gần nhất,
 // mỗi ngày 06:00 giờ VN làm mới đầy đủ (kể cả insights của các mục Facebook cũ hơn 14 ngày).
+// Sau số liệu, YouTube/Facebook đồng bộ thêm bình luận (lỗi bình luận chỉ thành ghi chú, không làm hỏng đồng bộ số liệu).
 // Nền tảng chưa cấu hình biến môi trường thì bỏ qua. Lần đồng bộ lỗi chỉ ghi vào trạng thái, không làm sập server.
 
 const PLATFORMS = {
   YOUTUBE: { run: () => youtube.sync(), configured: youtube.isConfigured },
   FACEBOOK: { run: (opts) => facebook.sync(opts), configured: facebook.isConfigured },
+  TIKTOK: { run: () => tiktok.sync(), configured: tiktok.isConfigured },
 };
 const QUICK_MS = 20 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -23,8 +27,19 @@ async function syncPlatform(platform, { full = true } = {}) {
   running[platform] = (async () => {
     if (!p.configured()) throw new Error('Chưa cấu hình biến môi trường cho nền tảng này');
     const r = await p.run({ full });
-    status[platform] = { at: new Date().toISOString(), error: null, items: r.items, notes: r.notes || [] };
-    console.log(`[social] ${platform}: ${r.items} mục, ${r.days} ngày`);
+    const notes = [...(r.notes || [])];
+    let newComments = 0;
+    if (comments.supports(platform)) {
+      try {
+        const c = await comments.syncComments(platform);
+        newComments = c.added;
+        notes.push(...c.notes);
+      } catch (err) {
+        notes.push(`Không đồng bộ được bình luận: ${String(err.message).slice(0, 200)}`);
+      }
+    }
+    status[platform] = { at: new Date().toISOString(), error: null, items: r.items, notes };
+    console.log(`[social] ${platform}: ${r.items} mục, ${r.days} ngày, ${newComments} bình luận mới`);
     return status[platform];
   })()
     .catch((err) => {
@@ -52,7 +67,7 @@ function msUntilNextFull() {
 
 function startSocialSync() {
   if (!Object.values(PLATFORMS).some((p) => p.configured())) {
-    console.log('[social] Chưa cấu hình YouTube/Facebook — bỏ qua đồng bộ mạng xã hội');
+    console.log('[social] Chưa cấu hình YouTube/Facebook/TikTok — bỏ qua đồng bộ mạng xã hội');
     return;
   }
   setTimeout(() => syncAll({ full: true }), 45_000).unref?.();

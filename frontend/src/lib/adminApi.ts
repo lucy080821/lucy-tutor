@@ -177,10 +177,10 @@ export type SeoReport = SeoReportMeta & { content: string };
 export const formatPosition = (p: number | null | undefined) =>
   p === null || p === undefined ? "—" : p.toLocaleString("vi-VN", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
-// ===== Mạng xã hội: YouTube + Facebook (backend: routes/adminSocial.routes.js, utils/socialSummary.js) =====
+// ===== Mạng xã hội: YouTube + Facebook + TikTok (backend: routes/adminSocial.routes.js, utils/socialSummary.js) =====
 
 export type SocialRange = 7 | 28 | 90;
-export type SocialKind = "YT_VIDEO" | "YT_SHORT" | "FB_REEL" | "FB_POST";
+export type SocialKind = "YT_VIDEO" | "YT_SHORT" | "FB_REEL" | "FB_POST" | "TT_VIDEO";
 export type SocialTotals = { views: number; watchHours: number; engagements: number; gained: number; lost: number; net: number; per1000: number | null };
 export type SocialItem = {
   id: string; kind: SocialKind; title: string; url: string; thumbnail: string; publishedAt: string;
@@ -189,13 +189,22 @@ export type SocialItem = {
 };
 export type SocialSync = { configured: boolean; syncing: boolean; at: string | null; error: string | null; items: number; notes: string[] };
 export type SocialPlatform = {
-  platform: "YOUTUBE" | "FACEBOOK"; configured: boolean; sync: SocialSync; hasData: boolean;
+  platform: "YOUTUBE" | "FACEBOOK" | "TIKTOK"; configured: boolean; sync: SocialSync; hasData: boolean;
   followers?: number | null; lifetimeViews?: number; period?: { start: string; end: string };
   totals?: { current: SocialTotals; previous: SocialTotals };
   series?: { date: string; views: number; gained: number; lost: number; net: number; per1000: number | null }[];
   items: SocialItem[];
 };
-export type SocialSummary = { days: number; youtube: SocialPlatform; facebook: SocialPlatform };
+export type SocialSummary = { days: number; youtube: SocialPlatform; facebook: SocialPlatform; tiktok: SocialPlatform };
+
+export type SocialCommentPlatform = "YOUTUBE" | "FACEBOOK";
+export type SocialComment = {
+  id: string; platform: SocialCommentPlatform; itemTitle: string; itemUrl: string; isReply: boolean; authorName: string; authorAvatar: string;
+  text: string; likes: number; replyCount: number; isOwner: boolean; handled: boolean; publishedAt: string;
+};
+export type SocialCommentsPage = {
+  total: number; page: number; pageSize: number; open: Record<SocialCommentPlatform, number>; items: SocialComment[];
+};
 
 // Chuyển đổi: hiện theo 1.000 lượt xem (tỷ lệ thật thường 0,1–1%, đọc phần trăm khó so sánh)
 export const formatPer1000 = (v: number | null | undefined) =>

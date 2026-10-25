@@ -127,4 +127,4 @@ async function sync() {
   return { items: items.length, days: daily.length, notes: ids.length >= MAX_VIDEOS ? [`Chỉ lấy ${MAX_VIDEOS} video mới nhất`] : [] };
 }
 
-module.exports = { sync, isConfigured };
+module.exports = { sync, isConfigured, config, api };

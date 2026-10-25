@@ -9,8 +9,9 @@ import {
 import { usePagination } from "@/lib/usePagination";
 import Pagination from "@/components/Pagination";
 import { ErrorBlock, KpiCard, LoadingBlock, SectionCard } from "./ui";
+import SocialComments from "./SocialComments";
 
-// Tab "Mạng xã hội": YouTube + Facebook (Reels, bài viết). Đồng bộ qua API chính thức mỗi 20 phút — backend/src/utils/social/*.
+// Tab "Mạng xã hội": YouTube + Facebook (Reels, bài viết) + TikTok, kèm theo dõi bình luận (SocialComments). Đồng bộ qua API chính thức mỗi 20 phút — backend/src/utils/social/*.
 // Tỷ lệ chuyển đổi = follow/subscribe mới ÷ lượt xem (hiện theo 1.000 lượt xem). Follow trễ 1–2 ngày so với lượt xem → số mới là "tạm tính".
 
 const SocialMetricChart = dynamic(() => import("./AdminCharts").then((m) => m.SeoMetricChart), {
@@ -27,12 +28,16 @@ const PAGE_SIZE = 15;
 const nf = (n: number) => n.toLocaleString("vi-VN");
 const vnDate = (iso: string) => new Date(iso).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
 
-type PlatformId = "YOUTUBE" | "FACEBOOK";
+type PlatformId = "YOUTUBE" | "FACEBOOK" | "TIKTOK";
 const PLATFORMS: { id: PlatformId; label: string; kinds: { id: SocialKind | "ALL"; label: string }[]; followLabel: string }[] = [
   { id: "YOUTUBE", label: "YouTube", followLabel: "Người đăng ký", kinds: [{ id: "ALL", label: "Tất cả" }, { id: "YT_SHORT", label: "Shorts" }, { id: "YT_VIDEO", label: "Video dài" }] },
   { id: "FACEBOOK", label: "Facebook", followLabel: "Người theo dõi", kinds: [{ id: "ALL", label: "Tất cả" }, { id: "FB_REEL", label: "Reels" }, { id: "FB_POST", label: "Bài viết" }] },
+  { id: "TIKTOK", label: "TikTok", followLabel: "Người theo dõi", kinds: [{ id: "ALL", label: "Tất cả" }] },
 ];
-const KIND_LABEL: Record<SocialKind, string> = { YT_SHORT: "Short", YT_VIDEO: "Video", FB_REEL: "Reel", FB_POST: "Bài viết" };
+const KIND_LABEL: Record<SocialKind, string> = { YT_SHORT: "Short", YT_VIDEO: "Video", FB_REEL: "Reel", FB_POST: "Bài viết", TT_VIDEO: "Video" };
+const PLATFORM_NAME: Record<PlatformId, string> = { YOUTUBE: "YouTube", FACEBOOK: "Facebook", TIKTOK: "TikTok" };
+type View = "METRICS" | "COMMENTS";
+const VIEW_KEY = "lucy_admin_social_view";
 
 type ChartMetric = "views" | "gained" | "per1000";
 const CHART_METRICS: { id: ChartMetric; label: string; format: (v: number) => string; decimals?: boolean }[] = [
@@ -47,7 +52,10 @@ export default function SocialTab({ onAuthLost }: { onAuthLost: () => void }) {
     try { const v = Number(localStorage.getItem(RANGE_KEY)); return RANGES.includes(v as SocialRange) ? (v as SocialRange) : 28; } catch { return 28; }
   });
   const [platform, setPlatform] = useState<PlatformId>(() => {
-    try { return localStorage.getItem(PLATFORM_KEY) === "FACEBOOK" ? "FACEBOOK" : "YOUTUBE"; } catch { return "YOUTUBE"; }
+    try { const v = localStorage.getItem(PLATFORM_KEY); return v === "FACEBOOK" || v === "TIKTOK" ? v : "YOUTUBE"; } catch { return "YOUTUBE"; }
+  });
+  const [view, setView] = useState<View>(() => {
+    try { return localStorage.getItem(VIEW_KEY) === "COMMENTS" ? "COMMENTS" : "METRICS"; } catch { return "METRICS"; }
   });
   const [data, setData] = useState<SocialSummary | null>(null);
   const [error, setError] = useState("");
@@ -84,7 +92,12 @@ export default function SocialTab({ onAuthLost }: { onAuthLost: () => void }) {
     try { localStorage.setItem(PLATFORM_KEY, p); } catch { /* bị chặn */ }
   };
 
-  const current = data ? (platform === "YOUTUBE" ? data.youtube : data.facebook) : null;
+  const changeView = (v: View) => {
+    setView(v);
+    try { localStorage.setItem(VIEW_KEY, v); } catch { /* bị chặn */ }
+  };
+
+  const current = data ? (platform === "YOUTUBE" ? data.youtube : platform === "FACEBOOK" ? data.facebook : data.tiktok) : null;
   const meta = PLATFORMS.find((p) => p.id === platform)!;
 
   const syncNow = async () => {
@@ -100,8 +113,27 @@ export default function SocialTab({ onAuthLost }: { onAuthLost: () => void }) {
     }
   };
 
+  const viewChips = (
+    <div className="flex flex-wrap gap-2" role="group" aria-label="Nội dung">
+      {([["METRICS", "Số liệu"], ["COMMENTS", "Bình luận"]] as [View, string][]).map(([id, label]) => (
+        <button key={id} onClick={() => changeView(id)} aria-pressed={id === view}
+          className={`ui-chip cursor-pointer ${id === view ? "ui-chip-active" : ""}`}>{label}</button>
+      ))}
+    </div>
+  );
+
+  if (view === "COMMENTS") {
+    return (
+      <div className="space-y-6">
+        {viewChips}
+        <SocialComments onAuthLost={onAuthLost} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {viewChips}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2" role="group" aria-label="Nền tảng">
           {PLATFORMS.map((p) => (
@@ -147,7 +179,9 @@ function Body({ data, meta, days }: { data: SocialPlatform; meta: (typeof PLATFO
       )}
 
       {data.period && (
-        <p className="text-xs text-muted">Số liệu theo ngày tính tới {vnDate(data.period.end)} — {data.platform === "YOUTUBE" ? "YouTube" : "Facebook"} cập nhật chậm 1–3 ngày nên video mới đăng sẽ chưa có trong các ô bên dưới (xem cột &ldquo;Lượt xem&rdquo; trong bảng nội dung để thấy số mới nhất).</p>
+        <p className="text-xs text-muted">Số liệu theo ngày tính tới {vnDate(data.period.end)} — {data.platform === "TIKTOK"
+          ? "TikTok không có số liệu theo ngày nên lượt xem, follow theo ngày được tích luỹ từ chênh lệch giữa các lần đồng bộ (chỉ tính từ khi bắt đầu kết nối; follow là tăng/giảm ròng)."
+          : `${PLATFORM_NAME[data.platform]} cập nhật chậm 1–3 ngày nên video mới đăng sẽ chưa có trong các ô bên dưới (xem cột “Lượt xem” trong bảng nội dung để thấy số mới nhất).`}</p>
       )}
 
       {t && p && (
@@ -204,7 +238,7 @@ function ItemsCard({ data, meta }: { data: SocialPlatform; meta: (typeof PLATFOR
   const now = Date.now();
 
   return (
-    <SectionCard title={data.platform === "YOUTUBE" ? "Video & Shorts" : "Reels & bài viết"}
+    <SectionCard title={data.platform === "YOUTUBE" ? "Video & Shorts" : data.platform === "TIKTOK" ? "Video TikTok" : "Reels & bài viết"}
       subtitle="Số liệu cộng dồn từ lúc đăng. Chuyển đổi = follow mới từ nội dung ÷ lượt xem."
       actions={
         <>
@@ -295,8 +329,8 @@ function ItemsCard({ data, meta }: { data: SocialPlatform; meta: (typeof PLATFOR
           <Pagination page={pg.page} totalPages={pg.totalPages} onPageChange={pg.setPage} totalItems={pg.totalItems} pageSize={PAGE_SIZE} />
         </div>
       )}
-      {data.platform === "FACEBOOK" && data.items.length > 0 && data.items.every((i) => i.followsGained === null) && (
-        <p className="text-xs text-muted mt-3">Facebook chưa trả số follow theo từng nội dung nên cột chuyển đổi để trống; chuyển đổi cấp Page vẫn tính ở các ô phía trên.</p>
+      {data.platform !== "YOUTUBE" && data.items.length > 0 && data.items.every((i) => i.followsGained === null) && (
+        <p className="text-xs text-muted mt-3">{PLATFORM_NAME[data.platform]} chưa trả số follow theo từng nội dung nên cột chuyển đổi để trống; chuyển đổi cấp {data.platform === "TIKTOK" ? "kênh" : "Page"} vẫn tính ở các ô phía trên.</p>
       )}
     </SectionCard>
   );
@@ -309,6 +343,14 @@ function SetupCard({ platform }: { platform: PlatformId }) {
         <li>Google Cloud: bật <b>YouTube Data API v3</b> và <b>YouTube Analytics API</b>, tạo OAuth client loại &ldquo;Desktop app&rdquo;, chuyển màn hình đồng ý OAuth sang <b>In production</b>.</li>
         <li>Đặt <code>YT_CLIENT_ID</code>, <code>YT_CLIENT_SECRET</code> trong <code>backend/.env</code>, chạy <code>node scripts/youtubeAuth.js</code> và đăng nhập bằng tài khoản chủ kênh.</li>
         <li>Chép <code>YT_REFRESH_TOKEN</code> script in ra vào <code>.env</code> (và biến môi trường hosting), khởi động lại server.</li>
+      </ol>
+    </SectionCard>
+  ) : platform === "TIKTOK" ? (
+    <SectionCard title="Chưa kết nối TikTok" subtitle="Cần cấu hình 1 lần trên server backend">
+      <ol className="list-decimal pl-6 space-y-1.5 text-sm text-foreground/90 break-words">
+        <li>Tạo app ở <b>developers.tiktok.com</b>, thêm product <b>Login Kit</b> + <b>Display API</b> với scope <code>user.info.basic</code>, <code>user.info.stats</code>, <code>video.list</code>. Khi app còn Sandbox, thêm tài khoản TikTok của kênh vào &ldquo;Target users&rdquo;.</li>
+        <li>Đăng ký Redirect URI <code>http://localhost:53683/callback</code>, đặt <code>TT_CLIENT_KEY</code>, <code>TT_CLIENT_SECRET</code> trong <code>backend/.env</code>, chạy <code>node scripts/tiktokAuth.js</code> và đăng nhập bằng tài khoản chủ kênh.</li>
+        <li>Chép <code>TT_REFRESH_TOKEN</code> script in ra vào <code>.env</code> (và biến môi trường hosting), khởi động lại server. Các lần sau token tự xoay vòng và được lưu trong database.</li>
       </ol>
     </SectionCard>
   ) : (
