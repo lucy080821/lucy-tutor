@@ -13,7 +13,10 @@ const SUGGESTIONS = [
   "Dự kiến cuối tháng tôi còn lại bao nhiêu?",
 ];
 // AI hay chèn <br> trong ô bảng Markdown; MiniMarkdown không hiểu HTML nên đổi thành dấu phân cách
-const clean = (s: string) => s.replace(/<br\s*\/?>/gi, " · ");
+const clean = (s: string) =>
+  s.replace(/<br\s*\/?>/gi, " · ")
+    // LaTeX còn sót: bỏ khung \[ \] \( \), \text{...} -> chữ thường, \approx -> ≈
+    .replace(/\[[()\]]/g, "").replace(/\text\{([^}]*)\}/g, "$1").replace(/\approx/g, "≈").replace(/\times/g, "×").replace(/\cdot/g, "·");
 
 export default function ChatPanel({ month, onAuthLost }: { month: string; onAuthLost: () => void }) {
   const [messages, setMessages] = useState<Msg[]>([]);

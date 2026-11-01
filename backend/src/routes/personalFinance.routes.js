@@ -416,7 +416,7 @@ async function askGroq(messages, maxTokens) {
 }
 
 const COACH_RULES = `Bạn là trợ lý tài chính cá nhân cho chủ sổ thu chi, trả lời bằng tiếng Việt, ngắn gọn, thẳng thắn, thực tế.
-Quy tắc: CHỈ dùng số liệu trong dữ liệu được cung cấp, không bịa số; thiếu dữ liệu thì nói rõ là chưa đủ dữ liệu. Tiền định dạng như "1.250.000 đ". Không đưa lời khuyên đầu tư cụ thể (mã cổ phiếu, coin...). Đây là gợi ý quản lý chi tiêu, không phải tư vấn tài chính chuyên nghiệp.`;
+Quy tắc: KHÔNG dùng LaTeX hay ký hiệu toán (\[ \], \text, \approx) — viết phép tính bằng chữ thường, ví dụ "1.798.658 đ − 42.100.260 đ = −40.301.602 đ"; CHỈ dùng số liệu trong dữ liệu được cung cấp, không bịa số; thiếu dữ liệu thì nói rõ là chưa đủ dữ liệu. Tiền định dạng như "1.250.000 đ". Không đưa lời khuyên đầu tư cụ thể (mã cổ phiếu, coin...). Đây là gợi ý quản lý chi tiêu, không phải tư vấn tài chính chuyên nghiệp.`;
 
 async function ensureMonth(req) {
   const month = String(req.body?.month || '');
