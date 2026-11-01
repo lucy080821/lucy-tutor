@@ -62,7 +62,7 @@ export function HorizontalBars({ data, color = NAVY }: { data: { name: string; v
       <BarChart data={data} layout="vertical" margin={{ top: 4, right: 16, left: 0, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#eaecef" />
         <XAxis type="number" axisLine={false} tickLine={false} tick={axisTick} tickFormatter={formatShortVND} />
-        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={axisTick} width={130} />
+        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tick={axisTick} width={104} tickFormatter={(v: string) => (v.length > 15 ? `${v.slice(0, 14)}…` : v)} />
         <Tooltip cursor={{ fill: "#eef2fb" }} formatter={money} contentStyle={tooltipStyle} />
         <Bar dataKey="value" name="Số tiền" fill={color} radius={[0, 4, 4, 0]} barSize={16} />
       </BarChart>

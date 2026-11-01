@@ -55,7 +55,7 @@ export default function ChatPanel({ month, onAuthLost }: { month: string; onAuth
         </div>
         {messages.length > 0 && <button onClick={() => { setMessages([]); setError(""); }} className="text-xs font-bold text-muted px-2 py-2 cursor-pointer">Xoá cuộc trò chuyện</button>}
       </div>
-      <div className="min-h-[22rem] max-h-[65vh] overflow-y-auto rounded-xl bg-background p-3 space-y-3">
+      <div className="min-h-[22rem] max-h-[60vh] sm:max-h-[65vh] overflow-y-auto rounded-xl bg-background p-3 space-y-3">
         {messages.length === 0 && (
           <div className="space-y-2">
             <p className="text-sm text-muted">Gợi ý câu hỏi:</p>

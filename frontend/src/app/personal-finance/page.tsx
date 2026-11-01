@@ -91,7 +91,7 @@ function Book({ admin, onAuthLost, onLogout }: { admin: Admin; onAuthLost: () =>
 
             <MonthEndPrompt key={month} store={store} data={data} month={month} cur={cur} />
 
-            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 [&>*:last-child]:col-span-2 md:[&>*:last-child]:col-span-1">
               <KpiCard label="Thu nhập" value={vnd(cur?.income ?? 0)} tone="good" delta={prev ? pctChange(cur?.income ?? 0, prev.income) : undefined} hint={prev ? "so với tháng trước" : undefined} />
               <KpiCard label="Chi tiêu" value={vnd(cur?.expense ?? 0)} invertDelta delta={prev ? pctChange(cur?.expense ?? 0, prev.expense) : undefined} hint={prev ? "so với tháng trước" : undefined} />
               <KpiCard label="Số dư cuối kỳ" value={vnd(cur?.closing ?? 0)} tone={(cur?.closing ?? 0) < 0 ? "bad" : "default"} hint={`đầu kỳ ${vnd(cur?.opening ?? 0)}`} />
@@ -99,7 +99,7 @@ function Book({ admin, onAuthLost, onLogout }: { admin: Admin; onAuthLost: () =>
               <KpiCard label="Quỹ tiết kiệm" value={vnd(cur?.savingsTotal ?? 0)} tone="good" hint={cur?.savedAll ? `tháng này ${cur.savedAll > 0 ? "+" : ""}${vnd(cur.savedAll)}` : "chưa có khoản tháng này"} />
             </div>
 
-            <nav className="flex flex-wrap gap-2" aria-label="Mục của sổ thu chi">
+            <nav className="-mx-4 px-4 md:mx-0 md:px-0 flex gap-2 overflow-x-auto md:flex-wrap md:overflow-visible pb-1 [&>button]:shrink-0 [&>button]:whitespace-nowrap" aria-label="Mục của sổ thu chi">
               {TABS.map((t) => (
                 <button key={t.id} onClick={() => setTab(t.id)} className={`ui-chip cursor-pointer ${tab === t.id ? "ui-chip-active" : ""}`}>{t.label}</button>
               ))}
@@ -157,7 +157,7 @@ function OpeningPanel({ month, cur, store }: { month: string; cur?: MonthRow; st
         </div>
         <form onSubmit={(e) => { e.preventDefault(); if (!invalid && value !== null) save(value); }} className="flex flex-wrap items-center gap-2">
           <input value={text} onChange={(e) => setText(e.target.value)} inputMode="decimal" placeholder={first ? "vd: 15tr" : "Tự động"} aria-label="Số dư đầu kỳ"
-            className={`ui-input !py-2 w-44 ${invalid ? "!border-red-400" : ""}`} />
+            className={`ui-input !py-2 w-full sm:w-44 ${invalid ? "!border-red-400" : ""}`} />
           <button type="submit" disabled={saving || invalid || value === null || !dirty} className="btn-primary px-5 py-2 cursor-pointer disabled:opacity-50">{saving ? "Đang lưu…" : "Lưu số dư"}</button>
           {cur?.manual && !first && <button type="button" disabled={saving} onClick={() => save(null)} className="btn-ghost px-3 py-2 cursor-pointer">Dùng số tự chuyển</button>}
         </form>
