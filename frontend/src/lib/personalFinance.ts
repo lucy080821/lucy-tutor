@@ -10,7 +10,10 @@ export type PfType = "INCOME" | "EXPENSE";
 export type PfCategory = { id: string; type: PfType; name: string; parentId: string | null; budget: number | null };
 export type PfTx = { id: string; type: PfType; categoryId: string; amount: number; date: string; detail: string | null };
 export type PfBalance = { month: string; opening: number };
-export type PfData = { startMonth: string; today: string; categories: PfCategory[]; transactions: PfTx[]; balances: PfBalance[] };
+// Quỹ tiết kiệm: amount > 0 gửi vào, < 0 rút ra; fromCash = trừ vào / hoàn về số dư tiền mặt của tháng
+export type PfSaving = { id: string; date: string; amount: number; note: string | null; fromCash: boolean; source: "MANUAL" | "ROLLOVER" };
+export type SavingInput = { date: string; amount: number; note: string; fromCash: boolean; source: "MANUAL" | "ROLLOVER" };
+export type PfData = { startMonth: string; today: string; categories: PfCategory[]; transactions: PfTx[]; balances: PfBalance[]; savings: PfSaving[] };
 export type TxInput = { categoryId: string; amount: number; date: string; detail: string };
 
 // ===== API =====
@@ -26,6 +29,8 @@ export const pfApi = {
   addTx: (b: TxInput) => adminFetch<PfTx>("/personal-finance/transactions", { method: "POST", body: json(b) }),
   updateTx: (id: string, b: TxInput) => adminFetch<PfTx>(`/personal-finance/transactions/${id}`, { method: "PUT", body: json(b) }),
   deleteTx: (id: string) => adminFetch<void>(`/personal-finance/transactions/${id}`, { method: "DELETE" }),
+  addSaving: (b: SavingInput) => adminFetch<PfSaving>("/personal-finance/savings", { method: "POST", body: json(b) }),
+  deleteSaving: (id: string) => adminFetch<void>(`/personal-finance/savings/${id}`, { method: "DELETE" }),
   setOpening: (month: string, opening: number | null) =>
     adminFetch<{ month: string; opening: number | null }>("/personal-finance/balance", { method: "PUT", body: json({ month, opening }) }),
   analyze: (month: string) => adminFetch<{ answer: string }>("/personal-finance/ai/analyze", { method: "POST", body: json({ month }) }),
@@ -76,10 +81,17 @@ export function categoryLabel(c: PfCategory | undefined, byId: Map<string, PfCat
 }
 
 // ===== Số dư theo tháng =====
-export type MonthRow = { month: string; opening: number; manual: boolean; income: number; expense: number; closing: number };
+export type MonthRow = {
+  month: string; opening: number; manual: boolean; income: number; expense: number;
+  saved: number; // tiết kiệm lấy từ số dư tháng (trừ vào closing)
+  savedAll: number; // tổng gửi/rút tiết kiệm trong tháng (kể cả khoản có sẵn)
+  savingsTotal: number; // quỹ tiết kiệm lũy kế đến hết tháng
+  closing: number;
+};
 
-/** Mỗi tháng từ 11/2026: đầu kỳ = số nhập tay, không có thì lấy cuối kỳ tháng trước (tháng đầu không nhập = 0). */
-export function computeMonths(txs: PfTx[], balances: PfBalance[], untilMonth: string): MonthRow[] {
+/** Mỗi tháng từ 11/2026: đầu kỳ = số nhập tay, không có thì lấy cuối kỳ tháng trước (tháng đầu không nhập = 0).
+ *  Cuối kỳ = đầu kỳ + thu − chi − tiết kiệm lấy từ số dư tháng. */
+export function computeMonths(txs: PfTx[], balances: PfBalance[], savings: PfSaving[], untilMonth: string): MonthRow[] {
   const manual = new Map(balances.map((b) => [b.month, b.opening]));
   const sums = new Map<string, { income: number; expense: number }>();
   let last = untilMonth;
@@ -90,13 +102,24 @@ export function computeMonths(txs: PfTx[], balances: PfBalance[], untilMonth: st
     sums.set(m, s);
     if (m > last) last = m;
   }
+  const savedFromCash = new Map<string, number>();
+  const savedAll = new Map<string, number>();
+  for (const v of savings) {
+    const m = v.date.slice(0, 7);
+    savedAll.set(m, (savedAll.get(m) ?? 0) + v.amount);
+    if (v.fromCash) savedFromCash.set(m, (savedFromCash.get(m) ?? 0) + v.amount);
+    if (m > last) last = m;
+  }
   const rows: MonthRow[] = [];
   let carry = 0;
+  let savingsTotal = 0;
   for (let m = START_MONTH; m <= last; m = shiftMonth(m, 1)) {
     const s = sums.get(m) ?? { income: 0, expense: 0 };
     const opening = manual.has(m) ? manual.get(m)! : carry;
-    const closing = opening + s.income - s.expense;
-    rows.push({ month: m, opening, manual: manual.has(m), ...s, closing });
+    const saved = savedFromCash.get(m) ?? 0;
+    const closing = opening + s.income - s.expense - saved;
+    savingsTotal += savedAll.get(m) ?? 0;
+    rows.push({ month: m, opening, manual: manual.has(m), ...s, saved, savedAll: savedAll.get(m) ?? 0, savingsTotal, closing });
     carry = closing;
   }
   return rows;

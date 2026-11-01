@@ -65,12 +65,13 @@ const cleanText = (value, max) => String(value ?? '').replace(/\s+/g, ' ').trim(
 const ownerWhere = (req) => ({ ownerId: req.admin.uid });
 
 async function loadAll(ownerId) {
-  const [categories, transactions, balances] = await Promise.all([
+  const [categories, transactions, balances, savings] = await Promise.all([
     prisma.pfCategory.findMany({ where: { ownerId }, orderBy: { createdAt: 'asc' } }),
     prisma.pfTransaction.findMany({ where: { ownerId }, orderBy: [{ date: 'asc' }, { createdAt: 'asc' }] }),
     prisma.pfMonthBalance.findMany({ where: { ownerId }, orderBy: { month: 'asc' } }),
+    prisma.pfSaving.findMany({ where: { ownerId }, orderBy: [{ date: 'asc' }, { createdAt: 'asc' }] }),
   ]);
-  return { categories, transactions, balances };
+  return { categories, transactions, balances, savings };
 }
 
 router.get('/data', async (req, res) => {
@@ -236,6 +237,38 @@ router.delete('/transactions/:id', async (req, res) => {
   }
 });
 
+// ===== Tiết kiệm =====
+router.post('/savings', async (req, res) => {
+  try {
+    const amount = Math.round(Number(req.body?.amount));
+    if (!Number.isFinite(amount) || amount === 0 || Math.abs(amount) > MAX_AMOUNT) throw httpError(400, 'Số tiền tiết kiệm không hợp lệ');
+    const source = req.body?.source === 'ROLLOVER' ? 'ROLLOVER' : 'MANUAL';
+    const row = await prisma.pfSaving.create({
+      data: {
+        ownerId: req.admin.uid,
+        date: parseDate(req.body?.date),
+        amount,
+        note: cleanText(req.body?.note, 200) || null,
+        fromCash: req.body?.fromCash === false ? false : true,
+        source,
+      },
+    });
+    res.status(201).json(row);
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+router.delete('/savings/:id', async (req, res) => {
+  try {
+    const { count } = await prisma.pfSaving.deleteMany({ where: { id: req.params.id, ...ownerWhere(req) } });
+    if (!count) throw httpError(404, 'Không tìm thấy khoản tiết kiệm');
+    res.status(204).end();
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
 // ===== Số dư đầu tháng =====
 router.put('/balance', async (req, res) => {
   try {
@@ -262,7 +295,7 @@ router.put('/balance', async (req, res) => {
 // ===== AI: phân tích + hỏi đáp =====
 
 // Tính lại số dư từng tháng (bản chép logic ở frontend/src/lib/personalFinance.ts: đầu kỳ nhập tay, không có thì lấy cuối kỳ tháng trước)
-function computeMonths({ transactions, balances }, upToMonth) {
+function computeMonths({ transactions, balances, savings }, upToMonth) {
   const manual = new Map(balances.map((b) => [b.month, b.opening]));
   const sums = new Map();
   let last = upToMonth;
@@ -273,13 +306,25 @@ function computeMonths({ transactions, balances }, upToMonth) {
     sums.set(m, s);
     if (m > last) last = m;
   }
+  // Tiết kiệm: fromCash trừ vào số dư tháng đó (rút ra thì cộng lại); tổng tiết kiệm tính cả khoản có sẵn
+  const savedFromCash = new Map();
+  const savedAll = new Map();
+  for (const v of savings) {
+    const m = v.date.slice(0, 7);
+    savedAll.set(m, (savedAll.get(m) || 0) + v.amount);
+    if (v.fromCash) savedFromCash.set(m, (savedFromCash.get(m) || 0) + v.amount);
+    if (m > last) last = m;
+  }
   const rows = [];
   let carry = 0;
+  let savingsTotal = 0;
   for (let m = START_MONTH; m <= last; m = nextMonth(m)) {
     const s = sums.get(m) || { income: 0, expense: 0 };
     const opening = manual.has(m) ? manual.get(m) : carry;
-    const closing = opening + s.income - s.expense;
-    rows.push({ month: m, opening, manual: manual.has(m), ...s, closing });
+    const saved = savedFromCash.get(m) || 0;
+    const closing = opening + s.income - s.expense - saved;
+    savingsTotal += savedAll.get(m) || 0;
+    rows.push({ month: m, opening, manual: manual.has(m), ...s, saved, savedAll: savedAll.get(m) || 0, savingsTotal, closing });
     carry = closing;
   }
   return rows;
@@ -298,7 +343,7 @@ function buildContext(all, month) {
   lines.push(`Hôm nay: ${today}. Sổ thu chi tính từ 01/11/2026. Đơn vị tiền: VND.`);
   lines.push(`\n## Tổng hợp theo tháng`);
   for (const m of months) {
-    lines.push(`- ${m.month}: đầu kỳ ${money(m.opening)}${m.manual ? ' (nhập tay)' : ' (chuyển từ tháng trước)'}, thu ${money(m.income)}, chi ${money(m.expense)}, cuối kỳ ${money(m.closing)}`);
+    lines.push(`- ${m.month}: đầu kỳ ${money(m.opening)}${m.manual ? ' (nhập tay)' : ' (chuyển từ tháng trước)'}, thu ${money(m.income)}, chi ${money(m.expense)}${m.savedAll ? `, gửi tiết kiệm ${money(m.savedAll)}${m.saved !== m.savedAll ? ` (trong đó lấy từ số dư tháng: ${money(m.saved)})` : ''}` : ''}, cuối kỳ ${money(m.closing)}, tổng tiết kiệm lũy kế ${money(m.savingsTotal)}`);
   }
 
   const monthTx = transactions.filter((t) => t.date.startsWith(month));

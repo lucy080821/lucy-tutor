@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { AdminAuthError } from "@/lib/adminApi";
-import { pfApi, type PfCategory, type PfData, type PfTx, type PfType, type TxInput } from "@/lib/personalFinance";
+import { pfApi, type PfCategory, type PfData, type PfSaving, type PfType, type PfTx, type SavingInput, type TxInput } from "@/lib/personalFinance";
 
 // Toàn bộ dữ liệu thu chi nằm trong 1 state; mọi thao tác cập nhật giao diện NGAY (lạc quan) rồi mới gọi API,
 // lỗi thì hoàn lại — nên thêm danh mục/giao dịch hiện tức thì dù mỗi lệnh gọi server mất vài trăm ms.
@@ -158,6 +158,32 @@ export function usePfData(onAuthLost: () => void) {
     }
   }, [fail, patch, commit]);
 
+  // ----- Tiết kiệm -----
+  const addSaving = useCallback(async (input: SavingInput) => {
+    const temp: PfSaving = { id: tmpId(), date: input.date, amount: input.amount, note: input.note || null, fromCash: input.fromCash, source: input.source };
+    patch((s) => ({ ...s, savings: [...s.savings, temp] }));
+    try {
+      const real = await pfApi.addSaving(input);
+      patch((s) => ({ ...s, savings: s.savings.map((v) => (v.id === temp.id ? real : v)) }));
+      return true;
+    } catch (err) {
+      patch((s) => ({ ...s, savings: s.savings.filter((v) => v.id !== temp.id) }));
+      fail(err);
+      return false;
+    }
+  }, [fail, patch]);
+
+  const deleteSaving = useCallback(async (id: string) => {
+    const before = dataRef.current;
+    patch((s) => ({ ...s, savings: s.savings.filter((v) => v.id !== id) }));
+    try {
+      await pfApi.deleteSaving(id);
+    } catch (err) {
+      if (before) commit(before);
+      fail(err);
+    }
+  }, [fail, patch, commit]);
+
   // ----- Số dư đầu tháng -----
   const setOpening = useCallback(async (month: string, opening: number | null) => {
     const before = dataRef.current;
@@ -177,7 +203,7 @@ export function usePfData(onAuthLost: () => void) {
     }
   }, [fail, patch, commit]);
 
-  return { data, error, reload, fail, addCategory, seedCategories, updateCategory, deleteCategory, addTx, updateTx, deleteTx, setOpening };
+  return { data, error, reload, fail, addCategory, seedCategories, updateCategory, deleteCategory, addTx, updateTx, deleteTx, addSaving, deleteSaving, setOpening };
 }
 
 export type PfStore = ReturnType<typeof usePfData>;

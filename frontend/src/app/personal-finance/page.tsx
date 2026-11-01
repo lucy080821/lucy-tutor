@@ -7,6 +7,7 @@ import { computeMonths, daysInMonth, monthLabel, parseMoney, shiftMonth, START_M
 import AiPanel from "./_components/AiPanel";
 import Categories from "./_components/Categories";
 import Overview from "./_components/Overview";
+import Savings, { MonthEndPrompt } from "./_components/Savings";
 import Transactions from "./_components/Transactions";
 import { usePfData, type PfStore } from "./_components/usePfData";
 
@@ -14,10 +15,11 @@ import { usePfData, type PfStore } from "./_components/usePfData";
 // lưu sessionStorage) — đã đăng nhập ở một trang thì trang kia vào thẳng. Dữ liệu: backend/src/routes/personalFinance.routes.js.
 // Sổ tính từ 01/11/2026; tháng đầu cần nhập số dư tháng trước, các tháng sau tự chuyển số dư cuối kỳ sang.
 
-type Tab = "OVERVIEW" | "TRANSACTIONS" | "CATEGORIES" | "AI";
+type Tab = "OVERVIEW" | "TRANSACTIONS" | "SAVINGS" | "CATEGORIES" | "AI";
 const TABS: { id: Tab; label: string }[] = [
   { id: "OVERVIEW", label: "Tổng quan" },
   { id: "TRANSACTIONS", label: "Giao dịch" },
+  { id: "SAVINGS", label: "Tiết kiệm" },
   { id: "CATEGORIES", label: "Danh mục" },
   { id: "AI", label: "Trợ lý AI" },
 ];
@@ -54,7 +56,7 @@ function Book({ admin, onAuthLost, onLogout }: { admin: Admin; onAuthLost: () =>
 
   const todayMonth = data ? (data.today.slice(0, 7) < START_MONTH ? START_MONTH : data.today.slice(0, 7)) : START_MONTH;
   const month = picked ?? todayMonth;
-  const rows = useMemo(() => (data ? computeMonths(data.transactions, data.balances, todayMonth) : []), [data, todayMonth]);
+  const rows = useMemo(() => (data ? computeMonths(data.transactions, data.balances, data.savings, todayMonth) : []), [data, todayMonth]);
   const cur = rows.find((r) => r.month === month);
   const prev = rows.find((r) => r.month === shiftMonth(month, -1));
 
@@ -85,11 +87,14 @@ function Book({ admin, onAuthLost, onLogout }: { admin: Admin; onAuthLost: () =>
           <>
             <OpeningPanel key={`${month}|${cur?.opening}|${cur?.manual}`} month={month} cur={cur} store={store} />
 
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <MonthEndPrompt key={month} store={store} data={data} month={month} cur={cur} />
+
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
               <KpiCard label="Thu nhập" value={vnd(cur?.income ?? 0)} tone="good" delta={prev ? pctChange(cur?.income ?? 0, prev.income) : undefined} hint={prev ? "so với tháng trước" : undefined} />
               <KpiCard label="Chi tiêu" value={vnd(cur?.expense ?? 0)} invertDelta delta={prev ? pctChange(cur?.expense ?? 0, prev.expense) : undefined} hint={prev ? "so với tháng trước" : undefined} />
               <KpiCard label="Số dư cuối kỳ" value={vnd(cur?.closing ?? 0)} tone={(cur?.closing ?? 0) < 0 ? "bad" : "default"} hint={`đầu kỳ ${vnd(cur?.opening ?? 0)}`} />
               <SavingKpi cur={cur} month={month} today={data.today} />
+              <KpiCard label="Quỹ tiết kiệm" value={vnd(cur?.savingsTotal ?? 0)} tone="good" hint={cur?.savedAll ? `tháng này ${cur.savedAll > 0 ? "+" : ""}${vnd(cur.savedAll)}` : "chưa có khoản tháng này"} />
             </div>
 
             <nav className="flex flex-wrap gap-2" aria-label="Mục của sổ thu chi">
@@ -100,6 +105,7 @@ function Book({ admin, onAuthLost, onLogout }: { admin: Admin; onAuthLost: () =>
 
             {tab === "OVERVIEW" && <Overview data={data} month={month} rows={rows} />}
             {tab === "TRANSACTIONS" && <Transactions store={store} data={data} month={month} />}
+            {tab === "SAVINGS" && <Savings store={store} data={data} month={month} rows={rows} />}
             {tab === "CATEGORIES" && <Categories store={store} data={data} month={month} />}
             {tab === "AI" && <AiPanel month={month} onAuthLost={onAuthLost} hasData={data.transactions.some((t) => t.date.startsWith(month))} />}
           </>
@@ -114,7 +120,7 @@ function SavingKpi({ cur, month, today }: { cur?: MonthRow; month: string; today
   const rate = cur && cur.income > 0 ? (net / cur.income) * 100 : null;
   const elapsed = month === today.slice(0, 7) ? Number(today.slice(8)) : month < today.slice(0, 7) ? daysInMonth(month) : 0;
   return (
-    <KpiCard label="Tiết kiệm ròng" value={`${net > 0 ? "+" : ""}${vnd(net)}`} tone={net < 0 ? "bad" : net > 0 ? "good" : "default"}
+    <KpiCard label="Thu − chi" value={`${net > 0 ? "+" : ""}${vnd(net)}`} tone={net < 0 ? "bad" : net > 0 ? "good" : "default"}
       hint={`${rate === null ? "chưa có thu nhập" : `${rate.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}% thu nhập`}${elapsed && cur ? ` · chi TB ${vnd(cur.expense / elapsed)}/ngày` : ""}`} />
   );
 }

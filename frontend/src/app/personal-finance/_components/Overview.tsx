@@ -15,6 +15,7 @@ const DailyBars = dynamic(() => import("./PfCharts").then((m) => m.DailyBars), {
 const CumulativeChart = dynamic(() => import("./PfCharts").then((m) => m.CumulativeChart), { ssr: false, loading: chartLoading });
 const StackedMonthChart = dynamic(() => import("./PfCharts").then((m) => m.StackedMonthChart), { ssr: false, loading: chartLoading });
 const WeekdayChart = dynamic(() => import("./PfCharts").then((m) => m.WeekdayChart), { ssr: false, loading: chartLoading });
+const SavingsChart = dynamic(() => import("./PfCharts").then((m) => m.SavingsChart), { ssr: false, loading: chartLoading });
 const SavingRateChart = dynamic(() => import("./PfCharts").then((m) => m.SavingRateChart), { ssr: false, loading: chartLoading });
 
 type Alert = { level: "critical" | "warning" | "info" | "success"; text: string };
@@ -93,6 +94,7 @@ export default function Overview({ data, month, rows }: { data: PfData; month: s
     // Qua các tháng (12 tháng gần nhất đến tháng đang xem)
     const upto = rows.filter((r) => r.month <= month).slice(-12);
     const cashflow = upto.map((r) => ({ name: monthShort(r.month), income: r.income, expense: r.expense, closing: r.closing }));
+    const savingsSeries = upto.map((r) => ({ name: monthShort(r.month), delta: r.savedAll, total: r.savingsTotal }));
     const saving = upto.map((r) => ({ name: monthShort(r.month), rate: r.income > 0 ? ((r.income - r.expense) / r.income) * 100 : null }));
     const monthSet = new Set(upto.map((r) => r.month));
     const perMonthBig = new Map<string, Map<string, number>>();
@@ -146,7 +148,7 @@ export default function Overview({ data, month, rows }: { data: PfData; month: s
 
     return {
       monthTx, expenses, incomes, cur, elapsed, N, donutExpense: toDonut(expenses), donutIncome: toDonut(incomes), subs, daily, cumulative,
-      weekday: WEEKDAYS.map((name, i) => ({ name, total: perWeekday[i] })), totalBudget, cashflow, saving, stacked, stackKeys, alerts, budgets,
+      savingsSeries, weekday: WEEKDAYS.map((name, i) => ({ name, total: perWeekday[i] })), totalBudget, cashflow, saving, stacked, stackKeys, alerts, budgets,
       multiMonth: monthSet.size > 1,
     };
   }, [data, month, rows]);
@@ -238,6 +240,12 @@ export default function Overview({ data, month, rows }: { data: PfData; month: s
           {calc.saving.some((s) => s.rate !== null) ? <ChartBox><SavingRateChart data={calc.saving} /></ChartBox> : <Empty text="Cần có khoản thu để tính tỷ lệ tiết kiệm." />}
         </SectionCard>
       </div>
+
+      {calc.savingsSeries.some((s) => s.total !== 0 || s.delta !== 0) && (
+        <SectionCard title="Quỹ tiết kiệm" subtitle="Cột: gửi vào (+) hoặc rút ra (−) mỗi tháng · Đường cam: tổng quỹ tích luỹ">
+          <ChartBox><SavingsChart data={calc.savingsSeries} /></ChartBox>
+        </SectionCard>
+      )}
 
       {calc.multiMonth && (
         <SectionCard title="Chi theo danh mục qua các tháng" subtitle="Danh mục nào đang phình to?">

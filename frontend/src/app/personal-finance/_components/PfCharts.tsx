@@ -135,6 +135,24 @@ export function WeekdayChart({ data }: { data: { name: string; total: number }[]
   );
 }
 
+/** Gửi / rút tiết kiệm từng tháng + quỹ tiết kiệm lũy kế */
+export function SavingsChart({ data }: { data: { name: string; delta: number; total: number }[] }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+        {grid}
+        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={axisTick} />
+        <YAxis axisLine={false} tickLine={false} tick={axisTick} width={52} tickFormatter={formatShortVND} />
+        <Tooltip cursor={{ fill: "#eef2fb" }} formatter={money} contentStyle={tooltipStyle} />
+        {legend}
+        <ReferenceLine y={0} stroke="#94a3b8" />
+        <Bar dataKey="delta" name="Gửi / rút trong tháng" fill={BLUE} radius={[4, 4, 0, 0]} barSize={22} />
+        <Line dataKey="total" name="Quỹ tiết kiệm" type="monotone" stroke={ACCENT} strokeWidth={3} dot={{ r: 3 }} />
+      </ComposedChart>
+    </ResponsiveContainer>
+  );
+}
+
 /** Tỷ lệ tiết kiệm (% thu nhập giữ lại) qua các tháng */
 export function SavingRateChart({ data }: { data: { name: string; rate: number | null }[] }) {
   return (

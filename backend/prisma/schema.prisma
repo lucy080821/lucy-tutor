@@ -1121,6 +1121,22 @@ model PfMonthBalance {
   @@unique([ownerId, month])
 }
 
+// Quỹ tiết kiệm (nhập tay). amount > 0 = gửi vào, < 0 = rút ra. fromCash = khoản này lấy từ / hoàn về số dư tiền mặt
+// của tháng (trừ vào số dư cuối kỳ); fromCash = false = tiền tiết kiệm có sẵn từ trước, không đụng số dư tháng.
+// source: "MANUAL" (nhập tay) | "ROLLOVER" (bấm đồng ý cộng số dư cuối tháng vào tiết kiệm).
+model PfSaving {
+  id        String   @id @default(uuid())
+  ownerId   String
+  date      String   // "YYYY-MM-DD" (giờ VN)
+  amount    Float
+  note      String?
+  fromCash  Boolean  @default(true)
+  source    String   @default("MANUAL")
+  createdAt DateTime @default(now())
+
+  @@index([ownerId, date])
+}
+
 // Lượt xem trang tự ghi (thay cho Google Analytics) — nuôi tab "Lượt truy cập" + "Sức khoẻ kinh doanh" ở /administrator.
 // Không lưu IP; visitorId/sessionId là mã ngẫu nhiên phía trình duyệt (localStorage/sessionStorage), id do client sinh
 // để beacon "rời trang" cập nhật được durationSec. Ghi theo lô (routes/track.routes.js), tự xoá dòng cũ hơn 400 ngày.
