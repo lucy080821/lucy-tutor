@@ -5,6 +5,7 @@ import { adminFetch, API_URL, clearAdminToken, getAdminToken, pctChange, setAdmi
 import { ErrorBlock, KpiCard, LoadingBlock } from "@/app/administrator/_components/ui";
 import { computeMonths, daysInMonth, monthLabel, parseMoney, shiftMonth, START_MONTH, vnd, type MonthRow } from "@/lib/personalFinance";
 import AiPanel from "./_components/AiPanel";
+import ChatPanel from "./_components/ChatPanel";
 import Categories from "./_components/Categories";
 import Overview from "./_components/Overview";
 import Savings, { MonthEndPrompt } from "./_components/Savings";
@@ -15,13 +16,14 @@ import { usePfData, type PfStore } from "./_components/usePfData";
 // lưu sessionStorage) — đã đăng nhập ở một trang thì trang kia vào thẳng. Dữ liệu: backend/src/routes/personalFinance.routes.js.
 // Sổ tính từ 01/11/2026; tháng đầu cần nhập số dư tháng trước, các tháng sau tự chuyển số dư cuối kỳ sang.
 
-type Tab = "OVERVIEW" | "TRANSACTIONS" | "SAVINGS" | "CATEGORIES" | "AI";
+type Tab = "OVERVIEW" | "TRANSACTIONS" | "SAVINGS" | "CATEGORIES" | "AI" | "CHAT";
 const TABS: { id: Tab; label: string }[] = [
   { id: "OVERVIEW", label: "Tổng quan" },
   { id: "TRANSACTIONS", label: "Giao dịch" },
   { id: "SAVINGS", label: "Tiết kiệm" },
   { id: "CATEGORIES", label: "Danh mục" },
-  { id: "AI", label: "Trợ lý AI" },
+  { id: "AI", label: "AI phân tích" },
+  { id: "CHAT", label: "Hỏi đáp AI" },
 ];
 type Admin = { email: string; name: string };
 
@@ -107,7 +109,8 @@ function Book({ admin, onAuthLost, onLogout }: { admin: Admin; onAuthLost: () =>
             {tab === "TRANSACTIONS" && <Transactions store={store} data={data} month={month} />}
             {tab === "SAVINGS" && <Savings store={store} data={data} month={month} rows={rows} />}
             {tab === "CATEGORIES" && <Categories store={store} data={data} month={month} />}
-            {tab === "AI" && <AiPanel month={month} onAuthLost={onAuthLost} hasData={data.transactions.some((t) => t.date.startsWith(month))} />}
+            <div className={tab === "AI" ? "" : "hidden"}><AiPanel month={month} onAuthLost={onAuthLost} hasData={data.transactions.some((t) => t.date.startsWith(month))} /></div>
+            <div className={tab === "CHAT" ? "" : "hidden"}><ChatPanel month={month} onAuthLost={onAuthLost} /></div>
           </>
         )}
       </div>
