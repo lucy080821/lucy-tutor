@@ -407,6 +407,20 @@ Giáo viên **tự nhập tay** từng đề IELTS đủ 4 kỹ năng (bài đ�
 
 ---
 
+### `/personal-finance` — Thu chi cá nhân của admin (11/2026)
+
+**Files:** [frontend/src/app/personal-finance/](frontend/src/app/personal-finance/) (`page.tsx` + `_components/`: `Overview`, `Transactions`, `Categories`, `AiPanel`, `PfCharts` load lười, `usePfData` hook) · [frontend/src/lib/personalFinance.ts](frontend/src/lib/personalFinance.ts) (kiểu, `parseMoney`, `computeMonths`, API) · Backend [backend/src/routes/personalFinance.routes.js](backend/src/routes/personalFinance.routes.js) (mount `/api/admin/personal-finance`, sau `requireAdmin`) · Model `PfCategory`, `PfTransaction`, `PfMonthBalance`
+
+- **Đăng nhập = tài khoản ADMIN của `/administrator`**, dùng chung token phiên (`sessionStorage`) — đăng nhập 1 trang thì trang kia vào thẳng. Mỗi admin 1 sổ riêng (`ownerId = User.id`, không FK). Trang `noindex`, chặn trong `robots.ts`, không đếm lượt truy cập
+- **Sổ tính từ 01/11/2026** (`START_DATE`/`START_MONTH` ở cả 2 phía; backend từ chối giao dịch/số dư trước mốc). Số dư đầu kỳ: tháng 11/2026 nhập tay; tháng sau tự lấy cuối kỳ tháng trước, nhập tay thì ghi đè (`PfMonthBalance`). `computeMonths` có bản chép ở backend (AI đọc cùng số liệu) — sửa cả 2 nơi
+- **Danh mục 2 cấp** (lớn › nhỏ, `PfCategory.parentId`); giao dịch trỏ tới danh mục lá (nhỏ, hoặc lớn nếu không chia nhỏ) + `detail` = chi tiết sử dụng. Thêm danh mục **lạc quan/real-time** (id tạm `tmp-…` hiện ngay, đổi sang id thật khi server trả về; nút lưu bị khoá trong lúc id còn tạm). Xoá danh mục có giao dịch bị chặn (409). Hạn mức chi tháng (`budget`) đặt ở danh mục chi lớn. Sổ trống có nút "Tạo danh mục gợi ý" (`POST /categories/seed`)
+- Ngày lưu dạng chuỗi `YYYY-MM-DD`, tiền `Float` (VND). Ô số tiền hiểu `50k`, `1,5tr`, `1.250.000`
+- Frontend tải **toàn bộ** dữ liệu 1 lần (`GET /data`) rồi tự tính biểu đồ; mọi thao tác cập nhật state ngay rồi mới gọi API (lỗi thì hoàn lại). Nếu sổ lên tới hàng chục nghìn dòng thì mới cần phân trang/lọc theo tháng ở server
+- Biểu đồ: dòng tiền + số dư theo tháng, donut chi/thu theo danh mục lớn, top danh mục nhỏ, chi từng ngày, chi lũy kế (so thu nhập/tổng hạn mức), chi theo thứ trong tuần, tỷ lệ tiết kiệm, cột chồng danh mục qua các tháng; cảnh báo nhanh rule-based (vượt hạn mức, dự báo chi > thu, tăng ≥50% so tháng trước, lâu chưa ghi)
+- **AI** (Groq, `GROQ_TEXT_MODEL`): `POST /ai/analyze` (phân tích Markdown theo tháng) và `POST /ai/chat` (hỏi đáp, giữ ≤12 tin gần nhất). Server dựng bối cảnh từ DB (`buildContext`: bảng tháng, chi theo danh mục kèm hạn mức/so tháng trước, ≤150 giao dịch) — client không gửi số liệu lên
+
+---
+
 ### `/games/lop-3` — Trò Chơi Học Tập (Tiếng Anh Lớp 3)
 
 **File:** [frontend/src/app/games/lop-3/page.tsx](frontend/src/app/games/lop-3/page.tsx) · Trò chơi: [frontend/src/components/games/](frontend/src/components/games/) · Dữ liệu: [frontend/src/lib/games/grade3.ts](frontend/src/lib/games/grade3.ts)

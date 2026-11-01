@@ -1078,6 +1078,49 @@ model AdminTransaction {
   @@index([date])
 }
 
+// ===== Thu chi cá nhân (/personal-finance) — chỉ tài khoản ADMIN, mỗi admin 1 sổ riêng (ownerId = User.id, không FK) =====
+// Danh mục 2 cấp: danh mục lớn (parentId = null) > danh mục nhỏ. Giao dịch trỏ tới danh mục lá (nhỏ, hoặc lớn nếu không chia nhỏ).
+model PfCategory {
+  id           String          @id @default(uuid())
+  ownerId      String
+  type         String // "INCOME" | "EXPENSE"
+  name         String
+  parentId     String?
+  parent       PfCategory?     @relation("PfCategoryTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children     PfCategory[]    @relation("PfCategoryTree")
+  budget       Float? // Hạn mức chi hằng tháng (chỉ danh mục lớn loại EXPENSE)
+  createdAt    DateTime        @default(now())
+  transactions PfTransaction[]
+
+  @@index([ownerId])
+}
+
+model PfTransaction {
+  id         String     @id @default(uuid())
+  ownerId    String
+  type       String // "INCOME" | "EXPENSE" (trùng type của danh mục)
+  categoryId String
+  category   PfCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  amount     Float // VND, luôn dương
+  date       String // "YYYY-MM-DD" (giờ VN) — chuỗi để không lệch ngày/tháng theo múi giờ
+  detail     String? // Chi tiết sử dụng
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([ownerId, date])
+  @@index([categoryId])
+}
+
+// Số dư đầu tháng nhập tay (tháng đầu 2026-11 bắt buộc nhập; tháng sau không nhập thì tự lấy số dư cuối tháng trước)
+model PfMonthBalance {
+  id      String @id @default(uuid())
+  ownerId String
+  month   String // "YYYY-MM"
+  opening Float
+
+  @@unique([ownerId, month])
+}
+
 // Lượt xem trang tự ghi (thay cho Google Analytics) — nuôi tab "Lượt truy cập" + "Sức khoẻ kinh doanh" ở /administrator.
 // Không lưu IP; visitorId/sessionId là mã ngẫu nhiên phía trình duyệt (localStorage/sessionStorage), id do client sinh
 // để beacon "rời trang" cập nhật được durationSec. Ghi theo lô (routes/track.routes.js), tự xoá dòng cũ hơn 400 ngày.

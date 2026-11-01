@@ -61,7 +61,7 @@ function send(path: string, payload: object) {
 
 function trackingDisabled(pathname: string) {
   if (process.env.NODE_ENV !== "production") return true;
-  if (pathname.startsWith("/administrator")) return true;
+  if (pathname.startsWith("/administrator") || pathname.startsWith("/personal-finance")) return true;
   if (storageGet(NO_TRACK_KEY) === "1") return true;
   if (storageGet("lucy_admin_token", "session")) return true;
   return false;

@@ -88,6 +88,8 @@ router.use('/analytics', require('./adminAnalytics.routes'));
 router.use('/seo', require('./adminSeo.routes'));
 // Mạng xã hội: YouTube + Facebook (xem adminSocial.routes.js)
 router.use('/social', require('./adminSocial.routes'));
+// Thu chi cá nhân của admin (/personal-finance): danh mục 2 cấp, giao dịch, số dư đầu tháng, AI phân tích/hỏi đáp
+router.use('/personal-finance', require('./personalFinance.routes'));
 
 router.get('/me', async (req, res) => {
   try {
