@@ -301,7 +301,10 @@ kbd{font:700 .72rem var(--body);background:#eef0f7;border:1px solid #d5d9e8;bord
 .part small{font-size:.72rem;color:var(--muted);font-weight:600;white-space:nowrap}
 .part[aria-pressed="true"]{background:var(--navy);border-color:var(--navy)}
 .part[aria-pressed="true"] b,.part[aria-pressed="true"] small{color:#fff}
-#btnStart:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.menu-cta .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.cta-btns{display:flex;gap:.5rem;flex:none}
+.cta-btns .btn-ghost{background:#fff}
+@media (max-width:560px){.menu-cta{flex-wrap:wrap;row-gap:.6rem}.menu-cta .sel{flex-basis:100%}.cta-btns{flex:1 1 100%}.cta-btns .btn{flex:1;font-size:1rem;padding:.7rem .5rem}}
 .face .ph{font-size:1rem;color:var(--muted);font-weight:600;letter-spacing:.02em}
 @media (max-width:560px){.grade{min-width:4.6rem}.topics.units .topic{flex-direction:row;text-align:left}.topics.units{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
@@ -369,7 +372,7 @@ kbd{font:700 .72rem var(--body);background:#eef0f7;border:1px solid #d5d9e8;bord
     <details class="howto-d">
       <summary>Cách chơi</summary>
       <ol>
-        <li>Học bộ flashcard của chủ đề, bấm thẻ để lật.</li>
+        <li>Học bộ flashcard của chủ đề, bấm thẻ để lật. Muốn chạy ngay thì bấm "Vào game luôn".</li>
         <li>Chạm màn hình hoặc <kbd>Space</kbd> để nhảy, nhấn thêm lần nữa để nhảy đôi. Nhặt ngọc chữ cái, tránh mực.</li>
         <li>Tới cổng, trả lời câu hỏi trong bộ thẻ vừa học. Đúng liên tiếp thì điểm nhân lên.</li>
       </ol>
@@ -380,9 +383,12 @@ kbd{font:700 .72rem var(--body);background:#eef0f7;border:1px solid #d5d9e8;bord
         <b id="selTopic"></b>
         <small id="selMeta"></small>
       </div>
-      <button class="btn btn-primary" id="btnStart">Học flashcard
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </button>
+      <div class="cta-btns">
+        <button class="btn btn-ghost" id="btnQuick" title="Bỏ qua flashcard, chạy ngay">Vào game luôn</button>
+        <button class="btn btn-primary" id="btnStart">Học flashcard
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 </section>
@@ -1613,7 +1619,7 @@ function renderMenu() {
   }
 
   const n = setItems().length, start = $("#btnStart");
-  start.disabled = n === 0;
+  start.disabled = n === 0; $("#btnQuick").disabled = n === 0;
   if (!t || !n) {
     $("#selTopic").textContent = "Lớp " + gradeSel + " đang cập nhật";
     $("#selMeta").textContent = "Chọn lớp khác để chơi";
@@ -1894,6 +1900,7 @@ window.addEventListener("keyup", (e) => { if (["Space", "ArrowUp", "KeyW"].inclu
 document.addEventListener("visibilitychange", () => { if (document.hidden) pauseGame(); });
 
 $("#btnStart").addEventListener("click", openStudy);
+$("#btnQuick").addEventListener("click", () => { study = null; startGame(); });
 $("#btnReplay").addEventListener("click", startGame);
 $("#btnRestudy").addEventListener("click", openStudy);
 $("#btnMenu").addEventListener("click", toMenu);
