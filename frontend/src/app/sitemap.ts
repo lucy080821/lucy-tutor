@@ -31,6 +31,7 @@ const PAGE_IMAGES: Record<string, string[]> = {
   "/bang-dong-tu-bat-quy-tac": [PHOTOS.irregularVerbs.src],
   "/blog": [PHOTOS.blog.src],
   "/ghi-chu-ai": ["/images/photos/home/ghi-chu-ai-ghi-am-flashcard.webp"],
+  "/game-hoc-tieng-anh": [PHOTOS.qilinRun.src, "/images/photos/home/game-hoc-tieng-anh-qilin-run.webp"],
 };
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

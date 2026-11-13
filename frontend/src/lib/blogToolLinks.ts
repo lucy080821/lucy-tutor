@@ -15,6 +15,7 @@ const TOOL_KEYWORDS: Record<string, string[]> = {
   "/ghi-chu-ai": ["ghi chu", "ghi chep", "cornell", "so tay", "tom tat bai", "on bai", "pomodoro", "ke hoach hoc", "ghi am bai giang", "mind map", "so do tu duy"],
   "/flashcard-tieng-anh": ["tu vung", "flashcard", "lap lai ngat quang", "spaced repetition", "tu dien", "ghi nho tu"],
   // Không dùng "tieu hoc": bỏ dấu thì "mục tiêu học" cũng thành "muc tieu hoc"
+  "/game-hoc-tieng-anh": ["game", "tro choi tieng anh", "hoc ma choi", "vua hoc vua choi", "ngu phap", "tu vung theo chu de", "global success"],
   "/games/lop-3": ["lop 3", "hoc sinh tieu hoc", "bac tieu hoc", "tre em", "be hoc", "tro choi"],
 };
 

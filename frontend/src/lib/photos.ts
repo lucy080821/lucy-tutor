@@ -36,6 +36,9 @@ export const PHOTOS = {
     "https://pixabay.com/photos/woman-girl-people-isolated-face-5309387/"),
   blogEmpty: p("blog-chua-co-bai-viet", "Học viên đeo kính đứng chờ bài viết mới", 390, 656,
     "https://pixabay.com/photos/woman-glasses-blue-shirt-pants-10505398/"),
+  // Linh vật rồng nước Qilin (ảnh của Lucy Tutor, không phải Pixabay) — banner + ảnh chia sẻ trang /game-hoc-tieng-anh
+  qilinRun: p("game-hoc-tieng-anh-rong-qilin", "Rồng nước Qilin đội mũ tốt nghiệp ôm sách — nhân vật game học tiếng Anh", 685, 800,
+    "https://lucytutor.online/game-hoc-tieng-anh"),
 } satisfies Record<string, Photo>;
 
 /** Ảnh bìa dự phòng cho bài blog chưa có ảnh bìa (thẻ bài viết, mục "Bài mới" ở dashboard). */

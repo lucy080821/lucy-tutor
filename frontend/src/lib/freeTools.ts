@@ -75,6 +75,14 @@ export const FREE_TOOLS: FreeTool[] = [
     tag: "IPA",
   },
   {
+    href: "/game-hoc-tieng-anh",
+    title: "Game Học Tiếng Anh Qilin Run",
+    desc: "Học flashcard rồi chạy nhảy cùng rồng Qilin, mở cổng bằng từ vựng, ngữ pháp A1–C1 hoặc từ vựng SGK lớp 1–12.",
+    thumb: "/images/photos/home/game-hoc-tieng-anh-qilin-run.webp",
+    alt: "Rồng nước Qilin ngồi trên chồng sách trong game học tiếng Anh Qilin Run",
+    tag: "Game",
+  },
+  {
     href: "/games/lop-3",
     title: "Trò Chơi Tiếng Anh Lớp 3",
     desc: "5 trò chơi ôn từ vựng, mẫu câu Global Success 3: lật thẻ, đánh vần, xếp câu, nghe và chọn.",

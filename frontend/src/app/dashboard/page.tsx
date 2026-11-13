@@ -395,6 +395,7 @@ export default function StudentDashboard() {
   const gamesGroup = {
     id: "GAMES", label: "Trò Chơi Học Tập", icon: "🎮",
     subItems: [
+      { id: "GAMES_QILIN_LINK", label: "Qilin Run (A1–C1, SGK)", icon: "🎮", isLink: true, href: '/game-hoc-tieng-anh' },
       { id: "GAMES_G3_LINK", label: "Tiếng Anh Lớp 3", icon: "🎮", isLink: true, href: '/games/lop-3' },
     ]
   };
@@ -447,6 +448,7 @@ export default function StudentDashboard() {
       ["GRAMMAR_GYM_LINK", "Phòng Gym Ngữ Pháp", "layers", "/grammar-gym", "grammar_gym"],
       ["PRONUNCIATION_LINK", "Luyện Phát Âm", "mic", "/pronunciation", "pronunciation"],
       ["PHONETICS_LINK", "Bảng Âm IPA", "volume", "/phonetics", "phonetics"],
+      ["GAMES_QILIN_LINK", "Game Qilin Run", "gamepad", "/game-hoc-tieng-anh"],
       ["GAMES_G3_LINK", "Trò Chơi Lớp 3", "gamepad", "/games/lop-3"],
     ]) },
     { id: "PROGRESS", label: "Tiến Độ", items: [
@@ -2040,7 +2042,7 @@ const PRACTICE_GROUPS: { id: string; label: string; description: string; hrefs: 
   { id: 'EXAM', label: 'Luyện Thi', description: 'Đề thi thử THPT Quốc Gia và IELTS Cambridge', hrefs: ['/ielts', '/mock-test'] },
   { id: 'FOUNDATION', label: 'Từ Vựng & Ngữ Pháp', description: 'Ôn từ vựng SRS, ngữ pháp theo chuyên đề và lộ trình học', hrefs: ['/gym', '/grammar-gym', '/study-plan'] },
   { id: 'PRONUNCIATION', label: 'Phát Âm', description: 'Bảng âm IPA và luyện phát âm cùng AI', hrefs: ['/phonetics', '/pronunciation'] },
-  { id: 'GAMES', label: 'Trò Chơi', description: 'Vừa chơi vừa ôn từ vựng và mẫu câu theo sách', hrefs: ['/games/lop-3'] },
+  { id: 'GAMES', label: 'Trò Chơi', description: 'Vừa chơi vừa ôn từ vựng và mẫu câu theo sách', hrefs: ['/game-hoc-tieng-anh', '/games/lop-3'] },
 ];
 
 // Thumbnail per self-practice route for the OVERVIEW "Luyện tập" grid (ảnh chụp WebP trong /public/images/photos/app/)
@@ -2057,6 +2059,7 @@ const PRACTICE_THUMBS: Record<string, string> = {
   '/mock-test': 'mock-test',
   '/ielts': 'ielts',
   '/mistakes': 'mistakes',
+  '/game-hoc-tieng-anh': 'qilin-run',
   '/games/lop-3': 'games',
 };
 
