@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Catalog, DecorPlaced, FarmView, PlotView } from "@/lib/farm/api";
 import { formatCountdown } from "@/lib/farm/api";
 import { Cloud, CropSprite, DecorSprite, SoilTile, TILE_H, TILE_W, diamondPoints, emojiSizeOf, type DecorMeta, type Outfit } from "./Sprites";
@@ -21,6 +21,7 @@ type Props = {
   pet: { name: string; level: number }; outfit?: Outfit; petJumping?: boolean; hearts?: number[]; floats?: FloatText[];
   sky?: SkyInfo; weather?: WeatherKind; // giờ + thời tiết của VỊ TRÍ người chơi (không truyền = giờ máy + trời quang)
   onTileClick?: (x: number, y: number) => void; onPlotClick?: (plot: PlotView) => void;
+  zoom?: number; onZoomChange?: (z: number) => void;
   onDecorClick?: (d: DecorPlaced) => void; onFactoryClick?: (d: DecorPlaced) => void; onPetClick?: () => void;
 };
 
@@ -41,7 +42,7 @@ export function liveStatus(plot: PlotView, now: number) {
   return { status: now >= ready ? ("READY" as const) : ("GROWING" as const), growth, msLeft: ready - now };
 }
 
-export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", onTileClick, onPlotClick, onDecorClick, onFactoryClick, onPetClick }: Props) {
+export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", zoom = 1, onZoomChange, onTileClick, onPlotClick, onDecorClick, onFactoryClick, onPetClick }: Props) {
   const W = farm.gridW, H = farm.gridH;
   const originX = (H * TILE_W) / 2;
   const vbW = ((W + H) * TILE_W) / 2;
@@ -73,6 +74,48 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const roam = !placing && (!!readOnly || mode.type === "normal");
   const animals = useMemo(() => (roam ? farm.layout.filter((d) => catalog.decor[d.key]?.cat === "animal").map((d) => ({ uid: d.uid, key: d.key, x: d.x, y: d.y, emoji: catalog.decor[d.key].emoji, size: emojiSizeOf(d.key) })) : []), [roam, farm.layout, catalog.decor]);
 
+
+  // ── Phóng to / thu nhỏ: thu hẹp viewBox quanh 1 điểm giữa (nét vẫn sắc), kéo để dời, 2 ngón để chụm, Ctrl+lăn chuột ──
+  const gridCx = originX + ((W - H) * TILE_W) / 4, gridCy = TOP_PAD + ((W + H - 2) * TILE_H) / 4 + TILE_H / 2;
+  const [center, setCenter] = useState<{ x: number; y: number } | null>(null);
+  const z = Math.max(1, Math.min(3, zoom));
+  const vw = vbW / z, vh = vbH / z;
+  const clampN = (v: number, lo: number, hi: number) => (hi < lo ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v)));
+  const ccx = clampN(center?.x ?? gridCx, vw / 2, vbW - vw / 2), ccy = clampN(center?.y ?? gridCy, vh / 2, vbH - vh / 2);
+  const vbx = z > 1 ? ccx - vw / 2 : 0, vby = z > 1 ? ccy - vh / 2 : 0;
+  const svgRef = useRef<SVGSVGElement>(null);
+  const zRef = useRef(z); zRef.current = z;
+  const cRef = useRef({ x: ccx, y: ccy }); cRef.current = { x: ccx, y: ccy };
+  const zcb = useRef(onZoomChange); zcb.current = onZoomChange;
+  useEffect(() => { if (z <= 1) setCenter(null); }, [z]);
+  useEffect(() => {
+    const el = svgRef.current; if (!el) return;
+    const wheel = (e: WheelEvent) => { if (!(e.ctrlKey || e.metaKey)) return; e.preventDefault(); zcb.current?.(Math.max(1, Math.min(3, zRef.current * (e.deltaY < 0 ? 1.15 : 1 / 1.15)))); };
+    el.addEventListener("wheel", wheel, { passive: false });
+    return () => el.removeEventListener("wheel", wheel);
+  }, []);
+  const gest = useRef<{ pts: Map<number, { x: number; y: number }>; start?: { x: number; y: number; cx: number; cy: number }; moved: boolean; pinch?: { d: number; z: number } }>({ pts: new Map(), moved: false });
+  const unitsPerPx = () => { const r = svgRef.current?.getBoundingClientRect(); if (!r || !r.width) return 1; return 1 / Math.min(r.width / (vbW / zRef.current), r.height / (vbH / zRef.current)); };
+  const onPD = (e: React.PointerEvent) => {
+    if (zRef.current <= 1 && gest.current.pts.size === 0) return;
+    const g = gest.current; g.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (g.pts.size === 1) { g.start = { x: e.clientX, y: e.clientY, cx: cRef.current.x, cy: cRef.current.y }; g.moved = false; }
+    if (g.pts.size === 2) { const [a, b] = [...g.pts.values()]; g.pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z: zRef.current }; g.moved = true; }
+  };
+  const onPM = (e: React.PointerEvent) => {
+    const g = gest.current; if (!g.pts.has(e.pointerId)) return;
+    g.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (g.pts.size >= 2 && g.pinch) { const [a, b] = [...g.pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); zcb.current?.(Math.max(1, Math.min(3, g.pinch.z * (d / g.pinch.d)))); return; }
+    if (g.pts.size === 1 && g.start && zRef.current > 1) {
+      const dx = e.clientX - g.start.x, dy = e.clientY - g.start.y;
+      if (!g.moved && Math.hypot(dx, dy) > 6) { g.moved = true; try { svgRef.current?.setPointerCapture(e.pointerId); } catch { /* bỏ qua */ } }
+      if (g.moved) { const k = unitsPerPx(); setCenter({ x: g.start.cx - dx * k, y: g.start.cy - dy * k }); }
+    }
+  };
+  const onPU = (e: React.PointerEvent) => { const g = gest.current; g.pts.delete(e.pointerId); if (g.pts.size < 2) g.pinch = undefined; if (g.pts.size === 0) g.start = undefined; };
+  // vừa kéo/chụm xong thì nuốt cú "click" cuối để không lỡ chạm vào ô đất
+  const onClickCap = (e: React.MouseEvent) => { if (gest.current.moved) { e.stopPropagation(); e.preventDefault(); gest.current.moved = false; } };
+
   // Điện thoại: khung cuộn ngang → mở ra ở giữa đất thay vì mép trái
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => { const el = scrollRef.current; if (el) el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2; }, [W, H]);
@@ -101,9 +144,9 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const bx = corners.bottom.cx, by = corners.bottom.cy + TILE_H / 2 + thick;
 
   return (
-    <div ref={scrollRef} className="farm-scene relative rounded-2xl overflow-x-auto overflow-y-hidden border border-line" style={{ background: skyBackground(phase, weather), transition: "background 2s ease" }}>
+    <div ref={scrollRef} onClickCapture={onClickCap} className="farm-scene relative rounded-2xl overflow-x-auto overflow-y-hidden border border-line" style={{ background: skyBackground(phase, weather), transition: "background 2s ease" }}>
       {/* Trên điện thoại khung đất rộng tối thiểu ~640px (cuộn ngang) để ô đất đủ lớn mà bấm; desktop tự co theo cột */}
-      <svg viewBox={`0 0 ${vbW} ${vbH}`} preserveAspectRatio="xMidYMid meet" aria-label="Nông trại" data-phase={phase} style={{ minWidth: Math.min(vbW, 640) }}>
+      <svg ref={svgRef} viewBox={`${vbx} ${vby} ${vw} ${vh}`} preserveAspectRatio="xMidYMid meet" aria-label="Nông trại" data-phase={phase} data-zoom={z} onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} onPointerCancel={onPU} style={{ minWidth: Math.min(vbW, 640), touchAction: z > 1 ? "none" : undefined, cursor: z > 1 ? "grab" : undefined }}>
         <SkyBackdrop vbW={vbW} vbH={vbH} phase={phase} frac={sky.frac} sr={sky.sr} ss={sky.ss} weather={weather} />
         <g opacity={phase === "night" ? (weather === "clear" ? 0.35 : 0.5) : phase === "noon" && weather === "clear" ? 0.8 : 1}>
           {[[-80, 30, 0.8, 70, 10], [-120, 60, 1.1, 95, 40], [-60, 16, 0.6, 55, 25], [-200, 44, 0.9, 80, 55], [-30, 72, 1.0, 105, 5], [-150, 22, 0.7, 62, 33], [-100, 84, 1.2, 120, 70]].slice(0, clouds.n).map(([cx, cy, sc, du, de], i) => (
@@ -124,13 +167,15 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
           const key = `${x},${y}`;
           const free = !occupied.has(key);
           const d = decorAt.get(key);
-          const isPath = d && d.key === "path";
+          const isPath = !!d && d.key === "path";
+          const pathEdit = isPath && !readOnly && mode.type === "edit";
+          const pathSel = isPath && selectedId === d!.uid;
           const clickable = !readOnly && free && (placing || (mode.type === "edit" && mode.selected) || false);
           const h = hashXY(x, y);
           const showTuft = free && h % 4 === 0;
           const showFlower = free && h % 9 === 0;
           return (
-            <g key={`t${key}`} onClick={() => { if (!readOnly && free && onTileClick) onTileClick(x, y); }} className={clickable ? "farm-tile farm-tile-selectable" : ""}>
+            <g key={`t${key}`} onClick={() => { if (pathEdit && d) { onDecorClick?.(d); return; } if (!readOnly && free && onTileClick) onTileClick(x, y); }} className={clickable ? "farm-tile farm-tile-selectable" : pathEdit ? "farm-tile" : ""}>
               <polygon points={diamondPoints(cx, cy)} fill={(x + y) % 2 ? "#86c75b" : "#7fbf52"} stroke="#6aa845" strokeWidth={1} />
               {showTuft && <path d={`M${cx + ((h >> 3) % 24) - 12} ${cy + ((h >> 7) % 8) - 3} l-3 -7 m3 7 l0 -9 m0 9 l3 -7`} stroke="#5f9f3b" strokeWidth={1.6} strokeLinecap="round" fill="none" opacity={0.85} />}
               {showFlower && (
@@ -139,6 +184,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
                 </g>
               )}
               {isPath && <DecorSprite emoji="" cx={cx} cy={cy} isPath />}
+              {pathSel && <polygon points={diamondPoints(cx, cy, TILE_W - 10, TILE_H - 5)} fill="rgba(30,58,138,.15)" stroke="#1E3A8A" strokeWidth={2.2} strokeDasharray="5 3" />}
               {clickable && <polygon points={diamondPoints(cx, cy, TILE_W - 10, TILE_H - 5)} fill="rgba(253,224,71,.45)" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3" />}
             </g>
           );

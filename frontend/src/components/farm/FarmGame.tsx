@@ -10,7 +10,7 @@ import { PHASE_LABEL, skyNow } from "./Ambient";
 import { useFarmWeather } from "@/lib/farm/useWeather";
 import { WEATHER_KINDS, WEATHER_LABEL, weatherLabel, type WeatherKind } from "@/lib/farm/weather";
 import WeatherPanel from "./WeatherPanel";
-import { BasketIcon, CoinIcon, GemIcon, IconBarn, IconBolt, IconFlame, IconHelp, IconMaximize, IconMinimize, IconMove, IconPaw, IconRefresh, IconShop, IconSprout, IconTarget, IconUsers, IconVolume, IconVolumeOff, IconWeather, IconWheel, NamedIcon } from "./FarmIcons";
+import { BasketIcon, CoinIcon, GemIcon, IconBarn, IconBolt, IconChevronDown, IconMenu, IconZoomIn, IconZoomOut, IconFlame, IconHelp, IconMaximize, IconMinimize, IconMove, IconPaw, IconRefresh, IconShop, IconSprout, IconTarget, IconUsers, IconVolume, IconVolumeOff, IconWeather, IconWheel, NamedIcon } from "./FarmIcons";
 import HarvestModal from "./HarvestModal";
 import SeedPicker from "./SeedPicker";
 import ShopPanel from "./ShopPanel";
@@ -40,6 +40,12 @@ export default function FarmGame({ userId }: { userId: string }) {
   const [questTab, setQuestTab] = useState<"DAILY" | "ACH">("DAILY");
   const [activePlot, setActivePlot] = useState<PlotView | null>(null);
   const [factoryUid, setFactoryUid] = useState<string | null>(null);
+  // Phóng to/thu nhỏ cảnh (1–3×) và ẩn/hiện thanh điều hướng trên điện thoại (nhớ lựa chọn)
+  const [zoom, setZoom] = useState(1);
+  const [dockOpen, setDockOpen] = useState(true);
+  useEffect(() => { try { if (localStorage.getItem("lucy_farm_dock") === "hidden") setDockOpen(false); } catch { /* bỏ qua */ } }, []);
+  const toggleDock = () => { sfx.click(); setDockOpen((v) => { try { localStorage.setItem("lucy_farm_dock", v ? "hidden" : "open"); } catch { /* bỏ qua */ } return !v; }); };
+  const stepZoom = (dir: 1 | -1) => { sfx.click(); setZoom((z) => Math.max(1, Math.min(3, Math.round((z + dir * 0.5) * 100) / 100))); };
   const activePlotRef = useRef<PlotView | null>(null);
   useEffect(() => { activePlotRef.current = activePlot; }, [activePlot]);
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
@@ -224,7 +230,9 @@ export default function FarmGame({ userId }: { userId: string }) {
     { k: "NEIGHBORS", label: "Bạn bè", Icon: IconUsers, c1: "#34d399", c2: "#059669" },
     { k: "BARN", label: "Kho", Icon: IconBarn, c1: "#fbbf24", c2: "#d97706", badge: barnFull || orders.some((o) => o.kind === "PRODUCE" && o.ready) ? "!" : undefined },
   ];
-  const tools: { k: string; title: string; Icon: (p: { size?: number }) => React.ReactElement; on?: boolean; run: () => void }[] = [
+  const tools: { k: string; title: string; Icon: (p: { size?: number }) => React.ReactElement; on?: boolean; off?: boolean; run: () => void }[] = [
+    { k: "ZIN", title: `Phóng to (đang ${Math.round(zoom * 100)}%)`, Icon: IconZoomIn, off: zoom >= 3, run: () => stepZoom(1) },
+    { k: "ZOUT", title: zoom > 1 ? `Thu nhỏ (đang ${Math.round(zoom * 100)}%)` : "Thu nhỏ (đang vừa khung)", Icon: IconZoomOut, off: zoom <= 1, run: () => stepZoom(-1) },
     { k: "EDIT", title: mode.type === "edit" ? "Xong sắp xếp" : "Sắp xếp đất & trang trí", Icon: IconMove, on: mode.type === "edit", run: () => { sfx.click(); setMode(mode.type === "edit" ? { type: "normal" } : { type: "edit", selected: null }); } },
     { k: "SOUND", title: soundOn ? "Tắt âm thanh" : "Bật âm thanh", Icon: soundOn ? IconVolume : IconVolumeOff, on: !soundOn, run: toggleSound },
     { k: "WEATHER", title: wx.status === "ok" ? "Thời tiết theo vị trí (đang bật)" : "Bật thời tiết theo vị trí", Icon: IconWeather, on: wx.status === "ok", run: () => openPanel("WEATHER") },
@@ -234,7 +242,7 @@ export default function FarmGame({ userId }: { userId: string }) {
   ];
 
   return (
-    <div ref={rootRef} id="farm-root" className={`farm-root-pad grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] ${fs ? "farm-fullscreen" : ""}`}>
+    <div ref={rootRef} id="farm-root" className={`farm-root-pad ${dockOpen ? "" : "farm-dock-off"} grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] ${fs ? "farm-fullscreen" : ""}`}>
       <div className="space-y-3 min-w-0">
         {/* Thanh trạng thái */}
         <div className="ui-card px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-3">
@@ -272,13 +280,13 @@ export default function FarmGame({ userId }: { userId: string }) {
         )}
 
         <div className="relative">
-          <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} sky={sky} weather={weather}
+          <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} sky={sky} weather={weather} zoom={zoom} onZoomChange={setZoom}
             onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onFactoryClick={onFactoryClick} onPetClick={onPetClick} />
           {readyPlots.length > 0 && mode.type === "normal" && (
             <button onClick={() => { sfx.click(); setActivePlot(readyPlots[0]); setPanel("HARVEST"); }} className="absolute top-3 left-3 z-[5] btn-highlight rounded-full pl-3 pr-4 py-2 font-extrabold shadow-card farm-toast inline-flex items-center gap-2"><IconSprout size={18} />{readyPlots.length} cây chín</button>
           )}
           <div className="farm-tools">
-            {tools.map((t) => <button key={t.k} onClick={t.run} title={t.title} aria-label={t.title} className={`farm-tool ${t.on ? "farm-tool-on" : ""}`}><t.Icon size={19} /></button>)}
+            {tools.map((t) => <button key={t.k} onClick={t.run} disabled={t.off} title={t.title} aria-label={t.title} className={`farm-tool ${t.on ? "farm-tool-on" : ""}`}><t.Icon size={19} /></button>)}
           </div>
           <button className="farm-phase" onClick={() => openPanel("WEATHER")} title={wx.status === "ok" ? "Xem dự báo thời tiết" : "Bật thời tiết thật theo vị trí của bạn"}>
             <b>{sky.label}</b><span>{PHASE_LABEL[sky.phase]}</span>
@@ -291,7 +299,7 @@ export default function FarmGame({ userId }: { userId: string }) {
         </div>
 
         {/* Thanh điều hướng dạng game */}
-        <nav className="farm-dock" aria-label="Menu nông trại">
+        <nav className={`farm-dock ${dockOpen ? "" : "farm-dock-hidden"}`} aria-label="Menu nông trại" aria-hidden={!dockOpen}>
           {dock.map((b) => (
             <button key={b.k} className="farm-dock-btn" onClick={() => openPanel(b.k)} style={{ ["--c1" as any]: b.c1, ["--c2" as any]: b.c2 }} aria-label={b.label}>
               <span className="farm-dock-ico"><b.Icon size={26} /></span>
@@ -300,6 +308,10 @@ export default function FarmGame({ userId }: { userId: string }) {
             </button>
           ))}
         </nav>
+        {/* điện thoại: nút ẩn/hiện thanh điều hướng cho rộng khung hình */}
+        <button onClick={toggleDock} className={`farm-dock-toggle ${dockOpen ? "" : "farm-dock-toggle-off"}`} aria-label={dockOpen ? "Ẩn thanh điều hướng" : "Hiện thanh điều hướng"} title={dockOpen ? "Ẩn menu" : "Hiện menu"}>
+          {dockOpen ? <IconChevronDown size={16} /> : <><IconMenu size={18} /><span>Menu</span></>}
+        </button>
       </div>
 
       <div className="space-y-4">

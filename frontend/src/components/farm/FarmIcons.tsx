@@ -56,3 +56,7 @@ export function NamedIcon({ name, size = 22, className }: { name: string; size?:
   const I = ICONS[name] || IconStar;
   return <span className={className} style={{ display: "inline-flex" }}><I size={size} /></span>;
 }
+export const IconZoomIn = ({ size, ...r }: P) => <svg {...base(size)} {...r}><circle cx="11" cy="11" r="7.5" /><path d="m21 21-4.3-4.3" /><path d="M11 8v6M8 11h6" /></svg>;
+export const IconZoomOut = ({ size, ...r }: P) => <svg {...base(size)} {...r}><circle cx="11" cy="11" r="7.5" /><path d="m21 21-4.3-4.3" /><path d="M8 11h6" /></svg>;
+export const IconChevronDown = ({ size, ...r }: P) => <svg {...base(size)} {...r}><path d="m6 9 6 6 6-6" /></svg>;
+export const IconMenu = ({ size, ...r }: P) => <svg {...base(size)} {...r}><path d="M4 7h16M4 12h16M4 17h16" /></svg>;
