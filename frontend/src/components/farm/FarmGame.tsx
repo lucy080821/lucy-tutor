@@ -7,7 +7,10 @@ import { loadSfxPref, setSfxEnabled, sfx } from "@/lib/farm/sfx";
 import FarmScene, { liveStatus, type FloatText, type SceneMode } from "./FarmScene";
 import type { Outfit } from "./Sprites";
 import { PHASE_LABEL, skyNow } from "./Ambient";
-import { BasketIcon, CoinIcon, GemIcon, IconBarn, IconBolt, IconFlame, IconHelp, IconMaximize, IconMinimize, IconMove, IconPaw, IconRefresh, IconShop, IconSprout, IconTarget, IconUsers, IconVolume, IconVolumeOff, IconWheel, NamedIcon } from "./FarmIcons";
+import { useFarmWeather } from "@/lib/farm/useWeather";
+import { WEATHER_KINDS, WEATHER_LABEL, weatherLabel, type WeatherKind } from "@/lib/farm/weather";
+import WeatherPanel from "./WeatherPanel";
+import { BasketIcon, CoinIcon, GemIcon, IconBarn, IconBolt, IconFlame, IconHelp, IconMaximize, IconMinimize, IconMove, IconPaw, IconRefresh, IconShop, IconSprout, IconTarget, IconUsers, IconVolume, IconVolumeOff, IconWeather, IconWheel, NamedIcon } from "./FarmIcons";
 import HarvestModal from "./HarvestModal";
 import SeedPicker from "./SeedPicker";
 import ShopPanel from "./ShopPanel";
@@ -19,7 +22,7 @@ import BarnPanel from "./BarnPanel";
 import QuestsPanel from "./QuestsPanel";
 import Modal from "./Modal";
 
-type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "QUESTS" | "HELP";
+type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "QUESTS" | "WEATHER" | "HELP";
 const TUT_KEY = "lucy_farm_tut_v2";
 
 async function confetti(opts: any) {
@@ -42,8 +45,10 @@ export default function FarmGame({ userId }: { userId: string }) {
   const [petJumping, setPetJumping] = useState(false);
   const [hearts, setHearts] = useState<number[]>([]);
   const [soundOn, setSoundOn] = useState(true);
-  // Xem thử bầu trời ở 1 giờ bất kỳ: /farm?time=21:30 (mặc định = giờ thật ở Việt Nam, GMT+7)
+  // Xem thử: /farm?time=21:30 (giờ bất kỳ) và /farm?weather=rain (clear|cloudy|overcast|fog|drizzle|rain|storm|snow). Mặc định = giờ + thời tiết thật tại vị trí.
   const [skyTime] = useState<string | null>(() => { try { return new URLSearchParams(window.location.search).get("time"); } catch { return null; } });
+  const [wxPreview] = useState<WeatherKind | null>(() => { try { const w = new URLSearchParams(window.location.search).get("weather") as WeatherKind | null; return w && WEATHER_KINDS.includes(w) ? w : null; } catch { return null; } });
+  const wx = useFarmWeather(wxPreview);
   const prevRef = useRef<FarmState | null>(null);
 
   // Toàn màn hình: dùng Fullscreen API trên #farm-root; trình duyệt không hỗ trợ (iPhone) thì dùng lớp CSS cố định
@@ -190,7 +195,10 @@ export default function FarmGame({ userId }: { userId: string }) {
   const readyOrders = orders.filter((o) => o.ready).length;
   const barnFull = farm.barnUsed >= farm.barnCapacity;
   const claimable = quests.claimable + achievements.claimable;
-  const sky = skyNow(now, skyTime);
+  // Múi giờ + giờ mặt trời mọc/lặn của VỊ TRÍ (khi đã bật thời tiết); chưa bật thì theo múi giờ thiết bị
+  const wdata = wx.status === "ok" ? wx.data : null;
+  const sky = skyNow(now, skyTime, { offsetMin: wdata ? wdata.utcOffsetSec / 60 : undefined, sunrise: wdata?.sunrise, sunset: wdata?.sunset });
+  const weather: WeatherKind = wxPreview ?? wdata?.kind ?? "clear";
   const questsDone = quests.items.filter((q) => q.claimed).length;
 
   const dock: { k: Panel; label: string; Icon: (p: { size?: number }) => React.ReactElement; c1: string; c2: string; badge?: string }[] = [
@@ -204,6 +212,7 @@ export default function FarmGame({ userId }: { userId: string }) {
   const tools: { k: string; title: string; Icon: (p: { size?: number }) => React.ReactElement; on?: boolean; run: () => void }[] = [
     { k: "EDIT", title: mode.type === "edit" ? "Xong sắp xếp" : "Sắp xếp đất & trang trí", Icon: IconMove, on: mode.type === "edit", run: () => { sfx.click(); setMode(mode.type === "edit" ? { type: "normal" } : { type: "edit", selected: null }); } },
     { k: "SOUND", title: soundOn ? "Tắt âm thanh" : "Bật âm thanh", Icon: soundOn ? IconVolume : IconVolumeOff, on: !soundOn, run: toggleSound },
+    { k: "WEATHER", title: wx.status === "ok" ? "Thời tiết theo vị trí (đang bật)" : "Bật thời tiết theo vị trí", Icon: IconWeather, on: wx.status === "ok", run: () => openPanel("WEATHER") },
     { k: "FS", title: fs ? "Thu nhỏ" : "Toàn màn hình", Icon: fs ? IconMinimize : IconMaximize, run: toggleFullscreen },
     { k: "HELP", title: "Hướng dẫn", Icon: IconHelp, run: () => openPanel("HELP") },
     { k: "RELOAD", title: "Tải lại", Icon: IconRefresh, run: () => { sfx.click(); load(); toast("Đã tải lại"); } },
@@ -242,7 +251,7 @@ export default function FarmGame({ userId }: { userId: string }) {
         )}
 
         <div className="relative">
-          <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} skyTime={skyTime}
+          <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} sky={sky} weather={weather}
             onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onPetClick={onPetClick} />
           {readyPlots.length > 0 && mode.type === "normal" && (
             <button onClick={() => { sfx.click(); setActivePlot(readyPlots[0]); setPanel("HARVEST"); }} className="absolute top-3 left-3 z-[5] btn-highlight rounded-full pl-3 pr-4 py-2 font-extrabold shadow-card farm-toast inline-flex items-center gap-2"><IconSprout size={18} />{readyPlots.length} cây chín</button>
@@ -250,9 +259,11 @@ export default function FarmGame({ userId }: { userId: string }) {
           <div className="farm-tools">
             {tools.map((t) => <button key={t.k} onClick={t.run} title={t.title} aria-label={t.title} className={`farm-tool ${t.on ? "farm-tool-on" : ""}`}><t.Icon size={19} /></button>)}
           </div>
-          <div className="farm-phase" title={sky.preview ? "Đang xem thử giờ này (bỏ ?time= trên đường dẫn để về giờ thật)" : "Giờ Việt Nam (GMT+7)"}>
-            <b>{sky.label}</b> · {sky.raining ? "Trời mưa" : PHASE_LABEL[sky.phase]}{sky.preview ? " (xem thử)" : " · GMT+7"}
-          </div>
+          <button className="farm-phase" onClick={() => openPanel("WEATHER")} title={wx.status === "ok" ? "Xem dự báo thời tiết" : "Bật thời tiết thật theo vị trí của bạn"}>
+            <b>{sky.label}</b><span>{PHASE_LABEL[sky.phase]}</span>
+            {wdata && wdata.tempC != null ? <span>{wdata.tempC}°C {weatherLabel(weather, wdata.isDay)}</span> : wxPreview ? <span>{WEATHER_LABEL[wxPreview]} (xem thử)</span> : null}
+            <span className="opacity-70">{sky.gmt}{sky.preview ? " · xem thử" : ""}</span>
+          </button>
           <div className="absolute left-1/2 -translate-x-1/2 bottom-12 z-10 flex flex-col items-center gap-1.5 pointer-events-none max-w-[92%]">
             {toasts.map((t) => <div key={t.id} className="farm-toast bg-white/95 border border-line rounded-full px-4 py-2 text-sm font-bold text-foreground shadow-card text-center">{t.msg}</div>)}
           </div>
@@ -302,8 +313,9 @@ export default function FarmGame({ userId }: { userId: string }) {
       {panel === "SHOP" && <ShopPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} onPick={(k, label) => { setPanel(null); setMode({ type: "place", itemKey: k, label }); }} onExpand={expand} />}
       {panel === "PET" && <PetPanel userId={userId} farm={farm} catalog={catalog} onClose={() => { setPanel(null); load(); }} onState={applyState} />}
       {panel === "WHEEL" && <WheelPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} />}
-      {panel === "NEIGHBORS" && <NeighborsPanel userId={userId} catalog={catalog} onClose={() => setPanel(null)} onToast={toast} onRefresh={load} />}
+      {panel === "NEIGHBORS" && <NeighborsPanel userId={userId} catalog={catalog} sky={sky} weather={weather} onClose={() => setPanel(null)} onToast={toast} onRefresh={load} />}
       {panel === "BARN" && <BarnPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
+      {panel === "WEATHER" && <WeatherPanel status={wx.status} data={wx.data} error={wx.error} sky={sky} previewKind={wxPreview} onEnable={wx.enable} onDisable={wx.disable} onRefresh={wx.refresh} onClose={() => setPanel(null)} />}
       {panel === "QUESTS" && <QuestsPanel userId={userId} quests={quests} achievements={achievements} initialTab={questTab} onClose={() => setPanel(null)} onState={applyState} />}
       {panel === "HELP" && (
         <Modal title="Chào mừng tới Nông Trại Qilin!" subtitle="Vừa chơi vừa nhớ từ — cây lớn theo đúng lịch ôn của bạn" onClose={closeTut}
@@ -317,7 +329,7 @@ export default function FarmGame({ userId }: { userId: string }) {
               ["target", "Mỗi ngày có 4 nhiệm vụ và 1 rương thưởng; Thành tựu là các mốc dài hạn. Vào mục Nhiệm vụ để nhận thưởng."],
               ["palette", "Phần chơi thuần: trang trí nông trại, mua trang phục cho Qilin con, vòng quay mỗi ngày, thăm nông trại và xem Bảng vàng của bạn bè."],
               ["star", "Từ nhớ lâu hơn 21 ngày = thuộc lòng. Cất vào kho để lấy chỗ trồng từ mới, hoặc ôn kho từ để kiếm thêm xu."],
-              ["wheel", "Cảnh nông trại đổi theo giờ thật ở Việt Nam (GMT+7): bình minh, sáng, trưa, chiều, hoàng hôn, đêm, thỉnh thoảng có mưa; khuya Qilin sẽ đi ngủ. Nút loa bên phải để tắt âm thanh."],
+              ["wheel", "Cảnh nông trại đổi theo giờ thật (bình minh, sáng, trưa, chiều, hoàng hôn, đêm; khuya Qilin đi ngủ). Bấm nút đám mây bên phải để bật thời tiết thật theo vị trí của bạn (nắng, mưa, giông...). Nút loa để tắt âm thanh."],
             ] as [string, string][]).map(([i, t]) => <li key={t} className="flex gap-3 items-start"><span className="farm-ring !w-9 !h-9 mt-0.5"><NamedIcon name={i} size={18} /></span><span className="pt-1">{t}</span></li>)}
           </ol>
         </Modal>

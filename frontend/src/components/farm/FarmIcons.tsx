@@ -32,6 +32,8 @@ export const IconFlame = ({ size, ...r }: P) => <svg {...base(size)} {...r}><pat
 export const IconBolt = ({ size, ...r }: P) => <svg {...base(size)} {...r}><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" /></svg>;
 export const IconGift = ({ size, ...r }: P) => <svg {...base(size)} {...r}><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M12 8v13" /><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" /><path d="M7.5 8a2.5 2.5 0 0 1 0-5A4.8 8 0 0 1 12 8a4.8 8 0 0 1 4.5-5 2.5 2.5 0 0 1 0 5" /></svg>;
 export const IconCheck = ({ size, ...r }: P) => <svg {...base(size)} {...r}><path d="M20 6 9 17l-5-5" /></svg>;
+export const IconWeather = ({ size, ...r }: P) => <svg {...base(size)} {...r}><path d="M12 2v2" /><path d="m4.93 4.93 1.41 1.41" /><path d="M20 12h2" /><path d="m19.07 4.93-1.41 1.41" /><path d="M15.947 12.65a4 4 0 0 0-5.925-4.128" /><path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6Z" /></svg>;
+export const IconPin = ({ size, ...r }: P) => <svg {...base(size)} {...r}><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></svg>;
 export const IconCrown = ({ size, ...r }: P) => <svg {...base(size)} {...r}><path d="m2 4 3 12h14l3-12-6 7-4-7-4 7-6-7z" /><path d="M5 20h14" /></svg>;
 
 // Icon tô màu (không phải nét) cho HUD

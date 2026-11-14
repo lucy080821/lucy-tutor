@@ -5,10 +5,12 @@ import FarmScene from "./FarmScene";
 import { alert as swalAlert } from "./farmSwal";
 import { farmApi, type Catalog, type LeaderRow, type Neighbor, type NeighborGroup, type VisitView } from "@/lib/farm/api";
 import { IconCrown, IconFlame } from "./FarmIcons";
+import type { SkyInfo } from "./Ambient";
+import type { WeatherKind } from "@/lib/farm/weather";
 
 // Bạn bè toàn app (không cần tham gia lớp): nhóm theo lớp — "Lớp của tôi" đứng đầu, rồi các lớp khác, cuối cùng là học viên tự do.
 // Thăm nông trại (chỉ xem), thích (+xu cho bạn), tặng quà (tốn xu nhỏ, tối đa 3/ngày).
-export default function NeighborsPanel({ userId, catalog, onClose, onToast, onRefresh }: { userId: string; catalog: Catalog; onClose: () => void; onToast: (m: string) => void; onRefresh: () => void }) {
+export default function NeighborsPanel({ userId, catalog, sky, weather, onClose, onToast, onRefresh }: { userId: string; catalog: Catalog; sky?: SkyInfo; weather?: WeatherKind; onClose: () => void; onToast: (m: string) => void; onRefresh: () => void }) {
   const [data, setData] = useState<{ groups: NeighborGroup[]; total: number; giftsLeft: number; hasClassroom: boolean } | null>(null);
   const [visit, setVisit] = useState<VisitView | null>(null);
   const [visiting, setVisiting] = useState<Neighbor | null>(null);
@@ -67,7 +69,7 @@ export default function NeighborsPanel({ userId, catalog, onClose, onToast, onRe
         </div>}>
         {!visit ? <p className="text-center text-muted py-10">Đang đi bộ sang nhà bạn...</p> : (
           <>
-            <FarmScene farm={visit.farm} plots={visit.plots} catalog={visit.catalog} now={now} mode={{ type: "normal" }} readOnly pet={{ name: visit.farm.pet.name, level: visit.farm.pet.level }} outfit={vEquipped} />
+            <FarmScene farm={visit.farm} plots={visit.plots} catalog={visit.catalog} now={now} mode={{ type: "normal" }} readOnly pet={{ name: visit.farm.pet.name, level: visit.farm.pet.level }} outfit={vEquipped} sky={sky} weather={weather} />
             <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold">
               <span className="ui-badge bg-amber-100 text-amber-800">🌱 {visit.plots.filter((p) => p.status !== "EMPTY").length} cây đang trồng</span>
               <span className="ui-badge bg-emerald-100 text-emerald-800">⭐ {visit.farm.barnCount} từ đã cất kho</span>

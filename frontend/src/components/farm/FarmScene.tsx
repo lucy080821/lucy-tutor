@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Catalog, DecorPlaced, FarmView, PlotView } from "@/lib/farm/api";
 import { formatCountdown } from "@/lib/farm/api";
 import { Cloud, CropSprite, DecorSprite, PetSprite, SoilTile, TILE_H, TILE_W, diamondPoints, type Outfit } from "./Sprites";
-import { AmbientLife, SKY, SkyBackdrop, skyNow } from "./Ambient";
+import { AmbientLife, SkyBackdrop, cloudsFor, skyBackground, skyNow, type SkyInfo } from "./Ambient";
+import { isWetWeather, type WeatherKind } from "@/lib/farm/weather";
 
 export type SceneMode =
   | { type: "normal" }
@@ -16,7 +17,8 @@ const FLOAT_COLOR: Record<FloatText["tone"], string> = { coin: "#b45309", xp: "#
 
 type Props = {
   farm: FarmView; plots: PlotView[]; catalog: Catalog; now: number; mode: SceneMode; readOnly?: boolean;
-  pet: { name: string; level: number }; outfit?: Outfit; petJumping?: boolean; hearts?: number[]; floats?: FloatText[]; skyTime?: string | null;
+  pet: { name: string; level: number }; outfit?: Outfit; petJumping?: boolean; hearts?: number[]; floats?: FloatText[];
+  sky?: SkyInfo; weather?: WeatherKind; // giờ + thời tiết của VỊ TRÍ người chơi (không truyền = giờ máy + trời quang)
   onTileClick?: (x: number, y: number) => void; onPlotClick?: (plot: PlotView) => void;
   onDecorClick?: (d: DecorPlaced) => void; onPetClick?: () => void;
 };
@@ -38,17 +40,18 @@ export function liveStatus(plot: PlotView, now: number) {
   return { status: now >= ready ? ("READY" as const) : ("GROWING" as const), growth, msLeft: ready - now };
 }
 
-export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], skyTime, onTileClick, onPlotClick, onDecorClick, onPetClick }: Props) {
+export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", onTileClick, onPlotClick, onDecorClick, onPetClick }: Props) {
   const W = farm.gridW, H = farm.gridH;
   const originX = (H * TILE_W) / 2;
   const vbW = ((W + H) * TILE_W) / 2;
   const vbH = TOP_PAD + ((W + H) * TILE_H) / 2 + 48;
   const toScreen = (gx: number, gy: number) => ({ cx: originX + ((gx - gy) * TILE_W) / 2, cy: TOP_PAD + ((gx + gy) * TILE_H) / 2 + TILE_H / 2 });
 
-  // Giờ THẬT Ở VIỆT NAM (GMT+7, không phụ thuộc múi giờ máy) → bình minh / sáng / trưa / chiều / hoàng hôn / đêm; mưa theo khung giờ trong ngày
-  const sky = skyNow(now, skyTime);
+  // Giờ + thời tiết THẬT tại vị trí người chơi: bình minh / sáng / trưa / chiều / hoàng hôn / đêm
+  const sky = skyProp ?? skyNow(now);
   const phase = sky.phase;
-  const raining = sky.raining;
+  const clouds = cloudsFor(weather);
+  const wet = isWetWeather(weather);
 
   const occupied = useMemo(() => {
     const s = new Set<string>();
@@ -94,14 +97,14 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const bx = corners.bottom.cx, by = corners.bottom.cy + TILE_H / 2 + thick;
 
   return (
-    <div ref={scrollRef} className="farm-scene relative rounded-2xl overflow-x-auto overflow-y-hidden border border-line" style={{ background: SKY[phase], transition: "background 2s ease" }}>
+    <div ref={scrollRef} className="farm-scene relative rounded-2xl overflow-x-auto overflow-y-hidden border border-line" style={{ background: skyBackground(phase, weather), transition: "background 2s ease" }}>
       {/* Trên điện thoại khung đất rộng tối thiểu ~640px (cuộn ngang) để ô đất đủ lớn mà bấm; desktop tự co theo cột */}
       <svg viewBox={`0 0 ${vbW} ${vbH}`} preserveAspectRatio="xMidYMid meet" aria-label="Nông trại" data-phase={phase} style={{ minWidth: Math.min(vbW, 640) }}>
-        <SkyBackdrop vbW={vbW} vbH={vbH} phase={phase} frac={sky.hour + sky.minute / 60} />
-        <g opacity={phase === "night" ? 0.35 : raining ? 0.55 : phase === "noon" ? 0.8 : 1}>
-          <Cloud x={-80} y={30} scale={0.8} duration={70} delay={10} />
-          <Cloud x={-120} y={60} scale={1.1} duration={95} delay={40} />
-          <Cloud x={-60} y={16} scale={0.6} duration={55} delay={25} />
+        <SkyBackdrop vbW={vbW} vbH={vbH} phase={phase} frac={sky.frac} sr={sky.sr} ss={sky.ss} weather={weather} />
+        <g opacity={phase === "night" ? (weather === "clear" ? 0.35 : 0.5) : phase === "noon" && weather === "clear" ? 0.8 : 1}>
+          {[[-80, 30, 0.8, 70, 10], [-120, 60, 1.1, 95, 40], [-60, 16, 0.6, 55, 25], [-200, 44, 0.9, 80, 55], [-30, 72, 1.0, 105, 5], [-150, 22, 0.7, 62, 33], [-100, 84, 1.2, 120, 70]].slice(0, clouds.n).map(([cx, cy, sc, du, de], i) => (
+            <Cloud key={i} x={cx} y={cy} scale={sc} duration={du} delay={de} fill={clouds.fill} />
+          ))}
         </g>
         {/* bóng đổ + đá treo dưới hòn đảo */}
         <ellipse cx={bx} cy={by + 26} rx={vbW * 0.3} ry={9} fill="rgba(15,23,42,.14)" />
@@ -209,6 +212,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
               </g>
               {hearts.map((h) => <text key={h} x={(h % 3) * 12 - 12} y={-60} textAnchor="middle" fontSize={16} className="farm-heart">💖</text>)}
               {sky.sleeping && <g transform="translate(16 -70)"><g className="farm-zzz"><text fontSize={15}>💤</text></g></g>}
+              {wet && !sky.sleeping && !outfit?.hand && <text x={22} y={-34} fontSize={20} textAnchor="middle">☂️</text>}
               <text x={0} y={22} textAnchor="middle" fontSize={12} fontWeight={800} fill="#1e3a8a" style={{ paintOrder: "stroke", stroke: "#fff", strokeWidth: 3 }}>{pet.name}</text>
             </g>
           );
@@ -223,7 +227,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
           );
         })}
         {/* màu trời, đèn vườn, bướm/đom đóm/chim, mưa */}
-        <AmbientLife vbW={vbW} vbH={vbH} phase={phase} rain={raining} lamps={lamps} seed={W * 31 + H} />
+        <AmbientLife vbW={vbW} vbH={vbH} phase={phase} weather={weather} lamps={lamps} seed={W * 31 + H} />
       </svg>
     </div>
   );

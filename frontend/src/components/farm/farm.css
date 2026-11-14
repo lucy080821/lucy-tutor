@@ -71,7 +71,7 @@
 @keyframes farm-flutter { 0% { transform: translate(0,0); } 25% { transform: translate(var(--dx), var(--dy)); } 50% { transform: translate(calc(var(--dx) * 2), 0); } 75% { transform: translate(var(--dx), calc(var(--dy) * -1)); } 100% { transform: translate(0,0); } }
 @keyframes farm-firefly { 0%,100% { opacity: .15; } 50% { opacity: 1; } }
 @keyframes farm-lamp-pulse { 0%,100% { opacity: .65; } 50% { opacity: 1; } }
-@keyframes farm-rain { from { transform: translate(0,0); } to { transform: translate(-34px, var(--h)); } }
+@keyframes farm-rain { from { transform: translate(0,0); } to { transform: translate(var(--w, -34px), var(--h)); } }
 @keyframes farm-sparkle { 0%,100% { transform: scale(.3) rotate(0deg); opacity: 0; } 50% { transform: scale(1.1) rotate(25deg); opacity: 1; } }
 .farm-twinkle { animation: farm-twinkle 3s ease-in-out infinite; }
 .farm-flutter { animation: farm-flutter 12s ease-in-out infinite; }
@@ -143,3 +143,14 @@
 .farm-zzz { animation: farm-zzz 2.6s ease-in-out infinite; }
 .farm-phase b { font-weight: 900; }
 @media (prefers-reduced-motion: reduce) { .farm-zzz { animation: none; } }
+
+/* ───────── Thời tiết thật: tuyết, sương mù, sét ───────── */
+@keyframes farm-snow { 0% { transform: translate(0,0); opacity: 0; } 8% { opacity: .95; } 50% { transform: translate(calc(var(--sway) * .5), calc(var(--h) * .5)); } 100% { transform: translate(var(--sway), var(--h)); opacity: .9; } }
+@keyframes farm-fog-drift { 0%,100% { opacity: .75; transform: translateX(-14px); } 50% { opacity: 1; transform: translateX(14px); } }
+@keyframes farm-lightning { 0%,90%,100% { opacity: 0; } 91% { opacity: .75; } 92% { opacity: .05; } 94% { opacity: .55; } 97% { opacity: 0; } }
+.farm-snow { animation: farm-snow 9s linear infinite; }
+.farm-fog { animation: farm-fog-drift 14s ease-in-out infinite; }
+.farm-lightning { animation: farm-lightning 9s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .farm-snow, .farm-fog, .farm-lightning { animation: none; } .farm-lightning { opacity: 0; } }
+.farm-phase { pointer-events: auto; cursor: pointer; border: 0; display: inline-flex; align-items: center; gap: 6px; transition: transform .15s ease; }
+.farm-phase:hover { transform: translateY(-1px); background: #fff; }

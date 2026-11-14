@@ -183,11 +183,11 @@ export function PetSprite({ level = 1, size = 1, outfit }: { level?: number; siz
   );
 }
 
-export function Cloud({ x, y, scale = 1, duration = 60, delay = 0 }: { x: number; y: number; scale?: number; duration?: number; delay?: number }) {
+export function Cloud({ x, y, scale = 1, duration = 60, delay = 0, fill = "#fff" }: { x: number; y: number; scale?: number; duration?: number; delay?: number; fill?: string }) {
   return (
     <g className="farm-cloud" style={{ animationDuration: `${duration}s`, animationDelay: `-${delay}s` }}>
       <g transform={`translate(${x} ${y}) scale(${scale})`} opacity={.9}>
-        <ellipse cx={0} cy={0} rx={28} ry={12} fill="#fff" /><ellipse cx={-16} cy={4} rx={16} ry={9} fill="#fff" /><ellipse cx={14} cy={3} rx={18} ry={10} fill="#fff" /><circle cx={4} cy={-8} r={12} fill="#fff" />
+        <ellipse cx={0} cy={0} rx={28} ry={12} fill={fill} /><ellipse cx={-16} cy={4} rx={16} ry={9} fill={fill} /><ellipse cx={14} cy={3} rx={18} ry={10} fill={fill} /><circle cx={4} cy={-8} r={12} fill={fill} />
       </g>
     </g>
   );
