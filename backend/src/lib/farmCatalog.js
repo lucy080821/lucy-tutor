@@ -75,19 +75,19 @@ const EXPANSIONS = [
 const DECOR = {
   path:       { name: 'Lối đi đá',       emoji: '🟫', price: 15,  currency: 'coins', minLevel: 1 },
   flower:     { name: 'Khóm hoa',        emoji: '🌷', price: 30,  currency: 'coins', minLevel: 1 },
-  fence:      { name: 'Hàng rào gỗ',     emoji: '🪵', price: 40,  currency: 'coins', minLevel: 1 },
+  fence:      { name: 'Hàng rào gỗ',     emoji: '🚧', price: 40,  currency: 'coins', minLevel: 1 },
   rock:       { name: 'Tảng đá',         emoji: '🪨', price: 25,  currency: 'coins', minLevel: 1 },
   bush:       { name: 'Bụi cây',         emoji: '🌿', price: 50,  currency: 'coins', minLevel: 1 },
-  haystack:   { name: 'Đụn rơm',         emoji: '🧺', price: 60,  currency: 'coins', minLevel: 2 },
+  haystack:   { name: 'Đụn rơm',         emoji: '🌾', price: 60,  currency: 'coins', minLevel: 2 },
   signpost:   { name: 'Bảng chỉ đường',  emoji: '🪧', price: 60,  currency: 'coins', minLevel: 2 },
   tree:       { name: 'Cây xanh',        emoji: '🌳', price: 90,  currency: 'coins', minLevel: 2 },
   mailbox:    { name: 'Hộp thư',         emoji: '📮', price: 80,  currency: 'coins', minLevel: 2 },
   bench:      { name: 'Ghế gỗ',          emoji: '🪑', price: 100, currency: 'coins', minLevel: 3 },
   lamp:       { name: 'Đèn vườn',        emoji: '🏮', price: 120, currency: 'coins', minLevel: 3 },
-  scarecrow:  { name: 'Bù nhìn',         emoji: '🎎', price: 140, currency: 'coins', minLevel: 3 },
+  scarecrow:  { name: 'Bù nhìn',         emoji: '🧑‍🌾', price: 140, currency: 'coins', minLevel: 3 },
   pine:       { name: 'Cây thông',       emoji: '🌲', price: 150, currency: 'coins', minLevel: 4 },
   well:       { name: 'Giếng nước',      emoji: '🪣', price: 220, currency: 'coins', minLevel: 4 },
-  pond:       { name: 'Ao cá',           emoji: '🐟', price: 300, currency: 'coins', minLevel: 5 },
+  pond:       { name: 'Ao cá',           emoji: '🏞️', price: 300, currency: 'coins', minLevel: 5 },
   cherry:     { name: 'Cây anh đào',     emoji: '🌸', price: 350, currency: 'coins', minLevel: 5 },
   beehive:    { name: 'Tổ ong',          emoji: '🍯', price: 400, currency: 'coins', minLevel: 6 },
   house:      { name: 'Nhà gỗ',          emoji: '🏠', price: 800, currency: 'coins', minLevel: 6 },
@@ -98,7 +98,14 @@ const DECOR = {
   statue:     { name: 'Tượng Qilin vàng', emoji: '🐉', price: 12, currency: 'gems',  minLevel: 8 },
   castle:     { name: 'Lâu đài nhỏ',     emoji: '🏰', price: 20,  currency: 'gems',  minLevel: 12 },
 };
-const DECOR_SELL_RATE = 0.5;
+// Bán lại đồ đã mua: CỐ Ý RẤT LỖ để không ai mua rồi bán qua lại kiếm lời (chỉ lấy lại 25% giá xu).
+// Đồ mua bằng kim cương hoàn lại bằng XU (kim cương là tiền hiếm, không đổi ngược được): mỗi kim cương = GEM_SELL_COINS xu.
+const DECOR_SELL_RATE = 0.25;
+const GEM_SELL_COINS = 5;
+function sellValue(item) {
+  if (!item) return 0;
+  return item.currency === 'gems' ? Math.max(1, Math.floor(item.price * GEM_SELL_COINS)) : Math.max(1, Math.floor(item.price * DECOR_SELL_RATE));
+}
 // Nhóm hiển thị trong cửa hàng (frontend lọc theo `cat`)
 const DECOR_EXTRA = {
   // Vật nuôi trang trí (giải trí thuần, không cần cho ăn)
@@ -336,7 +343,7 @@ function publicCatalog() {
     crops: CROPS, decor: DECOR, decorCats: DECOR_CATS, outfits: OUTFITS, outfitSlots: OUTFIT_SLOTS, producePrice: PRODUCE_PRICE, barnTiers: BARN_TIERS, barnQuiz: BARN_QUIZ, expansions: EXPANSIONS, wheel: WHEEL.map(({ id, label, kind }) => ({ id, label, kind })),
     startPlots: START_PLOTS, maxPlots: MAX_PLOTS, firstGrowMinutes: FIRST_GROW_MINUTES,
     harvestCoins: HARVEST_COINS, harvestXp: HARVEST_XP, masteredBonus: MASTERED_BONUS, barnBonus: BARN_BONUS,
-    orderTrashCost: ORDER_TRASH_COST, decorSellRate: DECOR_SELL_RATE,
+    orderTrashCost: ORDER_TRASH_COST, decorSellRate: DECOR_SELL_RATE, gemSellCoins: GEM_SELL_COINS,
     petLevels: PET_LEVELS, petFeedReward: PET_FEED_REWARD,
     visit: { likeReward: VISIT_LIKE_REWARD, giftReward: VISIT_GIFT_REWARD, giftCost: VISIT_GIFT_COST, giftsPerDay: VISIT_GIFTS_PER_DAY },
   };
@@ -345,7 +352,7 @@ function publicCatalog() {
 module.exports = {
   CROPS, CROP_KEYS, TOPIC_CROP, cropForTopic, FIRST_GROW_MINUTES,
   levelFor, harvestsForLevel, START_PLOTS, MAX_PLOTS, plotPrice, EXPANSIONS,
-  DECOR, DECOR_SELL_RATE, HARVEST_COINS, HARVEST_XP, MASTERED_BONUS, BARN_BONUS, WITHER_PENALTY_COINS,
+  DECOR, DECOR_SELL_RATE, GEM_SELL_COINS, sellValue, HARVEST_COINS, HARVEST_XP, MASTERED_BONUS, BARN_BONUS, WITHER_PENALTY_COINS,
   CUSTOMERS, ORDER_SLOTS, makeOrderTemplate, orderDifficulty, ORDER_TRASH_COST,
   PRODUCE_PRICE, PRODUCE_PER_HARVEST, BARN_TIERS, BARN_FULL_SELL_RATE, BARN_QUIZ, OUTFITS, OUTFIT_SLOTS, DECOR_CATS,
   WHEEL, WHEEL_DECOR_POOL, PET_FEED_REWARD, PET_PAT_XP, PET_LEVELS, petLevelFor,

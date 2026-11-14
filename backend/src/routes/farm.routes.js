@@ -508,7 +508,7 @@ router.post('/move', async (req, res) => {
   } catch (e) { console.error('[farm] move', e); res.status(500).json({ error: 'Không dời được' }); }
 });
 
-// Bán trang trí (hoàn 50%)
+// Bán trang trí — rất lỗ (xem sellValue trong farmCatalog): luôn hoàn bằng XU
 router.post('/sell', async (req, res) => {
   try {
     const { userId, uid } = req.body;
@@ -517,10 +517,9 @@ router.post('/sell', async (req, res) => {
     const layout = parseJSON(farm.layout, []);
     const d = layout.find((l) => l.uid === uid);
     if (!d) return res.status(404).json({ error: 'Vật phẩm không tồn tại' });
-    const item = C.DECOR[d.key] || { price: 0, currency: 'coins' };
-    const refund = Math.floor(item.price * C.DECOR_SELL_RATE);
-    await prisma.farmState.update({ where: { userId }, data: { layout: JSON.stringify(layout.filter((l) => l.uid !== uid)), [item.currency]: { increment: refund } } });
-    res.json(await buildState(userId, { sold: { key: d.key, refund, currency: item.currency } }));
+    const refund = C.sellValue(C.DECOR[d.key]);
+    await prisma.farmState.update({ where: { userId }, data: { layout: JSON.stringify(layout.filter((l) => l.uid !== uid)), coins: { increment: refund } } });
+    res.json(await buildState(userId, { sold: { key: d.key, refund, currency: 'coins' } }));
   } catch (e) { console.error('[farm] sell', e); res.status(500).json({ error: 'Không bán được' }); }
 });
 
@@ -803,6 +802,21 @@ router.post('/wardrobe/buy', async (req, res) => {
     await prisma.farmState.update({ where: { userId }, data: { [item.currency]: { decrement: item.price }, wardrobe: JSON.stringify(w) } });
     res.json(await buildState(userId, { bought: { itemKey: key, price: item.price, currency: item.currency } }));
   } catch (e) { console.error('[farm] wardrobe buy', e); res.status(500).json({ error: 'Không mua được' }); }
+});
+// Bán lại trang phục (rất lỗ, hoàn bằng xu); đang mặc thì tự cởi ra
+router.post('/wardrobe/sell', async (req, res) => {
+  try {
+    const { userId, key } = req.body; const item = C.OUTFITS[key];
+    const farm = await getOrCreateFarm(userId);
+    if (!farm || !item) return res.status(400).json({ error: 'Trang phục không tồn tại' });
+    const w = parseJSON(farm.wardrobe, {}); w.owned = w.owned || []; w.equipped = w.equipped || {};
+    if (!w.owned.includes(key)) return res.status(400).json({ error: 'Bạn chưa có món này' });
+    w.owned = w.owned.filter((k) => k !== key);
+    if (w.equipped[item.slot] === key) delete w.equipped[item.slot];
+    const refund = C.sellValue(item);
+    await prisma.farmState.update({ where: { userId }, data: { coins: { increment: refund }, wardrobe: JSON.stringify(w) } });
+    res.json(await buildState(userId, { sold: { key, refund, currency: 'coins' } }));
+  } catch (e) { console.error('[farm] wardrobe sell', e); res.status(500).json({ error: 'Không bán được' }); }
 });
 // Mặc/cởi: { userId, slot, key | null }
 router.post('/wardrobe/equip', async (req, res) => {

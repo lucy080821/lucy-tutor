@@ -166,7 +166,7 @@ export const AmbientLife = memo(function AmbientLife({ vbW, vbH, phase, weather,
       </defs>
       <rect x={-vbW} y={-vbH} width={vbW * 3} height={vbH * 3} fill={tint} style={{ transition: "fill 2s ease" }} />
       {weather === "fog" && <rect x={-vbW} y={vbH * 0.25} width={vbW * 3} height={vbH} fill="url(#farmFog)" className="farm-fog" />}
-      {lit && lamps.map((l, i) => <circle key={i} cx={l.cx} cy={l.cy - 14} r={46} fill="url(#farmLampGlow)" className="farm-lamp-pulse" />)}
+      {lit && lamps.map((l, i) => <circle key={i} cx={l.cx} cy={l.cy - 34} r={50} fill="url(#farmLampGlow)" className="farm-lamp-pulse" />)}
       {butterflies.map((b) => (
         <g key={b.k} transform={`translate(${b.x} ${b.y})`}>
           <g className="farm-flutter" style={{ ["--dx" as any]: `${b.dx}px`, ["--dy" as any]: `${b.dy}px`, animationDuration: `${b.t}s`, animationDelay: `-${b.d}s` }}>

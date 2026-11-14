@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fire, alert as swalAlert } from "./farmSwal";
 import "./farm.css";
-import { farmApi, formatCountdown, speak, type DecorPlaced, type FarmState, type PlotView } from "@/lib/farm/api";
+import { farmApi, formatCountdown, sellValue, speak, type DecorPlaced, type FarmState, type PlotView } from "@/lib/farm/api";
 import { loadSfxPref, setSfxEnabled, sfx } from "@/lib/farm/sfx";
 import FarmScene, { liveStatus, type FloatText, type SceneMode } from "./FarmScene";
 import type { Outfit } from "./Sprites";
@@ -157,7 +157,7 @@ export default function FarmGame({ userId }: { userId: string }) {
         const s = await farmApi.buy(userId, mode.itemKey, x, y); applyState(s);
         addFloat(x, y, `-${s.bought?.price ?? ""}`, "bad");
         toast(`Đã đặt ${mode.label} · −${s.bought?.price ?? ""} ${s.bought?.currency === "gems" ? "kim cương" : "xu"}`);
-        if (!["path", "fence", "flower", "rock"].includes(mode.itemKey)) setMode({ type: "normal" });
+        if (!["path", "fence", "flower", "rock", "wall", "bush"].includes(mode.itemKey)) setMode({ type: "normal" });
         else if (s.farm.coins < (s.catalog.decor[mode.itemKey]?.price ?? 0)) setMode({ type: "normal" });
       } else if (mode.type === "edit" && mode.selected) {
         applyState(await farmApi.move(userId, mode.selected.kind, mode.selected.id, x, y)); setMode({ type: "edit", selected: null }); sfx.pop();
@@ -169,8 +169,9 @@ export default function FarmGame({ userId }: { userId: string }) {
     if (!state || mode.type !== "edit") return;
     if (mode.selected?.id !== d.uid) { setMode({ type: "edit", selected: { kind: "decor", id: d.uid } }); sfx.pop(); return; }
     const item = state.catalog.decor[d.key];
-    const r = await fire({ title: item?.name || "Vật phẩm", text: `Bán lại được ${Math.floor((item?.price || 0) * state.catalog.decorSellRate)} ${item?.currency === "gems" ? "kim cương" : "xu"}. Hoặc bấm 1 ô trống để dời.`, showCancelButton: true, confirmButtonText: "Bán", cancelButtonText: "Giữ", confirmButtonColor: "#b45309" });
-    if (r.isConfirmed) { try { const s = await farmApi.sell(userId, d.uid); applyState(s); toast(`Đã bán · +${s.sold?.refund} ${s.sold?.currency === "gems" ? "kim cương" : "xu"}`); setMode({ type: "edit", selected: null }); } catch (e: any) { swalAlert("Lỗi", e.message, "error"); } }
+    const refund = sellValue(item, state.catalog);
+    const r = await fire({ title: item?.name || "Vật phẩm", html: `Bán lại chỉ được <b>${refund} xu</b> (bạn mua ${item?.price} ${item?.currency === "gems" ? "kim cương" : "xu"}) — rất lỗ.<br/>Muốn giữ thì bấm 1 ô trống để dời đồ sang đó.`, showCancelButton: true, confirmButtonText: `Bán lấy ${refund} xu`, cancelButtonText: "Giữ lại", confirmButtonColor: "#b45309" });
+    if (r.isConfirmed) { try { const s = await farmApi.sell(userId, d.uid); applyState(s); toast(`Đã bán · +${s.sold?.refund} xu`); setMode({ type: "edit", selected: null }); } catch (e: any) { swalAlert("Lỗi", e.message, "error"); } }
   };
 
   const onPetClick = () => {

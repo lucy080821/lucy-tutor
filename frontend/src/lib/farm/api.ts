@@ -42,7 +42,7 @@ export type Catalog = {
   wheel: { id: number; label: string; kind: string }[];
   startPlots: number; maxPlots: number; firstGrowMinutes: number;
   harvestCoins: Record<string, number>; harvestXp: number; masteredBonus: { coins: number; gems: number }; barnBonus: { coins: number };
-  orderTrashCost: number; decorSellRate: number; petLevels: number[]; petFeedReward: { coins: number; petXp: number };
+  orderTrashCost: number; decorSellRate: number; gemSellCoins: number; petLevels: number[]; petFeedReward: { coins: number; petXp: number };
   visit: { likeReward: number; giftReward: number; giftCost: number; giftsPerDay: number };
 };
 export type HarvestResult = {
@@ -127,6 +127,7 @@ export const farmApi = {
   claimAchievement: (userId: string, groupId: string) => post<FarmState>("/achievements/claim", { userId, groupId }),
   leaderboard: (userId: string, scope: "all" | "class") => get<{ scope: string; total: number; top: LeaderRow[]; myRank: number | null; hasClassroom: boolean }>(`/leaderboard/${userId}?scope=${scope}`),
   wardrobeBuy: (userId: string, key: string) => post<FarmState>("/wardrobe/buy", { userId, key }),
+  wardrobeSell: (userId: string, key: string) => post<FarmState>("/wardrobe/sell", { userId, key }),
   wardrobeEquip: (userId: string, slot: string, key: string | null) => post<FarmState>("/wardrobe/equip", { userId, slot, key }),
   visit: (userId: string, targetId: string) => get<VisitView>(`/visit/${userId}/${targetId}`),
   react: (userId: string, targetId: string, type: "LIKE" | "GIFT") => post<{ ok: boolean; type: string; reward: number }>("/visit/react", { userId, targetId, type }),
@@ -156,4 +157,10 @@ export function formatCountdown(ms: number) {
   if (h < 24) return `${h}g ${m % 60}p`;
   const d = Math.floor(h / 24);
   return `${d} ngày ${h % 24}g`;
+}
+
+// Giá bán lại đồ đã mua — khớp sellValue() ở backend (rất lỗ; đồ kim cương hoàn bằng xu)
+export function sellValue(item: { price: number; currency: string } | undefined, catalog: { decorSellRate: number; gemSellCoins: number }) {
+  if (!item) return 0;
+  return item.currency === "gems" ? Math.max(1, Math.floor(item.price * catalog.gemSellCoins)) : Math.max(1, Math.floor(item.price * catalog.decorSellRate));
 }

@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
 import Modal from "./Modal";
-import { alert as swalAlert } from "./farmSwal";
-import { farmApi, type Catalog, type FarmState, type FarmView } from "@/lib/farm/api";
+import { alert as swalAlert, fire } from "./farmSwal";
+import { farmApi, sellValue, type Catalog, type FarmState, type FarmView } from "@/lib/farm/api";
 import { PetSprite } from "./Sprites";
 
 // Cửa hàng: Trang trí (nhiều nhóm) · Trang phục cho Qilin · Đất đai. Toàn bộ là giải trí, không bắt học.
@@ -12,7 +12,7 @@ export default function ShopPanel({ userId, farm, catalog, onClose, onPick, onEx
   userId: string; farm: FarmView; catalog: Catalog; onClose: () => void;
   onPick: (itemKey: string, label: string) => void; onExpand: () => void; onState: (s: FarmState) => void; onToast: (m: string) => void;
 }) {
-  const [tab, setTab] = useState<"DECOR" | "OUTFIT" | "LAND">("DECOR");
+  const [tab, setTab] = useState<"DECOR" | "OUTFIT" | "LAND" | "SELL">("DECOR");
   const [cat, setCat] = useState("all");
   const [cur, setCur] = useState<"all" | "coins" | "gems">("all");
   const [slot, setSlot] = useState("all");
@@ -39,12 +39,31 @@ export default function ShopPanel({ userId, farm, catalog, onClose, onPick, onEx
     setBusy(null);
   };
 
+  // Bán lại đồ đã mua: rất lỗ (chỉ lấy lại phần nhỏ, luôn bằng xu) để không mua đi bán lại kiếm lời
+  const placed = farm.layout.reduce<Record<string, string[]>>((m, d) => { (m[d.key] ||= []).push(d.uid); return m; }, {});
+  const sellDecor = async (key: string, uid: string) => {
+    const item = catalog.decor[key]; const refund = sellValue(item, catalog);
+    const r = await fire({ title: `Bán ${item.name}?`, html: `Bạn mua ${item.price} ${item.currency === "gems" ? "kim cương" : "xu"} nhưng bán lại chỉ được <b>${refund} xu</b>.`, showCancelButton: true, confirmButtonText: `Bán lấy ${refund} xu`, cancelButtonText: "Giữ lại", confirmButtonColor: "#b45309" });
+    if (!r.isConfirmed || busy) return; setBusy(uid);
+    try { const s = await farmApi.sell(userId, uid); onState(s); onToast(`Đã bán ${item.name} · +${refund} xu`); } catch (e: any) { swalAlert("", e.message, "info"); }
+    setBusy(null);
+  };
+  const sellOutfit = async (key: string) => {
+    const item = catalog.outfits[key]; const refund = sellValue(item, catalog);
+    const r = await fire({ title: `Bán ${item.name}?`, html: `Bạn mua ${item.price} ${item.currency === "gems" ? "kim cương" : "xu"} nhưng bán lại chỉ được <b>${refund} xu</b>.`, showCancelButton: true, confirmButtonText: `Bán lấy ${refund} xu`, cancelButtonText: "Giữ lại", confirmButtonColor: "#b45309" });
+    if (!r.isConfirmed || busy) return; setBusy(key);
+    try { const s = await farmApi.wardrobeSell(userId, key); onState(s); onToast(`Đã bán ${item.name} · +${refund} xu`); } catch (e: any) { swalAlert("", e.message, "info"); }
+    setBusy(null);
+  };
+  const sellCount = farm.layout.length + farm.wardrobe.owned.length;
+
   return (
     <Modal title="🛒 Cửa hàng" subtitle={`🪙 ${farm.coins} xu · 💎 ${farm.gems} kim cương · Cấp ${farm.level}`} onClose={onClose} wide>
       <div className="flex flex-wrap gap-2 mb-3">
         <button onClick={() => setTab("DECOR")} className={`ui-chip ${tab === "DECOR" ? "ui-chip-active" : ""}`}>🎨 Trang trí</button>
         <button onClick={() => setTab("OUTFIT")} className={`ui-chip ${tab === "OUTFIT" ? "ui-chip-active" : ""}`}>👒 Trang phục Qilin</button>
         <button onClick={() => setTab("LAND")} className={`ui-chip ${tab === "LAND" ? "ui-chip-active" : ""}`}>🟫 Đất đai</button>
+        <button onClick={() => setTab("SELL")} className={`ui-chip ${tab === "SELL" ? "ui-chip-active" : ""}`}>💸 Bán lại ({sellCount})</button>
       </div>
 
       {tab === "DECOR" && (
@@ -110,6 +129,47 @@ export default function ShopPanel({ userId, farm, catalog, onClose, onPick, onEx
               })}
             </div>
             <p className="text-xs text-muted mt-3">Đồ đã mua đổi qua lại miễn phí ở panel {farm.pet.name}. Bạn bè thăm nông trại cũng thấy Qilin của bạn mặc gì.</p>
+          </div>
+        </div>
+      )}
+
+      {tab === "SELL" && (
+        <div className="space-y-4">
+          <p className="rounded-xl bg-amber-50 text-amber-900 text-sm font-semibold px-3 py-2">Bán lại đồ đã mua rất lỗ: chỉ nhận lại khoảng {Math.round(catalog.decorSellRate * 100)}% giá xu (đồ kim cương đổi {catalog.gemSellCoins} xu mỗi viên). Cân nhắc kỹ — hoặc dời đồ sang ô khác thay vì bán.</p>
+          <div>
+            <p className="text-xs font-bold text-muted uppercase mb-2">Đồ trang trí đang đặt ({farm.layout.length})</p>
+            {farm.layout.length === 0 ? <p className="text-sm text-muted">Chưa đặt món nào.</p> : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {Object.entries(placed).map(([key, uids]) => {
+                  const d = catalog.decor[key]; if (!d) return null;
+                  return (
+                    <div key={key} className="rounded-2xl border border-line bg-white p-3">
+                      <div className="text-3xl leading-none">{d.emoji}{uids.length > 1 && <span className="ml-1 text-sm font-extrabold text-primary align-middle">×{uids.length}</span>}</div>
+                      <p className="font-bold text-foreground mt-1.5 leading-tight text-sm">{d.name}</p>
+                      <button disabled={busy === uids[0]} onClick={() => sellDecor(key, uids[0])} className="mt-2 btn-outline rounded-full px-3 py-1.5 text-xs font-bold disabled:opacity-50">Bán 1 · 🪙 {sellValue(d, catalog)}</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <div>
+            <p className="text-xs font-bold text-muted uppercase mb-2">Trang phục đã mua ({farm.wardrobe.owned.length})</p>
+            {farm.wardrobe.owned.length === 0 ? <p className="text-sm text-muted">Chưa mua món nào.</p> : (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {farm.wardrobe.owned.map((key) => {
+                  const o = catalog.outfits[key]; if (!o) return null;
+                  const wearing = farm.wardrobe.equipped[o.slot] === key;
+                  return (
+                    <div key={key} className="rounded-2xl border border-line bg-white p-3">
+                      <div className="text-3xl leading-none">{o.emoji}</div>
+                      <p className="font-bold text-foreground mt-1.5 leading-tight text-sm">{o.name}{wearing && <span className="ml-1 text-[10px] font-bold text-emerald-700">(đang mặc)</span>}</p>
+                      <button disabled={busy === key} onClick={() => sellOutfit(key)} className="mt-2 btn-outline rounded-full px-3 py-1.5 text-xs font-bold disabled:opacity-50">Bán · 🪙 {sellValue(o, catalog)}</button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

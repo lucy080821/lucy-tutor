@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import type { Catalog, DecorPlaced, FarmView, PlotView } from "@/lib/farm/api";
 import { formatCountdown } from "@/lib/farm/api";
-import { Cloud, CropSprite, DecorSprite, PetSprite, SoilTile, TILE_H, TILE_W, diamondPoints, type Outfit } from "./Sprites";
+import { CONNECT_FAMILY, Cloud, CropSprite, DecorSprite, SoilTile, TILE_H, TILE_W, diamondPoints, emojiSizeOf, type Outfit } from "./Sprites";
+import Roamers from "./Roamers";
 import { AmbientLife, SkyBackdrop, cloudsFor, skyBackground, skyNow, type SkyInfo } from "./Ambient";
 import { isWetWeather, type WeatherKind } from "@/lib/farm/weather";
 
@@ -45,7 +46,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const originX = (H * TILE_W) / 2;
   const vbW = ((W + H) * TILE_W) / 2;
   const vbH = TOP_PAD + ((W + H) * TILE_H) / 2 + 48;
-  const toScreen = (gx: number, gy: number) => ({ cx: originX + ((gx - gy) * TILE_W) / 2, cy: TOP_PAD + ((gx + gy) * TILE_H) / 2 + TILE_H / 2 });
+  const toScreen = useCallback((gx: number, gy: number) => ({ cx: originX + ((gx - gy) * TILE_W) / 2, cy: TOP_PAD + ((gx + gy) * TILE_H) / 2 + TILE_H / 2 }), [originX]);
 
   // Giờ + thời tiết THẬT tại vị trí người chơi: bình minh / sáng / trưa / chiều / hoàng hôn / đêm
   const sky = skyProp ?? skyNow(now);
@@ -53,27 +54,24 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const clouds = cloudsFor(weather);
   const wet = isWetWeather(weather);
 
+  const placing = mode.type === "place";
+  const isAnimal = (key: string) => catalog.decor[key]?.cat === "animal";
+  // Ô đặt được đồ = ô chưa có ô đất/đồ nào; ô đi dạo được = không có ô đất / đồ trang trí (lối đi và vật nuôi không cản đường)
   const occupied = useMemo(() => {
     const s = new Set<string>();
     plots.forEach((p) => s.add(`${p.x},${p.y}`));
     farm.layout.forEach((d) => s.add(`${d.x},${d.y}`));
     return s;
   }, [plots, farm.layout]);
-
-  // Thú cưng đi dạo: đổi chỗ ngẫu nhiên vài giây một lần giữa các ô trống
-  const [petPos, setPetPos] = useState({ x: W - 1, y: H - 1 });
-  useEffect(() => {
-    const pick = () => {
-      const free: { x: number; y: number }[] = [];
-      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!occupied.has(`${x},${y}`)) free.push({ x, y });
-      if (free.length) setPetPos(free[Math.floor(Math.random() * free.length)]);
-    };
-    pick();
-    const t = setInterval(pick, 7000);
-    return () => clearInterval(t);
-  }, [W, H, occupied]);
-  const [blink, setBlink] = useState(false);
-  useEffect(() => { const t = setInterval(() => { setBlink(true); setTimeout(() => setBlink(false), 160); }, 3200); return () => clearInterval(t); }, []);
+  const blocked = useMemo(() => {
+    const s = new Set<string>();
+    plots.forEach((p) => s.add(`${p.x},${p.y}`));
+    farm.layout.forEach((d) => { if (d.key !== "path" && catalog.decor[d.key]?.cat !== "animal") s.add(`${d.x},${d.y}`); });
+    return s;
+  }, [plots, farm.layout, catalog.decor]);
+  // Vật nuôi đi dạo khi chơi bình thường / thăm bạn; đang sắp xếp hay đặt đồ thì đứng yên ở ô nhà để còn chọn/dời được
+  const roam = !placing && (!!readOnly || mode.type === "normal");
+  const animals = useMemo(() => (roam ? farm.layout.filter((d) => catalog.decor[d.key]?.cat === "animal").map((d) => ({ uid: d.uid, key: d.key, x: d.x, y: d.y, emoji: catalog.decor[d.key].emoji, size: emojiSizeOf(d.key) })) : []), [roam, farm.layout, catalog.decor]);
 
   // Điện thoại: khung cuộn ngang → mở ra ở giữa đất thay vì mép trái
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -84,7 +82,6 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const lamps = useMemo(() => farm.layout.filter((d) => LAMP_KEYS.has(d.key)).map((d) => ({ cx: originX + ((d.x - d.y) * TILE_W) / 2, cy: TOP_PAD + ((d.x + d.y) * TILE_H) / 2 + TILE_H / 2 })), [farm.layout, originX]);
 
   const selectedId = mode.type === "edit" ? mode.selected?.id : null;
-  const placing = mode.type === "place";
 
   // Vẽ theo thứ tự chiều sâu để vật phía trước che vật phía sau
   const cells: { x: number; y: number }[] = [];
@@ -177,12 +174,16 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
             );
           }
           if (d && d.key !== "path") {
+            if (roam && isAnimal(d.key)) return null; // vật nuôi vẽ ở lớp đi dạo
             const item = catalog.decor[d.key];
             const sel = selectedId === d.uid;
             const canClick = !readOnly && mode.type === "edit";
+            const fam = CONNECT_FAMILY[d.key];
+            const famAt = (gx: number, gy: number) => { const o = decorAt.get(`${gx},${gy}`); return !!o && CONNECT_FAMILY[o.key] === fam; };
+            const n = fam ? { xp: famAt(x + 1, y), xm: famAt(x - 1, y), yp: famAt(x, y + 1), ym: famAt(x, y - 1) } : undefined;
             return (
               <g key={`d${d.uid}`} className={`${canClick ? "farm-tile" : ""} ${sel ? "farm-tile-selected" : ""}`} onClick={(e) => { e.stopPropagation(); if (canClick && onDecorClick) onDecorClick(d); }}>
-                <DecorSprite emoji={item?.emoji || "❔"} cx={cx} cy={cy} />
+                <DecorSprite itemKey={d.key} emoji={item?.emoji || "❔"} cx={cx} cy={cy} n={n} />
               </g>
             );
           }
@@ -202,21 +203,8 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
             </g>
           );
         })}
-        {/* thú cưng */}
-        {(() => {
-          const { cx, cy } = toScreen(petPos.x, petPos.y);
-          return (
-            <g className="farm-pet-move" style={{ transform: `translate(${cx}px, ${cy + 8}px)` }} onClick={(e) => { e.stopPropagation(); onPetClick?.(); }} role="button" aria-label={pet.name}>
-              <g className={petJumping ? "farm-pet-jump" : "farm-pet-idle"} style={{ cursor: onPetClick ? "pointer" : "default" }}>
-                <PetSprite level={pet.level} size={0.9} blink={blink} outfit={outfit} />
-              </g>
-              {hearts.map((h) => <text key={h} x={(h % 3) * 12 - 12} y={-60} textAnchor="middle" fontSize={16} className="farm-heart">💖</text>)}
-              {sky.sleeping && <g transform="translate(16 -70)"><g className="farm-zzz"><text fontSize={15}>💤</text></g></g>}
-              {wet && !sky.sleeping && !outfit?.hand && <text x={22} y={-34} fontSize={20} textAnchor="middle">☂️</text>}
-              <text x={0} y={22} textAnchor="middle" fontSize={12} fontWeight={800} fill="#1e3a8a" style={{ paintOrder: "stroke", stroke: "#fff", strokeWidth: 3 }}>{pet.name}</text>
-            </g>
-          );
-        })()}
+        {/* thú cưng + vật nuôi đi dạo */}
+        <Roamers W={W} H={H} toScreen={toScreen} blocked={blocked} animals={animals} sleeping={!!sky.sleeping} pet={pet} outfit={outfit} petJumping={petJumping} hearts={hearts} wet={wet} onPetClick={onPetClick} />
         {/* chữ thưởng nổi lên (+xu, +XP...) */}
         {floats.map((f) => {
           const { cx, cy } = toScreen(f.x, f.y);
