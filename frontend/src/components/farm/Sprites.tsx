@@ -152,42 +152,18 @@ export function DecorSprite({ emoji, cx, cy, isPath }: { emoji: string; cx: numb
 }
 
 // ── Qilin con ────────────────────────────────────────────────────────────────
-// level 1..6 → to dần, màu đậm hơn, mọc thêm phụ kiện (bờm, cánh, vương miện)
-export function PetSprite({ level = 1, size = 1, blink = false }: { level?: number; size?: number; blink?: boolean }) {
+// Dùng đúng ảnh linh vật Lucy Tutor (public/images/farm/qilin.webp, đã tách nền) — không vẽ tay.
+// Cấp cao hơn → to hơn một chút + phụ kiện emoji (✨ từ cấp 3, 👑 cấp 6).
+export const PET_IMAGE = "/images/farm/qilin.webp";
+export function PetSprite({ level = 1, size = 1 }: { level?: number; size?: number; blink?: boolean }) {
   const s = size * (0.85 + Math.min(level, 6) * 0.07);
-  const body = level >= 4 ? "#2563eb" : "#3b82f6";
-  const belly = "#bfdbfe";
+  const w = 72 * s, h = 84 * s; // tỉ lệ ảnh gốc 360×420
   return (
-    <g transform={`scale(${s})`}>
-      <ellipse cx={0} cy={2} rx={24} ry={7} fill="rgba(31,45,61,.18)" />
-      {/* đuôi */}
-      <path d="M-18 -14 C -34 -16, -36 -34, -24 -34 C -30 -30, -28 -22, -16 -20" fill="#60a5fa" />
-      <circle cx={-25} cy={-35} r={4} fill="#fbbf24" />
-      {/* thân */}
-      <ellipse cx={0} cy={-16} rx={22} ry={16} fill={body} />
-      <ellipse cx={0} cy={-11} rx={13} ry={9} fill={belly} />
-      {/* vảy */}
-      <circle cx={-10} cy={-24} r={3} fill="#93c5fd" opacity={.8} /><circle cx={-2} cy={-28} r={3} fill="#93c5fd" opacity={.8} /><circle cx={7} cy={-25} r={3} fill="#93c5fd" opacity={.8} />
-      {/* chân */}
-      <ellipse cx={-12} cy={-2} rx={6} ry={4} fill="#1d4ed8" /><ellipse cx={12} cy={-2} rx={6} ry={4} fill="#1d4ed8" />
-      {/* cánh (cấp 3+) */}
-      {level >= 3 && <path d="M8 -26 C 20 -44, 36 -40, 30 -24 C 24 -30, 16 -28, 8 -22 Z" fill="#a5b4fc" opacity={.9} />}
-      {/* đầu */}
-      <circle cx={14} cy={-36} r={14} fill={body} />
-      <ellipse cx={22} cy={-32} rx={8} ry={5.5} fill={belly} />
-      {/* sừng vàng */}
-      <path d="M8 -47 L 5 -60 L 12 -49 Z" fill="#fbbf24" /><path d="M18 -48 L 20 -61 L 24 -48 Z" fill="#fbbf24" />
-      {/* bờm (cấp 2+) */}
-      {level >= 2 && <path d="M2 -44 C -6 -46, -10 -38, -4 -34 C -8 -30, -2 -26, 2 -30" fill="#f472b6" />}
-      {/* vương miện (cấp 6) */}
-      {level >= 6 && <path d="M6 -58 L 9 -66 L 13 -60 L 17 -68 L 20 -60 L 24 -66 L 26 -58 Z" fill="#f59e0b" stroke="#b45309" strokeWidth={.8} />}
-      {/* mắt */}
-      {blink ? <path d="M9 -38 L 15 -38 M 19 -38 L 25 -38" stroke="#1e3a8a" strokeWidth={2} strokeLinecap="round" /> : (
-        <g><circle cx={12} cy={-38} r={3.2} fill="#fff" /><circle cx={13} cy={-38} r={1.8} fill="#1e3a8a" /><circle cx={22} cy={-38} r={3.2} fill="#fff" /><circle cx={23} cy={-38} r={1.8} fill="#1e3a8a" /><circle cx={13.6} cy={-38.8} r={.6} fill="#fff" /><circle cx={23.6} cy={-38.8} r={.6} fill="#fff" /></g>
-      )}
-      {/* miệng + má */}
-      <path d="M17 -30 Q 21 -27 25 -30" stroke="#1e3a8a" strokeWidth={1.4} fill="none" strokeLinecap="round" />
-      <circle cx={9} cy={-31} r={2.2} fill="#f9a8d4" opacity={.8} /><circle cx={27} cy={-31} r={2.2} fill="#f9a8d4" opacity={.8} />
+    <g>
+      <ellipse cx={0} cy={2} rx={w * 0.38} ry={7 * s} fill="rgba(31,45,61,.18)" />
+      <image href={PET_IMAGE} x={-w / 2} y={-h} width={w} height={h} preserveAspectRatio="xMidYMax meet" />
+      {level >= 3 && <text x={w * 0.42} y={-h * 0.82} fontSize={14 * s} textAnchor="middle">✨</text>}
+      {level >= 6 && <text x={0} y={-h - 2} fontSize={16 * s} textAnchor="middle">👑</text>}
     </g>
   );
 }
