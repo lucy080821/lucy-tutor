@@ -10,8 +10,9 @@ export type PlotView = {
   srs?: { status: string; repetitions: number; interval: number };
 };
 export type OrderView = {
-  id: string; kind: "HARVEST" | "HARVEST_CROP" | "PLANT" | "SENTENCE"; customer: string; title: string;
-  requirement: { need?: number; cropKey?: string; words?: string[] }; progress: number; need: number; ready: boolean;
+  id: string; kind: "HARVEST" | "HARVEST_CROP" | "PLANT" | "SENTENCE" | "PRODUCE"; customer: string; title: string;
+  requirement: { need?: number; cropKey?: string; words?: string[]; minWords?: number; items?: Record<string, number> };
+  progress: number; need: number; ready: boolean; have?: Record<string, number>;
   rewardCoins: number; rewardGems: number; rewardXp: number; createdAt: string;
 };
 export type DecorPlaced = { uid: string; key: string; x: number; y: number };
@@ -22,11 +23,21 @@ export type FarmView = {
   plotCount: number; plotPrice: number | null; nextExpansion: { w: number; h: number; price: number; minLevel: number } | null;
   pet: { name: string; xp: number; level: number; fedToday: boolean; pats: number };
   canSpin: boolean; boostHarvests: number;
+  inventory: Record<string, number>; barnCapacity: number; barnUsed: number; barnTier: number; nextBarnTier: { capacity: number; price: number } | null;
+  wardrobe: { owned: string[]; equipped: Record<string, string> };
+  ordersDone: number; orderDifficulty: number; barnQuizLeft: number;
 };
-export type DecorItem = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number };
+export type OutfitItem = { name: string; emoji: string; slot: string; price: number; currency: "coins" | "gems"; minLevel: number };
+export type DecorItem = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number; cat?: string };
 export type Catalog = {
   crops: Record<string, { name: string; emoji: string }>;
   decor: Record<string, DecorItem>;
+  decorCats: { id: string; name: string }[];
+  outfits: Record<string, OutfitItem>;
+  outfitSlots: { id: string; name: string }[];
+  producePrice: Record<string, number>;
+  barnTiers: { capacity: number; price: number }[];
+  barnQuiz: { size: number; coinsPerCorrect: number; dailyRewarded: number };
   expansions: { w: number; h: number; price: number; minLevel: number }[];
   wheel: { id: number; label: string; kind: string }[];
   startPlots: number; maxPlots: number; firstGrowMinutes: number;
@@ -36,7 +47,7 @@ export type Catalog = {
 };
 export type HarvestResult = {
   correct: boolean; quality: number; mode: string; word: string; meaning: string; example: string | null;
-  coins: number; gems: number; xp: number; boosted: boolean; becameMastered: boolean; levelUp: number | null;
+  coins: number; gems: number; xp: number; produce: number; produceKey: string | null; overflowSold: number; boosted: boolean; becameMastered: boolean; levelUp: number | null;
   srs: { status: string; interval: number };
 };
 export type FarmState = {
@@ -46,7 +57,7 @@ export type FarmState = {
   spin?: { segmentId: number; label: string; kind: string; value: number; decorKey: string | null };
   delivered?: { ok: boolean; title: string; customer: string; coins: number; gems: number; xp: number; feedback?: string; corrected?: string; ai?: boolean };
   bought?: { itemKey: string; price?: number; currency?: string };
-  sold?: { key: string; refund: number; currency: string };
+  sold?: { key: string; refund: number; currency: string; qty?: number };
   stored?: { word: string; coins: number };
   fed?: { coins: number; petXp: number };
   planted?: { plotId: string; cropKey: string };
@@ -58,8 +69,10 @@ export type Question = {
 export type SeedDeckItem = { progressId: string; word: string; meaning: string; phonetic: string | null; example: string | null; pos: string | null; srs: { status: string; repetitions: number }; fromLesson: boolean };
 export type SeedTopic = { id: string; name: string; desc: string; count: number; cropKey: string };
 export type SeedTopicItem = { word: string; meaning: string; cefr: string; example: string; tier: string; inDeck: boolean; planted: boolean; progressId: string | null };
-export type Neighbor = { id: string; name: string; classroom: string; hasFarm: boolean; level: number; harvestCount: number; barnCount: number; petName?: string; likedToday: boolean; giftedToday: boolean };
+export type Neighbor = { id: string; name: string; level: number; harvestCount: number; barnCount: number; petName?: string; petLevel: number; streak: number; equipped: Record<string, string>; lastActive: string; likedToday: boolean; giftedToday: boolean };
+export type NeighborGroup = { id: string; name: string; mine: boolean; members: Neighbor[] };
 export type VisitView = { now: string; owner: { id: string; name: string; totalXP: number; streakCount: number }; farm: FarmView; plots: PlotView[]; likes: number; catalog: Catalog };
+export type BarnQuizItem = { progressId: string; meaning: string; hint: string; example: string | null };
 export type BarnItem = { progressId: string; word: string; meaning: string; phonetic: string | null; example: string | null; interval: number; onPlot: boolean };
 
 export class FarmApiError extends Error {
@@ -96,7 +109,13 @@ export const farmApi = {
   patPet: (userId: string) => post<{ ok: boolean; petXp: number; petPats: number; petLevel: number }>("/pet/pat", { userId }),
   renamePet: (userId: string, name: string) => post<FarmState>("/pet/rename", { userId, name }),
   spin: (userId: string) => post<FarmState>("/spin", { userId }),
-  neighbors: (userId: string) => get<{ neighbors: Neighbor[]; giftsLeft: number; hasClassroom: boolean }>(`/neighbors/${userId}`),
+  neighbors: (userId: string) => get<{ groups: NeighborGroup[]; total: number; giftsLeft: number; hasClassroom: boolean }>(`/neighbors/${userId}`),
+  barnSell: (userId: string, cropKey: string, qty: number) => post<FarmState>("/barn/sell", { userId, cropKey, qty }),
+  barnUpgrade: (userId: string) => post<FarmState>("/barn/upgrade", { userId }),
+  barnQuiz: (userId: string) => get<{ items: BarnQuizItem[]; total: number }>(`/barn/quiz/${userId}`),
+  barnQuizAnswer: (userId: string, progressId: string, answer: string) => post<{ correct: boolean; coins: number; word: string; meaning: string; example: string | null; left: number }>("/barn/quiz/answer", { userId, progressId, answer }),
+  wardrobeBuy: (userId: string, key: string) => post<FarmState>("/wardrobe/buy", { userId, key }),
+  wardrobeEquip: (userId: string, slot: string, key: string | null) => post<FarmState>("/wardrobe/equip", { userId, slot, key }),
   visit: (userId: string, targetId: string) => get<VisitView>(`/visit/${userId}/${targetId}`),
   react: (userId: string, targetId: string, type: "LIKE" | "GIFT") => post<{ ok: boolean; type: string; reward: number }>("/visit/react", { userId, targetId, type }),
 };

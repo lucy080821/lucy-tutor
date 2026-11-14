@@ -155,15 +155,30 @@ export function DecorSprite({ emoji, cx, cy, isPath }: { emoji: string; cx: numb
 // Dùng đúng ảnh linh vật Lucy Tutor (public/images/farm/qilin.webp, đã tách nền) — không vẽ tay.
 // Cấp cao hơn → to hơn một chút + phụ kiện emoji (✨ từ cấp 3, 👑 cấp 6).
 export const PET_IMAGE = "/images/farm/qilin.webp";
-export function PetSprite({ level = 1, size = 1 }: { level?: number; size?: number; blink?: boolean }) {
+// Vị trí đeo trang phục (tỉ lệ theo w/h của ảnh): đầu, mắt, cổ, lưng, tay
+const OUTFIT_POS: Record<string, { x: number; y: number; size: number }> = {
+  hat:  { x: 0.08, y: -0.98, size: 0.42 },
+  face: { x: 0.1,  y: -0.6,  size: 0.3 },
+  neck: { x: 0.02, y: -0.4,  size: 0.3 },
+  back: { x: -0.42, y: -0.62, size: 0.42 },
+  hand: { x: 0.38, y: -0.22, size: 0.34 },
+};
+export type Outfit = Record<string, string>; // slot → emoji
+export function PetSprite({ level = 1, size = 1, outfit }: { level?: number; size?: number; blink?: boolean; outfit?: Outfit }) {
   const s = size * (0.85 + Math.min(level, 6) * 0.07);
   const w = 72 * s, h = 84 * s; // tỉ lệ ảnh gốc 360×420
+  const wear = (slot: string) => {
+    const e = outfit?.[slot]; if (!e) return null; const p = OUTFIT_POS[slot];
+    return <text key={slot} x={p.x * w} y={p.y * h} textAnchor="middle" dominantBaseline="middle" fontSize={p.size * w} style={{ fontFamily: "'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif" }}>{e}</text>;
+  };
   return (
     <g>
       <ellipse cx={0} cy={2} rx={w * 0.38} ry={7 * s} fill="rgba(31,45,61,.18)" />
+      {wear("back")}
       <image href={PET_IMAGE} x={-w / 2} y={-h} width={w} height={h} preserveAspectRatio="xMidYMax meet" />
-      {level >= 3 && <text x={w * 0.42} y={-h * 0.82} fontSize={14 * s} textAnchor="middle">✨</text>}
-      {level >= 6 && <text x={0} y={-h - 2} fontSize={16 * s} textAnchor="middle">👑</text>}
+      {wear("neck")}{wear("face")}{wear("hat")}{wear("hand")}
+      {!outfit?.hat && level >= 3 && <text x={w * 0.42} y={-h * 0.82} fontSize={14 * s} textAnchor="middle">✨</text>}
+      {!outfit?.hat && level >= 6 && <text x={0} y={-h - 2} fontSize={16 * s} textAnchor="middle">👑</text>}
     </g>
   );
 }

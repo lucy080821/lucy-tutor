@@ -1,12 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Modal from "./Modal";
-import { farmApi, speak, type FarmState, type HarvestResult, type PlotView, type Question } from "@/lib/farm/api";
+import { farmApi, speak, type Catalog, type FarmState, type HarvestResult, type PlotView, type Question } from "@/lib/farm/api";
 import { CropSprite } from "./Sprites";
 
 // Thu hoạch = ôn từ. Dạng câu hỏi do server quyết định theo số lần đã nhớ (xem farm.routes.js modeFor).
-export default function HarvestModal({ userId, plot, cropName, nextReadyPlot, onClose, onState, onNext }: {
-  userId: string; plot: PlotView; cropName: string; nextReadyPlot: PlotView | null;
+export default function HarvestModal({ userId, plot, cropName, nextReadyPlot, catalog, onClose, onState, onNext }: {
+  userId: string; plot: PlotView; cropName: string; nextReadyPlot: PlotView | null; catalog?: Catalog;
   onClose: () => void; onState: (s: FarmState) => void; onNext: (p: PlotView) => void;
 }) {
   const [q, setQ] = useState<Question | null>(null);
@@ -105,6 +105,8 @@ export default function HarvestModal({ userId, plot, cropName, nextReadyPlot, on
             <div className="flex flex-wrap justify-center gap-2 text-sm font-bold">
               <span className="ui-badge bg-amber-100 text-amber-800 px-3 py-1 rounded-full">🪙 +{result.coins}{result.boosted ? " (x2)" : ""}</span>
               {result.gems > 0 && <span className="ui-badge bg-sky-100 text-sky-800 px-3 py-1 rounded-full">💎 +{result.gems}</span>}
+              {result.produce > 0 && <span className="ui-badge bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">🧺 +{result.produce} {catalog?.crops[result.produceKey || ""]?.name?.toLowerCase() || "nông sản"} vào kho</span>}
+              {result.overflowSold > 0 && <span className="ui-badge bg-orange-100 text-orange-800 px-3 py-1 rounded-full">Kho đầy, {result.overflowSold} nông sản bán nửa giá</span>}
               <span className="ui-badge bg-primary-soft text-primary px-3 py-1 rounded-full">⚡ +{result.xp} XP</span>
               <span className="ui-badge bg-slate-100 text-slate-700 px-3 py-1 rounded-full">⏳ Chín lại sau {result.srs.interval} ngày</span>
             </div>

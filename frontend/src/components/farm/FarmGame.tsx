@@ -1,9 +1,10 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Swal from "sweetalert2";
+import { fire, alert as swalAlert } from "./farmSwal";
 import "./farm.css";
 import { farmApi, formatCountdown, speak, type DecorPlaced, type FarmState, type PlotView } from "@/lib/farm/api";
 import FarmScene, { liveStatus, type SceneMode } from "./FarmScene";
+import type { Outfit } from "./Sprites";
 import HarvestModal from "./HarvestModal";
 import SeedPicker from "./SeedPicker";
 import ShopPanel from "./ShopPanel";
@@ -32,6 +33,17 @@ export default function FarmGame({ userId }: { userId: string }) {
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
   const [petJumping, setPetJumping] = useState(false);
   const [hearts, setHearts] = useState<number[]>([]);
+  // Toàn màn hình: dùng Fullscreen API trên #farm-root; trình duyệt không hỗ trợ (iPhone) thì dùng lớp CSS cố định
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [fs, setFs] = useState(false);
+  const toggleFullscreen = async () => {
+    const el = rootRef.current; if (!el) return;
+    if (document.fullscreenElement) { await document.exitFullscreen().catch(() => { }); setFs(false); return; }
+    if (fs) { setFs(false); return; }
+    try { if (el.requestFullscreen) await el.requestFullscreen(); } catch { /* iOS Safari không hỗ trợ → chỉ dùng CSS */ }
+    setFs(true);
+  };
+  useEffect(() => { const f = () => { if (!document.fullscreenElement) setFs(false); }; document.addEventListener("fullscreenchange", f); return () => document.removeEventListener("fullscreenchange", f); }, []);
 
   const toast = useCallback((msg: string) => {
     const id = Date.now() + Math.random();
@@ -43,7 +55,7 @@ export default function FarmGame({ userId }: { userId: string }) {
     offsetRef.current = new Date(s.now).getTime() - Date.now();
     setState(s);
     if (s.result?.correct) {
-      if (s.result.levelUp) { confetti({ particleCount: 160, spread: 100 }); Swal.fire({ icon: "success", title: `🎉 Nông trại lên cấp ${s.result.levelUp}!`, text: "Cửa hàng mở thêm vật phẩm mới, đơn hàng thưởng cao hơn.", confirmButtonColor: "#1E3A8A" }); }
+      if (s.result.levelUp) { confetti({ particleCount: 160, spread: 100 }); fire({ icon: "success", title: `🎉 Nông trại lên cấp ${s.result.levelUp}!`, text: "Cửa hàng mở thêm vật phẩm mới, đơn hàng thưởng cao hơn.", confirmButtonColor: "#1E3A8A" }); }
       else if (s.result.becameMastered) confetti({ particleCount: 60, spread: 60 });
     }
   }, []);
@@ -69,7 +81,7 @@ export default function FarmGame({ userId }: { userId: string }) {
     if (live.status === "READY") { setActivePlot(plot); setPanel("HARVEST"); return; }
     // Đang lớn: xem thẻ từ + tuỳ chọn nhổ / cất kho
     const mastered = plot.srs?.status === "MASTERED";
-    const r = await Swal.fire({
+    const r = await fire({
       title: plot.word, html: `<p class="text-lg">${plot.meaning}</p>${plot.example ? `<p class="text-sm italic mt-2 opacity-70">“${plot.example}”</p>` : ""}<p class="text-sm mt-3">⏳ Chín sau <b>${formatCountdown(live.msLeft)}</b>${plot.wilted ? " (cây đang héo, học lại từ đầu)" : ""}<br/>Đã nhớ đúng ${plot.srs?.repetitions ?? 0} lần · ${plot.srs?.status === "MASTERED" ? "⭐ Thuộc lòng" : plot.srs?.status === "REVIEWING" ? "Đang ôn" : "Mới"}</p>`,
       showDenyButton: true, showCancelButton: true, confirmButtonText: "🔊 Nghe", denyButtonText: mastered ? "⭐ Cất kho (+xu)" : "🪓 Nhổ cây", cancelButtonText: "Đóng", confirmButtonColor: "#1E3A8A", denyButtonColor: mastered ? "#059669" : "#b45309",
     });
@@ -77,8 +89,8 @@ export default function FarmGame({ userId }: { userId: string }) {
     if (r.isDenied) {
       try {
         if (mastered) { const s = await farmApi.store(userId, plot.id); applyState(s); toast(`⭐ Đã cất "${s.stored?.word}" vào kho · 🪙 +${s.stored?.coins}`); }
-        else { const ok = await Swal.fire({ title: "Nhổ cây này?", text: "Từ vẫn còn trong deck SRS, chỉ rời khỏi ô đất.", icon: "warning", showCancelButton: true, confirmButtonText: "Nhổ", cancelButtonText: "Thôi", confirmButtonColor: "#b45309" }); if (ok.isConfirmed) applyState(await farmApi.dig(userId, plot.id)); }
-      } catch (e: any) { Swal.fire("Lỗi", e.message, "error"); }
+        else { const ok = await fire({ title: "Nhổ cây này?", text: "Từ vẫn còn trong deck SRS, chỉ rời khỏi ô đất.", icon: "warning", showCancelButton: true, confirmButtonText: "Nhổ", cancelButtonText: "Thôi", confirmButtonColor: "#b45309" }); if (ok.isConfirmed) applyState(await farmApi.dig(userId, plot.id)); }
+      } catch (e: any) { swalAlert("Lỗi", e.message, "error"); }
     }
   };
 
@@ -93,15 +105,15 @@ export default function FarmGame({ userId }: { userId: string }) {
       } else if (mode.type === "edit" && mode.selected) {
         applyState(await farmApi.move(userId, mode.selected.kind, mode.selected.id, x, y)); setMode({ type: "edit", selected: null });
       }
-    } catch (e: any) { Swal.fire("", e.message, "info"); }
+    } catch (e: any) { swalAlert("", e.message, "info"); }
   };
 
   const onDecorClick = async (d: DecorPlaced) => {
     if (!state || mode.type !== "edit") return;
     if (mode.selected?.id !== d.uid) { setMode({ type: "edit", selected: { kind: "decor", id: d.uid } }); return; }
     const item = state.catalog.decor[d.key];
-    const r = await Swal.fire({ title: item?.name || "Vật phẩm", text: `Bán lại được ${Math.floor((item?.price || 0) * state.catalog.decorSellRate)} ${item?.currency === "gems" ? "kim cương" : "xu"}. Hoặc bấm 1 ô trống để dời.`, showCancelButton: true, confirmButtonText: "Bán", cancelButtonText: "Giữ", confirmButtonColor: "#b45309" });
-    if (r.isConfirmed) { try { const s = await farmApi.sell(userId, d.uid); applyState(s); toast(`Đã bán · +${s.sold?.refund} ${s.sold?.currency === "gems" ? "💎" : "🪙"}`); setMode({ type: "edit", selected: null }); } catch (e: any) { Swal.fire("Lỗi", e.message, "error"); } }
+    const r = await fire({ title: item?.name || "Vật phẩm", text: `Bán lại được ${Math.floor((item?.price || 0) * state.catalog.decorSellRate)} ${item?.currency === "gems" ? "kim cương" : "xu"}. Hoặc bấm 1 ô trống để dời.`, showCancelButton: true, confirmButtonText: "Bán", cancelButtonText: "Giữ", confirmButtonColor: "#b45309" });
+    if (r.isConfirmed) { try { const s = await farmApi.sell(userId, d.uid); applyState(s); toast(`Đã bán · +${s.sold?.refund} ${s.sold?.currency === "gems" ? "💎" : "🪙"}`); setMode({ type: "edit", selected: null }); } catch (e: any) { swalAlert("Lỗi", e.message, "error"); } }
   };
 
   const onPetClick = () => {
@@ -111,7 +123,7 @@ export default function FarmGame({ userId }: { userId: string }) {
   };
 
   const expand = async () => {
-    try { const s = await farmApi.buy(userId, "expand"); applyState(s); setPanel(null); toast(`🗺️ Đã mở rộng đất lên ${s.farm.gridW}×${s.farm.gridH}`); confetti({}); } catch (e: any) { Swal.fire("", e.message, "info"); }
+    try { const s = await farmApi.buy(userId, "expand"); applyState(s); setPanel(null); toast(`🗺️ Đã mở rộng đất lên ${s.farm.gridW}×${s.farm.gridH}`); confetti({}); } catch (e: any) { swalAlert("", e.message, "info"); }
   };
 
   const closeTut = () => { try { localStorage.setItem(TUT_KEY, "1"); } catch { /* bỏ qua */ } setPanel(null); };
@@ -120,17 +132,19 @@ export default function FarmGame({ userId }: { userId: string }) {
   if (!state) return <div className="ui-card p-8 text-center text-muted">Đang mở cổng nông trại... 🌾</div>;
 
   const { farm, catalog, user, orders } = state;
+  const outfit: Outfit = Object.fromEntries(Object.entries(farm.wardrobe.equipped).map(([slot, key]) => [slot, catalog.outfits[key]?.emoji || ""]).filter(([, e]) => e));
   const lvPct = Math.min(100, ((farm.harvestCount - farm.levelStart) / Math.max(1, farm.nextLevelAt - farm.levelStart)) * 100);
   const readyOrders = orders.filter((o) => o.ready).length;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+    <div ref={rootRef} id="farm-root" className={`grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] ${fs ? "farm-fullscreen" : ""}`}>
       <div className="space-y-3 min-w-0">
         {/* HUD */}
         <div className="ui-card px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
           <div className="flex items-center gap-3 font-extrabold text-foreground">
             <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 rounded-full px-3 py-1">🪙 {farm.coins}</span>
             <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-800 rounded-full px-3 py-1">💎 {farm.gems}</span>
+            <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-800 rounded-full px-3 py-1" title="Kho nông sản">🧺 {farm.barnUsed}/{farm.barnCapacity}</span>
             {farm.boostHarvests > 0 && <span className="ui-badge bg-pink-100 text-pink-800 text-xs">⚡ x2 xu còn {farm.boostHarvests} lần</span>}
           </div>
           <div className="flex-1 min-w-[160px]">
@@ -139,6 +153,7 @@ export default function FarmGame({ userId }: { userId: string }) {
           </div>
           <div className="flex items-center gap-2 text-sm font-bold text-muted">
             <span title="Chuỗi ngày học">🔥 {user.streakCount}</span><span title="Tổng XP">⚡ {user.totalXP} XP</span>
+            <button onClick={toggleFullscreen} className="btn-outline rounded-full px-3 py-1.5 text-xs font-bold" title={fs ? "Thoát toàn màn hình" : "Toàn màn hình"}>{fs ? "🗗 Thu nhỏ" : "⛶ Toàn màn hình"}</button>
           </div>
         </div>
 
@@ -151,7 +166,7 @@ export default function FarmGame({ userId }: { userId: string }) {
         )}
 
         <div className="relative">
-          <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} petJumping={petJumping} hearts={hearts}
+          <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts}
             onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onPetClick={onPetClick} />
           {readyPlots.length > 0 && mode.type === "normal" && (
             <button onClick={() => { setActivePlot(readyPlots[0]); setPanel("HARVEST"); }} className="absolute top-3 left-3 btn-highlight rounded-full px-4 py-2 font-extrabold shadow-card farm-toast">🌾 {readyPlots.length} cây chín — thu hoạch!</button>
@@ -168,7 +183,7 @@ export default function FarmGame({ userId }: { userId: string }) {
             { k: "PET", icon: "🐉", label: farm.pet.name, badge: !farm.pet.fedToday ? "🍖" : undefined },
             { k: "WHEEL", icon: "🎡", label: "Vòng quay", badge: farm.canSpin ? "!" : undefined },
             { k: "NEIGHBORS", icon: "👋", label: "Bạn bè" },
-            { k: "BARN", icon: "🏚️", label: `Kho (${farm.barnCount})` },
+            { k: "BARN", icon: "🧺", label: `Kho ${farm.barnUsed}/${farm.barnCapacity}`, badge: orders.some((o) => o.kind === "PRODUCE" && o.ready) ? "🚚" : undefined },
             { k: "EDIT", icon: "✏️", label: "Sắp xếp" },
             { k: "RELOAD", icon: "🔄", label: "Tải lại" },
             { k: "HELP", icon: "❓", label: "Hướng dẫn" },
@@ -183,7 +198,7 @@ export default function FarmGame({ userId }: { userId: string }) {
       </div>
 
       <div className="space-y-4">
-        <OrdersPanel userId={userId} orders={orders} catalog={catalog} coins={farm.coins} onState={applyState} onToast={toast} />
+        <OrdersPanel userId={userId} orders={orders} catalog={catalog} coins={farm.coins} difficulty={farm.orderDifficulty} onState={applyState} onToast={toast} />
         <div className="ui-card p-4 text-sm text-muted space-y-1">
           <p className="font-extrabold text-primary">📊 Hôm nay</p>
           <p>🌱 {state.plots.filter((p) => p.status !== "EMPTY").length}/{farm.plotCount} ô đang trồng · 🌾 {readyPlots.length} cây chín</p>
@@ -196,13 +211,13 @@ export default function FarmGame({ userId }: { userId: string }) {
       {panel === "SEED" && activePlot && <SeedPicker userId={userId} plot={activePlot} catalog={catalog} onClose={() => setPanel(null)} onState={(s) => { applyState(s); toast("🌱 Đã trồng! Chín lần đầu sau 10 phút."); }} />}
       {panel === "HARVEST" && activePlot && (
         <HarvestModal userId={userId} plot={activePlot} cropName={catalog.crops[activePlot.cropKey || ""]?.name || "cây"} nextReadyPlot={nextReadyAfter(activePlot.id)}
-          onClose={() => setPanel(null)} onState={applyState} onNext={(p) => setActivePlot(p)} />
+          onClose={() => setPanel(null)} onState={applyState} onNext={(p) => setActivePlot(p)} catalog={catalog} />
       )}
-      {panel === "SHOP" && <ShopPanel farm={farm} catalog={catalog} onClose={() => setPanel(null)} onPick={(k, label) => { setPanel(null); setMode({ type: "place", itemKey: k, label }); }} onExpand={expand} />}
+      {panel === "SHOP" && <ShopPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} onPick={(k, label) => { setPanel(null); setMode({ type: "place", itemKey: k, label }); }} onExpand={expand} />}
       {panel === "PET" && <PetPanel userId={userId} farm={farm} catalog={catalog} onClose={() => { setPanel(null); load(); }} onState={applyState} />}
       {panel === "WHEEL" && <WheelPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} />}
       {panel === "NEIGHBORS" && <NeighborsPanel userId={userId} catalog={catalog} onClose={() => setPanel(null)} onToast={toast} onRefresh={load} />}
-      {panel === "BARN" && <BarnPanel userId={userId} barnCount={farm.barnCount} onClose={() => setPanel(null)} />}
+      {panel === "BARN" && <BarnPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "HELP" && (
         <Modal title="🌾 Chào mừng tới Nông Trại Qilin!" subtitle="Vừa chơi vừa nhớ từ — cây lớn theo đúng lịch ôn của bạn" onClose={closeTut}
           footer={<button onClick={closeTut} className="btn-primary rounded-full px-6 py-2.5 font-bold w-full">Bắt đầu trồng!</button>}>
@@ -212,7 +227,8 @@ export default function FarmGame({ userId }: { userId: string }) {
               ["⏳", "Cây chín lần đầu sau 10 phút. Những lần sau chín theo lịch ôn SRS (1 ngày → 6 ngày → lâu hơn). Không mua được thời gian!"],
               ["🌾", "Cây chín hiện dấu ! — bấm để thu hoạch bằng cách trả lời 1 câu về từ đó. Đúng được xu + XP, sai thì cây héo và học lại sau 10 phút."],
               ["🚚", "Giao đơn hàng cho khách để nhận thưởng lớn. Đơn 'Viết câu' được AI chấm."],
-              ["🎉", "Phần chơi thuần: trang trí nông trại, nuôi Qilin con, vòng quay mỗi ngày, thăm nông trại bạn cùng lớp."],
+              ["🧺", "Mỗi lần thu hoạch còn cho 1–2 nông sản vào kho: bán lấy xu, hoặc để dành giao đơn nông sản (lời gấp đôi). Kho đầy thì nâng cấp."],
+              ["🎉", "Phần chơi thuần: trang trí nông trại, mua trang phục cho Qilin con, vòng quay mỗi ngày, thăm nông trại bạn bè toàn app."],
               ["⭐", "Từ nhớ lâu hơn 21 ngày = thuộc lòng → cất vào kho, lấy chỗ trồng từ mới."],
             ].map(([i, t]) => <li key={t} className="flex gap-3"><span className="text-2xl leading-none">{i}</span><span>{t}</span></li>)}
           </ol>

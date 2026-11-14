@@ -1535,6 +1535,17 @@ model FarmState {
   boostHarvests Int     @default(0)
 
   ordersRefreshedAt DateTime @default(now())
+  ordersDone        Int      @default(0) // số đơn đã giao — đơn khó dần theo số này + cấp
+
+  // Kho nông sản: { cropKey: số lượng }, sức chứa theo bậc (farmCatalog.BARN_TIERS)
+  inventory    String @default("{}")
+  barnCapacity Int    @default(30)
+  // Ôn kho từ (kiếm xu từ từ đã thuộc): giới hạn lượt thưởng mỗi ngày
+  barnQuizOn    String?
+  barnQuizCount Int     @default(0)
+
+  // Trang phục Qilin: { owned: [key], equipped: { slot: key } }
+  wardrobe String @default("{}")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -74,8 +74,17 @@ function plotView(plot, now = new Date()) {
   };
 }
 
-function orderView(o) {
+function orderView(o, inventory = {}) {
   const req = parseJSON(o.requirement, {});
+  if (o.kind === 'PRODUCE') {
+    const items = req.items || {};
+    const have = Object.fromEntries(Object.keys(items).map((k) => [k, inventory[k] || 0]));
+    const ready = Object.entries(items).every(([k, n]) => (inventory[k] || 0) >= n);
+    const total = Object.values(items).reduce((a, b) => a + b, 0);
+    const got = Object.entries(items).reduce((a, [k, n]) => a + Math.min(n, inventory[k] || 0), 0);
+    return { id: o.id, kind: o.kind, customer: o.customer, title: o.title, requirement: req, progress: got, need: total, have, ready,
+      rewardCoins: o.rewardCoins, rewardGems: o.rewardGems, rewardXp: o.rewardXp, createdAt: o.createdAt };
+  }
   const need = o.kind === 'SENTENCE' ? 1 : (req.need || 1);
   return { id: o.id, kind: o.kind, customer: o.customer, title: o.title, requirement: req, progress: o.progress, need,
     ready: o.kind !== 'SENTENCE' && o.progress >= need, rewardCoins: o.rewardCoins, rewardGems: o.rewardGems, rewardXp: o.rewardXp, createdAt: o.createdAt };
@@ -86,9 +95,17 @@ function farmView(farm, plotCount) {
   const expIdx = Math.max(0, C.EXPANSIONS.findIndex((e) => e.w === farm.gridW && e.h === farm.gridH));
   const nextExpansion = C.EXPANSIONS[expIdx + 1] || null;
   const today = C.vnDay();
+  const inventory = parseJSON(farm.inventory, {});
+  const barnTierIdx = Math.max(0, C.BARN_TIERS.findIndex((t) => t.capacity === farm.barnCapacity));
+  const wardrobe = parseJSON(farm.wardrobe, {});
   return {
     coins: farm.coins, gems: farm.gems, gridW: farm.gridW, gridH: farm.gridH,
     layout: parseJSON(farm.layout, []),
+    inventory, barnCapacity: farm.barnCapacity, barnUsed: Object.values(inventory).reduce((a, b) => a + b, 0),
+    barnTier: barnTierIdx + 1, nextBarnTier: C.BARN_TIERS[barnTierIdx + 1] || null,
+    wardrobe: { owned: wardrobe.owned || [], equipped: wardrobe.equipped || {} },
+    ordersDone: farm.ordersDone, orderDifficulty: C.orderDifficulty(level, farm.ordersDone),
+    barnQuizLeft: Math.max(0, C.BARN_QUIZ.dailyRewarded - (farm.barnQuizOn === today ? farm.barnQuizCount : 0)),
     harvestCount: farm.harvestCount, witherCount: farm.witherCount, barnCount: farm.barnCount,
     level, levelStart: C.harvestsForLevel(level), nextLevelAt: C.harvestsForLevel(level + 1),
     plotCount, plotPrice: plotCount < C.MAX_PLOTS ? C.plotPrice(plotCount) : null, nextExpansion,
@@ -103,22 +120,27 @@ async function ensureOrders(userId, farm, plots) {
   const missing = C.ORDER_SLOTS - open.length;
   if (missing <= 0) return open;
   const level = C.levelFor(farm.harvestCount);
+  const difficulty = C.orderDifficulty(level, farm.ordersDone);
   const planted = plots.filter((p) => p.progress);
   const cropKeys = [...new Set(planted.map((p) => p.cropKey).filter(Boolean))];
+  const inventory = parseJSON(farm.inventory, {});
+  const produceKeys = [...new Set([...cropKeys, ...Object.keys(inventory).filter((k) => inventory[k] > 0)])];
   const sentenceWords = planted.filter((p) => p.progress.repetitions >= 1).map((p) => p.progress.vocab.word);
   const kindsOpen = new Set(open.map((o) => o.kind));
   const data = [];
   for (let i = 0; i < missing; i++) {
     const r = Math.random();
-    let kind = r < 0.35 ? 'HARVEST' : r < 0.6 ? 'HARVEST_CROP' : r < 0.8 ? 'PLANT' : 'SENTENCE';
+    let kind = r < 0.25 ? 'HARVEST' : r < 0.45 ? 'HARVEST_CROP' : r < 0.6 ? 'PLANT' : r < 0.85 ? 'PRODUCE' : 'SENTENCE';
+    if (kind === 'PRODUCE' && (!produceKeys.length || kindsOpen.has('PRODUCE'))) kind = 'HARVEST';
     if (kind === 'HARVEST_CROP' && !cropKeys.length) kind = 'HARVEST';
     if (kind === 'SENTENCE' && (!sentenceWords.length || kindsOpen.has('SENTENCE'))) kind = kindsOpen.has('PLANT') ? 'HARVEST' : 'PLANT';
     if (kind === 'PLANT' && kindsOpen.has('PLANT')) kind = 'HARVEST'; // không để 2-3 đơn "Trồng" giống nhau
     kindsOpen.add(kind);
     const ctx = {};
     if (kind === 'HARVEST_CROP') ctx.cropKey = cropKeys[Math.floor(Math.random() * cropKeys.length)];
-    if (kind === 'SENTENCE') { ctx.words = shuffle(sentenceWords).slice(0, level >= 3 && sentenceWords.length > 1 && Math.random() < 0.5 ? 2 : 1); kindsOpen.add('SENTENCE'); }
-    const t = C.makeOrderTemplate(kind, level, ctx);
+    if (kind === 'PRODUCE') ctx.cropKeys = produceKeys;
+    if (kind === 'SENTENCE') { ctx.words = shuffle(sentenceWords).slice(0, difficulty >= 3 && sentenceWords.length > 1 && Math.random() < 0.5 ? 2 : 1); kindsOpen.add('SENTENCE'); }
+    const t = C.makeOrderTemplate(kind, difficulty, ctx);
     data.push({ userId, kind: t.kind, customer: t.customer, title: t.title, requirement: JSON.stringify(t.requirement), rewardCoins: t.rewardCoins, rewardGems: t.rewardGems, rewardXp: t.rewardXp });
   }
   await prisma.farmOrder.createMany({ data });
@@ -135,7 +157,8 @@ async function buildState(userId, extra = {}) {
   ]);
   const orders = await ensureOrders(userId, farm, plots);
   const now = new Date();
-  return { now, farm: farmView(farm, plots.length), plots: plots.map((p) => plotView(p, now)), orders: orders.map(orderView), user, catalog: C.publicCatalog(), ...extra };
+  const inventory = parseJSON(farm.inventory, {});
+  return { now, farm: farmView(farm, plots.length), plots: plots.map((p) => plotView(p, now)), orders: orders.map((o) => orderView(o, inventory)), user, catalog: C.publicCatalog(), ...extra };
 }
 
 const occupiedSet = (farm, plots) => {
@@ -293,19 +316,28 @@ router.post('/plots/:plotId/harvest', async (req, res) => {
     const newStatus = statusAfterReview(quality, sm2.interval, p.status);
     const becameMastered = correct && newStatus === 'MASTERED' && p.status !== 'MASTERED';
 
-    let coins = 0, gems = 0, xp = 0;
+    let coins = 0, gems = 0, xp = 0, produce = 0, overflowSold = 0;
+    const inventory = parseJSON(farm.inventory, {});
     if (correct) {
       coins = C.HARVEST_COINS[quality] || 0;
       if (farm.boostHarvests > 0) coins *= 2;
       xp = C.HARVEST_XP;
       if (becameMastered) { coins += C.MASTERED_BONUS.coins; gems += C.MASTERED_BONUS.gems; }
+      // Nông sản vào kho; kho đầy → phần dư bán tự động nửa giá
+      produce = C.PRODUCE_PER_HARVEST[quality] || 1;
+      const used = Object.values(inventory).reduce((a, b) => a + b, 0);
+      const room = Math.max(0, farm.barnCapacity - used);
+      const stored = Math.min(room, produce);
+      if (plot.cropKey) inventory[plot.cropKey] = (inventory[plot.cropKey] || 0) + stored;
+      overflowSold = produce - stored;
+      if (overflowSold > 0) coins += Math.floor(overflowSold * (C.PRODUCE_PRICE[plot.cropKey] || 4) * C.BARN_FULL_SELL_RATE);
     }
     const now = new Date();
     const ops = [
       prisma.userVocabProgress.update({ where: { id: p.id }, data: { ...sm2, status: newStatus, lastReviewedAt: now } }),
       prisma.farmPlot.update({ where: { id: plot.id }, data: { plantedAt: now } }),
       prisma.farmState.update({ where: { userId }, data: correct
-        ? { coins: { increment: coins }, gems: { increment: gems }, harvestCount: { increment: 1 }, boostHarvests: farm.boostHarvests > 0 ? { decrement: 1 } : undefined }
+        ? { coins: { increment: coins }, gems: { increment: gems }, harvestCount: { increment: 1 }, inventory: JSON.stringify(inventory), boostHarvests: farm.boostHarvests > 0 ? { decrement: 1 } : undefined }
         : { witherCount: { increment: 1 } } }),
     ];
     if (correct) {
@@ -315,7 +347,7 @@ router.post('/plots/:plotId/harvest', async (req, res) => {
     await Promise.all(ops);
     const prevLevel = C.levelFor(farm.harvestCount);
     const newLevel = C.levelFor(farm.harvestCount + (correct ? 1 : 0));
-    res.json(await buildState(userId, { result: { correct, quality, mode, word: v.word, meaning: v.meaning, example: v.example, coins, gems, xp, boosted: correct && farm.boostHarvests > 0, becameMastered, levelUp: newLevel > prevLevel ? newLevel : null, srs: { status: newStatus, interval: sm2.interval } } }));
+    res.json(await buildState(userId, { result: { correct, quality, mode, word: v.word, meaning: v.meaning, example: v.example, coins, gems, xp, produce: produce - overflowSold, produceKey: plot.cropKey, overflowSold, boosted: correct && farm.boostHarvests > 0, becameMastered, levelUp: newLevel > prevLevel ? newLevel : null, srs: { status: newStatus, interval: sm2.interval } } }));
   } catch (e) { console.error('[farm] harvest', e); res.status(500).json({ error: 'Không thu hoạch được' }); }
 });
 
@@ -435,13 +467,13 @@ router.post('/sell', async (req, res) => {
 });
 
 // Chấm câu cho đơn "Viết câu": quy tắc trước, có Groq thì nhờ AI nhận xét thêm
-async function gradeSentence(sentence, words) {
+async function gradeSentence(sentence, words, minWords = 4) {
   const s = String(sentence || '').trim();
   const lower = s.toLowerCase();
   const missing = words.filter((w) => { const lw = w.toLowerCase(); return !(lower.includes(lw) || (lw.length > 4 && lower.includes(lw.slice(0, -1)))); });
   const tokens = s.split(/\s+/).filter(Boolean);
   if (missing.length) return { ok: false, feedback: `Câu chưa dùng từ: ${missing.map((m) => `"${m}"`).join(', ')}.` };
-  if (tokens.length < 4) return { ok: false, feedback: 'Câu quá ngắn — viết ít nhất 4 từ nhé.' };
+  if (tokens.length < minWords) return { ok: false, feedback: `Câu quá ngắn — khách này muốn ít nhất ${minWords} từ nhé.` };
   if (!groq) return { ok: true, feedback: 'Khách hài lòng! (chấm theo quy tắc, chưa có AI nhận xét)', ai: false };
   try {
     const r = await groq.chat.completions.create({
@@ -468,15 +500,21 @@ router.post('/orders/:id/complete', async (req, res) => {
     if (!order) return res.status(404).json({ error: 'Đơn không tồn tại' });
     const reqm = parseJSON(order.requirement, {});
     let graded = null;
-    if (order.kind === 'SENTENCE') {
-      graded = await gradeSentence(sentence, reqm.words || []);
-      if (!graded.ok) return res.json({ ok: false, feedback: graded.feedback, corrected: graded.corrected });
-    } else if (order.progress < (reqm.need || 1)) return res.status(400).json({ error: 'Đơn chưa đủ hàng' });
     const farm = await prisma.farmState.findUnique({ where: { userId } });
+    const inventory = parseJSON(farm.inventory, {});
+    if (order.kind === 'SENTENCE') {
+      graded = await gradeSentence(sentence, reqm.words || [], reqm.minWords || 4);
+      if (!graded.ok) return res.json({ ok: false, feedback: graded.feedback, corrected: graded.corrected });
+    } else if (order.kind === 'PRODUCE') {
+      const items = reqm.items || {};
+      const missing = Object.entries(items).filter(([k, n]) => (inventory[k] || 0) < n);
+      if (missing.length) return res.status(400).json({ error: `Kho chưa đủ: ${missing.map(([k, n]) => `${C.CROPS[k]?.name || k} ${inventory[k] || 0}/${n}`).join(', ')}` });
+      for (const [k, n] of Object.entries(items)) { inventory[k] -= n; if (inventory[k] <= 0) delete inventory[k]; }
+    } else if (order.progress < (reqm.need || 1)) return res.status(400).json({ error: 'Đơn chưa đủ hàng' });
     const prevLevel = C.levelFor(farm.harvestCount);
     await Promise.all([
       prisma.farmOrder.update({ where: { id: order.id }, data: { status: 'DONE', doneAt: new Date() } }),
-      prisma.farmState.update({ where: { userId }, data: { coins: { increment: order.rewardCoins }, gems: { increment: order.rewardGems } } }),
+      prisma.farmState.update({ where: { userId }, data: { coins: { increment: order.rewardCoins }, gems: { increment: order.rewardGems }, ordersDone: { increment: 1 }, inventory: JSON.stringify(inventory) } }),
       order.rewardXp ? prisma.user.update({ where: { id: userId }, data: { totalXP: { increment: order.rewardXp } }, select: { id: true } }) : null,
     ]);
     res.json(await buildState(userId, { delivered: { ok: true, title: order.title, customer: order.customer, coins: order.rewardCoins, gems: order.rewardGems, xp: order.rewardXp, feedback: graded?.feedback, corrected: graded?.corrected, ai: graded?.ai, levelUp: null, prevLevel } }));
@@ -555,25 +593,40 @@ router.post('/spin', async (req, res) => {
   } catch (e) { console.error('[farm] spin', e); res.status(500).json({ error: 'Không quay được' }); }
 });
 
-// Bạn cùng lớp có nông trại (qua Classroom) + bảng vàng theo cấp
+// Bạn bè toàn app (mọi học viên đã mở nông trại), nhóm theo lớp: lớp của tôi trước, rồi lớp khác, rồi học viên tự do.
+// Không cần tham gia lớp vẫn chơi/thăm được.
 router.get('/neighbors/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
-    const me = await prisma.user.findUnique({ where: { id: userId }, select: { classroomsJoined: { select: { id: true, name: true, students: { select: { id: true, name: true } } } } } });
-    if (!me) return res.status(404).json({ error: 'User not found' });
-    const mates = new Map();
-    for (const c of me.classroomsJoined) for (const s of c.students) if (s.id !== userId) mates.set(s.id, { id: s.id, name: s.name, classroom: c.name });
-    const ids = [...mates.keys()];
     const today = C.vnDay();
-    const [farms, visits] = await Promise.all([
-      ids.length ? prisma.farmState.findMany({ where: { userId: { in: ids } }, select: { userId: true, harvestCount: true, petName: true, petXp: true, coins: true, barnCount: true } }) : [],
-      ids.length ? prisma.farmVisit.findMany({ where: { fromId: userId, day: today }, select: { toId: true, type: true } }) : [],
+    const [me, farms, visits] = await Promise.all([
+      prisma.user.findUnique({ where: { id: userId }, select: { classroomsJoined: { select: { id: true } } } }),
+      prisma.farmState.findMany({
+        where: { userId: { not: userId }, user: { role: 'STUDENT' } },
+        select: { userId: true, harvestCount: true, petName: true, petXp: true, barnCount: true, wardrobe: true, updatedAt: true,
+          user: { select: { name: true, streakCount: true, classroomsJoined: { select: { id: true, name: true } } } } },
+        orderBy: { harvestCount: 'desc' }, take: 300,
+      }),
+      prisma.farmVisit.findMany({ where: { fromId: userId, day: today }, select: { toId: true, type: true } }),
     ]);
-    const fmap = new Map(farms.map((f) => [f.userId, f]));
+    if (!me) return res.status(404).json({ error: 'User not found' });
+    const myClasses = new Set(me.classroomsJoined.map((c) => c.id));
+    const groups = new Map(); // classroomId|FREE → { id, name, mine, members[] }
+    for (const f of farms) {
+      const entry = {
+        id: f.userId, name: f.user.name, level: C.levelFor(f.harvestCount), harvestCount: f.harvestCount, barnCount: f.barnCount, petName: f.petName,
+        petLevel: C.petLevelFor(f.petXp), streak: f.user.streakCount, equipped: (parseJSON(f.wardrobe, {}).equipped) || {}, lastActive: f.updatedAt,
+        likedToday: visits.some((v) => v.toId === f.userId && v.type === 'LIKE'), giftedToday: visits.some((v) => v.toId === f.userId && v.type === 'GIFT'),
+      };
+      const cls = f.user.classroomsJoined.length ? f.user.classroomsJoined : [{ id: 'FREE', name: 'Học viên tự do' }];
+      for (const c of cls) {
+        if (!groups.has(c.id)) groups.set(c.id, { id: c.id, name: c.name, mine: myClasses.has(c.id), members: [] });
+        groups.get(c.id).members.push(entry);
+      }
+    }
+    const list = [...groups.values()].sort((a, b) => (b.mine ? 1 : 0) - (a.mine ? 1 : 0) || (a.id === 'FREE' ? 1 : 0) - (b.id === 'FREE' ? 1 : 0) || a.name.localeCompare(b.name));
     const giftsLeft = C.VISIT_GIFTS_PER_DAY - visits.filter((v) => v.type === 'GIFT').length;
-    const list = ids.map((id) => { const f = fmap.get(id); const m = mates.get(id); return { ...m, hasFarm: !!f, level: f ? C.levelFor(f.harvestCount) : 0, harvestCount: f?.harvestCount || 0, barnCount: f?.barnCount || 0, petName: f?.petName, likedToday: visits.some((v) => v.toId === id && v.type === 'LIKE'), giftedToday: visits.some((v) => v.toId === id && v.type === 'GIFT') }; })
-      .sort((a, b) => b.harvestCount - a.harvestCount || a.name.localeCompare(b.name));
-    res.json({ neighbors: list, giftsLeft: Math.max(0, giftsLeft), hasClassroom: me.classroomsJoined.length > 0 });
+    res.json({ groups: list, total: farms.length, giftsLeft: Math.max(0, giftsLeft), hasClassroom: myClasses.size > 0 });
   } catch (e) { console.error('[farm] neighbors', e); res.status(500).json({ error: 'Không tải được danh sách bạn' }); }
 });
 
@@ -581,13 +634,8 @@ router.get('/neighbors/:userId', async (req, res) => {
 router.get('/visit/:userId/:targetId', async (req, res) => {
   try {
     const { userId, targetId } = req.params;
-    const [me, target] = await Promise.all([
-      prisma.user.findUnique({ where: { id: userId }, select: { classroomsJoined: { select: { id: true } } } }),
-      prisma.user.findUnique({ where: { id: targetId }, select: { id: true, name: true, totalXP: true, streakCount: true, classroomsJoined: { select: { id: true } } } }),
-    ]);
-    if (!me || !target) return res.status(404).json({ error: 'Không tìm thấy' });
-    const mine = new Set(me.classroomsJoined.map((c) => c.id));
-    if (!target.classroomsJoined.some((c) => mine.has(c.id))) return res.status(403).json({ error: 'Chỉ thăm được bạn cùng lớp' });
+    const target = await prisma.user.findUnique({ where: { id: targetId }, select: { id: true, name: true, totalXP: true, streakCount: true, role: true } });
+    if (!target || target.role !== 'STUDENT') return res.status(404).json({ error: 'Không tìm thấy' });
     const [farm, plots, likes] = await Promise.all([
       prisma.farmState.findUnique({ where: { userId: targetId } }),
       prisma.farmPlot.findMany({ where: { userId: targetId }, include: PROGRESS_INCLUDE }),
@@ -623,6 +671,89 @@ router.post('/visit/react', async (req, res) => {
     ]);
     res.json({ ok: true, type, reward });
   } catch (e) { console.error('[farm] react', e); res.status(500).json({ error: 'Lỗi' }); }
+});
+
+// ── Kho nông sản ─────────────────────────────────────────────────────────────
+// Bán nông sản: { userId, cropKey, qty }
+router.post('/barn/sell', async (req, res) => {
+  try {
+    const { userId, cropKey } = req.body; const qty = Math.max(1, parseInt(req.body.qty, 10) || 1);
+    const farm = await getOrCreateFarm(userId);
+    if (!farm || !C.PRODUCE_PRICE[cropKey]) return res.status(400).json({ error: 'Nông sản không hợp lệ' });
+    const inventory = parseJSON(farm.inventory, {});
+    if ((inventory[cropKey] || 0) < qty) return res.status(400).json({ error: 'Kho không đủ số lượng' });
+    inventory[cropKey] -= qty; if (inventory[cropKey] <= 0) delete inventory[cropKey];
+    const coins = qty * C.PRODUCE_PRICE[cropKey];
+    await prisma.farmState.update({ where: { userId }, data: { inventory: JSON.stringify(inventory), coins: { increment: coins } } });
+    res.json(await buildState(userId, { sold: { key: cropKey, qty, refund: coins, currency: 'coins' } }));
+  } catch (e) { console.error('[farm] barn sell', e); res.status(500).json({ error: 'Không bán được' }); }
+});
+// Nâng cấp sức chứa kho
+router.post('/barn/upgrade', async (req, res) => {
+  try {
+    const { userId } = req.body; const farm = await getOrCreateFarm(userId);
+    if (!farm) return res.status(404).json({ error: 'User not found' });
+    const idx = Math.max(0, C.BARN_TIERS.findIndex((t) => t.capacity === farm.barnCapacity));
+    const next = C.BARN_TIERS[idx + 1];
+    if (!next) return res.status(400).json({ error: 'Kho đã lớn tối đa' });
+    if (farm.coins < next.price) return res.status(400).json({ error: 'Không đủ xu' });
+    await prisma.farmState.update({ where: { userId }, data: { coins: { decrement: next.price }, barnCapacity: next.capacity } });
+    res.json(await buildState(userId, { bought: { itemKey: 'barn', price: next.price, currency: 'coins' } }));
+  } catch (e) { console.error('[farm] barn upgrade', e); res.status(500).json({ error: 'Không nâng cấp được' }); }
+});
+// Ôn kho từ: 5 từ MASTERED ngẫu nhiên (gõ từ theo nghĩa) — không đổi lịch SRS, chỉ thưởng xu (giới hạn/ngày)
+router.get('/barn/quiz/:userId', async (req, res) => {
+  try {
+    const rows = await prisma.userVocabProgress.findMany({ where: { userId: req.params.userId, status: 'MASTERED' }, select: { id: true, vocab: { select: { word: true, meaning: true, example: true } } } });
+    const pick = shuffle(rows).slice(0, C.BARN_QUIZ.size);
+    res.json({ items: pick.map((r) => ({ progressId: r.id, meaning: r.vocab.meaning, hint: hintMask(r.vocab.word), example: r.vocab.example && new RegExp(r.vocab.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(r.vocab.example) ? r.vocab.example.replace(new RegExp(r.vocab.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '_____') : null })), total: rows.length });
+  } catch (e) { console.error('[farm] barn quiz', e); res.status(500).json({ error: 'Không tạo được bài ôn' }); }
+});
+router.post('/barn/quiz/answer', async (req, res) => {
+  try {
+    const { userId, progressId, answer } = req.body;
+    const [row, farm] = await Promise.all([
+      prisma.userVocabProgress.findFirst({ where: { id: progressId, userId }, select: { vocab: { select: { word: true, meaning: true, example: true } } } }),
+      prisma.farmState.findUnique({ where: { userId } }),
+    ]);
+    if (!row || !farm) return res.status(404).json({ error: 'Không tìm thấy từ' });
+    const correct = clean(answer) === clean(row.vocab.word) || (clean(answer) && levenshtein(clean(answer), clean(row.vocab.word)) <= 1);
+    const today = C.vnDay();
+    const used = farm.barnQuizOn === today ? farm.barnQuizCount : 0;
+    const rewarded = correct && used < C.BARN_QUIZ.dailyRewarded;
+    const coins = rewarded ? C.BARN_QUIZ.coinsPerCorrect : 0;
+    if (correct) await prisma.farmState.update({ where: { userId }, data: { barnQuizOn: today, barnQuizCount: used + (rewarded ? 1 : 0), coins: { increment: coins } } });
+    res.json({ correct, coins, word: row.vocab.word, meaning: row.vocab.meaning, example: row.vocab.example, left: Math.max(0, C.BARN_QUIZ.dailyRewarded - used - (rewarded ? 1 : 0)) });
+  } catch (e) { console.error('[farm] barn quiz answer', e); res.status(500).json({ error: 'Lỗi' }); }
+});
+
+// ── Trang phục Qilin ─────────────────────────────────────────────────────────
+router.post('/wardrobe/buy', async (req, res) => {
+  try {
+    const { userId, key } = req.body; const item = C.OUTFITS[key];
+    const farm = await getOrCreateFarm(userId);
+    if (!farm || !item) return res.status(400).json({ error: 'Trang phục không tồn tại' });
+    const w = parseJSON(farm.wardrobe, {}); w.owned = w.owned || []; w.equipped = w.equipped || {};
+    if (w.owned.includes(key)) return res.status(400).json({ error: 'Bạn đã có món này rồi' });
+    if (C.levelFor(farm.harvestCount) < item.minLevel) return res.status(400).json({ error: `Cần cấp ${item.minLevel}` });
+    if (farm[item.currency] < item.price) return res.status(400).json({ error: item.currency === 'gems' ? 'Không đủ kim cương' : 'Không đủ xu' });
+    w.owned.push(key); w.equipped[item.slot] = key; // mua xong mặc luôn
+    await prisma.farmState.update({ where: { userId }, data: { [item.currency]: { decrement: item.price }, wardrobe: JSON.stringify(w) } });
+    res.json(await buildState(userId, { bought: { itemKey: key, price: item.price, currency: item.currency } }));
+  } catch (e) { console.error('[farm] wardrobe buy', e); res.status(500).json({ error: 'Không mua được' }); }
+});
+// Mặc/cởi: { userId, slot, key | null }
+router.post('/wardrobe/equip', async (req, res) => {
+  try {
+    const { userId, slot, key } = req.body;
+    const farm = await getOrCreateFarm(userId);
+    if (!farm || !C.OUTFIT_SLOTS.some((s) => s.id === slot)) return res.status(400).json({ error: 'Không hợp lệ' });
+    const w = parseJSON(farm.wardrobe, {}); w.owned = w.owned || []; w.equipped = w.equipped || {};
+    if (key) { if (!w.owned.includes(key) || C.OUTFITS[key]?.slot !== slot) return res.status(400).json({ error: 'Bạn chưa có món này' }); w.equipped[slot] = key; }
+    else delete w.equipped[slot];
+    await prisma.farmState.update({ where: { userId }, data: { wardrobe: JSON.stringify(w) } });
+    res.json(await buildState(userId));
+  } catch (e) { console.error('[farm] wardrobe equip', e); res.status(500).json({ error: 'Không đổi được' }); }
 });
 
 module.exports = router;

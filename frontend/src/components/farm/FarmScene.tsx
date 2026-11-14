@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Catalog, DecorPlaced, FarmView, PlotView } from "@/lib/farm/api";
 import { formatCountdown } from "@/lib/farm/api";
-import { Cloud, CropSprite, DecorSprite, PetSprite, SoilTile, TILE_H, TILE_W, diamondPoints } from "./Sprites";
+import { Cloud, CropSprite, DecorSprite, PetSprite, SoilTile, TILE_H, TILE_W, diamondPoints, type Outfit } from "./Sprites";
 
 export type SceneMode =
   | { type: "normal" }
@@ -11,7 +11,7 @@ export type SceneMode =
 
 type Props = {
   farm: FarmView; plots: PlotView[]; catalog: Catalog; now: number; mode: SceneMode; readOnly?: boolean;
-  pet: { name: string; level: number }; petJumping?: boolean; hearts?: number[];
+  pet: { name: string; level: number }; outfit?: Outfit; petJumping?: boolean; hearts?: number[];
   onTileClick?: (x: number, y: number) => void; onPlotClick?: (plot: PlotView) => void;
   onDecorClick?: (d: DecorPlaced) => void; onPetClick?: () => void;
 };
@@ -28,7 +28,7 @@ export function liveStatus(plot: PlotView, now: number) {
   return { status: now >= ready ? ("READY" as const) : ("GROWING" as const), growth, msLeft: ready - now };
 }
 
-export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, petJumping, hearts = [], onTileClick, onPlotClick, onDecorClick, onPetClick }: Props) {
+export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], onTileClick, onPlotClick, onDecorClick, onPetClick }: Props) {
   const W = farm.gridW, H = farm.gridH;
   const originX = (H * TILE_W) / 2;
   const vbW = ((W + H) * TILE_W) / 2;
@@ -167,7 +167,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
           return (
             <g className="farm-pet-move" style={{ transform: `translate(${cx}px, ${cy + 8}px)` }} onClick={(e) => { e.stopPropagation(); onPetClick?.(); }} role="button" aria-label={pet.name}>
               <g className={petJumping ? "farm-pet-jump" : "farm-pet-idle"} style={{ cursor: onPetClick ? "pointer" : "default" }}>
-                <PetSprite level={pet.level} size={0.9} blink={blink} />
+                <PetSprite level={pet.level} size={0.9} blink={blink} outfit={outfit} />
               </g>
               {hearts.map((h) => <text key={h} x={(h % 3) * 12 - 12} y={-60} textAnchor="middle" fontSize={16} className="farm-heart">💖</text>)}
               <text x={0} y={22} textAnchor="middle" fontSize={12} fontWeight={800} fill="#1e3a8a" style={{ paintOrder: "stroke", stroke: "#fff", strokeWidth: 3 }}>{pet.name}</text>

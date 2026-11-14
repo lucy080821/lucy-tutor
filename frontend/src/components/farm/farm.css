@@ -60,3 +60,8 @@
 @media (prefers-reduced-motion: reduce) {
   .farm-sway, .farm-ready-marker, .farm-pet-idle, .farm-glow, .farm-cloud { animation: none; }
 }
+
+/* Toàn màn hình (Fullscreen API hoặc giả lập CSS trên iPhone) */
+.farm-fullscreen { position: fixed; inset: 0; z-index: 50; overflow: auto; background: var(--background); padding: 12px; align-content: start; }
+.farm-fullscreen:fullscreen { padding: 16px; }
+@media (min-width: 1024px) { .farm-fullscreen { padding: 16px 20px; } }

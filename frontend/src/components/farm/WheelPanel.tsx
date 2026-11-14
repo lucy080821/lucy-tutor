@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import Swal from "sweetalert2";
+import { alert as swalAlert } from "./farmSwal";
 import Modal from "./Modal";
 import { farmApi, type Catalog, type FarmState, type FarmView } from "@/lib/farm/api";
 
@@ -23,7 +23,7 @@ export default function WheelPanel({ userId, farm, catalog, onClose, onState }: 
       // Kim ở đỉnh (12h). Ô i nằm ở góc [i*step, (i+1)*step] tính từ 12h theo chiều kim đồng hồ → xoay ngược về giữa ô.
       const target = 360 * 6 - (idx * step + step / 2) + (Math.random() * step * 0.6 - step * 0.3);
       setRot(target); setPending(s);
-    } catch (e: any) { setSpinning(false); Swal.fire("", e.message, "info"); }
+    } catch (e: any) { setSpinning(false); swalAlert("", e.message, "info"); }
   };
   const finished = () => {
     if (!pending) return;

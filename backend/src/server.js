@@ -106,7 +106,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
   // Open the DB connection at boot so the first user request doesn't pay the ~1.5s cold connect.
-  require('./lib/prisma').$connect().catch(err => console.error('Prisma warm-up failed:', err.message));
+  require('./lib/prisma').$connect().then(() => require('./lib/farmSchemaGuard').ensureFarmColumns()).catch(err => console.error('Prisma warm-up failed:', err.message));
   // Quét từ vựng cho trang /flashcard-tieng-anh ngay lúc khởi động, sau đó mỗi ngày 23:30 giờ VN
   require('./utils/flashcardCatalog').startFlashcardScanner();
   // Đồng bộ số liệu Google Search Console (tab SEO Performance) 30 giây sau khởi động, sau đó mỗi ngày 06:00 giờ VN
