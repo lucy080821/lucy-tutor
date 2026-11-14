@@ -65,3 +65,81 @@
 .farm-fullscreen { position: fixed; inset: 0; z-index: 50; overflow: auto; background: var(--background); padding: 12px; align-content: start; }
 .farm-fullscreen:fullscreen { padding: 16px; }
 @media (min-width: 1024px) { .farm-fullscreen { padding: 16px 20px; } }
+
+/* ───────── Hiệu ứng không khí (Ambient) ───────── */
+@keyframes farm-twinkle { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
+@keyframes farm-flutter { 0% { transform: translate(0,0); } 25% { transform: translate(var(--dx), var(--dy)); } 50% { transform: translate(calc(var(--dx) * 2), 0); } 75% { transform: translate(var(--dx), calc(var(--dy) * -1)); } 100% { transform: translate(0,0); } }
+@keyframes farm-firefly { 0%,100% { opacity: .15; } 50% { opacity: 1; } }
+@keyframes farm-lamp-pulse { 0%,100% { opacity: .65; } 50% { opacity: 1; } }
+@keyframes farm-rain { from { transform: translate(0,0); } to { transform: translate(-34px, var(--h)); } }
+@keyframes farm-sparkle { 0%,100% { transform: scale(.3) rotate(0deg); opacity: 0; } 50% { transform: scale(1.1) rotate(25deg); opacity: 1; } }
+.farm-twinkle { animation: farm-twinkle 3s ease-in-out infinite; }
+.farm-flutter { animation: farm-flutter 12s ease-in-out infinite; }
+.farm-firefly { animation: farm-firefly 2.4s ease-in-out infinite; }
+.farm-lamp-pulse { animation: farm-lamp-pulse 3.2s ease-in-out infinite; }
+.farm-rain { animation: farm-rain .9s linear infinite; }
+.farm-sparkle { animation: farm-sparkle 1.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.farm-float { animation: farm-float-up 1.5s ease-out both; }
+@media (prefers-reduced-motion: reduce) { .farm-twinkle, .farm-flutter, .farm-firefly, .farm-lamp-pulse, .farm-rain, .farm-sparkle { animation: none; } }
+
+/* ───────── Thanh trạng thái (HUD) ───────── */
+.farm-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 13px 5px 8px; border-radius: 999px; font-weight: 800; font-size: 15px; line-height: 1; border: 1px solid transparent; }
+.farm-pill-coin { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+.farm-pill-gem { background: #f0f9ff; color: #075985; border-color: #bae6fd; }
+.farm-pill-barn { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.farm-pill-full { background: #fef2f2; color: #991b1b; border-color: #fecaca; }
+.farm-lv { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(150deg, #1e3a8a, #3b82f6); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; box-shadow: inset 0 -3px 0 rgba(0,0,0,.22), 0 3px 8px rgba(30,58,138,.3); flex-shrink: 0; }
+.farm-lv small { font-size: 8px; font-weight: 800; opacity: .8; letter-spacing: .04em; }
+.farm-lv b { font-size: 16px; font-weight: 900; }
+
+/* ───────── Thanh công cụ nổi trên cảnh ───────── */
+.farm-tools { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 8px; z-index: 5; }
+.farm-tool { width: 40px; height: 40px; border-radius: 14px; background: rgba(255,255,255,.94); border: 1px solid rgba(255,255,255,.95); color: var(--primary); display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(15,23,42,.2); cursor: pointer; transition: transform .15s cubic-bezier(.22,1,.36,1), background .15s, color .15s; -webkit-tap-highlight-color: transparent; }
+.farm-tool:hover { transform: scale(1.08); background: #fff; }
+.farm-tool:active { transform: scale(.94); }
+.farm-tool-on { background: var(--primary); color: #fff; }
+.farm-tool-on:hover { background: var(--primary); }
+.farm-phase { position: absolute; left: 12px; bottom: 10px; z-index: 5; font-size: 11px; font-weight: 800; color: #1e3a8a; background: rgba(255,255,255,.88); border-radius: 999px; padding: 4px 10px; box-shadow: 0 2px 6px rgba(15,23,42,.15); pointer-events: none; }
+
+/* ───────── Thanh điều hướng dạng game (Dock) ───────── */
+.farm-dock { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; padding: 10px 8px 9px; background: rgba(255,255,255,.97); border: 1px solid var(--line); border-radius: 24px; box-shadow: 0 -4px 22px rgba(30,58,138,.12), var(--shadow-card); }
+.farm-dock-btn { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 2px 0; background: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent; min-width: 0; }
+.farm-dock-ico { width: 52px; height: 52px; border-radius: 18px; display: flex; align-items: center; justify-content: center; color: #fff; background: linear-gradient(150deg, var(--c1), var(--c2)); box-shadow: 0 6px 14px color-mix(in srgb, var(--c2) 40%, transparent), inset 0 -4px 0 rgba(0,0,0,.14), inset 0 2px 0 rgba(255,255,255,.38); transition: transform .16s cubic-bezier(.22,1,.36,1), box-shadow .16s; }
+.farm-dock-btn:hover .farm-dock-ico { transform: translateY(-4px) scale(1.05); }
+.farm-dock-btn:active .farm-dock-ico { transform: translateY(1px) scale(.94); box-shadow: 0 2px 6px color-mix(in srgb, var(--c2) 40%, transparent), inset 0 -2px 0 rgba(0,0,0,.14); }
+.farm-dock-label { font-size: 12px; font-weight: 800; color: var(--foreground); line-height: 1; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.farm-dock-badge { position: absolute; top: -5px; left: calc(50% + 10px); min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 11px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(239,68,68,.45); animation: farm-bounce 1.3s ease-in-out infinite; pointer-events: none; }
+@media (max-width: 1023px) {
+  .farm-dock { position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom)); z-index: 40; }
+  .farm-root-pad { padding-bottom: 108px; }
+}
+@media (max-width: 420px) {
+  .farm-dock { padding: 8px 4px 7px; gap: 2px; }
+  .farm-dock-ico { width: 46px; height: 46px; border-radius: 16px; }
+  .farm-dock-label { font-size: 10.5px; }
+}
+
+/* ───────── Nhiệm vụ / thành tựu / bảng vàng ───────── */
+.farm-chip-reward { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800; padding: 3px 9px 3px 6px; border-radius: 999px; background: #f8fafc; border: 1px solid var(--line); color: var(--foreground); }
+.farm-ring { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: var(--primary-soft); color: var(--primary); }
+.farm-ring-done { background: #d1fae5; color: #047857; }
+.farm-ring-gold { background: #fef3c7; color: #b45309; }
+.farm-tier-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #cbd5e1; background: #fff; }
+.farm-tier-dot-reached { border-color: #f59e0b; background: #fef3c7; box-shadow: 0 0 0 3px rgba(245,158,11,.2); }
+.farm-tier-dot-claimed { border-color: #059669; background: #10b981; }
+.farm-glow-card { box-shadow: 0 0 0 2px #f9a95a, 0 8px 22px rgba(249,169,90,.28); }
+@keyframes farm-chest-wiggle { 0%,100% { transform: rotate(0); } 20% { transform: rotate(-9deg); } 40% { transform: rotate(8deg); } 60% { transform: rotate(-5deg); } 80% { transform: rotate(3deg); } }
+.farm-chest-ready { animation: farm-chest-wiggle 1.6s ease-in-out infinite; transform-origin: 50% 80%; }
+
+/* ───────── Vừa khít 1 màn hình trên máy tính ───────── */
+/* Cảnh không cao hơn cửa sổ (trừ banner + thanh trạng thái + thanh điều hướng); thanh điều hướng dính đáy nên luôn thấy được */
+@media (min-width: 1024px) {
+  .farm-scene svg { max-height: calc(100dvh - 395px); min-height: 340px; }
+  .farm-fullscreen .farm-scene svg { max-height: calc(100dvh - 235px); }
+  .farm-dock { position: sticky; bottom: 12px; z-index: 30; }
+}
+
+@keyframes farm-zzz { 0% { transform: translate(0,0); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(8px,-18px); opacity: 0; } }
+.farm-zzz { animation: farm-zzz 2.6s ease-in-out infinite; }
+.farm-phase b { font-weight: 900; }
+@media (prefers-reduced-motion: reduce) { .farm-zzz { animation: none; } }

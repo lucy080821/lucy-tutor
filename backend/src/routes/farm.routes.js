@@ -148,9 +148,65 @@ async function ensureOrders(userId, farm, plots) {
 }
 
 // Toàn bộ trạng thái trong 1 gói — mọi endpoint ghi đều trả lại gói này để client thay thế.
+// ── Bộ đếm sự kiện / nhiệm vụ ngày / thành tựu ───────────────────────────────
+const jsonObj = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+// Tăng bộ đếm trọn đời bằng 1 lệnh SQL nguyên tử (an toàn khi nhiều request song song). Chỉ nhận khoá trong danh sách trắng.
+async function bumpStats(userId, delta) {
+  const clean = {};
+  for (const [k, n] of Object.entries(delta || {})) if (C.TRACKED_STATS.includes(k) && Number.isFinite(n) && n > 0) clean[k] = Math.floor(n);
+  if (!Object.keys(clean).length) return;
+  try {
+    await prisma.$executeRawUnsafe(
+      `UPDATE "FarmState" SET "stats" = COALESCE("stats", '{}'::jsonb) || (SELECT jsonb_object_agg(e.key, COALESCE(("FarmState"."stats"->>e.key)::int, 0) + e.value::int) FROM jsonb_each_text($2::jsonb) e) WHERE "userId" = $1`,
+      userId, JSON.stringify(clean));
+  } catch (e) { console.error('[farm] bumpStats', e.message); }
+}
+const baseStats = (farm) => {
+  const st = jsonObj(farm.stats);
+  return { harvests: farm.harvestCount, orders: farm.ordersDone, plants: st.plants || 0, sold: st.sold || 0, feeds: st.feeds || 0, spins: st.spins || 0 };
+};
+// Sang ngày mới (giờ VN) → chụp mốc đầu ngày + chốt cấp để mục tiêu không đổi giữa chừng
+async function ensureDaily(farm) {
+  const today = C.vnDay();
+  let daily = jsonObj(farm.daily);
+  if (daily.day === today && daily.base) return { farm, daily };
+  daily = { day: today, level: C.levelFor(farm.harvestCount), base: baseStats(farm), claimed: [] };
+  const updated = await prisma.farmState.update({ where: { userId: farm.userId }, data: { daily } });
+  return { farm: updated, daily };
+}
+function nextMidnightVN() {
+  const vn = new Date(Date.now() + 7 * 3600e3); vn.setUTCHours(24, 0, 0, 0);
+  return new Date(vn.getTime() - 7 * 3600e3).toISOString();
+}
+function questsView(farm, daily) {
+  const level = daily.level || C.levelFor(farm.harvestCount);
+  const base = jsonObj(daily.base); const claimed = new Set(daily.claimed || []);
+  const items = C.dailyQuestDefs(daily.day, level).map((d) => {
+    const raw = Math.max(0, C.statValue(d.stat, { farm }) - (base[d.stat] || 0));
+    return { ...d, progress: Math.min(raw, d.target), done: raw >= d.target, claimed: claimed.has(d.id) };
+  });
+  const allClaimed = items.every((i) => i.claimed);
+  const chest = { reward: C.questChest(level), ready: allClaimed && !claimed.has('CHEST'), claimed: claimed.has('CHEST'), progress: items.filter((i) => i.claimed).length, total: items.length };
+  return { day: daily.day, items, chest, claimable: items.filter((i) => i.done && !i.claimed).length + (chest.ready ? 1 : 0), resetAt: nextMidnightVN() };
+}
+function achievementsView(farm, user) {
+  const claimedMap = jsonObj(jsonObj(farm.achievements).claimed);
+  let claimable = 0, completed = 0, total = 0;
+  const groups = C.ACHIEVEMENTS.map((g) => {
+    const value = C.statValue(g.stat, { farm, user }); const got = claimedMap[g.id] || 0;
+    const tiers = g.tiers.map(([target, coins, gems], i) => ({ target, reward: { coins, gems }, reached: value >= target, claimed: i < got }));
+    const can = tiers.filter((t) => t.reached && !t.claimed).length;
+    claimable += can; completed += tiers.filter((t) => t.claimed).length; total += tiers.length;
+    return { id: g.id, icon: g.icon, name: g.name, desc: g.desc, value, tiers, claimable: can, complete: got >= g.tiers.length };
+  });
+  return { groups, claimable, completed, total };
+}
+
 async function buildState(userId, extra = {}) {
-  const farm = await getOrCreateFarm(userId);
+  let farm = await getOrCreateFarm(userId);
   if (!farm) return null;
+  let daily;
+  ({ farm, daily } = await ensureDaily(farm));
   const [plots, user] = await Promise.all([
     prisma.farmPlot.findMany({ where: { userId }, include: PROGRESS_INCLUDE, orderBy: [{ y: 'asc' }, { x: 'asc' }] }),
     prisma.user.findUnique({ where: { id: userId }, select: { id: true, name: true, totalXP: true, streakCount: true } }),
@@ -158,7 +214,8 @@ async function buildState(userId, extra = {}) {
   const orders = await ensureOrders(userId, farm, plots);
   const now = new Date();
   const inventory = parseJSON(farm.inventory, {});
-  return { now, farm: farmView(farm, plots.length), plots: plots.map((p) => plotView(p, now)), orders: orders.map((o) => orderView(o, inventory)), user, catalog: C.publicCatalog(), ...extra };
+  return { now, farm: farmView(farm, plots.length), plots: plots.map((p) => plotView(p, now)), orders: orders.map((o) => orderView(o, inventory)), user, catalog: C.publicCatalog(),
+    quests: questsView(farm, daily), achievements: achievementsView(farm, user), ...extra };
 }
 
 const occupiedSet = (farm, plots) => {
@@ -253,7 +310,7 @@ router.post('/plant', async (req, res) => {
       if (e.code === 'P2002') return res.status(400).json({ error: 'Từ này đã được trồng ở ô khác' });
       throw e;
     }
-    await bumpOrders(userId, 'PLANT', 1);
+    await Promise.all([bumpOrders(userId, 'PLANT', 1), bumpStats(userId, { plants: 1 })]);
     res.json(await buildState(userId, { planted: { plotId, cropKey } }));
   } catch (e) { console.error('[farm] plant', e); res.status(500).json({ error: 'Không trồng được' }); }
 });
@@ -343,6 +400,7 @@ router.post('/plots/:plotId/harvest', async (req, res) => {
     if (correct) {
       ops.push(prisma.user.update({ where: { id: userId }, data: { totalXP: { increment: xp } }, select: { id: true } }));
       ops.push(bumpOrders(userId, 'HARVEST', 1, plot.cropKey));
+      if (becameMastered) ops.push(bumpStats(userId, { mastered: 1 }));
     }
     await Promise.all(ops);
     const prevLevel = C.levelFor(farm.harvestCount);
@@ -516,6 +574,7 @@ router.post('/orders/:id/complete', async (req, res) => {
       prisma.farmOrder.update({ where: { id: order.id }, data: { status: 'DONE', doneAt: new Date() } }),
       prisma.farmState.update({ where: { userId }, data: { coins: { increment: order.rewardCoins }, gems: { increment: order.rewardGems }, ordersDone: { increment: 1 }, inventory: JSON.stringify(inventory) } }),
       order.rewardXp ? prisma.user.update({ where: { id: userId }, data: { totalXP: { increment: order.rewardXp } }, select: { id: true } }) : null,
+      order.kind === 'SENTENCE' ? bumpStats(userId, { sentences: 1 }) : null,
     ]);
     res.json(await buildState(userId, { delivered: { ok: true, title: order.title, customer: order.customer, coins: order.rewardCoins, gems: order.rewardGems, xp: order.rewardXp, feedback: graded?.feedback, corrected: graded?.corrected, ai: graded?.ai, levelUp: null, prevLevel } }));
   } catch (e) { console.error('[farm] complete', e); res.status(500).json({ error: 'Không giao được hàng' }); }
@@ -544,6 +603,7 @@ router.post('/pet/feed', async (req, res) => {
     const today = C.vnDay();
     if (farm.petFedOn === today) return res.status(400).json({ error: `${farm.petName} đã ăn no hôm nay rồi!` });
     await prisma.farmState.update({ where: { userId }, data: { petFedOn: today, petXp: { increment: C.PET_FEED_REWARD.petXp }, coins: { increment: C.PET_FEED_REWARD.coins } } });
+    await bumpStats(userId, { feeds: 1 });
     res.json(await buildState(userId, { fed: { ...C.PET_FEED_REWARD } }));
   } catch (e) { res.status(500).json({ error: 'Không cho ăn được' }); }
 });
@@ -589,6 +649,7 @@ router.post('/spin', async (req, res) => {
       else data.coins = { increment: C.DECOR[decorKey].price };
     }
     await prisma.farmState.update({ where: { userId }, data });
+    await bumpStats(userId, { spins: 1 });
     res.json(await buildState(userId, { spin: { segmentId: seg.id, label: seg.label, kind: seg.kind, value: seg.value, decorKey } }));
   } catch (e) { console.error('[farm] spin', e); res.status(500).json({ error: 'Không quay được' }); }
 });
@@ -668,6 +729,7 @@ router.post('/visit/react', async (req, res) => {
     await Promise.all([
       prisma.farmState.update({ where: { userId: targetId }, data: { coins: { increment: reward } } }),
       type === 'GIFT' ? prisma.farmState.update({ where: { userId }, data: { coins: { decrement: C.VISIT_GIFT_COST } } }) : null,
+      bumpStats(userId, type === 'LIKE' ? { likes: 1 } : { gifts: 1 }),
     ]);
     res.json({ ok: true, type, reward });
   } catch (e) { console.error('[farm] react', e); res.status(500).json({ error: 'Lỗi' }); }
@@ -684,7 +746,7 @@ router.post('/barn/sell', async (req, res) => {
     if ((inventory[cropKey] || 0) < qty) return res.status(400).json({ error: 'Kho không đủ số lượng' });
     inventory[cropKey] -= qty; if (inventory[cropKey] <= 0) delete inventory[cropKey];
     const coins = qty * C.PRODUCE_PRICE[cropKey];
-    await prisma.farmState.update({ where: { userId }, data: { inventory: JSON.stringify(inventory), coins: { increment: coins } } });
+    await Promise.all([prisma.farmState.update({ where: { userId }, data: { inventory: JSON.stringify(inventory), coins: { increment: coins } } }), bumpStats(userId, { sold: qty })]);
     res.json(await buildState(userId, { sold: { key: cropKey, qty, refund: coins, currency: 'coins' } }));
   } catch (e) { console.error('[farm] barn sell', e); res.status(500).json({ error: 'Không bán được' }); }
 });
@@ -722,7 +784,7 @@ router.post('/barn/quiz/answer', async (req, res) => {
     const used = farm.barnQuizOn === today ? farm.barnQuizCount : 0;
     const rewarded = correct && used < C.BARN_QUIZ.dailyRewarded;
     const coins = rewarded ? C.BARN_QUIZ.coinsPerCorrect : 0;
-    if (correct) await prisma.farmState.update({ where: { userId }, data: { barnQuizOn: today, barnQuizCount: used + (rewarded ? 1 : 0), coins: { increment: coins } } });
+    if (correct) await Promise.all([prisma.farmState.update({ where: { userId }, data: { barnQuizOn: today, barnQuizCount: used + (rewarded ? 1 : 0), coins: { increment: coins } } }), bumpStats(userId, { quizCorrect: 1 })]);
     res.json({ correct, coins, word: row.vocab.word, meaning: row.vocab.meaning, example: row.vocab.example, left: Math.max(0, C.BARN_QUIZ.dailyRewarded - used - (rewarded ? 1 : 0)) });
   } catch (e) { console.error('[farm] barn quiz answer', e); res.status(500).json({ error: 'Lỗi' }); }
 });
@@ -754,6 +816,68 @@ router.post('/wardrobe/equip', async (req, res) => {
     await prisma.farmState.update({ where: { userId }, data: { wardrobe: JSON.stringify(w) } });
     res.json(await buildState(userId));
   } catch (e) { console.error('[farm] wardrobe equip', e); res.status(500).json({ error: 'Không đổi được' }); }
+});
+
+// ── Nhiệm vụ hằng ngày & thành tựu ───────────────────────────────────────────
+// Khoá lạc quan theo updatedAt: 2 yêu cầu nhận thưởng song song chỉ 1 cái thành công (không nhận đúp).
+router.post('/quests/claim', async (req, res) => {
+  try {
+    const { userId, id } = req.body;
+    const base = await getOrCreateFarm(userId);
+    if (!base) return res.status(404).json({ error: 'User not found' });
+    const { farm, daily } = await ensureDaily(base);
+    const view = questsView(farm, daily);
+    let reward;
+    if (id === 'CHEST') { if (!view.chest.ready) return res.status(400).json({ error: 'Cần nhận đủ 4 nhiệm vụ trước' }); reward = view.chest.reward; }
+    else {
+      const q = view.items.find((x) => x.id === id);
+      if (!q) return res.status(404).json({ error: 'Nhiệm vụ không tồn tại' });
+      if (q.claimed) return res.status(400).json({ error: 'Bạn đã nhận thưởng nhiệm vụ này' });
+      if (!q.done) return res.status(400).json({ error: 'Nhiệm vụ chưa hoàn thành' });
+      reward = q.reward;
+    }
+    const r = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm.updatedAt }, data: { coins: { increment: reward.coins }, gems: { increment: reward.gems }, daily: { ...daily, claimed: [...(daily.claimed || []), id] } } });
+    if (r.count !== 1) return res.status(409).json({ error: 'Đang xử lý, thử lại nhé' });
+    if (reward.xp) await prisma.user.update({ where: { id: userId }, data: { totalXP: { increment: reward.xp } }, select: { id: true } });
+    res.json(await buildState(userId, { claimedReward: { kind: id === 'CHEST' ? 'CHEST' : 'QUEST', name: id === 'CHEST' ? 'Rương nhiệm vụ' : view.items.find((x) => x.id === id).label, ...reward } }));
+  } catch (e) { console.error('[farm] quest claim', e); res.status(500).json({ error: 'Không nhận được thưởng' }); }
+});
+router.post('/achievements/claim', async (req, res) => {
+  try {
+    const { userId, groupId } = req.body;
+    const [farm, user] = await Promise.all([getOrCreateFarm(userId), prisma.user.findUnique({ where: { id: userId }, select: { id: true, streakCount: true } })]);
+    const g = C.ACHIEVEMENTS.find((x) => x.id === groupId);
+    if (!farm || !g) return res.status(400).json({ error: 'Thành tựu không tồn tại' });
+    const claimedMap = jsonObj(jsonObj(farm.achievements).claimed); const got = claimedMap[g.id] || 0;
+    const value = C.statValue(g.stat, { farm, user });
+    let n = got, coins = 0, gems = 0;
+    while (n < g.tiers.length && value >= g.tiers[n][0]) { coins += g.tiers[n][1]; gems += g.tiers[n][2]; n++; }
+    if (n === got) return res.status(400).json({ error: 'Chưa đạt mốc nào để nhận' });
+    const r = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm.updatedAt }, data: { coins: { increment: coins }, gems: { increment: gems }, achievements: { claimed: { ...claimedMap, [g.id]: n } } } });
+    if (r.count !== 1) return res.status(409).json({ error: 'Đang xử lý, thử lại nhé' });
+    res.json(await buildState(userId, { claimedReward: { kind: 'ACHIEVEMENT', name: g.name, coins, gems, xp: 0, tiers: n - got } }));
+  } catch (e) { console.error('[farm] achievement claim', e); res.status(500).json({ error: 'Không nhận được thưởng' }); }
+});
+
+// Bảng vàng nông dân: top 20 theo số lần thu hoạch đúng (scope=all | class), kèm hạng của mình
+router.get('/leaderboard/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params; const scope = req.query.scope === 'class' ? 'class' : 'all';
+    const me = await prisma.user.findUnique({ where: { id: userId }, select: { classroomsJoined: { select: { id: true } } } });
+    if (!me) return res.status(404).json({ error: 'User not found' });
+    const classIds = me.classroomsJoined.map((c) => c.id);
+    const userWhere = scope === 'class' ? { role: 'STUDENT', classroomsJoined: { some: { id: { in: classIds } } } } : { role: 'STUDENT' };
+    const where = { user: userWhere };
+    const myFarm = await prisma.farmState.findUnique({ where: { userId }, select: { harvestCount: true, ordersDone: true, barnCount: true, petName: true, petXp: true, wardrobe: true } });
+    const [rows, total, ahead] = await Promise.all([
+      prisma.farmState.findMany({ where, orderBy: [{ harvestCount: 'desc' }, { ordersDone: 'desc' }], take: 20,
+        select: { userId: true, harvestCount: true, ordersDone: true, barnCount: true, petName: true, petXp: true, wardrobe: true, user: { select: { name: true, streakCount: true } } } }),
+      prisma.farmState.count({ where }),
+      myFarm ? prisma.farmState.count({ where: { ...where, harvestCount: { gt: myFarm.harvestCount } } }) : Promise.resolve(0),
+    ]);
+    const row = (f, i) => ({ rank: i, id: f.userId, name: f.user.name, level: C.levelFor(f.harvestCount), harvestCount: f.harvestCount, orders: f.ordersDone, barnCount: f.barnCount, petName: f.petName, petLevel: C.petLevelFor(f.petXp), streak: f.user.streakCount, equipped: parseJSON(f.wardrobe, {}).equipped || {}, isMe: f.userId === userId });
+    res.json({ scope, total, top: rows.map((f, i) => row(f, i + 1)), myRank: myFarm ? ahead + 1 : null, hasClassroom: classIds.length > 0 });
+  } catch (e) { console.error('[farm] leaderboard', e); res.status(500).json({ error: 'Không tải được bảng vàng' }); }
 });
 
 module.exports = router;

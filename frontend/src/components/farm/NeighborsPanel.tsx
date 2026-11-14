@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import Modal from "./Modal";
 import FarmScene from "./FarmScene";
 import { alert as swalAlert } from "./farmSwal";
-import { farmApi, type Catalog, type Neighbor, type NeighborGroup, type VisitView } from "@/lib/farm/api";
+import { farmApi, type Catalog, type LeaderRow, type Neighbor, type NeighborGroup, type VisitView } from "@/lib/farm/api";
+import { IconCrown, IconFlame } from "./FarmIcons";
 
 // Bạn bè toàn app (không cần tham gia lớp): nhóm theo lớp — "Lớp của tôi" đứng đầu, rồi các lớp khác, cuối cùng là học viên tự do.
 // Thăm nông trại (chỉ xem), thích (+xu cho bạn), tặng quà (tốn xu nhỏ, tối đa 3/ngày).
@@ -15,6 +16,16 @@ export default function NeighborsPanel({ userId, catalog, onClose, onToast, onRe
   const [busy, setBusy] = useState<string | null>(null);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Record<string, boolean>>({});
+  // Tab: danh sách bạn (nhóm theo lớp) | Bảng vàng nông dân
+  const [tab, setTab] = useState<"FRIENDS" | "TOP">("FRIENDS");
+  const [scope, setScope] = useState<"all" | "class">("all");
+  const [board, setBoard] = useState<{ top: LeaderRow[]; total: number; myRank: number | null; hasClassroom: boolean } | null>(null);
+  useEffect(() => {
+    if (tab !== "TOP") return;
+    setBoard(null);
+    farmApi.leaderboard(userId, scope).then(setBoard).catch(() => setBoard({ top: [], total: 0, myRank: null, hasClassroom: false }));
+  }, [tab, scope, userId]);
+  const asNeighbor = (r: LeaderRow): Neighbor => ({ id: r.id, name: r.name, level: r.level, harvestCount: r.harvestCount, barnCount: r.barnCount, petName: r.petName, petLevel: r.petLevel, streak: r.streak, equipped: r.equipped, lastActive: "", likedToday: false, giftedToday: false });
 
   const load = () => farmApi.neighbors(userId).then((d) => { setData(d); setOpen((o) => { const n = { ...o }; d.groups.forEach((g, i) => { if (n[g.id] === undefined) n[g.id] = g.mine || i === 0; }); return n; }); }).catch(() => setData({ groups: [], total: 0, giftsLeft: 0, hasClassroom: false }));
   useEffect(() => { load(); }, [userId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -70,8 +81,36 @@ export default function NeighborsPanel({ userId, catalog, onClose, onToast, onRe
   }
 
   return (
-    <Modal title="👋 Bạn bè" subtitle={data ? `${data.total} bạn đã mở nông trại · hôm nay còn ${data.giftsLeft} lượt tặng quà` : undefined} onClose={onClose}>
-      {!data ? <p className="text-center text-muted py-8">Đang tải...</p> : data.total === 0 ? (
+    <Modal title="Bạn bè" subtitle={data ? `${data.total} bạn đã mở nông trại · hôm nay còn ${data.giftsLeft} lượt tặng quà` : undefined} onClose={onClose}>
+      <div className="flex flex-wrap gap-2 mb-3">
+        <button onClick={() => setTab("FRIENDS")} className={`ui-chip ${tab === "FRIENDS" ? "ui-chip-active" : ""}`}>Danh sách bạn</button>
+        <button onClick={() => setTab("TOP")} className={`ui-chip inline-flex items-center gap-1.5 ${tab === "TOP" ? "ui-chip-active" : ""}`}><IconCrown size={15} />Bảng vàng</button>
+      </div>
+      {tab === "TOP" ? (
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <button onClick={() => setScope("all")} className={`ui-chip text-xs ${scope === "all" ? "ui-chip-active" : ""}`}>Cả hệ thống</button>
+            <button onClick={() => setScope("class")} className={`ui-chip text-xs ${scope === "class" ? "ui-chip-active" : ""}`}>Lớp của tôi</button>
+            {board?.myRank && <span className="ml-auto text-sm font-extrabold text-primary">Hạng của bạn: #{board.myRank}/{board.total}</span>}
+          </div>
+          {!board ? <p className="text-center text-muted py-8">Đang tính điểm...</p> : board.top.length === 0 ? (
+            <p className="text-center text-muted text-sm py-8">{scope === "class" && !board.hasClassroom ? "Bạn chưa vào lớp nào nên chưa có bảng riêng cho lớp." : "Chưa có ai trên bảng vàng."}</p>
+          ) : (
+            <div className="space-y-2">
+              {board.top.map((r) => (
+                <div key={r.id} className={`flex items-center gap-3 rounded-2xl border px-3 py-2.5 ${r.isMe ? "border-primary bg-primary-soft" : "border-line bg-white"}`}>
+                  <div className={`w-9 h-9 rounded-full flex items-center justify-center font-black text-sm shrink-0 ${r.rank === 1 ? "bg-amber-300 text-amber-900" : r.rank === 2 ? "bg-slate-300 text-slate-800" : r.rank === 3 ? "bg-orange-300 text-orange-900" : "bg-slate-100 text-slate-600"}`}>{r.rank <= 3 ? <IconCrown size={17} /> : r.rank}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-foreground truncate">{r.name}{r.isMe && <span className="ml-2 ui-badge text-[10px] bg-primary text-white">Bạn</span>} <span className="text-sm">{outfitOf(r.equipped)}</span></p>
+                    <p className="text-xs text-muted truncate inline-flex items-center gap-2">Cấp {r.level} · {r.harvestCount} thu hoạch · {r.orders} đơn · <span className="inline-flex items-center gap-0.5"><IconFlame size={12} />{r.streak}</span></p>
+                  </div>
+                  {!r.isMe && <button onClick={() => open_(asNeighbor(r))} className="btn-outline rounded-full px-3 py-2 text-sm font-bold shrink-0">Thăm</button>}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : !data ? <p className="text-center text-muted py-8">Đang tải...</p> : data.total === 0 ? (
         <div className="text-center py-8 text-sm text-muted">
           <div className="text-5xl mb-2">🌱</div>
           <p className="font-semibold">Chưa có bạn nào mở nông trại.</p>

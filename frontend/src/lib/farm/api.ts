@@ -50,6 +50,13 @@ export type HarvestResult = {
   coins: number; gems: number; xp: number; produce: number; produceKey: string | null; overflowSold: number; boosted: boolean; becameMastered: boolean; levelUp: number | null;
   srs: { status: string; interval: number };
 };
+export type Reward = { coins: number; gems: number; xp: number };
+export type QuestItem = { id: string; stat: string; icon: string; label: string; target: number; progress: number; done: boolean; claimed: boolean; reward: Reward };
+export type QuestsView = { day: string; items: QuestItem[]; chest: { reward: Reward; ready: boolean; claimed: boolean; progress: number; total: number }; claimable: number; resetAt: string };
+export type AchTier = { target: number; reward: { coins: number; gems: number }; reached: boolean; claimed: boolean };
+export type AchGroup = { id: string; icon: string; name: string; desc: string; value: number; tiers: AchTier[]; claimable: number; complete: boolean };
+export type AchievementsView = { groups: AchGroup[]; claimable: number; completed: number; total: number };
+export type LeaderRow = { rank: number; id: string; name: string; level: number; harvestCount: number; orders: number; barnCount: number; petName: string; petLevel: number; streak: number; equipped: Record<string, string>; isMe: boolean };
 export type FarmState = {
   now: string; farm: FarmView; plots: PlotView[]; orders: OrderView[];
   user: { id: string; name: string; totalXP: number; streakCount: number }; catalog: Catalog;
@@ -61,6 +68,8 @@ export type FarmState = {
   stored?: { word: string; coins: number };
   fed?: { coins: number; petXp: number };
   planted?: { plotId: string; cropKey: string };
+  quests: QuestsView; achievements: AchievementsView;
+  claimedReward?: { kind: "QUEST" | "CHEST" | "ACHIEVEMENT"; name: string; coins: number; gems: number; xp: number; tiers?: number };
 };
 export type Question = {
   plotId: string; mode: "CHOICE" | "LISTEN" | "TYPE" | "FILL";
@@ -114,6 +123,9 @@ export const farmApi = {
   barnUpgrade: (userId: string) => post<FarmState>("/barn/upgrade", { userId }),
   barnQuiz: (userId: string) => get<{ items: BarnQuizItem[]; total: number }>(`/barn/quiz/${userId}`),
   barnQuizAnswer: (userId: string, progressId: string, answer: string) => post<{ correct: boolean; coins: number; word: string; meaning: string; example: string | null; left: number }>("/barn/quiz/answer", { userId, progressId, answer }),
+  claimQuest: (userId: string, id: string) => post<FarmState>("/quests/claim", { userId, id }),
+  claimAchievement: (userId: string, groupId: string) => post<FarmState>("/achievements/claim", { userId, groupId }),
+  leaderboard: (userId: string, scope: "all" | "class") => get<{ scope: string; total: number; top: LeaderRow[]; myRank: number | null; hasClassroom: boolean }>(`/leaderboard/${userId}?scope=${scope}`),
   wardrobeBuy: (userId: string, key: string) => post<FarmState>("/wardrobe/buy", { userId, key }),
   wardrobeEquip: (userId: string, slot: string, key: string | null) => post<FarmState>("/wardrobe/equip", { userId, slot, key }),
   visit: (userId: string, targetId: string) => get<VisitView>(`/visit/${userId}/${targetId}`),

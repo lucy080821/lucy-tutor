@@ -265,6 +265,66 @@ const VISIT_GIFT_REWARD = 15;     // xu người được tặng nhận
 const VISIT_GIFT_COST = 5;        // xu người tặng bỏ ra
 const VISIT_GIFTS_PER_DAY = 3;
 
+// ── Nhiệm vụ hằng ngày + Thành tựu ────────────────────────────────────────────
+// Nhiệm vụ: 4 việc/ngày, luôn làm được (thu hoạch, trồng, 1 trong [giao đơn | bán nông sản], 1 trong [cho ăn | quay vòng]),
+// mục tiêu theo cấp CHỐT lúc đầu ngày (daily.level) để không đổi giữa chừng. Làm đủ 4 → mở rương thưởng.
+// Tiến độ = giá trị bộ đếm hiện tại − mốc chụp đầu ngày (daily.base), nên không cần ghi từng sự kiện theo ngày.
+const dayNumber = (day) => parseInt(String(day).replace(/-/g, ''), 10) || 0;
+function dailyQuestDefs(day, level) {
+  const n = dayNumber(day); const lv = Math.max(1, level);
+  const r = (coins, gems = 0, xp = 5) => ({ coins: Math.round(coins), gems, xp });
+  const t1 = Math.min(12, 3 + Math.floor(lv / 2));
+  const t2 = Math.min(6, 2 + Math.floor(lv / 5));
+  const defs = [
+    { id: 'harvest', stat: 'harvests', icon: 'sprout', label: `Thu hoạch ${t1} cây`, target: t1, reward: r(30 + lv * 5, 0, 6) },
+    { id: 'plant', stat: 'plants', icon: 'seed', label: `Trồng ${t2} từ mới`, target: t2, reward: r(24 + lv * 4, 0, 5) },
+  ];
+  if (n % 2 === 0) { const t = Math.min(4, 1 + Math.floor(lv / 6)); defs.push({ id: 'orders', stat: 'orders', icon: 'truck', label: `Giao ${t} đơn hàng`, target: t, reward: r(50 + lv * 6, lv >= 5 ? 1 : 0, 8) }); }
+  else { const t = Math.min(30, 6 + lv * 2); defs.push({ id: 'sell', stat: 'sold', icon: 'coin', label: `Bán ${t} nông sản`, target: t, reward: r(36 + lv * 4, 0, 5) }); }
+  if (Math.floor(n / 2) % 2 === 0) defs.push({ id: 'feed', stat: 'feeds', icon: 'paw', label: 'Cho Qilin ăn', target: 1, reward: r(20, 0, 3) });
+  else defs.push({ id: 'spin', stat: 'spins', icon: 'wheel', label: 'Quay vòng may mắn', target: 1, reward: r(20, 0, 3) });
+  return defs;
+}
+const questChest = (lv) => ({ coins: 80 + Math.max(1, lv) * 10, gems: 2, xp: 15 });
+// Bộ đếm cần chụp mốc đầu ngày
+const QUEST_STAT_KEYS = ['harvests', 'orders', 'plants', 'sold', 'feeds', 'spins'];
+// Bộ đếm ghi bằng SQL nguyên tử (bumpStats trong farm.routes.js) — danh sách trắng
+const TRACKED_STATS = ['plants', 'sold', 'feeds', 'spins', 'sentences', 'quizCorrect', 'likes', 'gifts', 'mastered'];
+
+const safeJson = (v, fb) => { try { return typeof v === 'string' ? JSON.parse(v) : (v ?? fb); } catch { return fb; } };
+// Giá trị hiện tại của 1 bộ đếm (nguồn có sẵn trong FarmState/User hoặc bộ đếm stats)
+function statValue(stat, { farm, user }) {
+  const st = (farm.stats && typeof farm.stats === 'object') ? farm.stats : {};
+  switch (stat) {
+    case 'harvests': return farm.harvestCount;
+    case 'orders': return farm.ordersDone;
+    case 'level': return levelFor(farm.harvestCount);
+    case 'petLevel': return petLevelFor(farm.petXp);
+    case 'decor': return safeJson(farm.layout, []).length;
+    case 'outfits': return (safeJson(farm.wardrobe, {}).owned || []).length;
+    case 'barnTier': return Math.max(1, BARN_TIERS.findIndex((t) => t.capacity === farm.barnCapacity) + 1);
+    case 'streak': return (user && user.streakCount) || 0;
+    case 'friends': return (st.likes || 0) + (st.gifts || 0);
+    default: return st[stat] || 0;
+  }
+}
+// tiers: [mục tiêu, xu, kim cương]
+const ACHIEVEMENTS = [
+  { id: 'harvest', icon: 'sprout', name: 'Nông dân chăm chỉ', desc: 'Thu hoạch đúng nhiều cây', stat: 'harvests', tiers: [[10, 50, 0], [50, 150, 1], [200, 400, 2], [600, 1000, 4], [1500, 2500, 8]] },
+  { id: 'plant', icon: 'seed', name: 'Người gieo hạt', desc: 'Trồng nhiều từ mới', stat: 'plants', tiers: [[5, 40, 0], [25, 120, 1], [100, 350, 2], [400, 1000, 5]] },
+  { id: 'mastered', icon: 'star', name: 'Bộ nhớ thép', desc: 'Đưa từ lên mức thuộc lòng', stat: 'mastered', tiers: [[3, 80, 1], [10, 200, 2], [30, 600, 4], [80, 1500, 8], [200, 4000, 15]] },
+  { id: 'quiz', icon: 'brain', name: 'Siêu sao ôn kho', desc: 'Trả lời đúng ở mục Ôn kho từ', stat: 'quizCorrect', tiers: [[10, 60, 0], [50, 200, 1], [200, 600, 3], [600, 1500, 6]] },
+  { id: 'orders', icon: 'truck', name: 'Thương nhân', desc: 'Giao đơn hàng cho khách', stat: 'orders', tiers: [[5, 60, 0], [25, 200, 1], [100, 700, 3], [300, 2000, 8]] },
+  { id: 'sentences', icon: 'pen', name: 'Nhà văn nhí', desc: 'Viết câu tiếng Anh được khách khen', stat: 'sentences', tiers: [[3, 80, 1], [15, 250, 2], [50, 800, 4], [150, 2500, 10]] },
+  { id: 'level', icon: 'medal', name: 'Cấp nông trại', desc: 'Nâng cấp nông trại', stat: 'level', tiers: [[3, 80, 0], [5, 200, 1], [10, 600, 3], [15, 1200, 6], [20, 2500, 12]] },
+  { id: 'decor', icon: 'palette', name: 'Kiến trúc sư vườn', desc: 'Đặt vật trang trí lên đất', stat: 'decor', tiers: [[5, 50, 0], [15, 150, 1], [30, 400, 2], [60, 1000, 5]] },
+  { id: 'outfits', icon: 'shirt', name: 'Tín đồ thời trang', desc: 'Sưu tập trang phục cho Qilin', stat: 'outfits', tiers: [[3, 60, 0], [8, 200, 1], [15, 600, 3], [24, 1500, 8]] },
+  { id: 'pet', icon: 'paw', name: 'Bạn thân của Qilin', desc: 'Nuôi Qilin lên cấp', stat: 'petLevel', tiers: [[2, 40, 0], [4, 150, 1], [6, 500, 4]] },
+  { id: 'friends', icon: 'users', name: 'Người thân thiện', desc: 'Thích và tặng quà nông trại bạn bè', stat: 'friends', tiers: [[5, 40, 0], [25, 150, 1], [100, 500, 3]] },
+  { id: 'streak', icon: 'flame', name: 'Chuỗi ngày học', desc: 'Giữ chuỗi học liên tiếp', stat: 'streak', tiers: [[3, 60, 0], [7, 200, 2], [14, 500, 4], [30, 1500, 10]] },
+  { id: 'barn', icon: 'barn', name: 'Chủ kho', desc: 'Nâng cấp sức chứa kho', stat: 'barnTier', tiers: [[2, 100, 0], [4, 300, 2], [7, 1000, 6]] },
+];
+
 // Ngày theo giờ Việt Nam "YYYY-MM-DD" — mọi giới hạn "1 lần/ngày" dùng chung hàm này
 function vnDay(d = new Date()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
@@ -290,4 +350,5 @@ module.exports = {
   PRODUCE_PRICE, PRODUCE_PER_HARVEST, BARN_TIERS, BARN_FULL_SELL_RATE, BARN_QUIZ, OUTFITS, OUTFIT_SLOTS, DECOR_CATS,
   WHEEL, WHEEL_DECOR_POOL, PET_FEED_REWARD, PET_PAT_XP, PET_LEVELS, petLevelFor,
   VISIT_LIKE_REWARD, VISIT_GIFT_REWARD, VISIT_GIFT_COST, VISIT_GIFTS_PER_DAY, vnDay, publicCatalog,
+  dailyQuestDefs, questChest, QUEST_STAT_KEYS, TRACKED_STATS, ACHIEVEMENTS, statValue,
 };

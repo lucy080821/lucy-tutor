@@ -1547,6 +1547,13 @@ model FarmState {
   // Trang phục Qilin: { owned: [key], equipped: { slot: key } }
   wardrobe String @default("{}")
 
+  // Bộ đếm sự kiện trọn đời { plants, sold, feeds, spins, sentences, quizCorrect, likes, gifts, mastered } (tăng bằng SQL nguyên tử)
+  stats Json @default("{}")
+  // Nhiệm vụ hằng ngày: { day, level, base: {...mốc đầu ngày}, claimed: [id] }
+  daily Json @default("{}")
+  // Thành tựu: { claimed: { groupId: số mốc đã nhận } }
+  achievements Json @default("{}")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

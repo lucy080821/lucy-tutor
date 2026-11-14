@@ -3,20 +3,30 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Catalog, DecorPlaced, FarmView, PlotView } from "@/lib/farm/api";
 import { formatCountdown } from "@/lib/farm/api";
 import { Cloud, CropSprite, DecorSprite, PetSprite, SoilTile, TILE_H, TILE_W, diamondPoints, type Outfit } from "./Sprites";
+import { AmbientLife, SKY, SkyBackdrop, skyNow } from "./Ambient";
 
 export type SceneMode =
   | { type: "normal" }
   | { type: "edit"; selected: { kind: "plot" | "decor"; id: string } | null }
   | { type: "place"; itemKey: string; label: string };
 
+// Chữ thưởng nổi lên trên 1 ô đất (x,y là toạ độ lưới)
+export type FloatText = { id: number; x: number; y: number; text: string; tone: "coin" | "xp" | "gem" | "bad" | "item" };
+const FLOAT_COLOR: Record<FloatText["tone"], string> = { coin: "#b45309", xp: "#1e3a8a", gem: "#0369a1", bad: "#b91c1c", item: "#047857" };
+
 type Props = {
   farm: FarmView; plots: PlotView[]; catalog: Catalog; now: number; mode: SceneMode; readOnly?: boolean;
-  pet: { name: string; level: number }; outfit?: Outfit; petJumping?: boolean; hearts?: number[];
+  pet: { name: string; level: number }; outfit?: Outfit; petJumping?: boolean; hearts?: number[]; floats?: FloatText[]; skyTime?: string | null;
   onTileClick?: (x: number, y: number) => void; onPlotClick?: (plot: PlotView) => void;
   onDecorClick?: (d: DecorPlaced) => void; onPetClick?: () => void;
 };
 
-const TOP_PAD = 110;
+const TOP_PAD = 90;
+const LAMP_KEYS = new Set(["lamp", "xmas", "lantern"]);
+
+// Băm vị trí ô → số cố định (cụm cỏ/hoa mọc cùng chỗ mỗi lần vẽ lại)
+const hashXY = (x: number, y: number) => { let h = (Math.imul(x + 1, 374761393) + Math.imul(y + 1, 668265263)) >>> 0; h = Math.imul(h ^ (h >>> 13), 1274126177) >>> 0; return (h ^ (h >>> 16)) >>> 0; };
+const FLOWER_COLORS = ["#ffffff", "#fda4af", "#fde047", "#c4b5fd", "#fdba74"];
 
 // LƯU Ý SVG: CSS animation có transform sẽ GHI ĐÈ thuộc tính transform của phần tử → luôn tách
 // <g transform=...> (vị trí) và <g className="farm-..."> (hoạt ảnh) thành 2 lớp lồng nhau.
@@ -28,12 +38,17 @@ export function liveStatus(plot: PlotView, now: number) {
   return { status: now >= ready ? ("READY" as const) : ("GROWING" as const), growth, msLeft: ready - now };
 }
 
-export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], onTileClick, onPlotClick, onDecorClick, onPetClick }: Props) {
+export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], skyTime, onTileClick, onPlotClick, onDecorClick, onPetClick }: Props) {
   const W = farm.gridW, H = farm.gridH;
   const originX = (H * TILE_W) / 2;
   const vbW = ((W + H) * TILE_W) / 2;
   const vbH = TOP_PAD + ((W + H) * TILE_H) / 2 + 48;
   const toScreen = (gx: number, gy: number) => ({ cx: originX + ((gx - gy) * TILE_W) / 2, cy: TOP_PAD + ((gx + gy) * TILE_H) / 2 + TILE_H / 2 });
+
+  // Giờ THẬT Ở VIỆT NAM (GMT+7, không phụ thuộc múi giờ máy) → bình minh / sáng / trưa / chiều / hoàng hôn / đêm; mưa theo khung giờ trong ngày
+  const sky = skyNow(now, skyTime);
+  const phase = sky.phase;
+  const raining = sky.raining;
 
   const occupied = useMemo(() => {
     const s = new Set<string>();
@@ -63,6 +78,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
 
   const plotAt = useMemo(() => new Map(plots.map((p) => [`${p.x},${p.y}`, p])), [plots]);
   const decorAt = useMemo(() => new Map(farm.layout.map((d) => [`${d.x},${d.y}`, d])), [farm.layout]);
+  const lamps = useMemo(() => farm.layout.filter((d) => LAMP_KEYS.has(d.key)).map((d) => ({ cx: originX + ((d.x - d.y) * TILE_W) / 2, cy: TOP_PAD + ((d.x + d.y) * TILE_H) / 2 + TILE_H / 2 })), [farm.layout, originX]);
 
   const selectedId = mode.type === "edit" ? mode.selected?.id : null;
   const placing = mode.type === "place";
@@ -75,14 +91,23 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   // Bệ đất 3D
   const corners = { top: toScreen(0, 0), right: toScreen(W - 1, 0), bottom: toScreen(W - 1, H - 1), left: toScreen(0, H - 1) };
   const thick = 16;
+  const bx = corners.bottom.cx, by = corners.bottom.cy + TILE_H / 2 + thick;
 
   return (
-    <div ref={scrollRef} className="farm-scene relative rounded-2xl overflow-x-auto overflow-y-hidden border border-line" style={{ background: "linear-gradient(180deg,#bae6fd 0%,#e0f2fe 45%,#dcfce7 100%)" }}>
+    <div ref={scrollRef} className="farm-scene relative rounded-2xl overflow-x-auto overflow-y-hidden border border-line" style={{ background: SKY[phase], transition: "background 2s ease" }}>
       {/* Trên điện thoại khung đất rộng tối thiểu ~640px (cuộn ngang) để ô đất đủ lớn mà bấm; desktop tự co theo cột */}
-      <svg viewBox={`0 0 ${vbW} ${vbH}`} preserveAspectRatio="xMidYMid meet" aria-label="Nông trại" style={{ minWidth: Math.min(vbW, 640) }}>
-        <Cloud x={-80} y={30} scale={0.8} duration={70} delay={10} />
-        <Cloud x={-120} y={60} scale={1.1} duration={95} delay={40} />
-        <Cloud x={-60} y={16} scale={0.6} duration={55} delay={25} />
+      <svg viewBox={`0 0 ${vbW} ${vbH}`} preserveAspectRatio="xMidYMid meet" aria-label="Nông trại" data-phase={phase} style={{ minWidth: Math.min(vbW, 640) }}>
+        <SkyBackdrop vbW={vbW} vbH={vbH} phase={phase} frac={sky.hour + sky.minute / 60} />
+        <g opacity={phase === "night" ? 0.35 : raining ? 0.55 : phase === "noon" ? 0.8 : 1}>
+          <Cloud x={-80} y={30} scale={0.8} duration={70} delay={10} />
+          <Cloud x={-120} y={60} scale={1.1} duration={95} delay={40} />
+          <Cloud x={-60} y={16} scale={0.6} duration={55} delay={25} />
+        </g>
+        {/* bóng đổ + đá treo dưới hòn đảo */}
+        <ellipse cx={bx} cy={by + 26} rx={vbW * 0.3} ry={9} fill="rgba(15,23,42,.14)" />
+        <polygon points={`${bx - 34},${by - 2} ${bx - 6},${by - 2} ${bx - 20},${by + 20}`} fill="#7c4a22" />
+        <polygon points={`${bx + 8},${by - 3} ${bx + 36},${by - 3} ${bx + 24},${by + 14}`} fill="#6b3f1d" />
+        <polygon points={`${bx - 8},${by} ${bx + 4},${by} ${bx - 2},${by + 10}`} fill="#5a3418" />
         {/* bệ đất */}
         <polygon points={`${corners.left.cx - TILE_W / 2},${corners.left.cy} ${corners.bottom.cx},${corners.bottom.cy + TILE_H / 2} ${corners.bottom.cx},${corners.bottom.cy + TILE_H / 2 + thick} ${corners.left.cx - TILE_W / 2},${corners.left.cy + thick}`} fill="#8b5a2b" />
         <polygon points={`${corners.bottom.cx},${corners.bottom.cy + TILE_H / 2} ${corners.right.cx + TILE_W / 2},${corners.right.cy} ${corners.right.cx + TILE_W / 2},${corners.right.cy + thick} ${corners.bottom.cx},${corners.bottom.cy + TILE_H / 2 + thick}`} fill="#6b4423" />
@@ -94,9 +119,18 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
           const d = decorAt.get(key);
           const isPath = d && d.key === "path";
           const clickable = !readOnly && free && (placing || (mode.type === "edit" && mode.selected) || false);
+          const h = hashXY(x, y);
+          const showTuft = free && h % 4 === 0;
+          const showFlower = free && h % 9 === 0;
           return (
             <g key={`t${key}`} onClick={() => { if (!readOnly && free && onTileClick) onTileClick(x, y); }} className={clickable ? "farm-tile farm-tile-selectable" : ""}>
               <polygon points={diamondPoints(cx, cy)} fill={(x + y) % 2 ? "#86c75b" : "#7fbf52"} stroke="#6aa845" strokeWidth={1} />
+              {showTuft && <path d={`M${cx + ((h >> 3) % 24) - 12} ${cy + ((h >> 7) % 8) - 3} l-3 -7 m3 7 l0 -9 m0 9 l3 -7`} stroke="#5f9f3b" strokeWidth={1.6} strokeLinecap="round" fill="none" opacity={0.85} />}
+              {showFlower && (
+                <g transform={`translate(${cx + ((h >> 5) % 30) - 15} ${cy + ((h >> 9) % 10) - 4})`}>
+                  <circle r={2.6} fill={FLOWER_COLORS[h % FLOWER_COLORS.length]} stroke="rgba(0,0,0,.15)" strokeWidth={0.5} /><circle r={0.9} fill="#f59e0b" />
+                </g>
+              )}
               {isPath && <DecorSprite emoji="" cx={cx} cy={cy} isPath />}
               {clickable && <polygon points={diamondPoints(cx, cy, TILE_W - 10, TILE_H - 5)} fill="rgba(253,224,71,.45)" stroke="#f59e0b" strokeWidth={1.5} strokeDasharray="4 3" />}
             </g>
@@ -124,10 +158,14 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
                   <g transform={`translate(${cx} ${cy + 6})`}>
                     <g className="farm-pop"><CropSprite cropKey={plot.cropKey} growth={live.growth} ready={isReady} wilted={plot.wilted && live.status !== "READY"} /></g>
                     {isReady && (
-                      <g transform="translate(0 -74)"><g className="farm-ready-marker">
-                        <circle cx={0} cy={0} r={11} fill="#f9a95a" stroke="#fff" strokeWidth={2} />
-                        <text x={0} y={5} textAnchor="middle" fontSize={15} fontWeight={800} fill="#1f2d3d">!</text>
-                      </g></g>
+                      <>
+                        <g transform="translate(0 -74)"><g className="farm-ready-marker">
+                          <circle cx={0} cy={0} r={11} fill="#f9a95a" stroke="#fff" strokeWidth={2} />
+                          <text x={0} y={5} textAnchor="middle" fontSize={15} fontWeight={800} fill="#1f2d3d">!</text>
+                        </g></g>
+                        <g transform="translate(-17 -44)"><g className="farm-sparkle"><text fontSize={11}>✨</text></g></g>
+                        <g transform="translate(11 -52)"><g className="farm-sparkle" style={{ animationDelay: ".7s" }}><text fontSize={9}>✨</text></g></g>
+                      </>
                     )}
                     {plot.srs?.status === "MASTERED" && <text x={18} y={-8} fontSize={14}>⭐</text>}
                   </g>
@@ -170,10 +208,22 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
                 <PetSprite level={pet.level} size={0.9} blink={blink} outfit={outfit} />
               </g>
               {hearts.map((h) => <text key={h} x={(h % 3) * 12 - 12} y={-60} textAnchor="middle" fontSize={16} className="farm-heart">💖</text>)}
+              {sky.sleeping && <g transform="translate(16 -70)"><g className="farm-zzz"><text fontSize={15}>💤</text></g></g>}
               <text x={0} y={22} textAnchor="middle" fontSize={12} fontWeight={800} fill="#1e3a8a" style={{ paintOrder: "stroke", stroke: "#fff", strokeWidth: 3 }}>{pet.name}</text>
             </g>
           );
         })()}
+        {/* chữ thưởng nổi lên (+xu, +XP...) */}
+        {floats.map((f) => {
+          const { cx, cy } = toScreen(f.x, f.y);
+          return (
+            <g key={f.id} transform={`translate(${cx} ${cy - 54})`} pointerEvents="none">
+              <g className="farm-float"><text textAnchor="middle" fontSize={17} fontWeight={900} fill={FLOAT_COLOR[f.tone]} style={{ paintOrder: "stroke", stroke: "#fff", strokeWidth: 4, strokeLinejoin: "round" }}>{f.text}</text></g>
+            </g>
+          );
+        })}
+        {/* màu trời, đèn vườn, bướm/đom đóm/chim, mưa */}
+        <AmbientLife vbW={vbW} vbH={vbH} phase={phase} rain={raining} lamps={lamps} seed={W * 31 + H} />
       </svg>
     </div>
   );

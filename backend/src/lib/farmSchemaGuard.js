@@ -11,6 +11,9 @@ const COLUMNS = [
   `"barnQuizOn" TEXT`,
   `"barnQuizCount" INTEGER NOT NULL DEFAULT 0`,
   `"wardrobe" TEXT NOT NULL DEFAULT '{}'`,
+  `"stats" JSONB NOT NULL DEFAULT '{}'::jsonb`,
+  `"daily" JSONB NOT NULL DEFAULT '{}'::jsonb`,
+  `"achievements" JSONB NOT NULL DEFAULT '{}'::jsonb`,
 ];
 
 async function ensureFarmColumns() {
