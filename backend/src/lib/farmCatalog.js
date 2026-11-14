@@ -353,15 +353,40 @@ function dailyQuestDefs(day, level) {
   ];
   if (n % 2 === 0) { const t = Math.min(4, 1 + Math.floor(lv / 6)); defs.push({ id: 'orders', stat: 'orders', icon: 'truck', label: `Giao ${t} đơn hàng`, target: t, reward: r(50 + lv * 6, lv >= 5 ? 1 : 0, 8) }); }
   else { const t = Math.min(30, 6 + lv * 2); defs.push({ id: 'sell', stat: 'sold', icon: 'coin', label: `Bán ${t} nông sản`, target: t, reward: r(36 + lv * 4, 0, 5) }); }
-  if (Math.floor(n / 2) % 2 === 0) defs.push({ id: 'feed', stat: 'feeds', icon: 'paw', label: 'Cho Qilin ăn', target: 1, reward: r(20, 0, 3) });
-  else defs.push({ id: 'spin', stat: 'spins', icon: 'wheel', label: 'Quay vòng may mắn', target: 1, reward: r(20, 0, 3) });
+  const k4 = Math.floor(n / 2) % 3;
+  if (k4 === 0) defs.push({ id: 'feed', stat: 'feeds', icon: 'paw', label: 'Cho Qilin ăn', target: 1, reward: r(20, 0, 3) });
+  else if (k4 === 1) defs.push({ id: 'spin', stat: 'spins', icon: 'wheel', label: 'Quay vòng may mắn', target: 1, reward: r(20, 0, 3) });
+  else defs.push({ id: 'trip', stat: 'trips', icon: 'paw', label: 'Cho Qilin đi thám hiểm 1 chuyến', target: 1, reward: r(32, 0, 4) });
   return defs;
 }
 const questChest = (lv) => ({ coins: 80 + Math.max(1, lv) * 10, gems: 2, xp: 15 });
 // Bộ đếm cần chụp mốc đầu ngày
-const QUEST_STAT_KEYS = ['harvests', 'orders', 'plants', 'sold', 'feeds', 'spins'];
+// ── Nhiệm vụ & kỹ năng của Qilin ─────────────────────────────────────────────────────────────────
+// 1) THÁM HIỂM: Qilin đi vắng (theo giờ thật) rồi mang về xu, nông sản, đôi khi kim cương và TỪ VỰNG MỚI (tự vào deck để trồng/ôn).
+//    Chuyến dài cần Qilin cấp cao hơn; phần thưởng nhân thêm theo cấp Qilin.
+// 2) KỸ NĂNG THEO CẤP: có hiệu lực khi Qilin đã được cho ăn hôm nay → có lý do cho ăn mỗi ngày.
+const PET_TRIPS = [
+  { tier: 1, name: 'Dạo quanh làng', emoji: '🏘️', minutes: 15,  minLevel: 1, coins: [20, 40],   produce: [2, 3],  gemChance: 0.03, gemMax: 1, words: 1, petXp: 6 },
+  { tier: 2, name: 'Rừng hoa',       emoji: '🌸', minutes: 60,  minLevel: 2, coins: [70, 120],  produce: [4, 7],  gemChance: 0.15, gemMax: 1, words: 2, petXp: 18 },
+  { tier: 3, name: 'Núi Qilin',      emoji: '⛰️', minutes: 240, minLevel: 4, coins: [200, 340], produce: [9, 14], gemChance: 0.45, gemMax: 2, words: 3, petXp: 50 },
+];
+const PET_TRIP_WORDS_PER_DAY = 6;   // tối đa từ mới Qilin mang về mỗi ngày (khỏi ngập deck)
+const PET_TRIP_LEVEL_BONUS = 0.08;  // phần thưởng xu/nông sản +8% mỗi cấp Qilin sau cấp 1
+const PET_PERKS = [
+  { level: 2, id: 'coin',    name: 'Nhanh tay', desc: '+10% xu khi thu hoạch' },
+  { level: 3, id: 'order',   name: 'Khéo buôn', desc: '+10% xu khi giao đơn hàng' },
+  { level: 4, id: 'trip',    name: 'Chân sáo',  desc: 'Chuyến thám hiểm ngắn hơn 20%' },
+  { level: 5, id: 'factory', name: 'Phụ bếp',   desc: 'Nhà máy chế biến nhanh hơn 15%' },
+  { level: 6, id: 'xp',      name: 'Thông thái', desc: '+25% XP khi thu hoạch' },
+];
+function petBuffs(petXp, fed) {
+  const lv = petLevelFor(petXp); const on = (l) => !!fed && lv >= l;
+  return { active: !!fed, coinPct: on(2) ? 0.1 : 0, orderPct: on(3) ? 0.1 : 0, tripTimePct: on(4) ? 0.2 : 0, factoryTimePct: on(5) ? 0.15 : 0, xpPct: on(6) ? 0.25 : 0 };
+}
+
+const QUEST_STAT_KEYS = ['harvests', 'orders', 'plants', 'sold', 'feeds', 'spins', 'trips'];
 // Bộ đếm ghi bằng SQL nguyên tử (bumpStats trong farm.routes.js) — danh sách trắng
-const TRACKED_STATS = ['plants', 'sold', 'feeds', 'spins', 'sentences', 'quizCorrect', 'likes', 'gifts', 'mastered'];
+const TRACKED_STATS = ['plants', 'sold', 'feeds', 'spins', 'trips', 'sentences', 'quizCorrect', 'likes', 'gifts', 'mastered'];
 
 const safeJson = (v, fb) => { try { return typeof v === 'string' ? JSON.parse(v) : (v ?? fb); } catch { return fb; } };
 // Giá trị hiện tại của 1 bộ đếm (nguồn có sẵn trong FarmState/User hoặc bộ đếm stats)
@@ -391,6 +416,7 @@ const ACHIEVEMENTS = [
   { id: 'level', icon: 'medal', name: 'Cấp nông trại', desc: 'Nâng cấp nông trại', stat: 'level', tiers: [[3, 80, 0], [5, 200, 1], [10, 600, 3], [15, 1200, 6], [20, 2500, 12]] },
   { id: 'decor', icon: 'palette', name: 'Kiến trúc sư vườn', desc: 'Đặt vật trang trí lên đất', stat: 'decor', tiers: [[5, 50, 0], [15, 150, 1], [30, 400, 2], [60, 1000, 5]] },
   { id: 'outfits', icon: 'shirt', name: 'Tín đồ thời trang', desc: 'Sưu tập trang phục cho Qilin', stat: 'outfits', tiers: [[3, 60, 0], [8, 200, 1], [15, 600, 3], [24, 1500, 8]] },
+  { id: 'trips', icon: 'paw', name: 'Nhà thám hiểm', desc: 'Cho Qilin đi thám hiểm', stat: 'trips', tiers: [[3, 60, 0], [15, 200, 1], [50, 600, 3], [150, 1800, 8]] },
   { id: 'pet', icon: 'paw', name: 'Bạn thân của Qilin', desc: 'Nuôi Qilin lên cấp', stat: 'petLevel', tiers: [[2, 40, 0], [4, 150, 1], [6, 500, 4]] },
   { id: 'friends', icon: 'users', name: 'Người thân thiện', desc: 'Thích và tặng quà nông trại bạn bè', stat: 'friends', tiers: [[5, 40, 0], [25, 150, 1], [100, 500, 3]] },
   { id: 'streak', icon: 'flame', name: 'Chuỗi ngày học', desc: 'Giữ chuỗi học liên tiếp', stat: 'streak', tiers: [[3, 60, 0], [7, 200, 2], [14, 500, 4], [30, 1500, 10]] },
@@ -409,7 +435,7 @@ function publicCatalog() {
     startPlots: START_PLOTS, maxPlots: MAX_PLOTS, firstGrowMinutes: FIRST_GROW_MINUTES,
     harvestCoins: HARVEST_COINS, harvestXp: HARVEST_XP, masteredBonus: MASTERED_BONUS, barnBonus: BARN_BONUS,
     orderTrashCost: ORDER_TRASH_COST, decorSellRate: DECOR_SELL_RATE, gemSellCoins: GEM_SELL_COINS,
-    petLevels: PET_LEVELS, petFeedReward: PET_FEED_REWARD,
+    petLevels: PET_LEVELS, petFeedReward: PET_FEED_REWARD, petTrips: PET_TRIPS, petPerks: PET_PERKS, petTripWordsPerDay: PET_TRIP_WORDS_PER_DAY,
     visit: { likeReward: VISIT_LIKE_REWARD, giftReward: VISIT_GIFT_REWARD, giftCost: VISIT_GIFT_COST, giftsPerDay: VISIT_GIFTS_PER_DAY },
   };
 }
@@ -420,7 +446,7 @@ module.exports = {
   DECOR, PRODUCTS, FACTORIES, DECOR_SELL_RATE, GEM_SELL_COINS, sellValue, HARVEST_COINS, HARVEST_XP, MASTERED_BONUS, BARN_BONUS, WITHER_PENALTY_COINS,
   CUSTOMERS, ORDER_SLOTS, makeOrderTemplate, orderDifficulty, ORDER_TRASH_COST,
   PRODUCE_PRICE, PRODUCE_PER_HARVEST, BARN_TIERS, BARN_FULL_SELL_RATE, BARN_QUIZ, OUTFITS, OUTFIT_SLOTS, DECOR_CATS,
-  WHEEL, WHEEL_DECOR_POOL, PET_FEED_REWARD, PET_PAT_XP, PET_LEVELS, petLevelFor,
+  WHEEL, WHEEL_DECOR_POOL, PET_TRIPS, PET_TRIP_WORDS_PER_DAY, PET_TRIP_LEVEL_BONUS, PET_PERKS, petBuffs, PET_FEED_REWARD, PET_PAT_XP, PET_LEVELS, petLevelFor,
   VISIT_LIKE_REWARD, VISIT_GIFT_REWARD, VISIT_GIFT_COST, VISIT_GIFTS_PER_DAY, vnDay, publicCatalog,
   dailyQuestDefs, questChest, QUEST_STAT_KEYS, TRACKED_STATS, ACHIEVEMENTS, statValue,
 };

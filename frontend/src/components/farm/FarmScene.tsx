@@ -21,7 +21,8 @@ type Props = {
   pet: { name: string; level: number }; outfit?: Outfit; petJumping?: boolean; hearts?: number[]; floats?: FloatText[];
   sky?: SkyInfo; weather?: WeatherKind; // giờ + thời tiết của VỊ TRÍ người chơi (không truyền = giờ máy + trời quang)
   onTileClick?: (x: number, y: number) => void; onPlotClick?: (plot: PlotView) => void;
-  zoom?: number; onZoomChange?: (z: number) => void;
+  zoom?: number; onZoomChange?: (z: number) => void; fit?: boolean; petAway?: boolean; // petAway: Qilin đang đi thám hiểm → không hiện trong vườn
+  // fit: vừa khít khung (toàn màn hình), không cuộn ngang
   onDecorClick?: (d: DecorPlaced) => void; onFactoryClick?: (d: DecorPlaced) => void; onPetClick?: () => void;
 };
 
@@ -42,7 +43,7 @@ export function liveStatus(plot: PlotView, now: number) {
   return { status: now >= ready ? ("READY" as const) : ("GROWING" as const), growth, msLeft: ready - now };
 }
 
-export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", zoom = 1, onZoomChange, onTileClick, onPlotClick, onDecorClick, onFactoryClick, onPetClick }: Props) {
+export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", zoom = 1, onZoomChange, fit, petAway, onTileClick, onPlotClick, onDecorClick, onFactoryClick, onPetClick }: Props) {
   const W = farm.gridW, H = farm.gridH;
   const originX = (H * TILE_W) / 2;
   const vbW = ((W + H) * TILE_W) / 2;
@@ -146,7 +147,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   return (
     <div ref={scrollRef} onClickCapture={onClickCap} className="farm-scene relative rounded-2xl overflow-x-auto overflow-y-hidden border border-line" style={{ background: skyBackground(phase, weather), transition: "background 2s ease" }}>
       {/* Trên điện thoại khung đất rộng tối thiểu ~640px (cuộn ngang) để ô đất đủ lớn mà bấm; desktop tự co theo cột */}
-      <svg ref={svgRef} viewBox={`${vbx} ${vby} ${vw} ${vh}`} preserveAspectRatio="xMidYMid meet" aria-label="Nông trại" data-phase={phase} data-zoom={z} onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} onPointerCancel={onPU} style={{ minWidth: Math.min(vbW, 640), touchAction: z > 1 ? "none" : undefined, cursor: z > 1 ? "grab" : undefined }}>
+      <svg ref={svgRef} viewBox={`${vbx} ${vby} ${vw} ${vh}`} preserveAspectRatio="xMidYMid meet" aria-label="Nông trại" data-phase={phase} data-zoom={z} onPointerDown={onPD} onPointerMove={onPM} onPointerUp={onPU} onPointerCancel={onPU} style={{ minWidth: fit ? 0 : Math.min(vbW * 0.7, 520), touchAction: z > 1 ? "none" : undefined, cursor: z > 1 ? "grab" : undefined }}>
         <SkyBackdrop vbW={vbW} vbH={vbH} phase={phase} frac={sky.frac} sr={sky.sr} ss={sky.ss} weather={weather} />
         <g opacity={phase === "night" ? (weather === "clear" ? 0.35 : 0.5) : phase === "noon" && weather === "clear" ? 0.8 : 1}>
           {[[-80, 30, 0.8, 70, 10], [-120, 60, 1.1, 95, 40], [-60, 16, 0.6, 55, 25], [-200, 44, 0.9, 80, 55], [-30, 72, 1.0, 105, 5], [-150, 22, 0.7, 62, 33], [-100, 84, 1.2, 120, 70]].slice(0, clouds.n).map(([cx, cy, sc, du, de], i) => (
@@ -280,7 +281,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
           );
         })}
         {/* thú cưng + vật nuôi đi dạo */}
-        <Roamers W={W} H={H} toScreen={toScreen} blocked={blocked} animals={animals} sleeping={!!sky.sleeping} pet={pet} outfit={outfit} petJumping={petJumping} hearts={hearts} wet={wet} onPetClick={onPetClick} />
+        <Roamers W={W} H={H} toScreen={toScreen} blocked={blocked} animals={animals} sleeping={!!sky.sleeping} petAway={petAway} pet={pet} outfit={outfit} petJumping={petJumping} hearts={hearts} wet={wet} onPetClick={onPetClick} />
         {/* chữ thưởng nổi lên (+xu, +XP...) */}
         {floats.map((f) => {
           const { cx, cy } = toScreen(f.x, f.y);

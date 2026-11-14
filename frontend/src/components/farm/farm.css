@@ -71,6 +71,29 @@
 .farm-fullscreen { position: fixed; inset: 0; z-index: 50; overflow: auto; background: var(--background); padding: 12px; align-content: start; }
 .farm-fullscreen:fullscreen { padding: 16px; }
 @media (min-width: 1024px) { .farm-fullscreen { padding: 16px 20px; } }
+/* Toàn màn hình = 1 màn hình duy nhất, không cuộn: thanh trạng thái gọn trên cùng, cảnh chiếm phần còn lại, thanh điều hướng dưới đáy;
+   cột Đơn hàng/Nhiệm vụ bên phải đổi thành nút bật/tắt (ngăn kéo) trên thanh công cụ */
+.farm-fs-game { display: flex; flex-direction: column; height: 100dvh; overflow: hidden; padding: 8px !important; }
+.farm-fs-main { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.farm-fs-scene { flex: 1; min-height: 0; }
+.farm-fs-scene .farm-scene { height: 100%; }
+.farm-fs-scene .farm-scene svg { height: 100% !important; width: 100%; max-height: none !important; min-height: 0 !important; }
+.farm-fs-main .farm-hud { padding: 5px 10px; gap: 4px 12px; border-radius: 14px; box-shadow: none; }
+.farm-fs-main .farm-hud .farm-lv { transform: scale(.78); transform-origin: left center; margin-right: -8px; }
+.farm-fs-main .farm-hud .farm-pill { padding: 3px 9px 3px 6px; font-size: 13px; gap: 4px; }
+.farm-fs-main .farm-hud .farm-pill svg { width: 17px; height: 17px; }
+.farm-fs-main .farm-hud .h-2\.5 { height: 6px; }
+.farm-fs-main .farm-hud .text-sm { font-size: 12px; }
+.farm-fullscreen .farm-dock { position: static !important; transform: none; opacity: 1; pointer-events: auto; padding: 5px 4px 4px; border-radius: 16px; box-shadow: none; flex-shrink: 0; }
+.farm-fullscreen .farm-dock-ico { width: 34px; height: 34px; border-radius: 12px; }
+.farm-fullscreen .farm-dock-ico svg { width: 19px; height: 19px; }
+.farm-fullscreen .farm-dock-label { font-size: 10.5px; }
+.farm-fullscreen .farm-dock-hidden { display: none; }
+.farm-fullscreen .farm-dock-toggle { bottom: calc(8px + env(safe-area-inset-bottom) + 62px); }
+.farm-fullscreen .farm-dock-toggle-off { bottom: calc(10px + env(safe-area-inset-bottom)); }
+.farm-fs-drawer { position: absolute; top: 10px; bottom: 10px; right: 58px; width: min(350px, calc(100% - 78px)); overflow: auto; z-index: 8; border-radius: 16px; box-shadow: 0 10px 30px rgba(15,23,42,.28); background: var(--surface, #fff); }
+.farm-tool { position: relative; }
+.farm-tool-badge { position: absolute; top: -5px; right: -5px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 10px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; pointer-events: none; }
 
 /* ───────── Hiệu ứng không khí (Ambient) ───────── */
 @keyframes farm-twinkle { 0%,100% { opacity: .25; } 50% { opacity: 1; } }
@@ -148,7 +171,6 @@
 /* Cảnh không cao hơn cửa sổ (trừ banner + thanh trạng thái + thanh điều hướng); thanh điều hướng dính đáy nên luôn thấy được */
 @media (min-width: 1024px) {
   .farm-scene svg { max-height: calc(100dvh - 375px); min-height: 340px; }
-  .farm-fullscreen .farm-scene svg { max-height: calc(100dvh - 235px); }
   .farm-dock { position: sticky; bottom: 12px; z-index: 30; }
 }
 

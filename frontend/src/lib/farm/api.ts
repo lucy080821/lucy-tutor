@@ -15,6 +15,11 @@ export type OrderView = {
   progress: number; need: number; ready: boolean; have?: Record<string, number>;
   rewardCoins: number; rewardGems: number; rewardXp: number; createdAt: string;
 };
+export type PetTripActive = { tier: number; startedAt: string; readyAt: string };
+export type PetBuffs = { active: boolean; coinPct: number; orderPct: number; tripTimePct: number; factoryTimePct: number; xpPct: number };
+export type PetTripDef = { tier: number; name: string; emoji: string; minutes: number; minLevel: number; coins: [number, number]; produce: [number, number]; gemChance: number; gemMax: number; words: number; petXp: number };
+export type PetPerk = { level: number; id: string; name: string; desc: string };
+export type TripResult = { tier: number; name: string; coins: number; gems: number; produce: Record<string, number>; overflowCoins: number; words: { word: string; meaning: string; example: string | null }[]; petXp: number };
 export type FactoryJob = { recipe: string; startedAt: string; readyAt: string };
 export type DecorPlaced = { uid: string; key: string; x: number; y: number; r?: 0 | 1; job?: FactoryJob };
 export type FarmView = {
@@ -22,7 +27,7 @@ export type FarmView = {
   harvestCount: number; witherCount: number; barnCount: number;
   level: number; levelStart: number; nextLevelAt: number;
   plotCount: number; plotPrice: number | null; nextExpansion: { w: number; h: number; price: number; minLevel: number } | null;
-  pet: { name: string; xp: number; level: number; fedToday: boolean; pats: number };
+  pet: { name: string; xp: number; level: number; fedToday: boolean; pats: number; trip: PetTripActive | null; buffs: PetBuffs };
   canSpin: boolean; boostHarvests: number;
   inventory: Record<string, number>; barnCapacity: number; barnUsed: number; barnTier: number; nextBarnTier: { capacity: number; price: number } | null;
   wardrobe: { owned: string[]; equipped: Record<string, string> };
@@ -47,7 +52,7 @@ export type Catalog = {
   wheel: { id: number; label: string; kind: string }[];
   startPlots: number; maxPlots: number; firstGrowMinutes: number;
   harvestCoins: Record<string, number>; harvestXp: number; masteredBonus: { coins: number; gems: number }; barnBonus: { coins: number };
-  orderTrashCost: number; decorSellRate: number; gemSellCoins: number; petLevels: number[]; petFeedReward: { coins: number; petXp: number };
+  orderTrashCost: number; decorSellRate: number; gemSellCoins: number; petTrips: PetTripDef[]; petPerks: PetPerk[]; petTripWordsPerDay: number; petLevels: number[]; petFeedReward: { coins: number; petXp: number };
   visit: { likeReward: number; giftReward: number; giftCost: number; giftsPerDay: number };
 };
 export type HarvestResult = {
@@ -70,6 +75,7 @@ export type FarmState = {
   delivered?: { ok: boolean; title: string; customer: string; coins: number; gems: number; xp: number; feedback?: string; corrected?: string; ai?: boolean };
   bought?: { itemKey: string; price?: number; currency?: string };
   sold?: { key: string; refund: number; currency: string; qty?: number };
+  tripResult?: TripResult;
   crafted?: { started?: string; product?: string; collected?: string; qty?: number; price?: number };
   stored?: { word: string; coins: number };
   fed?: { coins: number; petXp: number };
@@ -133,6 +139,8 @@ export const farmApi = {
   claimAchievement: (userId: string, groupId: string) => post<FarmState>("/achievements/claim", { userId, groupId }),
   leaderboard: (userId: string, scope: "all" | "class") => get<{ scope: string; total: number; top: LeaderRow[]; myRank: number | null; hasClassroom: boolean }>(`/leaderboard/${userId}?scope=${scope}`),
   wardrobeBuy: (userId: string, key: string) => post<FarmState>("/wardrobe/buy", { userId, key }),
+  tripStart: (userId: string, tier: number) => post<FarmState>("/pet/trip/start", { userId, tier }),
+  tripCollect: (userId: string) => post<FarmState>("/pet/trip/collect", { userId }),
   rotate: (userId: string, uid: string) => post<FarmState>("/rotate", { userId, uid }),
   factoryStart: (userId: string, uid: string, recipeId: string) => post<FarmState>("/factory/start", { userId, uid, recipeId }),
   factoryCollect: (userId: string, uid: string) => post<FarmState>("/factory/collect", { userId, uid }),

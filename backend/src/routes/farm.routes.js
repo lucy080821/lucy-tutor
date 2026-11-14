@@ -109,7 +109,7 @@ function farmView(farm, plotCount) {
     harvestCount: farm.harvestCount, witherCount: farm.witherCount, barnCount: farm.barnCount,
     level, levelStart: C.harvestsForLevel(level), nextLevelAt: C.harvestsForLevel(level + 1),
     plotCount, plotPrice: plotCount < C.MAX_PLOTS ? C.plotPrice(plotCount) : null, nextExpansion,
-    pet: { name: farm.petName, xp: farm.petXp, level: C.petLevelFor(farm.petXp), fedToday: farm.petFedOn === today, pats: farm.petPats },
+    pet: { name: farm.petName, xp: farm.petXp, level: C.petLevelFor(farm.petXp), fedToday: farm.petFedOn === today, pats: farm.petPats, trip: jsonObj(farm.petTrip).active || null, buffs: C.petBuffs(farm.petXp, farm.petFedOn === today) },
     canSpin: farm.spunOn !== today, boostHarvests: farm.boostHarvests,
   };
 }
@@ -163,7 +163,7 @@ async function bumpStats(userId, delta) {
 }
 const baseStats = (farm) => {
   const st = jsonObj(farm.stats);
-  return { harvests: farm.harvestCount, orders: farm.ordersDone, plants: st.plants || 0, sold: st.sold || 0, feeds: st.feeds || 0, spins: st.spins || 0 };
+  return { harvests: farm.harvestCount, orders: farm.ordersDone, plants: st.plants || 0, sold: st.sold || 0, feeds: st.feeds || 0, spins: st.spins || 0, trips: st.trips || 0 };
 };
 // Sang ngày mới (giờ VN) → chụp mốc đầu ngày + chốt cấp để mục tiêu không đổi giữa chừng
 async function ensureDaily(farm) {
@@ -376,9 +376,10 @@ router.post('/plots/:plotId/harvest', async (req, res) => {
     let coins = 0, gems = 0, xp = 0, produce = 0, overflowSold = 0;
     const inventory = parseJSON(farm.inventory, {});
     if (correct) {
-      coins = C.HARVEST_COINS[quality] || 0;
+      const buffs = C.petBuffs(farm.petXp, farm.petFedOn === C.vnDay());
+      coins = Math.round((C.HARVEST_COINS[quality] || 0) * (1 + buffs.coinPct));
       if (farm.boostHarvests > 0) coins *= 2;
-      xp = C.HARVEST_XP;
+      xp = Math.round(C.HARVEST_XP * (1 + buffs.xpPct));
       if (becameMastered) { coins += C.MASTERED_BONUS.coins; gems += C.MASTERED_BONUS.gems; }
       // Nông sản vào kho; kho đầy → phần dư bán tự động nửa giá
       produce = C.PRODUCE_PER_HARVEST[quality] || 1;
@@ -561,7 +562,8 @@ router.post('/factory/start', async (req, res) => {
     if (missing.length) return res.status(400).json({ error: `Thiếu nguyên liệu: ${missing.map(([k, n]) => `${C.CROPS[k]?.name || k} ${inventory[k] || 0}/${n}`).join(', ')}` });
     for (const [k, n] of Object.entries(recipe.inputs)) { inventory[k] -= n; if (inventory[k] <= 0) delete inventory[k]; }
     const nowMs = Date.now();
-    d.job = { recipe: recipe.id, startedAt: new Date(nowMs).toISOString(), readyAt: new Date(nowMs + recipe.minutes * 60000).toISOString() };
+    const mins = recipe.minutes * (1 - C.petBuffs(farm.petXp, farm.petFedOn === C.vnDay()).factoryTimePct);
+    d.job = { recipe: recipe.id, startedAt: new Date(nowMs).toISOString(), readyAt: new Date(nowMs + mins * 60000).toISOString() };
     const r = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm.updatedAt }, data: { layout: JSON.stringify(layout), inventory: JSON.stringify(inventory) } });
     if (r.count === 0) return res.status(409).json({ error: 'Vừa có thay đổi khác, bấm lại nhé' });
     res.json(await buildState(userId, { crafted: { started: recipe.id, product: recipe.product } }));
@@ -637,13 +639,14 @@ router.post('/orders/:id/complete', async (req, res) => {
       for (const [k, n] of Object.entries(items)) { inventory[k] -= n; if (inventory[k] <= 0) delete inventory[k]; }
     } else if (order.progress < (reqm.need || 1)) return res.status(400).json({ error: 'Đơn chưa đủ hàng' });
     const prevLevel = C.levelFor(farm.harvestCount);
+    const rewardCoins = Math.round(order.rewardCoins * (1 + C.petBuffs(farm.petXp, farm.petFedOn === C.vnDay()).orderPct));
     await Promise.all([
       prisma.farmOrder.update({ where: { id: order.id }, data: { status: 'DONE', doneAt: new Date() } }),
-      prisma.farmState.update({ where: { userId }, data: { coins: { increment: order.rewardCoins }, gems: { increment: order.rewardGems }, ordersDone: { increment: 1 }, inventory: JSON.stringify(inventory) } }),
+      prisma.farmState.update({ where: { userId }, data: { coins: { increment: rewardCoins }, gems: { increment: order.rewardGems }, ordersDone: { increment: 1 }, inventory: JSON.stringify(inventory) } }),
       order.rewardXp ? prisma.user.update({ where: { id: userId }, data: { totalXP: { increment: order.rewardXp } }, select: { id: true } }) : null,
       order.kind === 'SENTENCE' ? bumpStats(userId, { sentences: 1 }) : null,
     ]);
-    res.json(await buildState(userId, { delivered: { ok: true, title: order.title, customer: order.customer, coins: order.rewardCoins, gems: order.rewardGems, xp: order.rewardXp, feedback: graded?.feedback, corrected: graded?.corrected, ai: graded?.ai, levelUp: null, prevLevel } }));
+    res.json(await buildState(userId, { delivered: { ok: true, title: order.title, customer: order.customer, coins: rewardCoins, gems: order.rewardGems, xp: order.rewardXp, feedback: graded?.feedback, corrected: graded?.corrected, ai: graded?.ai, levelUp: null, prevLevel } }));
   } catch (e) { console.error('[farm] complete', e); res.status(500).json({ error: 'Không giao được hàng' }); }
 });
 
@@ -674,6 +677,79 @@ router.post('/pet/feed', async (req, res) => {
     res.json(await buildState(userId, { fed: { ...C.PET_FEED_REWARD } }));
   } catch (e) { res.status(500).json({ error: 'Không cho ăn được' }); }
 });
+
+// ── Qilin thám hiểm: đi vắng theo giờ thật → mang về xu, nông sản, kim cương và TỪ VỰNG MỚI vào deck ─────────────
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+router.post('/pet/trip/start', async (req, res) => {
+  try {
+    const { userId, tier } = req.body;
+    const farm = await getOrCreateFarm(userId);
+    if (!farm) return res.status(404).json({ error: 'User not found' });
+    const def = C.PET_TRIPS.find((t) => t.tier === Number(tier));
+    if (!def) return res.status(400).json({ error: 'Chuyến đi không hợp lệ' });
+    const lv = C.petLevelFor(farm.petXp);
+    if (lv < def.minLevel) return res.status(400).json({ error: `${farm.petName} cần cấp ${def.minLevel} mới đi được chuyến này` });
+    const st = jsonObj(farm.petTrip);
+    if (st.active) return res.status(400).json({ error: `${farm.petName} đang đi thám hiểm rồi` });
+    const mins = def.minutes * (1 - C.petBuffs(farm.petXp, farm.petFedOn === C.vnDay()).tripTimePct);
+    const nowMs = Date.now();
+    st.active = { tier: def.tier, startedAt: new Date(nowMs).toISOString(), readyAt: new Date(nowMs + mins * 60000).toISOString() };
+    const r = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm.updatedAt }, data: { petTrip: st } });
+    if (r.count === 0) return res.status(409).json({ error: 'Vừa có thay đổi khác, bấm lại nhé' });
+    res.json(await buildState(userId));
+  } catch (e) { console.error('[farm] trip start', e); res.status(500).json({ error: 'Không đi được' }); }
+});
+
+router.post('/pet/trip/collect', async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const farm = await getOrCreateFarm(userId);
+    if (!farm) return res.status(404).json({ error: 'User not found' });
+    const st = jsonObj(farm.petTrip);
+    const act = st.active;
+    if (!act) return res.status(400).json({ error: 'Qilin không đi thám hiểm' });
+    if (Date.now() < new Date(act.readyAt).getTime()) return res.status(400).json({ error: 'Qilin chưa về tới nơi' });
+    const def = C.PET_TRIPS.find((t) => t.tier === act.tier) || C.PET_TRIPS[0];
+    const mult = 1 + C.PET_TRIP_LEVEL_BONUS * (C.petLevelFor(farm.petXp) - 1);
+    let coins = Math.round(rnd(def.coins[0], def.coins[1]) * mult);
+    const gems = Math.random() < def.gemChance ? rnd(1, def.gemMax || 1) : 0;
+    // nông sản ngẫu nhiên vào kho (kho đầy → bán nửa giá)
+    const inventory = parseJSON(farm.inventory, {});
+    const n = Math.round(rnd(def.produce[0], def.produce[1]) * mult);
+    const room = Math.max(0, farm.barnCapacity - Object.values(inventory).reduce((a, b) => a + b, 0));
+    const got = {}; let overflow = 0;
+    for (let i = 0; i < n; i++) {
+      const k = C.CROP_KEYS[Math.floor(Math.random() * C.CROP_KEYS.length)];
+      if (i < room) { inventory[k] = (inventory[k] || 0) + 1; got[k] = (got[k] || 0) + 1; }
+      else overflow += Math.floor((C.PRODUCE_PRICE[k] || 4) * C.BARN_FULL_SELL_RATE);
+    }
+    coins += overflow;
+    // từ mới: chọn từ trong kho hạt giống mà học viên chưa có
+    const today = C.vnDay();
+    if (st.day !== today) { st.day = today; st.words = 0; }
+    const allowed = Math.max(0, Math.min(def.words, C.PET_TRIP_WORDS_PER_DAY - (st.words || 0)));
+    let picks = [];
+    if (allowed > 0) {
+      const have = await prisma.userVocabProgress.findMany({ where: { userId }, select: { vocab: { select: { word: true } } } });
+      const owned = new Set(have.map((h) => String(h.vocab.word).toLowerCase()));
+      const pool = ALL_SEED_WORDS.filter((w) => !owned.has(w.word.toLowerCase()));
+      for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
+      picks = pool.slice(0, allowed);
+    }
+    st.active = null; st.words = (st.words || 0) + picks.length;
+    // khoá lạc quan: gọi song song chỉ 1 lần thành công (không nhân đôi thưởng)
+    const r = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm.updatedAt }, data: { coins: { increment: coins }, gems: { increment: gems }, inventory: JSON.stringify(inventory), petXp: { increment: def.petXp }, petTrip: st } });
+    if (r.count === 0) return res.status(409).json({ error: 'Vừa có thay đổi khác, bấm lại nhé' });
+    const words = [];
+    for (const w of picks) {
+      try { await prisma.vocabItem.create({ data: { word: w.word, meaning: w.meaning, example: w.example || null, addedByUserId: userId, progress: { create: { userId } } } }); words.push({ word: w.word, meaning: w.meaning, example: w.example || null }); }
+      catch (e) { console.error('[farm] trip word', e.message); }
+    }
+    await bumpStats(userId, { trips: 1 });
+    res.json(await buildState(userId, { tripResult: { tier: def.tier, name: def.name, coins, gems, produce: got, overflowCoins: overflow, words, petXp: def.petXp } }));
+  } catch (e) { console.error('[farm] trip collect', e); res.status(500).json({ error: 'Không nhận được quà' }); }
+});
+
 router.post('/pet/pat', async (req, res) => {
   try {
     const { userId } = req.body; const farm = await getOrCreateFarm(userId);

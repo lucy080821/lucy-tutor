@@ -14,12 +14,12 @@ const RADIUS = 3;
 
 type Props = {
   W: number; H: number; toScreen: (x: number, y: number) => { cx: number; cy: number };
-  blocked: Set<string>; animals: Roamer[]; sleeping: boolean;
+  blocked: Set<string>; animals: Roamer[]; sleeping: boolean; petAway?: boolean;
   pet: { name: string; level: number }; outfit?: Outfit; petJumping?: boolean; hearts: number[]; wet: boolean;
   onPetClick?: () => void;
 };
 
-export default memo(function Roamers({ W, H, toScreen, blocked, animals, sleeping, pet, outfit, petJumping, hearts, wet, onPetClick }: Props) {
+export default memo(function Roamers({ W, H, toScreen, blocked, animals, sleeping, petAway, pet, outfit, petJumping, hearts, wet, onPetClick }: Props) {
   const walkers = useRef<Map<string, Walker>>(new Map());
   const [, setTick] = useState(0);
   const reduced = useMemo(() => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches, []);
@@ -75,6 +75,7 @@ export default memo(function Roamers({ W, H, toScreen, blocked, animals, sleepin
         const { cx, cy } = toScreen(w.x, w.y);
         const style = { transform: `translate(${cx}px, ${cy + 8}px)` } as const;
         if (w.id === "pet") {
+          if (petAway) return null;
           return (
             <g key="pet" className="farm-walker" style={style} onClick={(e) => { e.stopPropagation(); onPetClick?.(); }} role="button" aria-label={pet.name}>
               <g key={w.hop} className={w.hop ? "farm-hop-pet" : ""}>

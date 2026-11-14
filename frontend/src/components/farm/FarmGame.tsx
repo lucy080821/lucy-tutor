@@ -10,7 +10,7 @@ import { PHASE_LABEL, skyNow } from "./Ambient";
 import { useFarmWeather } from "@/lib/farm/useWeather";
 import { WEATHER_KINDS, WEATHER_LABEL, weatherLabel, type WeatherKind } from "@/lib/farm/weather";
 import WeatherPanel from "./WeatherPanel";
-import { BasketIcon, CoinIcon, GemIcon, IconBarn, IconBolt, IconChevronDown, IconMenu, IconZoomIn, IconZoomOut, IconFlame, IconHelp, IconMaximize, IconMinimize, IconMove, IconPaw, IconRefresh, IconShop, IconSprout, IconTarget, IconUsers, IconVolume, IconVolumeOff, IconWeather, IconWheel, NamedIcon } from "./FarmIcons";
+import { BasketIcon, CoinIcon, GemIcon, IconBarn, IconBolt, IconChevronDown, IconMenu, IconTruck, IconZoomIn, IconZoomOut, IconFlame, IconHelp, IconMaximize, IconMinimize, IconMove, IconPaw, IconRefresh, IconShop, IconSprout, IconTarget, IconUsers, IconVolume, IconVolumeOff, IconWeather, IconWheel, NamedIcon } from "./FarmIcons";
 import HarvestModal from "./HarvestModal";
 import SeedPicker from "./SeedPicker";
 import ShopPanel from "./ShopPanel";
@@ -43,6 +43,7 @@ export default function FarmGame({ userId }: { userId: string }) {
   // Phóng to/thu nhỏ cảnh (1–3×) và ẩn/hiện thanh điều hướng trên điện thoại (nhớ lựa chọn)
   const [zoom, setZoom] = useState(1);
   const [dockOpen, setDockOpen] = useState(true);
+  const [ordersOpen, setOrdersOpen] = useState(false); // chỉ dùng ở chế độ toàn màn hình: ngăn kéo Đơn hàng
   useEffect(() => { try { if (localStorage.getItem("lucy_farm_dock") === "hidden") setDockOpen(false); } catch { /* bỏ qua */ } }, []);
   const toggleDock = () => { sfx.click(); setDockOpen((v) => { try { localStorage.setItem("lucy_farm_dock", v ? "hidden" : "open"); } catch { /* bỏ qua */ } return !v; }); };
   const stepZoom = (dir: 1 | -1) => { sfx.click(); setZoom((z) => Math.max(1, Math.min(3, Math.round((z + dir * 0.5) * 100) / 100))); };
@@ -65,10 +66,12 @@ export default function FarmGame({ userId }: { userId: string }) {
   const toggleFullscreen = async () => {
     const el = rootRef.current; if (!el) return;
     sfx.click();
-    if (document.fullscreenElement) { await document.exitFullscreen().catch(() => { }); setFs(false); return; }
-    if (fs) { setFs(false); return; }
+    if (document.fullscreenElement) { await document.exitFullscreen().catch(() => { }); setFs(false); setOrdersOpen(false); return; }
+    if (fs) { setFs(false); setOrdersOpen(false); return; }
     try { if (el.requestFullscreen) await el.requestFullscreen(); } catch { /* iOS Safari không hỗ trợ → chỉ dùng CSS */ }
     setFs(true);
+    // điện thoại dọc: cảnh vừa chiều ngang sẽ nhỏ → tự phóng nhẹ cho dễ nhìn (vẫn chỉnh được bằng nút kính lúp)
+    try { if (window.innerHeight > window.innerWidth * 1.2) setZoom((z) => (z === 1 ? 1.5 : z)); } catch { /* bỏ qua */ }
   };
   useEffect(() => { const f = () => { if (!document.fullscreenElement) setFs(false); }; document.addEventListener("fullscreenchange", f); return () => document.removeEventListener("fullscreenchange", f); }, []);
   useEffect(() => { setSoundOn(loadSfxPref()); }, []);
@@ -133,6 +136,10 @@ export default function FarmGame({ userId }: { userId: string }) {
   useEffect(() => { const f = () => { if (document.visibilityState === "visible") load(); }; document.addEventListener("visibilitychange", f); return () => document.removeEventListener("visibilitychange", f); }, [load]);
 
   const readyPlots = useMemo(() => (state?.plots || []).filter((p) => liveStatus(p, now).status === "READY"), [state, now]);
+  // Qilin thám hiểm về tới nơi → báo 1 lần
+  const tripReady = !!state?.farm.pet.trip && new Date(state.farm.pet.trip.readyAt).getTime() <= now;
+  const tripReadyRef = useRef(false);
+  useEffect(() => { if (tripReady && !tripReadyRef.current) { sfx.claim(); toast(`${state?.farm.pet.name} đã thám hiểm về! Mở Qilin để nhận quà`); } tripReadyRef.current = tripReady; }, [tripReady]); // eslint-disable-line react-hooks/exhaustive-deps
   const nextReadyAfter = (id: string) => readyPlots.find((p) => p.id !== id) || null;
   const openPanel = (p: Panel) => { sfx.click(); setPanel(p); };
 
@@ -224,13 +231,14 @@ export default function FarmGame({ userId }: { userId: string }) {
 
   const dock: { k: Panel; label: string; Icon: (p: { size?: number }) => React.ReactElement; c1: string; c2: string; badge?: string }[] = [
     { k: "SHOP", label: "Cửa hàng", Icon: IconShop, c1: "#fb923c", c2: "#ea580c" },
-    { k: "PET", label: farm.pet.name, Icon: IconPaw, c1: "#60a5fa", c2: "#2563eb", badge: farm.pet.fedToday ? undefined : "!" },
+    { k: "PET", label: farm.pet.name, Icon: IconPaw, c1: "#60a5fa", c2: "#2563eb", badge: (farm.pet.trip && new Date(farm.pet.trip.readyAt).getTime() <= now) || !farm.pet.fedToday ? "!" : undefined },
     { k: "QUESTS", label: "Nhiệm vụ", Icon: IconTarget, c1: "#fb7185", c2: "#e11d48", badge: claimable > 0 ? String(claimable) : undefined },
     { k: "WHEEL", label: "Vòng quay", Icon: IconWheel, c1: "#a78bfa", c2: "#7c3aed", badge: farm.canSpin ? "!" : undefined },
     { k: "NEIGHBORS", label: "Bạn bè", Icon: IconUsers, c1: "#34d399", c2: "#059669" },
     { k: "BARN", label: "Kho", Icon: IconBarn, c1: "#fbbf24", c2: "#d97706", badge: barnFull || orders.some((o) => o.kind === "PRODUCE" && o.ready) ? "!" : undefined },
   ];
-  const tools: { k: string; title: string; Icon: (p: { size?: number }) => React.ReactElement; on?: boolean; off?: boolean; run: () => void }[] = [
+  const tools: { k: string; title: string; Icon: (p: { size?: number }) => React.ReactElement; on?: boolean; off?: boolean; badge?: string; run: () => void }[] = [
+    ...(fs ? [{ k: "ORDERS", title: ordersOpen ? "Đóng đơn hàng" : "Đơn hàng", Icon: IconTruck, on: ordersOpen, badge: readyOrders > 0 ? String(readyOrders) : undefined, run: () => { sfx.click(); setOrdersOpen((v) => !v); } }] : []),
     { k: "ZIN", title: `Phóng to (đang ${Math.round(zoom * 100)}%)`, Icon: IconZoomIn, off: zoom >= 3, run: () => stepZoom(1) },
     { k: "ZOUT", title: zoom > 1 ? `Thu nhỏ (đang ${Math.round(zoom * 100)}%)` : "Thu nhỏ (đang vừa khung)", Icon: IconZoomOut, off: zoom <= 1, run: () => stepZoom(-1) },
     { k: "EDIT", title: mode.type === "edit" ? "Xong sắp xếp" : "Sắp xếp đất & trang trí", Icon: IconMove, on: mode.type === "edit", run: () => { sfx.click(); setMode(mode.type === "edit" ? { type: "normal" } : { type: "edit", selected: null }); } },
@@ -242,10 +250,10 @@ export default function FarmGame({ userId }: { userId: string }) {
   ];
 
   return (
-    <div ref={rootRef} id="farm-root" className={`farm-root-pad ${dockOpen ? "" : "farm-dock-off"} grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px] ${fs ? "farm-fullscreen" : ""}`}>
-      <div className="space-y-3 min-w-0">
+    <div ref={rootRef} id="farm-root" className={fs ? "farm-fullscreen farm-fs-game" : `farm-root-pad ${dockOpen ? "" : "farm-dock-off"} grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]`}>
+      <div className={fs ? "farm-fs-main" : "space-y-3 min-w-0"}>
         {/* Thanh trạng thái */}
-        <div className="ui-card px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-3">
+        <div className="ui-card farm-hud px-4 py-3 flex flex-wrap items-center gap-x-5 gap-y-3">
           <div className="flex items-center gap-3 flex-1 min-w-[190px]">
             <div className="farm-lv" title={`Cấp nông trại ${farm.level}`}><small>CẤP</small><b>{farm.level}</b></div>
             <div className="flex-1 min-w-[110px]">
@@ -279,15 +287,20 @@ export default function FarmGame({ userId }: { userId: string }) {
           </div>
         )}
 
-        <div className="relative">
-          <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} sky={sky} weather={weather} zoom={zoom} onZoomChange={setZoom}
+        <div className={fs ? "relative farm-fs-scene" : "relative"}>
+          <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} sky={sky} weather={weather} zoom={zoom} onZoomChange={setZoom} fit={fs} petAway={!!farm.pet.trip}
             onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onFactoryClick={onFactoryClick} onPetClick={onPetClick} />
           {readyPlots.length > 0 && mode.type === "normal" && (
             <button onClick={() => { sfx.click(); setActivePlot(readyPlots[0]); setPanel("HARVEST"); }} className="absolute top-3 left-3 z-[5] btn-highlight rounded-full pl-3 pr-4 py-2 font-extrabold shadow-card farm-toast inline-flex items-center gap-2"><IconSprout size={18} />{readyPlots.length} cây chín</button>
           )}
           <div className="farm-tools">
-            {tools.map((t) => <button key={t.k} onClick={t.run} disabled={t.off} title={t.title} aria-label={t.title} className={`farm-tool ${t.on ? "farm-tool-on" : ""}`}><t.Icon size={19} /></button>)}
+            {tools.map((t) => <button key={t.k} onClick={t.run} disabled={t.off} title={t.title} aria-label={t.title} className={`farm-tool ${t.on ? "farm-tool-on" : ""}`}><t.Icon size={19} />{t.badge && <span className="farm-tool-badge">{t.badge}</span>}</button>)}
           </div>
+          {fs && ordersOpen && (
+            <div className="farm-fs-drawer farm-toast" role="dialog" aria-label="Đơn hàng">
+              <OrdersPanel userId={userId} orders={orders} catalog={catalog} coins={farm.coins} difficulty={farm.orderDifficulty} onState={applyState} onToast={toast} />
+            </div>
+          )}
           <button className="farm-phase" onClick={() => openPanel("WEATHER")} title={wx.status === "ok" ? "Xem dự báo thời tiết" : "Bật thời tiết thật theo vị trí của bạn"}>
             <b>{sky.label}</b><span>{PHASE_LABEL[sky.phase]}</span>
             {wdata && wdata.tempC != null ? <span>{wdata.tempC}°C {weatherLabel(weather, wdata.isDay)}</span> : wxPreview ? <span>{WEATHER_LABEL[wxPreview]} (xem thử)</span> : null}
@@ -314,7 +327,7 @@ export default function FarmGame({ userId }: { userId: string }) {
         </button>
       </div>
 
-      <div className="space-y-4">
+      {!fs && <div className="space-y-4">
         <OrdersPanel userId={userId} orders={orders} catalog={catalog} coins={farm.coins} difficulty={farm.orderDifficulty} onState={applyState} onToast={toast} />
         {/* Nhiệm vụ hôm nay (rút gọn) — bấm để mở đầy đủ */}
         <button onClick={() => { setQuestTab("DAILY"); openPanel("QUESTS"); }} className="ui-card p-4 w-full text-left hover:shadow-card-hover transition-shadow">
@@ -335,7 +348,7 @@ export default function FarmGame({ userId }: { userId: string }) {
           </div>
           <p className="text-[11px] text-muted mt-3">{state.plots.filter((p) => p.status !== "EMPTY").length}/{farm.plotCount} ô đang trồng · {readyPlots.length} cây chín · {readyOrders} đơn đủ hàng</p>
         </button>
-      </div>
+      </div>}
 
       {/* Panels */}
       {panel === "SEED" && activePlot && <SeedPicker userId={userId} plot={activePlot} catalog={catalog} onClose={() => setPanel(null)} onState={(s) => { applyState(s); toast("Đã trồng! Chín lần đầu sau 10 phút."); }} />}
@@ -344,7 +357,7 @@ export default function FarmGame({ userId }: { userId: string }) {
           onClose={() => setPanel(null)} onState={applyState} onNext={(p) => setActivePlot(p)} catalog={catalog} />
       )}
       {panel === "SHOP" && <ShopPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} onPick={(k, label) => { setPanel(null); setMode({ type: "place", itemKey: k, label }); }} onExpand={expand} />}
-      {panel === "PET" && <PetPanel userId={userId} farm={farm} catalog={catalog} onClose={() => { setPanel(null); load(); }} onState={applyState} />}
+      {panel === "PET" && <PetPanel userId={userId} farm={farm} catalog={catalog} now={now} onClose={() => { setPanel(null); load(); }} onState={applyState} />}
       {panel === "WHEEL" && <WheelPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} />}
       {panel === "NEIGHBORS" && <NeighborsPanel userId={userId} catalog={catalog} sky={sky} weather={weather} onClose={() => setPanel(null)} onToast={toast} onRefresh={load} />}
       {panel === "FACTORY" && factoryUid && <FactoryPanel userId={userId} uid={factoryUid} farm={farm} catalog={catalog} now={now} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}

@@ -1554,6 +1554,9 @@ model FarmState {
   // Thành tựu: { claimed: { groupId: số mốc đã nhận } }
   achievements Json @default("{}")
 
+  // Chuyến thám hiểm của Qilin: { active?: { tier, startedAt, readyAt }, day, words } — xem farmCatalog PET_TRIPS
+  petTrip Json?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
