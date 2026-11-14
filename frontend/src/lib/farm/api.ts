@@ -15,7 +15,8 @@ export type OrderView = {
   progress: number; need: number; ready: boolean; have?: Record<string, number>;
   rewardCoins: number; rewardGems: number; rewardXp: number; createdAt: string;
 };
-export type DecorPlaced = { uid: string; key: string; x: number; y: number };
+export type FactoryJob = { recipe: string; startedAt: string; readyAt: string };
+export type DecorPlaced = { uid: string; key: string; x: number; y: number; r?: 0 | 1; job?: FactoryJob };
 export type FarmView = {
   coins: number; gems: number; gridW: number; gridH: number; layout: DecorPlaced[];
   harvestCount: number; witherCount: number; barnCount: number;
@@ -28,9 +29,13 @@ export type FarmView = {
   ordersDone: number; orderDifficulty: number; barnQuizLeft: number;
 };
 export type OutfitItem = { name: string; emoji: string; slot: string; price: number; currency: "coins" | "gems"; minLevel: number };
-export type DecorItem = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number; cat?: string };
+export type DecorItem = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number; cat?: string; fam?: "wall" | "fence" | "hedge"; gate?: boolean; style?: string; factory?: boolean };
+export type Recipe = { id: string; product: string; inputs: Record<string, number>; minutes: number };
+export type FactoryDef = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number; wall: string; roof: string; recipes: Recipe[] };
 export type Catalog = {
   crops: Record<string, { name: string; emoji: string }>;
+  products: Record<string, { name: string; emoji: string; price: number }>;
+  factories: Record<string, FactoryDef>;
   decor: Record<string, DecorItem>;
   decorCats: { id: string; name: string }[];
   outfits: Record<string, OutfitItem>;
@@ -65,6 +70,7 @@ export type FarmState = {
   delivered?: { ok: boolean; title: string; customer: string; coins: number; gems: number; xp: number; feedback?: string; corrected?: string; ai?: boolean };
   bought?: { itemKey: string; price?: number; currency?: string };
   sold?: { key: string; refund: number; currency: string; qty?: number };
+  crafted?: { started?: string; product?: string; collected?: string; qty?: number; price?: number };
   stored?: { word: string; coins: number };
   fed?: { coins: number; petXp: number };
   planted?: { plotId: string; cropKey: string };
@@ -127,6 +133,9 @@ export const farmApi = {
   claimAchievement: (userId: string, groupId: string) => post<FarmState>("/achievements/claim", { userId, groupId }),
   leaderboard: (userId: string, scope: "all" | "class") => get<{ scope: string; total: number; top: LeaderRow[]; myRank: number | null; hasClassroom: boolean }>(`/leaderboard/${userId}?scope=${scope}`),
   wardrobeBuy: (userId: string, key: string) => post<FarmState>("/wardrobe/buy", { userId, key }),
+  rotate: (userId: string, uid: string) => post<FarmState>("/rotate", { userId, uid }),
+  factoryStart: (userId: string, uid: string, recipeId: string) => post<FarmState>("/factory/start", { userId, uid, recipeId }),
+  factoryCollect: (userId: string, uid: string) => post<FarmState>("/factory/collect", { userId, uid }),
   wardrobeSell: (userId: string, key: string) => post<FarmState>("/wardrobe/sell", { userId, key }),
   wardrobeEquip: (userId: string, slot: string, key: string | null) => post<FarmState>("/wardrobe/equip", { userId, slot, key }),
   visit: (userId: string, targetId: string) => get<VisitView>(`/visit/${userId}/${targetId}`),
@@ -163,4 +172,9 @@ export function formatCountdown(ms: number) {
 export function sellValue(item: { price: number; currency: string } | undefined, catalog: { decorSellRate: number; gemSellCoins: number }) {
   if (!item) return 0;
   return item.currency === "gems" ? Math.max(1, Math.floor(item.price * catalog.gemSellCoins)) : Math.max(1, Math.floor(item.price * catalog.decorSellRate));
+}
+
+// Tên + emoji của 1 món trong kho: nông sản (crops) hoặc thành phẩm (products)
+export function produceInfo(catalog: { crops: Record<string, { name: string; emoji: string }>; products: Record<string, { name: string; emoji: string }> }, key: string) {
+  return catalog.crops[key] || catalog.products?.[key] || { name: key, emoji: "📦" };
 }

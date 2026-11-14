@@ -165,3 +165,8 @@
 @media (prefers-reduced-motion: reduce) { .farm-snow, .farm-fog, .farm-lightning { animation: none; } .farm-lightning { opacity: 0; } }
 .farm-phase { pointer-events: auto; cursor: pointer; border: 0; display: inline-flex; align-items: center; gap: 6px; transition: transform .15s ease; }
 .farm-phase:hover { transform: translateY(-1px); background: #fff; }
+
+/* khói ống khói nhà máy */
+@keyframes farm-smoke { 0% { transform: translate(0,0) scale(.5); opacity: 0; } 25% { opacity: .85; } 100% { transform: translate(8px,-26px) scale(1.5); opacity: 0; } }
+.farm-smoke { animation: farm-smoke 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: reduce) { .farm-smoke { animation: none; opacity: .5; } }

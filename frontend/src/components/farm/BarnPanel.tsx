@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Modal from "./Modal";
 import { alert as swalAlert, fire } from "./farmSwal";
-import { farmApi, speak, type BarnItem, type BarnQuizItem, type Catalog, type FarmState, type FarmView } from "@/lib/farm/api";
+import { farmApi, produceInfo, speak, type BarnItem, type BarnQuizItem, type Catalog, type FarmState, type FarmView } from "@/lib/farm/api";
 
 // Kho: 3 tab.
 //  - Nông sản: chứa nông sản thu hoạch được (bán lấy xu, hoặc để giao đơn nông sản lời gấp đôi), nâng cấp sức chứa.
@@ -37,7 +37,7 @@ export default function BarnPanel({ userId, farm, catalog, onClose, onState, onT
 
   const sell = async (key: string, qty: number) => {
     if (busy) return; setBusy(key);
-    try { const s = await farmApi.barnSell(userId, key, qty); onState(s); onToast(`🪙 +${s.sold?.refund} xu (bán ${qty} ${catalog.crops[key]?.name?.toLowerCase()})`); }
+    try { const s = await farmApi.barnSell(userId, key, qty); onState(s); onToast(`🪙 +${s.sold?.refund} xu (bán ${qty} ${produceInfo(catalog, key).name.toLowerCase()})`); }
     catch (e: any) { swalAlert("", e.message, "info"); }
     setBusy(null);
   };
@@ -96,7 +96,7 @@ export default function BarnPanel({ userId, farm, catalog, onClose, onState, onT
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {entries.map(([key, n]) => {
-                const c = catalog.crops[key]; const price = catalog.producePrice[key] || 0;
+                const c = produceInfo(catalog, key); const price = catalog.producePrice[key] || 0;
                 return (
                   <div key={key} className="rounded-2xl border border-line bg-white p-3 flex items-center gap-3">
                     <div className="text-4xl leading-none">{c?.emoji}</div>

@@ -19,10 +19,11 @@ import PetPanel from "./PetPanel";
 import WheelPanel from "./WheelPanel";
 import NeighborsPanel from "./NeighborsPanel";
 import BarnPanel from "./BarnPanel";
+import FactoryPanel from "./FactoryPanel";
 import QuestsPanel from "./QuestsPanel";
 import Modal from "./Modal";
 
-type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "QUESTS" | "WEATHER" | "HELP";
+type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "FACTORY" | "QUESTS" | "WEATHER" | "HELP";
 const TUT_KEY = "lucy_farm_tut_v2";
 
 async function confetti(opts: any) {
@@ -38,6 +39,7 @@ export default function FarmGame({ userId }: { userId: string }) {
   const [panel, setPanel] = useState<Panel>(null);
   const [questTab, setQuestTab] = useState<"DAILY" | "ACH">("DAILY");
   const [activePlot, setActivePlot] = useState<PlotView | null>(null);
+  const [factoryUid, setFactoryUid] = useState<string | null>(null);
   const activePlotRef = useRef<PlotView | null>(null);
   useEffect(() => { activePlotRef.current = activePlot; }, [activePlot]);
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
@@ -97,7 +99,8 @@ export default function FarmGame({ userId }: { userId: string }) {
     }
     if (s.delivered) sfx.claim();
     if (s.planted) sfx.plant();
-    if (s.bought || s.sold || s.stored) sfx.coin();
+    if (s.bought || s.sold || s.stored || s.crafted?.collected) sfx.coin();
+    if (s.crafted?.started) sfx.plant();
     if (s.claimedReward) {
       const c = s.claimedReward; sfx.claim();
       toast(`Đã nhận ${c.name}: +${c.coins} xu${c.gems ? ` +${c.gems} kim cương` : ""}${c.xp ? ` +${c.xp} XP` : ""}`);
@@ -165,10 +168,21 @@ export default function FarmGame({ userId }: { userId: string }) {
     } catch (e: any) { swalAlert("", e.message, "info"); }
   };
 
-  const onDecorClick = async (d: DecorPlaced) => {
+  // Sắp xếp: bấm đồ để chọn → thanh công cụ có Xoay / Bán; bấm ô trống để dời; bấm lại đồ đang chọn để bỏ chọn
+  const onDecorClick = (d: DecorPlaced) => {
     if (!state || mode.type !== "edit") return;
-    if (mode.selected?.id !== d.uid) { setMode({ type: "edit", selected: { kind: "decor", id: d.uid } }); sfx.pop(); return; }
-    const item = state.catalog.decor[d.key];
+    sfx.pop();
+    setMode({ type: "edit", selected: mode.selected?.id === d.uid ? null : { kind: "decor", id: d.uid } });
+  };
+  const onFactoryClick = (d: DecorPlaced) => { sfx.pop(); setFactoryUid(d.uid); setPanel("FACTORY"); };
+  const selectedDecor = state && mode.type === "edit" && mode.selected?.kind === "decor" ? state.farm.layout.find((l) => l.uid === mode.selected!.id) : undefined;
+  const rotateSelected = async () => {
+    if (!selectedDecor) return;
+    try { applyState(await farmApi.rotate(userId, selectedDecor.uid)); sfx.pop(); } catch (e: any) { swalAlert("", e.message, "info"); }
+  };
+  const sellSelected = async () => {
+    if (!state || !selectedDecor) return;
+    const d = selectedDecor; const item = state.catalog.decor[d.key];
     const refund = sellValue(item, state.catalog);
     const r = await fire({ title: item?.name || "Vật phẩm", html: `Bán lại chỉ được <b>${refund} xu</b> (bạn mua ${item?.price} ${item?.currency === "gems" ? "kim cương" : "xu"}) — rất lỗ.<br/>Muốn giữ thì bấm 1 ô trống để dời đồ sang đó.`, showCancelButton: true, confirmButtonText: `Bán lấy ${refund} xu`, cancelButtonText: "Giữ lại", confirmButtonColor: "#b45309" });
     if (r.isConfirmed) { try { const s = await farmApi.sell(userId, d.uid); applyState(s); toast(`Đã bán · +${s.sold?.refund} xu`); setMode({ type: "edit", selected: null }); } catch (e: any) { swalAlert("Lỗi", e.message, "error"); } }
@@ -246,14 +260,20 @@ export default function FarmGame({ userId }: { userId: string }) {
         {/* Thanh chế độ */}
         {mode.type !== "normal" && (
           <div className={`rounded-2xl px-4 py-2.5 flex flex-wrap items-center justify-between gap-2 text-sm font-bold ${mode.type === "place" ? "bg-amber-50 text-amber-900 border border-amber-200" : "bg-primary-soft text-primary"}`}>
-            <span>{mode.type === "place" ? `Chọn 1 ô trống (viền vàng) để đặt ${mode.label}` : mode.selected ? "Chọn ô trống để dời, hoặc bấm lại vật phẩm để bán" : "Chế độ sắp xếp: bấm vào ô đất hoặc vật trang trí để chọn"}</span>
+            <span>{mode.type === "place" ? `Chọn 1 ô trống (viền vàng) để đặt ${mode.label}` : selectedDecor ? `Đang chọn ${state.catalog.decor[selectedDecor.key]?.name}: xoay, bán, hoặc bấm ô trống để dời` : mode.selected ? "Bấm ô trống để dời" : "Chế độ sắp xếp: bấm vào ô đất hoặc đồ trang trí để chọn"}</span>
+            {selectedDecor && (
+              <span className="inline-flex gap-2">
+                <button onClick={rotateSelected} className="btn-primary rounded-full px-3 py-1.5 text-xs inline-flex items-center gap-1.5">↻ Xoay</button>
+                <button onClick={sellSelected} className="btn-outline rounded-full px-3 py-1.5 text-xs">💸 Bán</button>
+              </span>
+            )}
             <button onClick={() => setMode({ type: "normal" })} className="btn-outline rounded-full px-3 py-1.5 text-xs">Xong</button>
           </div>
         )}
 
         <div className="relative">
           <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} sky={sky} weather={weather}
-            onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onPetClick={onPetClick} />
+            onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onFactoryClick={onFactoryClick} onPetClick={onPetClick} />
           {readyPlots.length > 0 && mode.type === "normal" && (
             <button onClick={() => { sfx.click(); setActivePlot(readyPlots[0]); setPanel("HARVEST"); }} className="absolute top-3 left-3 z-[5] btn-highlight rounded-full pl-3 pr-4 py-2 font-extrabold shadow-card farm-toast inline-flex items-center gap-2"><IconSprout size={18} />{readyPlots.length} cây chín</button>
           )}
@@ -315,6 +335,7 @@ export default function FarmGame({ userId }: { userId: string }) {
       {panel === "PET" && <PetPanel userId={userId} farm={farm} catalog={catalog} onClose={() => { setPanel(null); load(); }} onState={applyState} />}
       {panel === "WHEEL" && <WheelPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} />}
       {panel === "NEIGHBORS" && <NeighborsPanel userId={userId} catalog={catalog} sky={sky} weather={weather} onClose={() => setPanel(null)} onToast={toast} onRefresh={load} />}
+      {panel === "FACTORY" && factoryUid && <FactoryPanel userId={userId} uid={factoryUid} farm={farm} catalog={catalog} now={now} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "BARN" && <BarnPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "WEATHER" && <WeatherPanel status={wx.status} data={wx.data} error={wx.error} sky={sky} previewKind={wxPreview} onEnable={wx.enable} onDisable={wx.disable} onRefresh={wx.refresh} onClose={() => setPanel(null)} />}
       {panel === "QUESTS" && <QuestsPanel userId={userId} quests={quests} achievements={achievements} initialTab={questTab} onClose={() => setPanel(null)} onState={applyState} />}

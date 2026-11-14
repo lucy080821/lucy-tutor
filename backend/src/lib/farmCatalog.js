@@ -154,9 +154,74 @@ for (const [k, v] of Object.entries(DECOR_EXTRA)) DECOR[k] = v;
 const DECOR_CAT_OLD = { path: 'build', fence: 'build', rock: 'build', wall: 'build', bench: 'build', lamp: 'build', signpost: 'build', mailbox: 'build', well: 'build', haystack: 'build', scarecrow: 'build',
   flower: 'plant', bush: 'plant', tree: 'plant', pine: 'plant', cherry: 'plant', pond: 'building', beehive: 'building', house: 'building', windmill: 'building', tent: 'building', fountain: 'fun', rainbow: 'fun', statue: 'fun', castle: 'building' };
 for (const [k, c] of Object.entries(DECOR_CAT_OLD)) if (DECOR[k] && !DECOR[k].cat) DECOR[k].cat = c;
+// ── Cổng, tường/rào (tự nối liền) và nhà máy chế biến ─────────────────────────
+// fam: họ tự nối liền (wall | fence | hedge); gate: ô cổng (có lối đi, quay được theo 2 hướng); factory: nhà máy chế biến.
+for (const [k, f] of Object.entries({ wall: 'wall', fence: 'fence', bush: 'hedge' })) if (DECOR[k]) DECOR[k].fam = f;
+const DECOR_GATES = {
+  gate_wood:    { name: 'Cổng gỗ',          emoji: '🚪', price: 70,  currency: 'coins', minLevel: 1, style: 'wood',    fam: 'fence' },
+  gate_picket:  { name: 'Cổng rào trắng',   emoji: '🏡', price: 110, currency: 'coins', minLevel: 2, style: 'picket',  fam: 'fence' },
+  gate_bamboo:  { name: 'Cổng tre',         emoji: '🎍', price: 100, currency: 'coins', minLevel: 2, style: 'bamboo',  fam: 'fence' },
+  gate_brick:   { name: 'Cổng gạch',        emoji: '🧱', price: 140, currency: 'coins', minLevel: 2, style: 'brick',   fam: 'wall' },
+  gate_iron:    { name: 'Cổng sắt',         emoji: '⛓️', price: 160, currency: 'coins', minLevel: 3, style: 'iron',    fam: 'fence' },
+  gate_flower:  { name: 'Cổng hoa hồng',    emoji: '🌹', price: 180, currency: 'coins', minLevel: 3, style: 'flower',  fam: 'hedge' },
+  gate_stone:   { name: 'Cổng đá vòm',      emoji: '🏛️', price: 220, currency: 'coins', minLevel: 4, style: 'stone',   fam: 'wall' },
+  gate_lantern: { name: 'Cổng đèn lồng',    emoji: '🏮', price: 260, currency: 'coins', minLevel: 5, style: 'lantern', fam: 'fence' },
+  gate_golden:  { name: 'Cổng vàng',        emoji: '✨', price: 6,   currency: 'gems',  minLevel: 6, style: 'golden',  fam: 'fence' },
+  gate_castle:  { name: 'Cổng thành',       emoji: '🏰', price: 8,   currency: 'gems',  minLevel: 8, style: 'castle',  fam: 'wall' },
+};
+for (const [k, v] of Object.entries(DECOR_GATES)) DECOR[k] = { ...v, cat: 'gate', gate: true };
+
+// Thành phẩm (nằm chung kho với nông sản, bán được ở Kho; giá ≈ 2,5–3,5 lần nguyên liệu)
+const PRODUCTS = {
+  bread:        { name: 'Bánh mì',           emoji: '🍞', price: 34 },
+  cornbread:    { name: 'Bánh ngô',          emoji: '🥮', price: 62 },
+  pumpkin_pie:  { name: 'Bánh bí ngô',       emoji: '🥧', price: 78 },
+  juice_carrot: { name: 'Nước ép cà rốt',    emoji: '🥕', price: 40 },
+  juice_tomato: { name: 'Nước ép cà chua',   emoji: '🍹', price: 48 },
+  juice_grape:  { name: 'Nước ép nho',       emoji: '🍷', price: 84 },
+  smoothie:     { name: 'Sinh tố dâu cà rốt', emoji: '🥤', price: 76 },
+  jam_strawberry: { name: 'Mứt dâu',         emoji: '🍓', price: 92 },
+  jam_grape:    { name: 'Mứt nho',           emoji: '🍇', price: 118 },
+  jam_pumpkin:  { name: 'Mứt bí ngô',        emoji: '🎃', price: 105 },
+  salad:        { name: 'Salad rau củ',      emoji: '🥗', price: 105 },
+  sunflower_oil:{ name: 'Dầu hướng dương',   emoji: '🫗', price: 110 },
+  feast:        { name: 'Mâm cỗ thu hoạch',  emoji: '🍱', price: 190 },
+};
+Object.assign(PRODUCE_PRICE, Object.fromEntries(Object.entries(PRODUCTS).map(([k, v]) => [k, v.price])));
+// Nhà máy: mỗi loại chỉ mua 1 cái. Công thức: bỏ nguyên liệu (nông sản trong kho) vào → sau `minutes` phút ra 1 thành phẩm.
+// Thời gian chạy theo giờ thật; kim cương không rút ngắn.
+const FACTORIES = {
+  bakery:  { name: 'Lò bánh', emoji: '🥖', price: 600,  currency: 'coins', minLevel: 4, wall: '#f3d9a4', roof: '#c0392b',
+    recipes: [
+      { id: 'bread',       product: 'bread',       inputs: { wheat: 3 }, minutes: 3 },
+      { id: 'cornbread',   product: 'cornbread',   inputs: { corn: 3, wheat: 1 }, minutes: 6 },
+      { id: 'pumpkin_pie', product: 'pumpkin_pie', inputs: { pumpkin: 2, wheat: 2 }, minutes: 10 },
+    ] },
+  juicer:  { name: 'Máy ép nước', emoji: '🧃', price: 800, currency: 'coins', minLevel: 5, wall: '#bfe3f5', roof: '#2e86c1',
+    recipes: [
+      { id: 'juice_carrot', product: 'juice_carrot', inputs: { carrot: 3 }, minutes: 4 },
+      { id: 'juice_tomato', product: 'juice_tomato', inputs: { tomato: 3 }, minutes: 5 },
+      { id: 'juice_grape',  product: 'juice_grape',  inputs: { grape: 3 }, minutes: 8 },
+      { id: 'smoothie',     product: 'smoothie',     inputs: { strawberry: 2, carrot: 2 }, minutes: 8 },
+    ] },
+  jamhouse: { name: 'Bếp làm mứt', emoji: '🍯', price: 1000, currency: 'coins', minLevel: 6, wall: '#f4c7d9', roof: '#8e44ad',
+    recipes: [
+      { id: 'jam_strawberry', product: 'jam_strawberry', inputs: { strawberry: 4 }, minutes: 10 },
+      { id: 'jam_grape',      product: 'jam_grape',      inputs: { grape: 4 }, minutes: 12 },
+      { id: 'jam_pumpkin',    product: 'jam_pumpkin',    inputs: { pumpkin: 4 }, minutes: 12 },
+    ] },
+  kitchen: { name: 'Nhà hàng nhỏ', emoji: '🍽️', price: 1500, currency: 'coins', minLevel: 8, wall: '#e9e4d5', roof: '#27ae60',
+    recipes: [
+      { id: 'salad',         product: 'salad',         inputs: { tomato: 2, carrot: 2, corn: 2 }, minutes: 10 },
+      { id: 'sunflower_oil', product: 'sunflower_oil', inputs: { sunflower: 5 }, minutes: 12 },
+      { id: 'feast',         product: 'feast',         inputs: { pumpkin: 2, grape: 2, corn: 2, wheat: 2 }, minutes: 20 },
+    ] },
+};
+for (const [k, f] of Object.entries(FACTORIES)) DECOR[k] = { name: f.name, emoji: f.emoji, price: f.price, currency: f.currency, minLevel: f.minLevel, cat: 'factory', factory: true };
+
 const DECOR_CATS = [
   { id: 'all', name: 'Tất cả' }, { id: 'plant', name: 'Cây & hoa' }, { id: 'animal', name: 'Vật nuôi' },
-  { id: 'build', name: 'Đường & rào' }, { id: 'building', name: 'Công trình' }, { id: 'fun', name: 'Vui chơi' },
+  { id: 'build', name: 'Đường & rào' }, { id: 'gate', name: 'Cổng' }, { id: 'factory', name: 'Nhà máy' }, { id: 'building', name: 'Công trình' }, { id: 'fun', name: 'Vui chơi' },
 ];
 
 // ── Trang phục Qilin (đeo lên ảnh linh vật theo slot; emoji, không vẽ tay) ──────
@@ -340,7 +405,7 @@ function vnDay(d = new Date()) {
 // Gói gửi về frontend (chỉ phần cần hiển thị giá/tên)
 function publicCatalog() {
   return {
-    crops: CROPS, decor: DECOR, decorCats: DECOR_CATS, outfits: OUTFITS, outfitSlots: OUTFIT_SLOTS, producePrice: PRODUCE_PRICE, barnTiers: BARN_TIERS, barnQuiz: BARN_QUIZ, expansions: EXPANSIONS, wheel: WHEEL.map(({ id, label, kind }) => ({ id, label, kind })),
+    crops: CROPS, products: PRODUCTS, factories: FACTORIES, decor: DECOR, decorCats: DECOR_CATS, outfits: OUTFITS, outfitSlots: OUTFIT_SLOTS, producePrice: PRODUCE_PRICE, barnTiers: BARN_TIERS, barnQuiz: BARN_QUIZ, expansions: EXPANSIONS, wheel: WHEEL.map(({ id, label, kind }) => ({ id, label, kind })),
     startPlots: START_PLOTS, maxPlots: MAX_PLOTS, firstGrowMinutes: FIRST_GROW_MINUTES,
     harvestCoins: HARVEST_COINS, harvestXp: HARVEST_XP, masteredBonus: MASTERED_BONUS, barnBonus: BARN_BONUS,
     orderTrashCost: ORDER_TRASH_COST, decorSellRate: DECOR_SELL_RATE, gemSellCoins: GEM_SELL_COINS,
@@ -352,7 +417,7 @@ function publicCatalog() {
 module.exports = {
   CROPS, CROP_KEYS, TOPIC_CROP, cropForTopic, FIRST_GROW_MINUTES,
   levelFor, harvestsForLevel, START_PLOTS, MAX_PLOTS, plotPrice, EXPANSIONS,
-  DECOR, DECOR_SELL_RATE, GEM_SELL_COINS, sellValue, HARVEST_COINS, HARVEST_XP, MASTERED_BONUS, BARN_BONUS, WITHER_PENALTY_COINS,
+  DECOR, PRODUCTS, FACTORIES, DECOR_SELL_RATE, GEM_SELL_COINS, sellValue, HARVEST_COINS, HARVEST_XP, MASTERED_BONUS, BARN_BONUS, WITHER_PENALTY_COINS,
   CUSTOMERS, ORDER_SLOTS, makeOrderTemplate, orderDifficulty, ORDER_TRASH_COST,
   PRODUCE_PRICE, PRODUCE_PER_HARVEST, BARN_TIERS, BARN_FULL_SELL_RATE, BARN_QUIZ, OUTFITS, OUTFIT_SLOTS, DECOR_CATS,
   WHEEL, WHEEL_DECOR_POOL, PET_FEED_REWARD, PET_PAT_XP, PET_LEVELS, petLevelFor,

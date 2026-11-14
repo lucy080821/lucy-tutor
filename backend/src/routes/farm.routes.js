@@ -124,7 +124,7 @@ async function ensureOrders(userId, farm, plots) {
   const planted = plots.filter((p) => p.progress);
   const cropKeys = [...new Set(planted.map((p) => p.cropKey).filter(Boolean))];
   const inventory = parseJSON(farm.inventory, {});
-  const produceKeys = [...new Set([...cropKeys, ...Object.keys(inventory).filter((k) => inventory[k] > 0)])];
+  const produceKeys = [...new Set([...cropKeys, ...Object.keys(inventory).filter((k) => inventory[k] > 0 && C.CROPS[k])])];
   const sentenceWords = planted.filter((p) => p.progress.repetitions >= 1).map((p) => p.progress.vocab.word);
   const kindsOpen = new Set(open.map((o) => o.kind));
   const data = [];
@@ -479,6 +479,7 @@ router.post('/buy', async (req, res) => {
     if (level < item.minLevel) return res.status(400).json({ error: `Cần cấp ${item.minLevel}` });
     if (farm[item.currency] < item.price) return res.status(400).json({ error: item.currency === 'gems' ? 'Không đủ kim cương' : 'Không đủ xu' });
     const layout = parseJSON(farm.layout, []);
+    if (item.factory && layout.some((l) => l.key === itemKey)) return res.status(400).json({ error: `Bạn đã có ${item.name} rồi (mỗi loại chỉ mua 1 cái)` });
     layout.push({ uid: crypto.randomUUID(), key: itemKey, x, y });
     await prisma.farmState.update({ where: { userId }, data: { [item.currency]: { decrement: item.price }, layout: JSON.stringify(layout) } });
     res.json(await buildState(userId, { bought: { itemKey, price: item.price, currency: item.currency } }));
@@ -517,10 +518,77 @@ router.post('/sell', async (req, res) => {
     const layout = parseJSON(farm.layout, []);
     const d = layout.find((l) => l.uid === uid);
     if (!d) return res.status(404).json({ error: 'Vật phẩm không tồn tại' });
+    if (d.job) return res.status(400).json({ error: 'Máy đang chế biến — hãy thu thành phẩm trước khi bán' });
     const refund = C.sellValue(C.DECOR[d.key]);
     await prisma.farmState.update({ where: { userId }, data: { layout: JSON.stringify(layout.filter((l) => l.uid !== uid)), coins: { increment: refund } } });
     res.json(await buildState(userId, { sold: { key: d.key, refund, currency: 'coins' } }));
   } catch (e) { console.error('[farm] sell', e); res.status(500).json({ error: 'Không bán được' }); }
+});
+
+// ── Xoay đồ trang trí (2 hướng nhìn: tường/rào/cổng đổi trục, đồ khác lật ngang) ─────────────────
+router.post('/rotate', async (req, res) => {
+  try {
+    const { userId, uid } = req.body;
+    const farm = await getOrCreateFarm(userId);
+    if (!farm) return res.status(404).json({ error: 'User not found' });
+    const layout = parseJSON(farm.layout, []);
+    const d = layout.find((l) => l.uid === uid);
+    if (!d) return res.status(404).json({ error: 'Vật phẩm không tồn tại' });
+    d.r = d.r ? 0 : 1;
+    const r = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm.updatedAt }, data: { layout: JSON.stringify(layout) } });
+    if (r.count === 0) return res.status(409).json({ error: 'Vừa có thay đổi khác, bấm lại nhé' });
+    res.json(await buildState(userId));
+  } catch (e) { console.error('[farm] rotate', e); res.status(500).json({ error: 'Không xoay được' }); }
+});
+
+// ── Nhà máy chế biến: bỏ nguyên liệu (nông sản trong kho) → chờ → thu thành phẩm giá cao ─────────
+// Công việc lưu ngay trong phần tử layout (d.job = { recipe, startedAt, readyAt }) nên không cần cột mới.
+// Khoá lạc quan theo updatedAt để bấm/gọi song song không nhân đôi thành phẩm.
+router.post('/factory/start', async (req, res) => {
+  try {
+    const { userId, uid, recipeId } = req.body;
+    const farm = await getOrCreateFarm(userId);
+    if (!farm) return res.status(404).json({ error: 'User not found' });
+    const layout = parseJSON(farm.layout, []);
+    const d = layout.find((l) => l.uid === uid);
+    const fac = d && C.FACTORIES[d.key];
+    if (!fac) return res.status(404).json({ error: 'Nhà máy không tồn tại' });
+    const recipe = fac.recipes.find((x) => x.id === recipeId);
+    if (!recipe) return res.status(400).json({ error: 'Công thức không hợp lệ' });
+    if (d.job) return res.status(400).json({ error: 'Máy đang chạy rồi' });
+    const inventory = parseJSON(farm.inventory, {});
+    const missing = Object.entries(recipe.inputs).filter(([k, n]) => (inventory[k] || 0) < n);
+    if (missing.length) return res.status(400).json({ error: `Thiếu nguyên liệu: ${missing.map(([k, n]) => `${C.CROPS[k]?.name || k} ${inventory[k] || 0}/${n}`).join(', ')}` });
+    for (const [k, n] of Object.entries(recipe.inputs)) { inventory[k] -= n; if (inventory[k] <= 0) delete inventory[k]; }
+    const nowMs = Date.now();
+    d.job = { recipe: recipe.id, startedAt: new Date(nowMs).toISOString(), readyAt: new Date(nowMs + recipe.minutes * 60000).toISOString() };
+    const r = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm.updatedAt }, data: { layout: JSON.stringify(layout), inventory: JSON.stringify(inventory) } });
+    if (r.count === 0) return res.status(409).json({ error: 'Vừa có thay đổi khác, bấm lại nhé' });
+    res.json(await buildState(userId, { crafted: { started: recipe.id, product: recipe.product } }));
+  } catch (e) { console.error('[farm] factory start', e); res.status(500).json({ error: 'Không bắt đầu được' }); }
+});
+
+router.post('/factory/collect', async (req, res) => {
+  try {
+    const { userId, uid } = req.body;
+    const farm = await getOrCreateFarm(userId);
+    if (!farm) return res.status(404).json({ error: 'User not found' });
+    const layout = parseJSON(farm.layout, []);
+    const d = layout.find((l) => l.uid === uid);
+    const fac = d && C.FACTORIES[d.key];
+    if (!fac || !d.job) return res.status(400).json({ error: 'Không có gì để thu' });
+    if (Date.now() < new Date(d.job.readyAt).getTime()) return res.status(400).json({ error: 'Chưa chế biến xong' });
+    const recipe = fac.recipes.find((x) => x.id === d.job.recipe);
+    if (!recipe) { delete d.job; await prisma.farmState.update({ where: { userId }, data: { layout: JSON.stringify(layout) } }); return res.json(await buildState(userId)); }
+    const inventory = parseJSON(farm.inventory, {});
+    const used = Object.values(inventory).reduce((a, b) => a + b, 0);
+    if (used + 1 > farm.barnCapacity) return res.status(400).json({ error: 'Kho đầy — hãy bán bớt hoặc nâng cấp kho rồi thu thành phẩm' });
+    inventory[recipe.product] = (inventory[recipe.product] || 0) + 1;
+    delete d.job;
+    const r = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm.updatedAt }, data: { layout: JSON.stringify(layout), inventory: JSON.stringify(inventory) } });
+    if (r.count === 0) return res.status(409).json({ error: 'Vừa có thay đổi khác, bấm lại nhé' });
+    res.json(await buildState(userId, { crafted: { collected: recipe.product, qty: 1, price: C.PRODUCTS[recipe.product].price } }));
+  } catch (e) { console.error('[farm] factory collect', e); res.status(500).json({ error: 'Không thu được' }); }
 });
 
 // Chấm câu cho đơn "Viết câu": quy tắc trước, có Groq thì nhờ AI nhận xét thêm

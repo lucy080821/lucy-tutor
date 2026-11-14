@@ -151,7 +151,6 @@ const raise = (p: Pt, h: number): Pt => [p[0], p[1] - h];
 const lerp = (a: Pt, b: Pt, f: number): Pt => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
 
 export type Neighbors = { xp: boolean; xm: boolean; yp: boolean; ym: boolean };
-export const CONNECT_FAMILY: Record<string, string> = { wall: "wall", fence: "fence", bush: "hedge" };
 const HX = TILE_W / 4, HY = TILE_H / 4; // từ tâm ô tới giữa cạnh ô kề
 // hướng 4 ô kề trong màn hình + véc-tơ độ dày (luôn hướng về phía người xem để thấy mặt trước)
 const DIRS: { k: keyof Neighbors; d: Pt; t: Pt }[] = [
@@ -196,30 +195,32 @@ const WALL: Colors = { front: "#c8704a", cap: "#a95a38", top: "#ebb892", line: "
 const WOOD: Colors = { front: "#c68b50", cap: "#a9703b", top: "#e3b57c", line: "#7a4f26" };
 const HEDGE: Colors = { front: "#3f9d3e", cap: "#2f7f31", top: "#68c455", line: "#256a2a" };
 
-// Một ô tường/rào/hàng cây: các đoạn nối tới ô kề cùng loại (không có ô kề nào → 1 đoạn dọc theo trục x)
-function ConnectedPiece({ kind, cx, cy, n }: { kind: "wall" | "fence" | "hedge"; cx: number; cy: number; n: Neighbors }) {
+// Một đoạn tường/rào/hàng cây xuất phát từ điểm `start`, dài/hướng `d`, dày `t`
+function segFrom(kind: "wall" | "fence" | "hedge", key: string, start: Pt, d: Pt, t: Pt) {
+  const a: Pt = [start[0] - t[0] / 2, start[1] - t[1] / 2];
+  if (kind === "wall") return <Box key={key} a={a} d={d} t={t} h={26} c={WALL} courses={4} />;
+  if (kind === "hedge") return (
+    <g key={key}>
+      <Box a={a} d={d} t={[t[0] * 1.5, t[1] * 1.5]} h={20} c={HEDGE} />
+      {[0.35, 0.8].map((f) => { const p = lerp([start[0], start[1] - 20], [start[0] + d[0], start[1] + d[1] - 20], f); return <circle key={f} cx={p[0]} cy={p[1]} r={4.5} fill="#86d96a" opacity={0.85} />; })}
+    </g>
+  );
+  // hàng rào gỗ: 2 thanh ngang + 1 song đứng giữa đoạn
+  const mid = lerp(start, [start[0] + d[0], start[1] + d[1]], 0.5);
+  return (
+    <g key={key}>
+      <line x1={mid[0] + t[0] / 2} y1={mid[1] + t[1] / 2} x2={mid[0] + t[0] / 2} y2={mid[1] + t[1] / 2 - 20} stroke={WOOD.cap} strokeWidth={3.4} strokeLinecap="round" />
+      <Box a={a} d={d} t={[t[0] / 3, t[1] / 3]} h={3.5} lift={7} c={WOOD} />
+      <Box a={a} d={d} t={[t[0] / 3, t[1] / 3]} h={3.5} lift={15} c={WOOD} />
+    </g>
+  );
+}
+
+// Một ô tường/rào/hàng cây: các đoạn nối tới ô kề cùng loại (không có ô kề nào → 1 đoạn dọc theo trục, trục 0 = x, 1 = y)
+function ConnectedPiece({ kind, cx, cy, n, axis }: { kind: "wall" | "fence" | "hedge"; cx: number; cy: number; n: Neighbors; axis: 0 | 1 }) {
   const any = n.xp || n.xm || n.yp || n.ym;
-  const on = (k: keyof Neighbors) => (any ? n[k] : k === "xp" || k === "xm");
-  const seg = (k: keyof Neighbors, d: Pt, t: Pt) => {
-    if (!on(k)) return null;
-    const a: Pt = [cx - t[0] / 2, cy - t[1] / 2];
-    if (kind === "wall") return <Box key={k} a={a} d={d} t={t} h={26} c={WALL} courses={4} />;
-    if (kind === "hedge") return (
-      <g key={k}>
-        <Box a={a} d={d} t={[t[0] * 1.5, t[1] * 1.5]} h={20} c={HEDGE} />
-        {[0.35, 0.8].map((f) => { const p = lerp([cx, cy - 20], [cx + d[0], cy + d[1] - 20], f); return <circle key={f} cx={p[0]} cy={p[1]} r={4.5} fill="#86d96a" opacity={0.85} />; })}
-      </g>
-    );
-    // hàng rào gỗ: 2 thanh ngang + 1 song đứng giữa đoạn
-    const mid = lerp([cx, cy], [cx + d[0], cy + d[1]], 0.5);
-    return (
-      <g key={k}>
-        <line x1={mid[0] + t[0] / 2} y1={mid[1] + t[1] / 2} x2={mid[0] + t[0] / 2} y2={mid[1] + t[1] / 2 - 20} stroke={WOOD.cap} strokeWidth={3.4} strokeLinecap="round" />
-        <Box a={a} d={d} t={[t[0] / 3, t[1] / 3]} h={3.5} lift={7} c={WOOD} />
-        <Box a={a} d={d} t={[t[0] / 3, t[1] / 3]} h={3.5} lift={15} c={WOOD} />
-      </g>
-    );
-  };
+  const on = (k: keyof Neighbors) => (any ? n[k] : axis === 0 ? k === "xp" || k === "xm" : k === "yp" || k === "ym");
+  const seg = (k: keyof Neighbors, d: Pt, t: Pt) => (on(k) ? segFrom(kind, k, [cx, cy], d, t) : null);
   const post = () => {
     if (kind === "wall") return <Prism cx={cx} cy={cy} rw={9} rh={4.5} h={31} c={{ ...WALL, top: "#f4cdb0" }} />;
     if (kind === "fence") return <Prism cx={cx} cy={cy} rw={3.8} rh={1.9} h={25} c={WOOD} />;
@@ -236,6 +237,119 @@ function ConnectedPiece({ kind, cx, cy, n }: { kind: "wall" | "fence" | "hedge";
       {DIRS.filter((x) => x.d[1] < 0).map((x) => seg(x.k, x.d, x.t))}
       {post()}
       {DIRS.filter((x) => x.d[1] > 0).map((x) => seg(x.k, x.d, x.t))}
+    </g>
+  );
+}
+
+// ── Cổng: 2 trụ + cánh/vòm ở giữa ô, 2 đầu nối với tường/rào cùng họ ──────────────────────────────
+const WHITE: Colors = { front: "#f8f8f4", cap: "#dcdcd2", top: "#ffffff", line: "#9a9a8e" };
+const BAMBOO: Colors = { front: "#b8c46a", cap: "#8fa04a", top: "#d9e28f", line: "#5f6f2c" };
+const IRON: Colors = { front: "#4b5563", cap: "#374151", top: "#6b7280", line: "#1f2937" };
+const STONE: Colors = { front: "#a9afb9", cap: "#8a909b", top: "#d0d5dc", line: "#59606b" };
+const RED: Colors = { front: "#d9453b", cap: "#b3322a", top: "#f0766c", line: "#7a1d18" };
+const GOLD: Colors = { front: "#f2c230", cap: "#c99a12", top: "#ffe27a", line: "#8a6508" };
+type GateStyle = { post: Colors; postH: number; rw: number; leaf?: "boards" | "lattice" | "pickets" | "bars"; leafC?: Colors; leafH?: number; arch?: { c: string; edge: string; h: number; w: number }; top?: "merlon" | "lantern" | "flowers" | "crown" | "spears" };
+const GATE_STYLES: Record<string, GateStyle> = {
+  wood: { post: WOOD, postH: 32, rw: 4.5, leaf: "boards", leafC: WOOD, leafH: 24 },
+  picket: { post: WHITE, postH: 30, rw: 4, leaf: "pickets", leafC: WHITE, leafH: 22 },
+  bamboo: { post: BAMBOO, postH: 36, rw: 3.5, leaf: "lattice", leafC: BAMBOO, leafH: 25 },
+  brick: { post: WALL, postH: 40, rw: 6.5, arch: { c: "#c8704a", edge: "#7a3f22", h: 11, w: 7 } },
+  iron: { post: IRON, postH: 36, rw: 3.5, leaf: "bars", leafC: IRON, leafH: 28, top: "spears" },
+  flower: { post: HEDGE, postH: 36, rw: 6, arch: { c: "#3f9d3e", edge: "#256a2a", h: 14, w: 8 }, top: "flowers" },
+  stone: { post: STONE, postH: 42, rw: 6.5, arch: { c: "#b6bcc6", edge: "#6b7280", h: 13, w: 8 } },
+  lantern: { post: RED, postH: 44, rw: 3.8, top: "lantern" },
+  golden: { post: GOLD, postH: 40, rw: 4, leaf: "bars", leafC: GOLD, leafH: 26, arch: { c: "#fbbf24", edge: "#b45309", h: 10, w: 5 }, top: "crown" },
+  castle: { post: STONE, postH: 56, rw: 8, arch: { c: "#9aa1ac", edge: "#4b5563", h: 14, w: 9 }, leaf: "bars", leafC: IRON, leafH: 30, top: "merlon" },
+};
+
+function GatePiece({ style, fam, cx, cy, axis, n }: { style: string; fam: "wall" | "fence" | "hedge"; cx: number; cy: number; axis: 0 | 1; n: Neighbors }) {
+  const g = GATE_STYLES[style] || GATE_STYLES.wood;
+  const L: Pt = axis ? [-TILE_W / 2, TILE_H / 2] : [TILE_W / 2, TILE_H / 2];
+  const t: Pt = axis ? [6, 3] : [-6, 3];
+  const P1: Pt = [cx - L[0] * 0.3, cy - L[1] * 0.3], P2: Pt = [cx + L[0] * 0.3, cy + L[1] * 0.3]; // P1 phía sau, P2 phía trước
+  const backNb = axis ? n.ym : n.xm, frontNb = axis ? n.yp : n.xp;
+  const mid = lerp(P1, P2, 0.5);
+  const a = lerp(P1, P2, 0.1), b = lerp(P1, P2, 0.9);
+  const lc = g.leafC || WOOD; const lh = g.leafH || 24;
+  const leaf: ReactNode[] = [];
+  if (g.leaf === "boards") {
+    leaf.push(<polygon key="l" points={pts([a, b, raise(b, lh), raise(a, lh)])} fill={lc.front} stroke={lc.line} strokeWidth={0.9} />);
+    for (let i = 1; i < 5; i++) { const p = lerp(a, b, i / 5); leaf.push(<line key={`v${i}`} x1={p[0]} y1={p[1]} x2={p[0]} y2={p[1] - lh} stroke={lc.line} strokeWidth={0.8} />); }
+    leaf.push(<line key="d1" x1={a[0]} y1={a[1] - 3} x2={b[0]} y2={b[1] - lh + 3} stroke={lc.cap} strokeWidth={2.4} />, <line key="d2" x1={a[0]} y1={a[1] - lh + 3} x2={b[0]} y2={b[1] - 3} stroke={lc.cap} strokeWidth={2.4} />);
+  } else if (g.leaf === "pickets") {
+    leaf.push(<line key="r1" x1={a[0]} y1={a[1] - 7} x2={b[0]} y2={b[1] - 7} stroke={lc.line} strokeWidth={2.4} />, <line key="r2" x1={a[0]} y1={a[1] - 16} x2={b[0]} y2={b[1] - 16} stroke={lc.line} strokeWidth={2.4} />);
+    for (let i = 0; i < 6; i++) { const p = lerp(a, b, (i + 0.5) / 6); leaf.push(<polygon key={`p${i}`} points={pts([[p[0] - 2.4, p[1]], [p[0] + 2.4, p[1]], [p[0] + 2.4, p[1] - lh], [p[0], p[1] - lh - 4], [p[0] - 2.4, p[1] - lh]])} fill={lc.front} stroke={lc.line} strokeWidth={0.8} />); }
+  } else if (g.leaf === "lattice") {
+    for (let i = 0; i < 6; i++) { const p = lerp(a, b, (i + 0.5) / 6); leaf.push(<line key={`s${i}`} x1={p[0]} y1={p[1]} x2={p[0]} y2={p[1] - lh} stroke={lc.cap} strokeWidth={3} strokeLinecap="round" />); }
+    leaf.push(<line key="h1" x1={a[0]} y1={a[1] - 8} x2={b[0]} y2={b[1] - 8} stroke={lc.line} strokeWidth={1.8} />, <line key="h2" x1={a[0]} y1={a[1] - 17} x2={b[0]} y2={b[1] - 17} stroke={lc.line} strokeWidth={1.8} />);
+  } else if (g.leaf === "bars") {
+    leaf.push(<line key="b0" x1={a[0]} y1={a[1] - 3} x2={b[0]} y2={b[1] - 3} stroke={lc.line} strokeWidth={2.4} />, <line key="b1" x1={a[0]} y1={a[1] - lh} x2={b[0]} y2={b[1] - lh} stroke={lc.line} strokeWidth={2.4} />);
+    for (let i = 0; i < 7; i++) { const p = lerp(a, b, (i + 0.5) / 7); leaf.push(<line key={`r${i}`} x1={p[0]} y1={p[1]} x2={p[0]} y2={p[1] - lh} stroke={lc.front} strokeWidth={1.8} />, <polygon key={`t${i}`} points={pts([[p[0] - 2, p[1] - lh], [p[0], p[1] - lh - 5], [p[0] + 2, p[1] - lh]])} fill={lc.front} />); }
+  }
+  // vòm / dầm trên
+  const peak = (g.arch?.h || 0) * 2;
+  const top0 = raise(P1, g.postH), top2 = raise(P2, g.postH), ctrl = raise(mid, g.postH + peak);
+  const bez = (f: number): Pt => [(1 - f) * (1 - f) * top0[0] + 2 * (1 - f) * f * ctrl[0] + f * f * top2[0], (1 - f) * (1 - f) * top0[1] + 2 * (1 - f) * f * ctrl[1] + f * f * top2[1]];
+  const deco: ReactNode[] = [];
+  if (g.top === "flowers") [0.12, 0.28, 0.5, 0.72, 0.88].forEach((f, i) => { const p = bez(f); deco.push(<circle key={`f${i}`} cx={p[0]} cy={p[1] - 1} r={3.4} fill={["#fb7185", "#fde68a", "#f9a8d4", "#fde68a", "#fb7185"][i]} stroke="#9f1239" strokeWidth={0.5} />); });
+  if (g.top === "crown") { const p = bez(0.5); deco.push(<polygon key="cr" points={pts([[p[0] - 7, p[1]], [p[0] - 7, p[1] - 8], [p[0] - 3.5, p[1] - 3.5], [p[0], p[1] - 10], [p[0] + 3.5, p[1] - 3.5], [p[0] + 7, p[1] - 8], [p[0] + 7, p[1]]])} fill="#ffd84d" stroke="#8a6508" strokeWidth={1} />); }
+  if (g.top === "lantern") {
+    const e1 = [P1[0] - L[0] * 0.16, P1[1] - L[1] * 0.16] as Pt, e2 = [P2[0] + L[0] * 0.16, P2[1] + L[1] * 0.16] as Pt;
+    deco.push(<line key="k1" x1={e1[0]} y1={e1[1] - g.postH - 3} x2={e2[0]} y2={e2[1] - g.postH - 3} stroke="#7a1d18" strokeWidth={6} strokeLinecap="round" />, <line key="k2" x1={P1[0]} y1={P1[1] - g.postH + 8} x2={P2[0]} y2={P2[1] - g.postH + 8} stroke="#b3322a" strokeWidth={3.4} />);
+    deco.push(<g key="ln"><line x1={mid[0]} y1={mid[1] - g.postH + 8} x2={mid[0]} y2={mid[1] - g.postH + 14} stroke="#7a1d18" strokeWidth={1} /><ellipse cx={mid[0]} cy={mid[1] - g.postH + 20} rx={5.5} ry={6.5} fill="#ef4444" stroke="#7f1d1d" strokeWidth={1} /><ellipse cx={mid[0]} cy={mid[1] - g.postH + 20} rx={2.4} ry={3.4} fill="#fde68a" opacity={0.9} /></g>);
+  }
+  const finial = (p: Pt, k: string) => g.top === "spears" ? <polygon key={k} points={pts([[p[0] - 3.2, p[1] - g.postH], [p[0], p[1] - g.postH - 8], [p[0] + 3.2, p[1] - g.postH]])} fill={IRON.front} stroke={IRON.line} strokeWidth={0.8} /> : g.top === "merlon" ? <Prism key={k} cx={p[0]} cy={p[1]} rw={g.rw + 2} rh={(g.rw + 2) / 2} h={5} lift={g.postH} c={{ ...STONE, front: "#8a909b" }} /> : null;
+  const post = (p: Pt, k: string) => <Prism key={k} cx={p[0]} cy={p[1]} rw={g.rw} rh={g.rw / 2} h={g.postH} c={g.post} />;
+  return (
+    <g>
+      <ellipse cx={cx} cy={cy + 3} rx={36} ry={10} fill="rgba(31,45,61,.15)" />
+      {backNb && segFrom(fam, "sb", P1, [-L[0] * 0.2, -L[1] * 0.2], t)}
+      {post(P1, "p1")}{finial(P1, "f1")}
+      {leaf}
+      {post(P2, "p2")}{finial(P2, "f2")}
+      {frontNb && segFrom(fam, "sf", P2, [L[0] * 0.2, L[1] * 0.2], t)}
+      {g.arch && (
+        <g>
+          <path d={`M${top0[0]} ${top0[1]} Q${ctrl[0]} ${ctrl[1]} ${top2[0]} ${top2[1]}`} fill="none" stroke={g.arch.edge} strokeWidth={g.arch.w + 2.4} strokeLinecap="round" />
+          <path d={`M${top0[0]} ${top0[1]} Q${ctrl[0]} ${ctrl[1]} ${top2[0]} ${top2[1]}`} fill="none" stroke={g.arch.c} strokeWidth={g.arch.w} strokeLinecap="round" />
+        </g>
+      )}
+      {deco}
+    </g>
+  );
+}
+
+// ── Nhà máy chế biến: nhà nhỏ mái màu + biển emoji; chạy thì ống khói nhả khói ─────────────────────
+function shade(hex: string, f: number) {
+  const n = parseInt(hex.slice(1), 16); const r = Math.round(((n >> 16) & 255) * f), g = Math.round(((n >> 8) & 255) * f), b = Math.round((n & 255) * f);
+  return `rgb(${r},${g},${b})`;
+}
+export function FactorySprite({ cx, cy, wall, roof, emoji, busy, mirror }: { cx: number; cy: number; wall: string; roof: string; emoji: string; busy?: boolean; mirror?: boolean }) {
+  const W = 30, Hh = 15, wallH = 30, roofH = 26;
+  const Lp: Pt = [cx - W, cy], Bp: Pt = [cx, cy + Hh], Rp: Pt = [cx + W, cy];
+  const A: Pt = [cx, cy - wallH - roofH];
+  const eave = (p: Pt, ox: number, oy: number): Pt => [p[0] + ox, p[1] - wallH + oy];
+  const L2 = eave(Lp, -6, 2), B2 = eave(Bp, 0, 4), R2 = eave(Rp, 6, 2);
+  const door0 = lerp(Lp, Bp, 0.42), door1 = lerp(Lp, Bp, 0.66);
+  const win0 = lerp(Bp, Rp, 0.3), win1 = lerp(Bp, Rp, 0.62);
+  const flip = mirror ? `translate(${cx} 0) scale(-1 1) translate(${-cx} 0)` : undefined;
+  return (
+    <g>
+      <ellipse cx={cx} cy={cy + 5} rx={W + 10} ry={Hh + 4} fill="rgba(31,45,61,.2)" />
+      <g transform={flip} strokeLinejoin="round">
+        <polygon points={pts([Lp, Bp, raise(Bp, wallH), raise(Lp, wallH)])} fill={wall} stroke="#6b5232" strokeWidth={1} />
+        <polygon points={pts([Bp, Rp, raise(Rp, wallH), raise(Bp, wallH)])} fill={shade(wall, 0.86)} stroke="#6b5232" strokeWidth={1} />
+        <polygon points={pts([door0, door1, raise(door1, 17), raise(door0, 17)])} fill="#7a4f26" stroke="#4e3217" strokeWidth={0.9} />
+        <polygon points={pts([raise(win0, 10), raise(win1, 10), raise(win1, 22), raise(win0, 22)])} fill="#cfeaff" stroke="#4e3217" strokeWidth={0.9} />
+        <polygon points={pts([L2, B2, A])} fill={roof} stroke={shade(roof, 0.6)} strokeWidth={1} />
+        <polygon points={pts([B2, R2, A])} fill={shade(roof, 0.8)} stroke={shade(roof, 0.6)} strokeWidth={1} />
+        <Prism cx={cx + 13} cy={cy - wallH - 9} rw={4.5} rh={2.2} h={14} c={{ front: "#b45a3c", cap: "#8f4429", top: "#d98264", line: "#5b2a18" }} />
+        {busy && [0, 1, 2].map((i) => (
+          <circle key={i} cx={cx + 13} cy={cy - wallH - 25} r={4 + i} fill="#e5e7eb" stroke="#cbd5e1" strokeWidth={0.6} className="farm-smoke" style={{ animationDelay: `${i * 0.8}s` }} />
+        ))}
+      </g>
+      <circle cx={cx} cy={cy + Hh - 14} r={11.5} fill="#fff" stroke={shade(roof, 0.7)} strokeWidth={1.6} />
+      <text x={cx} y={cy + Hh - 8.5} textAnchor="middle" fontSize={15} style={{ fontFamily: EMOJI_FONT }}>{emoji}</text>
     </g>
   );
 }
@@ -258,10 +372,18 @@ export function EmojiDecor({ emoji, size = 40, cx, cy }: { emoji: string; size?:
   );
 }
 
-export function DecorSprite({ itemKey, emoji, cx, cy, isPath, n }: { itemKey?: string; emoji: string; cx: number; cy: number; isPath?: boolean; n?: Neighbors }) {
+export type DecorMeta = { fam?: "wall" | "fence" | "hedge"; gate?: boolean; style?: string; factory?: { wall: string; roof: string; emoji: string; busy?: boolean } };
+// r: hướng (0/1). Tường/rào/cổng đổi trục x ↔ y; đồ khác lật ngang. meta lấy từ catalog (gate/fam/style) + nhà máy.
+export function DecorSprite({ itemKey, emoji, cx, cy, isPath, n, r = 0, meta }: { itemKey?: string; emoji: string; cx: number; cy: number; isPath?: boolean; n?: Neighbors; r?: 0 | 1; meta?: DecorMeta }) {
   if (isPath) return <polygon points={diamondPoints(cx, cy, TILE_W - 6, TILE_H - 3)} fill="#d6c3a5" stroke="#b9a47f" strokeWidth={1.5} />;
-  const fam = itemKey ? CONNECT_FAMILY[itemKey] : undefined;
-  if (fam) return <ConnectedPiece kind={fam as "wall" | "fence" | "hedge"} cx={cx} cy={cy} n={n || { xp: false, xm: false, yp: false, ym: false }} />;
+  const nb = n || { xp: false, xm: false, yp: false, ym: false };
+  if (meta?.gate && meta.fam) return <GatePiece style={meta.style || "wood"} fam={meta.fam} cx={cx} cy={cy} axis={r ? 1 : 0} n={nb} />;
+  if (meta?.fam) return <ConnectedPiece kind={meta.fam} cx={cx} cy={cy} n={nb} axis={r ? 1 : 0} />;
+  if (meta?.factory) return <FactorySprite cx={cx} cy={cy} wall={meta.factory.wall} roof={meta.factory.roof} emoji={meta.factory.emoji} busy={meta.factory.busy} mirror={!!r} />;
+  if (r) return <g transform={`translate(${cx} 0) scale(-1 1) translate(${-cx} 0)`}><DecorBody itemKey={itemKey} emoji={emoji} cx={cx} cy={cy} /></g>;
+  return <DecorBody itemKey={itemKey} emoji={emoji} cx={cx} cy={cy} />;
+}
+function DecorBody({ itemKey, emoji, cx, cy }: { itemKey?: string; emoji: string; cx: number; cy: number }) {
   const shadow = (rx: number, ry: number) => <ellipse cx={cx} cy={cy + 4} rx={rx} ry={ry} fill="rgba(31,45,61,.2)" />;
   switch (itemKey) {
     case "rock": return (

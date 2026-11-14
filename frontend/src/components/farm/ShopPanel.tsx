@@ -77,14 +77,19 @@ export default function ShopPanel({ userId, farm, catalog, onClose, onPick, onEx
             {decor.map(([key, d]) => {
               const locked = farm.level < d.minLevel;
               const ok = afford(d.price, d.currency);
+              const have = !!d.factory && farm.layout.some((l) => l.key === key);
+              const fac = d.factory ? catalog.factories[key] : undefined;
               return (
-                <button key={key} disabled={locked || !ok} onClick={() => onPick(key, d.name)}
+                <button key={key} disabled={locked || !ok || have} onClick={() => onPick(key, d.name)}
                   className="farm-item relative rounded-2xl border border-line bg-white p-3 text-left disabled:opacity-50 disabled:cursor-not-allowed hover:border-primary">
                   <div className="text-4xl leading-none">{d.emoji}</div>
                   <p className="font-bold text-foreground mt-2 leading-tight">{d.name}</p>
                   <p className="text-sm font-extrabold text-primary mt-0.5">{d.currency === "coins" ? "🪙" : "💎"} {d.price}</p>
+                  {fac && <p className="text-[11px] text-muted mt-1 leading-tight">Làm: {fac.recipes.map((r) => catalog.products[r.product].emoji).join(" ")}</p>}
+                  {d.gate && <p className="text-[11px] text-muted mt-1 leading-tight">Nối liền với {d.fam === "wall" ? "tường" : d.fam === "hedge" ? "hàng cây" : "hàng rào"}</p>}
+                  {have && <span className="absolute top-2 right-2 ui-badge text-[10px] bg-emerald-100 text-emerald-800">Đã có</span>}
                   {locked && <span className="absolute top-2 right-2 ui-badge text-[10px] bg-slate-100 text-slate-600">🔒 Cấp {d.minLevel}</span>}
-                  {!locked && !ok && <span className="absolute top-2 right-2 ui-badge text-[10px] bg-amber-100 text-amber-800">Thiếu {d.currency === "coins" ? "xu" : "💎"}</span>}
+                  {!locked && !ok && !have && <span className="absolute top-2 right-2 ui-badge text-[10px] bg-amber-100 text-amber-800">Thiếu {d.currency === "coins" ? "xu" : "💎"}</span>}
                 </button>
               );
             })}
