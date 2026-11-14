@@ -51,6 +51,13 @@ model User {
   tuitionPayments TuitionPayment[]
   vocabProgress   UserVocabProgress[]
 
+  // Nông Trại Qilin (/farm) — xem CLAUDE.md mục `/farm`
+  farmState      FarmState?
+  farmPlots      FarmPlot[]
+  farmOrders     FarmOrder[]
+  farmVisitsSent FarmVisit[] @relation("FarmVisitFrom")
+  farmVisitsGot  FarmVisit[] @relation("FarmVisitTo")
+
   uploadedListeningClips ListeningClip[] @relation("TeacherListeningClips")
   assignedListeningClips ListeningClip[] @relation("StudentListeningClips")
 
@@ -623,6 +630,7 @@ model UserVocabProgress {
 
   user  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   vocab VocabItem @relation(fields: [vocabId], references: [id], onDelete: Cascade)
+  farmPlot FarmPlot?
 
   @@unique([userId, vocabId])
 }
@@ -1488,4 +1496,105 @@ model SocialComment {
   @@unique([platform, externalId])
   @@index([platform, publishedAt])
   @@index([handled, publishedAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Nông Trại Qilin (/farm) — game kiểu Hay Day chạy trên deck SRS của học viên.
+// Mỗi ô đất (FarmPlot) giữ 1 từ (UserVocabProgress); cây "chín" khi từ đến hạn ôn
+// (nextReviewDate) — thu hoạch = ôn từ qua câu hỏi, chấm ở server rồi cộng xu/XP.
+// Trạng thái cây (EMPTY/GROWING/READY) suy ra lúc đọc, không có cron.
+// ═══════════════════════════════════════════════════════════════════════════
+
+model FarmState {
+  id     String @id @default(uuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  coins Int @default(120)
+  gems  Int @default(3)
+
+  // Lưới đất hiển thị: mở rộng bằng xu (gridW/gridH tăng theo bậc trong farmCatalog)
+  gridW Int @default(8)
+  gridH Int @default(6)
+
+  // Trang trí đã đặt lên đất: [{ uid, key, x, y }] — key tra trong farmCatalog
+  layout String @default("[]")
+
+  harvestCount Int @default(0) // tổng lần thu hoạch đúng — tính cấp nông trại
+  witherCount  Int @default(0) // tổng lần trả lời sai (cây héo)
+  barnCount    Int @default(0) // số từ MASTERED đã cất vào kho
+
+  // Thú cưng Qilin con (giải trí thuần)
+  petName   String  @default("Qilin")
+  petXp     Int     @default(0)
+  petFedOn  String? // "YYYY-MM-DD" (giờ VN) lần cho ăn gần nhất — 1 lần/ngày
+  petPats   Int     @default(0)
+
+  // Vòng quay may mắn 1 lần/ngày + buff nhân đôi xu cho N lần thu hoạch tiếp theo
+  spunOn        String?
+  boostHarvests Int     @default(0)
+
+  ordersRefreshedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model FarmPlot {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  x Int
+  y Int
+
+  // Từ đang trồng (null = đất trống). Mỗi từ chỉ nằm trên đúng 1 ô.
+  progressId String?            @unique
+  progress   UserVocabProgress? @relation(fields: [progressId], references: [id], onDelete: SetNull)
+
+  cropKey   String?   // kiểu cây hiển thị (wheat/carrot/...) — xem farmCatalog.CROPS
+  plantedAt DateTime? // mốc bắt đầu chu kỳ lớn hiện tại (trồng hoặc vừa thu hoạch)
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, x, y])
+  @@index([userId])
+}
+
+model FarmOrder {
+  id     String @id @default(uuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind     String // "HARVEST" | "HARVEST_CROP" | "PLANT" | "SENTENCE"
+  customer String // tên khách (emoji + tên) để hiển thị
+  title    String
+  // Yêu cầu: HARVEST {need}, HARVEST_CROP {need, cropKey}, PLANT {need}, SENTENCE {words:[...]}
+  requirement String @default("{}")
+  progress    Int    @default(0)
+
+  rewardCoins Int @default(0)
+  rewardGems  Int @default(0)
+  rewardXp    Int @default(0)
+
+  status    String    @default("OPEN") // "OPEN" | "DONE"
+  createdAt DateTime  @default(now())
+  doneAt    DateTime?
+
+  @@index([userId, status])
+}
+
+// Thăm nông trại bạn cùng lớp: thích/tặng quà, mỗi cặp 1 lần/ngày
+model FarmVisit {
+  id       String @id @default(uuid())
+  fromId   String
+  toId     String
+  from     User   @relation("FarmVisitFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to       User   @relation("FarmVisitTo", fields: [toId], references: [id], onDelete: Cascade)
+  day      String // "YYYY-MM-DD" giờ VN
+  type     String @default("LIKE") // "LIKE" | "GIFT"
+  createdAt DateTime @default(now())
+
+  @@unique([fromId, toId, day, type])
+  @@index([toId])
 }

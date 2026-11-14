@@ -445,6 +445,21 @@ Giáo viên **tự nhập tay** từng đề IELTS đủ 4 kỹ năng (bài đ�
 
 ---
 
+### `/farm` — Nông Trại Qilin (game kiểu Hay Day trên deck SRS, 11/2026)
+
+**Files:** trang [frontend/src/app/farm/page.tsx](frontend/src/app/farm/page.tsx) (client, `next/dynamic` tắt SSR, cần đăng nhập, `layout.tsx` noindex) · game [frontend/src/components/farm/](frontend/src/components/farm/) (`FarmGame.tsx` điều phối, `FarmScene.tsx` khung cảnh isometric SVG, `Sprites.tsx` cây/thú cưng, các panel `HarvestModal`/`SeedPicker`/`ShopPanel`/`OrdersPanel`/`PetPanel`/`WheelPanel`/`NeighborsPanel`/`BarnPanel`, `farm.css`) · API client [frontend/src/lib/farm/api.ts](frontend/src/lib/farm/api.ts) · backend [backend/src/routes/farm.routes.js](backend/src/routes/farm.routes.js) + số liệu game [backend/src/lib/farmCatalog.js](backend/src/lib/farmCatalog.js) + kho hạt giống [backend/src/data/farmSeeds.json](backend/src/data/farmSeeds.json) (144 từ, trích từ `games-src/qilin-run/content.js`) · SM-2 dùng chung [backend/src/lib/sm2.js](backend/src/lib/sm2.js) (tách ra từ `srs.routes.js`)
+
+**Ý tưởng cốt lõi — cây = từ vựng, bộ đếm giờ = lịch SRS:** mỗi ô đất (`FarmPlot`) giữ đúng 1 `UserVocabProgress` (quan hệ 1-1 qua `progressId @unique`, cùng deck với `/gym`). Cây "chín" (`READY`) khi tới `readyAt` = 10 phút sau khi trồng nếu `repetitions === 0` (`FIRST_GROW_MINUTES`), còn lại = `nextReviewDate` của SM-2. **Thu hoạch = ôn từ**: `GET /plots/:id/question` sinh câu hỏi theo `repetitions` (`modeFor`: 0 → chọn từ theo nghĩa, 1 → nghe chọn nghĩa, ≥2 → gõ từ / điền vào câu ví dụ xen kẽ), `POST /plots/:id/harvest` chấm ở server (quy tắc quality giống `/gym`: đúng 5, có gợi ý 4, Levenshtein ≤ 2 → 3, sai 1), chạy `calculateSM2` + `statusAfterReview`, rồi cộng xu/XP (`User.totalXP` dùng chung bảng xếp hạng). **Sai → cây héo** (`wilted` suy ra từ `repetitions === 0 && lastReviewedAt >= plantedAt`), mọc lại sau 10 phút, học lại từ đầu. Từ `MASTERED` (interval > 21 ngày) hiện ⭐ và được "cất kho" (`/store`) để giải phóng ô. Trạng thái cây suy ra lúc đọc (`plotView`), **không có cron**. Kim cương/xu **không rút ngắn thời gian** (chủ ý sư phạm).
+- **Mọi endpoint ghi trả về nguyên gói `buildState()`** (`farm`, `plots`, `orders`, `user`, `catalog`, kèm field phụ `result`/`spin`/`delivered`/`bought`...) → client chỉ thay state, không tự tính thưởng. Giá/thưởng/cấp chỉ khai báo ở `farmCatalog.js` và được gửi về qua `catalog` (`publicCatalog()`), frontend không hardcode.
+- **Hạt giống** (`GET /seeds/:userId`): `?source=deck` = từ trong deck SRS chưa trồng (ưu tiên đến hạn; gồm từ giáo viên giao + tự thêm) · `?topic=<id>` = 8 chủ đề trong `farmSeeds.json`; trồng từ chủ đề tạo `VocabItem` (`addedByUserId`, giống `/api/srs/vocab/custom`) nếu deck chưa có từ đó. `cropKey` (hình cây) gán theo chủ đề (`TOPIC_CROP`), từ trong deck chọn ngẫu nhiên.
+- **Đơn hàng** (`FarmOrder`, luôn giữ 3 đơn mở, `ensureOrders`): `HARVEST`/`HARVEST_CROP`/`PLANT` tự cộng tiến độ (`bumpOrders`) và học sinh bấm "Giao hàng"; `SENTENCE` ("viết 1 câu dùng từ X [và Y]") chấm bằng `gradeSentence`: quy tắc (có đủ từ, ≥ 4 từ) rồi Groq (`GROQ_TEXT_MODEL`, JSON `{ok, feedback, corrected}`); không có khoá/AI lỗi thì chấp nhận theo quy tắc. Sai → trả `{ok:false, feedback}` không mất gì, làm lại được. Bỏ đơn tốn `ORDER_TRASH_COST` xu.
+- **Phần giải trí thuần (không bắt học)**: cửa hàng trang trí (`DECOR`, mở khoá theo cấp, mua bằng xu/kim cương, chế độ đặt/dời/bán 50%, mua thêm ô đất `plotPrice()` và mở rộng lưới `EXPANSIONS`), thú cưng Qilin con (vuốt ve `+1 petXp`, cho ăn 1 lần/ngày `petFedOn`, đổi tên, cấp theo `PET_LEVELS` → sprite mọc bờm/cánh/vương miện), vòng quay 1 lần/ngày (`WHEEL` có trọng số, server chọn ô, client quay tới ô đó; quà trang trí tự đặt vào ô trống đầu tiên), thăm bạn cùng lớp (`/neighbors`, `/visit`, `/visit/react` — qua `Classroom`, thích 1 lần/ngày/bạn, tặng quà tối đa 3/ngày, `FarmVisit @@unique([fromId,toId,day,type])`).
+- **Cấp nông trại** = `levelFor(harvestCount)` (cấp n cần 3n(n−1) lần thu hoạch đúng). Mọi giới hạn "1 lần/ngày" dùng `vnDay()` (giờ Việt Nam).
+- **SVG/hoạt ảnh — bẫy đã gặp:** CSS animation có `transform` **ghi đè** thuộc tính `transform` của phần tử SVG → luôn tách `<g transform>` (vị trí) và `<g className="farm-...">` (hoạt ảnh) thành 2 lớp lồng nhau. Thanh lớn + đếm ngược vẽ ở **lớp phủ riêng sau mọi vật thể** (nếu vẽ trong nhóm cây sẽ bị ô đất hàng dưới che). Vật thể sắp theo chiều sâu `(x+y, x)`. Trên điện thoại khung đất có `min-width` 640px + cuộn ngang để ô đủ lớn mà bấm.
+- Có trong sidebar `/dashboard` (`gamesGroup`, mục đầu), lưới Luyện tập (`PRACTICE_GROUPS` GAMES + thumbnail `photos/app/farm.webp`). Test tự động bằng Playwright khi phát triển: bấm phần tử SVG dùng `dispatchEvent('click')` (click thường bị "not stable" vì hoạt ảnh).
+
+---
+
 ### `/phonetics` — Bảng Âm IPA
 
 **File:** [frontend/src/app/phonetics/page.tsx](frontend/src/app/phonetics/page.tsx)
@@ -686,6 +701,13 @@ Cho phép học sinh cài app lên điện thoại (Add to Home Screen):
 | `POST /api/pronunciation/transcribe` | Ghi âm → text qua Groq Whisper (đồng bộ, không lưu Supabase Storage) |
 | `POST /api/pronunciation/coach` | AI góp ý lỗi phát âm dựa trên so khớp transcript |
 | `POST /api/pronunciation/attempts` · `GET .../attempts/:userId` | Lưu/xem lịch sử luyện phát âm |
+| `GET /api/farm/state/:userId` | Nông Trại Qilin: toàn bộ trạng thái (tự tạo nông trại + 6 ô đất lần đầu, đảm bảo 3 đơn mở) |
+| `GET /api/farm/seeds/:userId?source=deck` · `?topic=` | Hạt giống: deck SRS chưa trồng / kho 8 chủ đề |
+| `POST /api/farm/plant` · `GET .../plots/:id/question` · `POST .../plots/:id/harvest` · `.../dig` · `.../store` · `GET .../barn/:userId` | Trồng, câu hỏi thu hoạch, thu hoạch (chấm + SM-2 + thưởng), nhổ, cất kho từ MASTERED, kho từ |
+| `POST /api/farm/buy` · `/move` · `/sell` | Cửa hàng trang trí, mua ô đất (`itemKey: plot`), mở rộng (`expand`), dời, bán lại 50% |
+| `POST /api/farm/orders/:id/complete` · `.../trash` | Giao đơn (đơn SENTENCE chấm Groq/quy tắc), bỏ đơn |
+| `POST /api/farm/pet/feed` · `/pet/pat` · `/pet/rename` · `POST /api/farm/spin` | Thú cưng Qilin con, vòng quay may mắn (1 lần/ngày giờ VN) |
+| `GET /api/farm/neighbors/:userId` · `GET .../visit/:userId/:targetId` · `POST .../visit/react` | Bạn cùng lớp có nông trại, thăm (chỉ đọc), thích/tặng quà |
 | `POST /api/mock-test/generate` | AI sinh đề thi thử THPT Quốc Gia (2 lời gọi Groq song song: câu rời rạc + phần cần đoạn văn) |
 | `POST /api/mock-test/analysis` | AI phân tích kết quả đề thi thử theo từng phần |
 | `POST /api/mock-test/attempts` · `GET/PATCH .../attempts/:id`/`:userId` | Lưu/xem lịch sử đề thi thử |

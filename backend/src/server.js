@@ -53,6 +53,7 @@ const seoReportRoutes = require('./routes/seoReport.routes');
 const notesRoutes = require('./routes/notes.routes');
 const notesAiRoutes = require('./routes/notesAi.routes');
 const notesAuthRoutes = require('./routes/notesAuth.routes');
+const farmRoutes = require('./routes/farm.routes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/questions', questionRoutes);
@@ -87,6 +88,7 @@ app.use('/api/seo-report', seoReportRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/notes-ai', notesAiRoutes);
 app.use('/api/notes-auth', notesAuthRoutes);
+app.use('/api/farm', farmRoutes);
 
 // Every route in this app returns JSON errors as { error: '...' } — but multer's fileFilter/
 // limits errors (bad file type, file too large) and malformed-JSON body-parser errors are

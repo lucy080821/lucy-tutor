@@ -3,40 +3,7 @@ const prisma = require('../lib/prisma');
 const router = express.Router();
 
 // Calculate next review date and SM-2 parameters
-function calculateSM2(quality, prevRepetitions, prevEaseFactor, prevInterval) {
-  let repetitions = prevRepetitions;
-  let interval = prevInterval;
-  let easeFactor = prevEaseFactor;
-
-  // Quality: 1 (Lại/Again), 3 (Khó/Hard), 4 (Tốt/Good), 5 (Dễ/Easy)
-  if (quality >= 3) {
-    if (repetitions === 0) {
-      interval = 1;
-    } else if (repetitions === 1) {
-      interval = 6;
-    } else {
-      interval = Math.round(interval * easeFactor);
-    }
-    repetitions += 1;
-  } else {
-    repetitions = 0;
-    interval = 1;
-  }
-
-  // Update easeFactor
-  easeFactor = easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-  if (easeFactor < 1.3) easeFactor = 1.3;
-
-  const nextReviewDate = new Date();
-  nextReviewDate.setDate(nextReviewDate.getDate() + interval);
-
-  return {
-    repetitions,
-    interval,
-    easeFactor,
-    nextReviewDate
-  };
-}
+const { calculateSM2 } = require('../lib/sm2'); // dùng chung với farm.routes.js
 
 // 1. Add flipped vocabularies to SRS from lesson
 router.post('/add-from-lesson', async (req, res) => {

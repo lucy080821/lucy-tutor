@@ -1,0 +1,1066 @@
+[
+ {
+  "id": "family",
+  "name": "Gia đình & con người",
+  "desc": "Người thân, tính cách, quan hệ",
+  "words": [
+   {
+    "word": "mother",
+    "meaning": "mẹ",
+    "cefr": "A1",
+    "example": "My mother cooks dinner every evening.",
+    "tier": "easy"
+   },
+   {
+    "word": "brother",
+    "meaning": "anh trai, em trai",
+    "cefr": "A1",
+    "example": "My brother is ten years old.",
+    "tier": "easy"
+   },
+   {
+    "word": "friendly",
+    "meaning": "thân thiện",
+    "cefr": "A1",
+    "example": "Our new neighbour is very friendly.",
+    "tier": "easy"
+   },
+   {
+    "word": "cousin",
+    "meaning": "anh chị em họ",
+    "cefr": "A2",
+    "example": "My cousin lives in Da Nang.",
+    "tier": "easy"
+   },
+   {
+    "word": "grandparents",
+    "meaning": "ông bà",
+    "cefr": "A2",
+    "example": "I visit my grandparents every Sunday.",
+    "tier": "easy"
+   },
+   {
+    "word": "twins",
+    "meaning": "cặp sinh đôi",
+    "cefr": "A2",
+    "example": "The twins look exactly the same.",
+    "tier": "easy"
+   },
+   {
+    "word": "relative",
+    "meaning": "họ hàng",
+    "cefr": "B1",
+    "example": "Every relative came to the wedding.",
+    "tier": "medium"
+   },
+   {
+    "word": "generous",
+    "meaning": "hào phóng",
+    "cefr": "B1",
+    "example": "She is generous with her time and money.",
+    "tier": "medium"
+   },
+   {
+    "word": "argue",
+    "meaning": "cãi nhau",
+    "cefr": "B1",
+    "example": "My sisters often argue about clothes.",
+    "tier": "medium"
+   },
+   {
+    "word": "childhood",
+    "meaning": "thời thơ ấu",
+    "cefr": "B1",
+    "example": "He spent his childhood in the countryside.",
+    "tier": "medium"
+   },
+   {
+    "word": "reliable",
+    "meaning": "đáng tin cậy",
+    "cefr": "B1",
+    "example": "A good friend is always reliable.",
+    "tier": "medium"
+   },
+   {
+    "word": "get along",
+    "meaning": "hoà thuận",
+    "cefr": "B1",
+    "example": "I get along well with my stepbrother.",
+    "tier": "medium"
+   },
+   {
+    "word": "upbringing",
+    "meaning": "sự nuôi dạy",
+    "cefr": "B2",
+    "example": "Her strict upbringing made her very disciplined.",
+    "tier": "hard"
+   },
+   {
+    "word": "bond",
+    "meaning": "sự gắn bó",
+    "cefr": "B2",
+    "example": "There is a strong bond between the two brothers.",
+    "tier": "hard"
+   },
+   {
+    "word": "sibling",
+    "meaning": "anh chị em ruột",
+    "cefr": "B2",
+    "example": "Each sibling has a different personality.",
+    "tier": "hard"
+   },
+   {
+    "word": "resilient",
+    "meaning": "kiên cường",
+    "cefr": "C1",
+    "example": "Children are often more resilient than adults think.",
+    "tier": "hard"
+   },
+   {
+    "word": "estranged",
+    "meaning": "bị xa cách, ghẻ lạnh",
+    "cefr": "C1",
+    "example": "He has been estranged from his father for years.",
+    "tier": "hard"
+   },
+   {
+    "word": "nurture",
+    "meaning": "nuôi dưỡng",
+    "cefr": "C1",
+    "example": "Parents should nurture their children's curiosity.",
+    "tier": "hard"
+   }
+  ]
+ },
+ {
+  "id": "school",
+  "name": "Trường học & học tập",
+  "desc": "Lớp học, thi cử, đại học",
+  "words": [
+   {
+    "word": "classroom",
+    "meaning": "lớp học",
+    "cefr": "A1",
+    "example": "Our classroom is on the second floor.",
+    "tier": "easy"
+   },
+   {
+    "word": "homework",
+    "meaning": "bài tập về nhà",
+    "cefr": "A1",
+    "example": "I do my homework after dinner.",
+    "tier": "easy"
+   },
+   {
+    "word": "subject",
+    "meaning": "môn học",
+    "cefr": "A1",
+    "example": "Maths is my favourite subject.",
+    "tier": "easy"
+   },
+   {
+    "word": "timetable",
+    "meaning": "thời khoá biểu",
+    "cefr": "A2",
+    "example": "Check the timetable for tomorrow's lessons.",
+    "tier": "easy"
+   },
+   {
+    "word": "exam",
+    "meaning": "kỳ thi",
+    "cefr": "A2",
+    "example": "We have a big exam next week.",
+    "tier": "easy"
+   },
+   {
+    "word": "library",
+    "meaning": "thư viện",
+    "cefr": "A2",
+    "example": "I borrow books from the school library.",
+    "tier": "easy"
+   },
+   {
+    "word": "revise",
+    "meaning": "ôn tập",
+    "cefr": "B1",
+    "example": "I need to revise for the history test.",
+    "tier": "medium"
+   },
+   {
+    "word": "knowledge",
+    "meaning": "kiến thức",
+    "cefr": "B1",
+    "example": "Reading books improves your knowledge.",
+    "tier": "medium"
+   },
+   {
+    "word": "scholarship",
+    "meaning": "học bổng",
+    "cefr": "B1",
+    "example": "She won a scholarship to study in Japan.",
+    "tier": "medium"
+   },
+   {
+    "word": "graduate",
+    "meaning": "tốt nghiệp",
+    "cefr": "B1",
+    "example": "My sister will graduate from university next year.",
+    "tier": "medium"
+   },
+   {
+    "word": "fail",
+    "meaning": "trượt, thi rớt",
+    "cefr": "B1",
+    "example": "Don't worry if you fail the first time.",
+    "tier": "medium"
+   },
+   {
+    "word": "attend",
+    "meaning": "theo học, tham dự",
+    "cefr": "B1",
+    "example": "Over 800 students attend this school.",
+    "tier": "medium"
+   },
+   {
+    "word": "curriculum",
+    "meaning": "chương trình học",
+    "cefr": "B2",
+    "example": "The new curriculum includes more science lessons.",
+    "tier": "hard"
+   },
+   {
+    "word": "assessment",
+    "meaning": "sự đánh giá",
+    "cefr": "B2",
+    "example": "Teachers use regular assessment to track progress.",
+    "tier": "hard"
+   },
+   {
+    "word": "tuition",
+    "meaning": "học phí",
+    "cefr": "B2",
+    "example": "University tuition has risen sharply.",
+    "tier": "hard"
+   },
+   {
+    "word": "plagiarism",
+    "meaning": "đạo văn",
+    "cefr": "C1",
+    "example": "Plagiarism can get you expelled from university.",
+    "tier": "hard"
+   },
+   {
+    "word": "rigorous",
+    "meaning": "nghiêm ngặt, khắt khe",
+    "cefr": "C1",
+    "example": "The course has a rigorous selection process.",
+    "tier": "hard"
+   },
+   {
+    "word": "pedagogy",
+    "meaning": "phương pháp sư phạm",
+    "cefr": "C1",
+    "example": "Modern pedagogy puts learners at the centre.",
+    "tier": "hard"
+   }
+  ]
+ },
+ {
+  "id": "food",
+  "name": "Đồ ăn & nấu nướng",
+  "desc": "Món ăn, nấu ăn, dinh dưỡng",
+  "words": [
+   {
+    "word": "bread",
+    "meaning": "bánh mì",
+    "cefr": "A1",
+    "example": "I eat bread with eggs for breakfast.",
+    "tier": "easy"
+   },
+   {
+    "word": "rice",
+    "meaning": "cơm, gạo",
+    "cefr": "A1",
+    "example": "We have rice with every meal.",
+    "tier": "easy"
+   },
+   {
+    "word": "hungry",
+    "meaning": "đói",
+    "cefr": "A1",
+    "example": "I'm hungry, let's eat now.",
+    "tier": "easy"
+   },
+   {
+    "word": "delicious",
+    "meaning": "ngon",
+    "cefr": "A2",
+    "example": "This soup is delicious!",
+    "tier": "easy"
+   },
+   {
+    "word": "vegetable",
+    "meaning": "rau củ",
+    "cefr": "A2",
+    "example": "A carrot is a vegetable.",
+    "tier": "easy"
+   },
+   {
+    "word": "menu",
+    "meaning": "thực đơn",
+    "cefr": "A2",
+    "example": "Can I see the menu, please?",
+    "tier": "easy"
+   },
+   {
+    "word": "recipe",
+    "meaning": "công thức nấu ăn",
+    "cefr": "B1",
+    "example": "My grandma gave me her recipe for pho.",
+    "tier": "medium"
+   },
+   {
+    "word": "ingredient",
+    "meaning": "nguyên liệu",
+    "cefr": "B1",
+    "example": "Flour is the main ingredient in bread.",
+    "tier": "medium"
+   },
+   {
+    "word": "spicy",
+    "meaning": "cay",
+    "cefr": "B1",
+    "example": "Thai food is often very spicy.",
+    "tier": "medium"
+   },
+   {
+    "word": "boil",
+    "meaning": "luộc, đun sôi",
+    "cefr": "B1",
+    "example": "Boil the eggs for ten minutes.",
+    "tier": "medium"
+   },
+   {
+    "word": "diet",
+    "meaning": "chế độ ăn",
+    "cefr": "B1",
+    "example": "A healthy diet includes lots of fruit.",
+    "tier": "medium"
+   },
+   {
+    "word": "portion",
+    "meaning": "khẩu phần",
+    "cefr": "B1",
+    "example": "The portion was too big for one person.",
+    "tier": "medium"
+   },
+   {
+    "word": "nutritious",
+    "meaning": "bổ dưỡng",
+    "cefr": "B2",
+    "example": "Beans are cheap and nutritious.",
+    "tier": "hard"
+   },
+   {
+    "word": "cuisine",
+    "meaning": "ẩm thực",
+    "cefr": "B2",
+    "example": "Vietnamese cuisine is famous around the world.",
+    "tier": "hard"
+   },
+   {
+    "word": "processed",
+    "meaning": "đã qua chế biến",
+    "cefr": "B2",
+    "example": "Try to avoid processed food.",
+    "tier": "hard"
+   },
+   {
+    "word": "savour",
+    "meaning": "thưởng thức",
+    "cefr": "C1",
+    "example": "Take time to savour every bite.",
+    "tier": "hard"
+   },
+   {
+    "word": "palatable",
+    "meaning": "ngon miệng, dễ ăn",
+    "cefr": "C1",
+    "example": "The medicine was made palatable for children.",
+    "tier": "hard"
+   },
+   {
+    "word": "gastronomy",
+    "meaning": "nghệ thuật ẩm thực",
+    "cefr": "C1",
+    "example": "Lyon is a capital of French gastronomy.",
+    "tier": "hard"
+   }
+  ]
+ },
+ {
+  "id": "travel",
+  "name": "Du lịch & giao thông",
+  "desc": "Đi lại, sân bay, chuyến đi",
+  "words": [
+   {
+    "word": "bus",
+    "meaning": "xe buýt",
+    "cefr": "A1",
+    "example": "I go to school by bus.",
+    "tier": "easy"
+   },
+   {
+    "word": "ticket",
+    "meaning": "vé",
+    "cefr": "A1",
+    "example": "How much is a ticket to Hue?",
+    "tier": "easy"
+   },
+   {
+    "word": "map",
+    "meaning": "bản đồ",
+    "cefr": "A1",
+    "example": "Let's look at the map.",
+    "tier": "easy"
+   },
+   {
+    "word": "airport",
+    "meaning": "sân bay",
+    "cefr": "A2",
+    "example": "We arrived at the airport early.",
+    "tier": "easy"
+   },
+   {
+    "word": "luggage",
+    "meaning": "hành lý",
+    "cefr": "A2",
+    "example": "My luggage is too heavy.",
+    "tier": "easy"
+   },
+   {
+    "word": "holiday",
+    "meaning": "kỳ nghỉ",
+    "cefr": "A2",
+    "example": "We spent our holiday by the sea.",
+    "tier": "easy"
+   },
+   {
+    "word": "destination",
+    "meaning": "điểm đến",
+    "cefr": "B1",
+    "example": "Ha Long Bay is a popular destination.",
+    "tier": "medium"
+   },
+   {
+    "word": "journey",
+    "meaning": "chuyến đi",
+    "cefr": "B1",
+    "example": "The journey takes about three hours.",
+    "tier": "medium"
+   },
+   {
+    "word": "passenger",
+    "meaning": "hành khách",
+    "cefr": "B1",
+    "example": "Every passenger must wear a seat belt.",
+    "tier": "medium"
+   },
+   {
+    "word": "delay",
+    "meaning": "sự chậm trễ",
+    "cefr": "B1",
+    "example": "There was a long delay because of the storm.",
+    "tier": "medium"
+   },
+   {
+    "word": "souvenir",
+    "meaning": "quà lưu niệm",
+    "cefr": "B1",
+    "example": "I bought a souvenir for my mum.",
+    "tier": "medium"
+   },
+   {
+    "word": "accommodation",
+    "meaning": "chỗ ở",
+    "cefr": "B1",
+    "example": "We booked our accommodation online.",
+    "tier": "medium"
+   },
+   {
+    "word": "itinerary",
+    "meaning": "lịch trình",
+    "cefr": "B2",
+    "example": "Our itinerary includes three cities in five days.",
+    "tier": "hard"
+   },
+   {
+    "word": "commute",
+    "meaning": "quãng đi làm, đi học hằng ngày",
+    "cefr": "B2",
+    "example": "My commute takes forty minutes.",
+    "tier": "hard"
+   },
+   {
+    "word": "congestion",
+    "meaning": "sự tắc nghẽn",
+    "cefr": "B2",
+    "example": "Traffic congestion is a big problem in Hanoi.",
+    "tier": "hard"
+   },
+   {
+    "word": "wanderlust",
+    "meaning": "niềm đam mê xê dịch",
+    "cefr": "C1",
+    "example": "Her wanderlust took her to forty countries.",
+    "tier": "hard"
+   },
+   {
+    "word": "secluded",
+    "meaning": "hẻo lánh, biệt lập",
+    "cefr": "C1",
+    "example": "They found a secluded beach.",
+    "tier": "hard"
+   },
+   {
+    "word": "embark",
+    "meaning": "bắt đầu (chuyến đi)",
+    "cefr": "C1",
+    "example": "We embark on our trip tomorrow morning.",
+    "tier": "hard"
+   }
+  ]
+ },
+ {
+  "id": "work",
+  "name": "Công việc & nghề nghiệp",
+  "desc": "Nghề, phỏng vấn, sự nghiệp",
+  "words": [
+   {
+    "word": "doctor",
+    "meaning": "bác sĩ",
+    "cefr": "A1",
+    "example": "The doctor works at a big hospital.",
+    "tier": "easy"
+   },
+   {
+    "word": "teacher",
+    "meaning": "giáo viên",
+    "cefr": "A1",
+    "example": "My teacher is very kind.",
+    "tier": "easy"
+   },
+   {
+    "word": "office",
+    "meaning": "văn phòng",
+    "cefr": "A1",
+    "example": "My dad works in an office.",
+    "tier": "easy"
+   },
+   {
+    "word": "job",
+    "meaning": "công việc",
+    "cefr": "A2",
+    "example": "She has a new job at a bank.",
+    "tier": "easy"
+   },
+   {
+    "word": "busy",
+    "meaning": "bận rộn",
+    "cefr": "A2",
+    "example": "I'm busy at work today.",
+    "tier": "easy"
+   },
+   {
+    "word": "farmer",
+    "meaning": "nông dân",
+    "cefr": "A2",
+    "example": "The farmer grows rice and corn.",
+    "tier": "easy"
+   },
+   {
+    "word": "salary",
+    "meaning": "tiền lương",
+    "cefr": "B1",
+    "example": "He earns a good salary.",
+    "tier": "medium"
+   },
+   {
+    "word": "interview",
+    "meaning": "buổi phỏng vấn",
+    "cefr": "B1",
+    "example": "I have a job interview on Monday.",
+    "tier": "medium"
+   },
+   {
+    "word": "colleague",
+    "meaning": "đồng nghiệp",
+    "cefr": "B1",
+    "example": "My colleague helped me with the report.",
+    "tier": "medium"
+   },
+   {
+    "word": "experience",
+    "meaning": "kinh nghiệm",
+    "cefr": "B1",
+    "example": "Do you have any experience in sales?",
+    "tier": "medium"
+   },
+   {
+    "word": "career",
+    "meaning": "sự nghiệp",
+    "cefr": "B1",
+    "example": "She wants a career in medicine.",
+    "tier": "medium"
+   },
+   {
+    "word": "deadline",
+    "meaning": "hạn chót",
+    "cefr": "B1",
+    "example": "The deadline for the project is Friday.",
+    "tier": "medium"
+   },
+   {
+    "word": "promotion",
+    "meaning": "sự thăng chức",
+    "cefr": "B2",
+    "example": "She got a promotion after two years.",
+    "tier": "hard"
+   },
+   {
+    "word": "resign",
+    "meaning": "từ chức",
+    "cefr": "B2",
+    "example": "He decided to resign from his job.",
+    "tier": "hard"
+   },
+   {
+    "word": "negotiate",
+    "meaning": "đàm phán",
+    "cefr": "B2",
+    "example": "We need to negotiate a better contract.",
+    "tier": "hard"
+   },
+   {
+    "word": "entrepreneur",
+    "meaning": "doanh nhân khởi nghiệp",
+    "cefr": "C1",
+    "example": "The young entrepreneur started three companies.",
+    "tier": "hard"
+   },
+   {
+    "word": "lucrative",
+    "meaning": "béo bở, sinh lời cao",
+    "cefr": "C1",
+    "example": "Software is a lucrative industry.",
+    "tier": "hard"
+   },
+   {
+    "word": "redundancy",
+    "meaning": "sự cắt giảm nhân sự",
+    "cefr": "C1",
+    "example": "The factory announced a wave of redundancy.",
+    "tier": "hard"
+   }
+  ]
+ },
+ {
+  "id": "health",
+  "name": "Sức khoẻ & cơ thể",
+  "desc": "Bệnh, thuốc, lối sống",
+  "words": [
+   {
+    "word": "head",
+    "meaning": "cái đầu",
+    "cefr": "A1",
+    "example": "My head hurts.",
+    "tier": "easy"
+   },
+   {
+    "word": "tired",
+    "meaning": "mệt",
+    "cefr": "A1",
+    "example": "I'm tired after the game.",
+    "tier": "easy"
+   },
+   {
+    "word": "sick",
+    "meaning": "bị ốm",
+    "cefr": "A1",
+    "example": "She is sick today.",
+    "tier": "easy"
+   },
+   {
+    "word": "medicine",
+    "meaning": "thuốc",
+    "cefr": "A2",
+    "example": "Take this medicine twice a day.",
+    "tier": "easy"
+   },
+   {
+    "word": "exercise",
+    "meaning": "tập thể dục",
+    "cefr": "A2",
+    "example": "I exercise every morning.",
+    "tier": "easy"
+   },
+   {
+    "word": "dentist",
+    "meaning": "nha sĩ",
+    "cefr": "A2",
+    "example": "I go to the dentist twice a year.",
+    "tier": "easy"
+   },
+   {
+    "word": "symptom",
+    "meaning": "triệu chứng",
+    "cefr": "B1",
+    "example": "A fever is a common symptom of flu.",
+    "tier": "medium"
+   },
+   {
+    "word": "injury",
+    "meaning": "chấn thương",
+    "cefr": "B1",
+    "example": "He has a knee injury.",
+    "tier": "medium"
+   },
+   {
+    "word": "recover",
+    "meaning": "hồi phục",
+    "cefr": "B1",
+    "example": "She needs a week to recover.",
+    "tier": "medium"
+   },
+   {
+    "word": "stress",
+    "meaning": "sự căng thẳng",
+    "cefr": "B1",
+    "example": "Exams can cause a lot of stress.",
+    "tier": "medium"
+   },
+   {
+    "word": "balanced",
+    "meaning": "cân bằng",
+    "cefr": "B1",
+    "example": "Eat a balanced meal every day.",
+    "tier": "medium"
+   },
+   {
+    "word": "appointment",
+    "meaning": "cuộc hẹn (khám bệnh)",
+    "cefr": "B1",
+    "example": "I made an appointment with the doctor.",
+    "tier": "medium"
+   },
+   {
+    "word": "immune",
+    "meaning": "(thuộc) miễn dịch",
+    "cefr": "B2",
+    "example": "Sleep helps your immune system.",
+    "tier": "hard"
+   },
+   {
+    "word": "chronic",
+    "meaning": "mãn tính",
+    "cefr": "B2",
+    "example": "He suffers from chronic back pain.",
+    "tier": "hard"
+   },
+   {
+    "word": "therapy",
+    "meaning": "liệu pháp",
+    "cefr": "B2",
+    "example": "Music therapy can reduce anxiety.",
+    "tier": "hard"
+   },
+   {
+    "word": "sedentary",
+    "meaning": "ít vận động",
+    "cefr": "C1",
+    "example": "A sedentary lifestyle is bad for your heart.",
+    "tier": "hard"
+   },
+   {
+    "word": "ailment",
+    "meaning": "bệnh vặt",
+    "cefr": "C1",
+    "example": "A cold is a common ailment in winter.",
+    "tier": "hard"
+   },
+   {
+    "word": "prognosis",
+    "meaning": "tiên lượng bệnh",
+    "cefr": "C1",
+    "example": "The doctor gave a good prognosis.",
+    "tier": "hard"
+   }
+  ]
+ },
+ {
+  "id": "environment",
+  "name": "Môi trường & thiên nhiên",
+  "desc": "Thời tiết, ô nhiễm, khí hậu",
+  "words": [
+   {
+    "word": "tree",
+    "meaning": "cái cây",
+    "cefr": "A1",
+    "example": "There is a big tree in our garden.",
+    "tier": "easy"
+   },
+   {
+    "word": "river",
+    "meaning": "dòng sông",
+    "cefr": "A1",
+    "example": "The river is very long.",
+    "tier": "easy"
+   },
+   {
+    "word": "rain",
+    "meaning": "mưa",
+    "cefr": "A1",
+    "example": "It will rain this afternoon.",
+    "tier": "easy"
+   },
+   {
+    "word": "weather",
+    "meaning": "thời tiết",
+    "cefr": "A2",
+    "example": "The weather is hot today.",
+    "tier": "easy"
+   },
+   {
+    "word": "rubbish",
+    "meaning": "rác",
+    "cefr": "A2",
+    "example": "Put your rubbish in the bin.",
+    "tier": "easy"
+   },
+   {
+    "word": "recycle",
+    "meaning": "tái chế",
+    "cefr": "A2",
+    "example": "We recycle paper and bottles.",
+    "tier": "easy"
+   },
+   {
+    "word": "pollution",
+    "meaning": "sự ô nhiễm",
+    "cefr": "B1",
+    "example": "Air pollution is bad in big cities.",
+    "tier": "medium"
+   },
+   {
+    "word": "protect",
+    "meaning": "bảo vệ",
+    "cefr": "B1",
+    "example": "We must protect wild animals.",
+    "tier": "medium"
+   },
+   {
+    "word": "wildlife",
+    "meaning": "động vật hoang dã",
+    "cefr": "B1",
+    "example": "The park is home to a lot of wildlife.",
+    "tier": "medium"
+   },
+   {
+    "word": "flood",
+    "meaning": "lũ lụt",
+    "cefr": "B1",
+    "example": "The flood destroyed many houses.",
+    "tier": "medium"
+   },
+   {
+    "word": "energy",
+    "meaning": "năng lượng",
+    "cefr": "B1",
+    "example": "Solar energy is clean and cheap.",
+    "tier": "medium"
+   },
+   {
+    "word": "waste",
+    "meaning": "lãng phí",
+    "cefr": "B1",
+    "example": "Don't waste water.",
+    "tier": "medium"
+   },
+   {
+    "word": "sustainable",
+    "meaning": "bền vững",
+    "cefr": "B2",
+    "example": "We need more sustainable farming.",
+    "tier": "hard"
+   },
+   {
+    "word": "deforestation",
+    "meaning": "nạn phá rừng",
+    "cefr": "B2",
+    "example": "Deforestation destroys animal homes.",
+    "tier": "hard"
+   },
+   {
+    "word": "habitat",
+    "meaning": "môi trường sống",
+    "cefr": "B2",
+    "example": "The panda's habitat is shrinking.",
+    "tier": "hard"
+   },
+   {
+    "word": "biodiversity",
+    "meaning": "đa dạng sinh học",
+    "cefr": "C1",
+    "example": "Coral reefs have rich biodiversity.",
+    "tier": "hard"
+   },
+   {
+    "word": "deplete",
+    "meaning": "làm cạn kiệt",
+    "cefr": "C1",
+    "example": "We deplete natural resources too fast.",
+    "tier": "hard"
+   },
+   {
+    "word": "mitigate",
+    "meaning": "giảm nhẹ",
+    "cefr": "C1",
+    "example": "Planting trees can mitigate climate change.",
+    "tier": "hard"
+   }
+  ]
+ },
+ {
+  "id": "tech",
+  "name": "Công nghệ & truyền thông",
+  "desc": "Thiết bị, internet, mạng xã hội",
+  "words": [
+   {
+    "word": "phone",
+    "meaning": "điện thoại",
+    "cefr": "A1",
+    "example": "Can I use your phone?",
+    "tier": "easy"
+   },
+   {
+    "word": "computer",
+    "meaning": "máy tính",
+    "cefr": "A1",
+    "example": "I play games on my computer.",
+    "tier": "easy"
+   },
+   {
+    "word": "email",
+    "meaning": "thư điện tử",
+    "cefr": "A1",
+    "example": "Send me an email tonight.",
+    "tier": "easy"
+   },
+   {
+    "word": "website",
+    "meaning": "trang web",
+    "cefr": "A2",
+    "example": "Our school has a new website.",
+    "tier": "easy"
+   },
+   {
+    "word": "password",
+    "meaning": "mật khẩu",
+    "cefr": "A2",
+    "example": "Never share your password.",
+    "tier": "easy"
+   },
+   {
+    "word": "download",
+    "meaning": "tải xuống",
+    "cefr": "A2",
+    "example": "You can download the app for free.",
+    "tier": "easy"
+   },
+   {
+    "word": "device",
+    "meaning": "thiết bị",
+    "cefr": "B1",
+    "example": "Please turn off your device during the test.",
+    "tier": "medium"
+   },
+   {
+    "word": "online",
+    "meaning": "trực tuyến",
+    "cefr": "B1",
+    "example": "I take English lessons online.",
+    "tier": "medium"
+   },
+   {
+    "word": "screen",
+    "meaning": "màn hình",
+    "cefr": "B1",
+    "example": "Don't look at a screen for too long.",
+    "tier": "medium"
+   },
+   {
+    "word": "update",
+    "meaning": "cập nhật",
+    "cefr": "B1",
+    "example": "You should update your apps regularly.",
+    "tier": "medium"
+   },
+   {
+    "word": "social media",
+    "meaning": "mạng xã hội",
+    "cefr": "B1",
+    "example": "Teenagers spend hours on social media.",
+    "tier": "medium"
+   },
+   {
+    "word": "invent",
+    "meaning": "phát minh",
+    "cefr": "B1",
+    "example": "Scientists invent new tools every year.",
+    "tier": "medium"
+   },
+   {
+    "word": "algorithm",
+    "meaning": "thuật toán",
+    "cefr": "B2",
+    "example": "The app uses an algorithm to suggest videos.",
+    "tier": "hard"
+   },
+   {
+    "word": "privacy",
+    "meaning": "quyền riêng tư",
+    "cefr": "B2",
+    "example": "Protect your privacy online.",
+    "tier": "hard"
+   },
+   {
+    "word": "cyberbullying",
+    "meaning": "bắt nạt trên mạng",
+    "cefr": "B2",
+    "example": "Schools are fighting cyberbullying.",
+    "tier": "hard"
+   },
+   {
+    "word": "misinformation",
+    "meaning": "thông tin sai lệch",
+    "cefr": "C1",
+    "example": "Misinformation spreads quickly on the internet.",
+    "tier": "hard"
+   },
+   {
+    "word": "obsolete",
+    "meaning": "lỗi thời",
+    "cefr": "C1",
+    "example": "Floppy disks are now obsolete.",
+    "tier": "hard"
+   },
+   {
+    "word": "encrypt",
+    "meaning": "mã hoá",
+    "cefr": "C1",
+    "example": "Banks encrypt your data to keep it safe.",
+    "tier": "hard"
+   }
+  ]
+ }
+]
