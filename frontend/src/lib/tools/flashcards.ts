@@ -51,14 +51,40 @@ function skeleton(grade: number): Map<number, FlashUnit> {
   return units;
 }
 
-async function fetchSnapshot(): Promise<ApiSnapshot | null> {
+const SNAPSHOT_URL = `${API_URL}/api/free-tools/flashcards`;
+// Khi backend chưa có dữ liệu, chỉ cache ngắn (5 phút) thay vì 1 giờ
+const EMPTY_REVALIDATE = 300;
+
+export const snapshotCardCount = (s: ApiSnapshot | null) =>
+  s?.grades.reduce((n, g) => n + g.units.reduce((m, u) => m + u.cards.length, 0), 0) ?? 0;
+
+async function fetchOnce(url: string, revalidate: number): Promise<ApiSnapshot | null> {
   try {
-    const res = await fetch(`${API_URL}/api/free-tools/flashcards`, { next: { revalidate: FLASHCARD_REVALIDATE } });
+    const res = await fetch(url, { next: { revalidate } });
     if (!res.ok) return null;
     return (await res.json()) as ApiSnapshot;
   } catch {
     return null;
   }
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Sự cố 14/11/2026: frontend được build đúng lúc backend đang khởi động lại (cùng 1 lần deploy) → fetch lỗi/rỗng,
+// trang tĩnh và tu-vung-sgk.json bị "đóng băng" bản rỗng suốt 1 giờ → Qilin Run + /flashcard-tieng-anh hiện
+// "đang cập nhật" ở mọi Unit. Cách xử lý: kết quả rỗng chỉ được cache 5 phút (khoá cache đổi theo mốc 5 phút,
+// không dùng no-store để trang vẫn render tĩnh), và lúc `next build` thử lại vài lần trước khi chấp nhận bản rỗng.
+async function fetchSnapshot(): Promise<ApiSnapshot | null> {
+  let snap = await fetchOnce(SNAPSHOT_URL, FLASHCARD_REVALIDATE);
+  if (snapshotCardCount(snap) > 0) return snap;
+  const bucket = Math.floor(Date.now() / (EMPTY_REVALIDATE * 1000));
+  const isBuild = process.env.NEXT_PHASE === "phase-production-build";
+  for (let i = 0; i < (isBuild ? 6 : 1); i++) {
+    if (i > 0) await sleep(5000);
+    snap = await fetchOnce(`${SNAPSHOT_URL}?retry=${bucket}-${i}`, EMPTY_REVALIDATE);
+    if (snapshotCardCount(snap) > 0) return snap;
+  }
+  return snap;
 }
 
 /** Khung Unit lớp 1–12 ghép với từ vựng trong hệ thống. Backend lỗi → mọi Unit đều "đang cập nhật". */
