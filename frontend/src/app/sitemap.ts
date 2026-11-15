@@ -13,6 +13,8 @@ const PUBLIC_ROUTES: { path: string; priority: number; changeFrequency: "weekly"
   { path: "", priority: 1, changeFrequency: "weekly" },
   { path: "/blog", priority: 0.8, changeFrequency: "weekly" },
   { path: "/auth", priority: 0.5, changeFrequency: "monthly" },
+  // Trang giới thiệu công khai của game cần tài khoản (/farm bản thân noindex vì phải đăng nhập)
+  { path: "/game-nong-trai-hoc-tieng-anh", priority: 0.9, changeFrequency: "monthly" },
 ];
 
 // Công cụ miễn phí (không cần đăng nhập) — ưu tiên cao vì là trang đích từ Google; gồm cả /phonetics và /games/lop-3
@@ -32,6 +34,7 @@ const PAGE_IMAGES: Record<string, string[]> = {
   "/blog": [PHOTOS.blog.src],
   "/ghi-chu-ai": ["/images/photos/home/ghi-chu-ai-ghi-am-flashcard.webp"],
   "/game-hoc-tieng-anh": [PHOTOS.qilinRun.src, "/images/photos/home/game-hoc-tieng-anh-qilin-run.webp"],
+  "/game-nong-trai-hoc-tieng-anh": [PHOTOS.farmScene.src, PHOTOS.qilinRun.src],
 };
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {

@@ -39,6 +39,9 @@ export const PHOTOS = {
   // Linh vật rồng nước Qilin (ảnh của Lucy Tutor, không phải Pixabay) — banner + ảnh chia sẻ trang /game-hoc-tieng-anh
   qilinRun: p("game-hoc-tieng-anh-rong-qilin", "Rồng nước Qilin đội mũ tốt nghiệp ôm sách — nhân vật game học tiếng Anh", 685, 800,
     "https://lucytutor.online/game-hoc-tieng-anh"),
+  // Ảnh chụp màn hình thật của game Nông Trại Qilin (1200×630, dùng cho OpenGraph + JSON-LD trang /game-nong-trai-hoc-tieng-anh)
+  farmScene: p("home/game-nong-trai-hoc-tieng-anh", "Màn hình game Nông Trại Qilin: ô đất trồng từ vựng tiếng Anh, chuồng trại và các con vật", 1200, 630,
+    "https://lucytutor.online/game-nong-trai-hoc-tieng-anh"),
 } satisfies Record<string, Photo>;
 
 /** Ảnh bìa dự phòng cho bài blog chưa có ảnh bìa (thẻ bài viết, mục "Bài mới" ở dashboard). */

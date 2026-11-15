@@ -16,8 +16,10 @@ const d = (ms: number) => ({ "--d": `${ms}ms` }) as CSSProperties;
 /** Banner đầu trang kiểu landing page: tiêu đề lớn bên trái, ảnh người (tách nền) cỡ lớn bên phải đứng trên
  *  vòng tròn navy + 2 thẻ nổi nêu điểm chính. Trên mobile ảnh xếp dưới chữ. Hiệu ứng vào trang dùng lại class
  *  lp-* của trang chủ (CSS thuần, tự tắt khi người dùng bật "giảm chuyển động"). */
-export function ToolBanner({ crumbs, title, subtitle, photo, highlights, cta = "Dùng ngay miễn phí", actions }: {
+export function ToolBanner({ crumbs, title, subtitle, photo, highlights, cta = "Dùng ngay miễn phí", actions, badges = ["Miễn phí", "Không cần đăng nhập"] }: {
   crumbs: Crumb[]; title: string; subtitle: string; photo: Photo; highlights: [string, string]; cta?: string;
+  /** 2 nhãn nhỏ phía trên H1 (mặc định "Miễn phí / Không cần đăng nhập" — trang cần tài khoản phải đổi cho đúng sự thật) */
+  badges?: [string, string];
   /** Thay nút CTA mặc định bằng nhóm nút riêng (vd nút tải PDF ngay đầu trang) */
   actions?: ReactNode;
 }) {
@@ -40,8 +42,8 @@ export function ToolBanner({ crumbs, title, subtitle, photo, highlights, cta = "
             </ol>
           </nav>
           <p className="lp-enter mt-5 flex flex-wrap gap-2" style={d(0)}>
-            <span className="ui-badge-new">Miễn phí</span>
-            <span className="ui-badge bg-white">Không cần đăng nhập</span>
+            <span className="ui-badge-new">{badges[0]}</span>
+            <span className="ui-badge bg-white">{badges[1]}</span>
           </p>
           <h1 className="lp-enter mt-3 text-3xl sm:text-4xl lg:text-[2.75rem] font-extrabold tracking-tight leading-tight text-primary" style={d(100)}>{title}</h1>
           <p className="lp-enter mt-4 text-base sm:text-lg text-muted leading-relaxed max-w-xl" style={d(200)}>{subtitle}</p>
@@ -72,8 +74,10 @@ export function ToolBanner({ crumbs, title, subtitle, photo, highlights, cta = "
 }
 
 /** JSON-LD: WebApplication (công cụ) + BreadcrumbList + FAQPage. Chỉ thông tin có thật — không rating/review. */
-export function ToolJsonLd({ name, path, description, crumbs, faqs, category = "EducationalApplication", image }: {
+export function ToolJsonLd({ name, path, description, crumbs, faqs, category = "EducationalApplication", image, free = true }: {
   name: string; path: string; description: string; crumbs: Crumb[]; faqs?: Faq[]; category?: string; image?: Photo;
+  /** false = trang cần tài khoản/dùng thử: không khai báo isAccessibleForFree + Offer giá 0 */
+  free?: boolean;
 }) {
   const url = `${SITE_URL}${path}`;
   const graph: Record<string, unknown>[] = [
@@ -86,8 +90,7 @@ export function ToolJsonLd({ name, path, description, crumbs, faqs, category = "
       ...(image ? { image: `${SITE_URL}${image.src}` } : {}),
       operatingSystem: "Web",
       inLanguage: "vi-VN",
-      isAccessibleForFree: true,
-      offers: { "@type": "Offer", price: "0", priceCurrency: "VND" },
+      ...(free ? { isAccessibleForFree: true, offers: { "@type": "Offer", price: "0", priceCurrency: "VND" } } : {}),
       provider: { "@type": "EducationalOrganization", name: SITE_NAME, url: SITE_URL },
     },
     {

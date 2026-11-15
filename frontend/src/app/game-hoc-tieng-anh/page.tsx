@@ -5,14 +5,18 @@ import { ToolBanner, ToolJsonLd, ToolFaq, ToolCta, RelatedTools, ToolNextSteps, 
 import QilinRunEmbed from "@/components/tools/QilinRunEmbed";
 import { getFlashGrades, gradeWordCount, gradeSlug } from "@/lib/tools/flashcards";
 
-// Từ khoá chính: "game học tiếng anh"
+// Từ khoá chính: "game học tiếng anh" (+ "online", "miễn phí" ở title/description vì là cụm người tìm hay gõ kèm)
 // Từ khoá phụ: game tiếng anh online, trò chơi học tiếng anh, game học từ vựng tiếng anh, game ngữ pháp tiếng anh,
-// game tiếng anh cho học sinh, trò chơi tiếng anh miễn phí, game học tiếng anh lớp 1–12
+// game tiếng anh cho học sinh, trò chơi tiếng anh miễn phí, game học tiếng anh lớp 1–12, game học tiếng anh trên điện thoại
+// Nghiên cứu (11/2026, đọc kết quả tìm kiếm Google VN — không có số lượt tìm kiếm thật): trang 1 của "game học tiếng anh" là bài tổng hợp top-N
+// của cửa hàng điện thoại (FPT Shop, Hoàng Hà, CellphoneS, Viettel Store), PREP và trang App Store. Cách tạo khác biệt: game CHƠI ĐƯỢC NGAY trên trang
+// (không phải danh sách app), có kiến thức theo SGK lớp 1–12 và ngữ pháp, nên các mục bên dưới bám đúng cụm người dùng tìm (từ vựng, ngữ pháp, điện thoại, học sinh).
+// Game thứ hai (cần tài khoản) có trang riêng: /game-nong-trai-hoc-tieng-anh — nhớ liên kết chéo 2 trang.
 // (giả thuyết — kiểm lại bằng tab SEO Performance ở /administrator sau 4–8 tuần)
 const PATH = "/game-hoc-tieng-anh";
-const TITLE = "Game Học Tiếng Anh Miễn Phí – Qilin Run";
+const TITLE = "Game Học Tiếng Anh Online Miễn Phí – Qilin Run";
 const DESCRIPTION =
-  "Game học tiếng Anh online miễn phí: chạy nhảy cùng rồng Qilin, học flashcard từ vựng, ngữ pháp A1–C1 và từ vựng SGK lớp 1–12 rồi trả lời để mở cổng.";
+  "Game học tiếng Anh online miễn phí trên máy tính, điện thoại: chạy nhảy cùng rồng Qilin, ôn từ vựng, ngữ pháp A1–C1 và từ vựng SGK lớp 1–12.";
 
 export const metadata = pageMetadata({
   title: TITLE,
@@ -22,6 +26,7 @@ export const metadata = pageMetadata({
   keywords: [
     "game học tiếng anh", "game tiếng anh online", "trò chơi học tiếng anh", "game học từ vựng tiếng anh",
     "game ngữ pháp tiếng anh", "game tiếng anh cho học sinh", "trò chơi tiếng anh miễn phí", "game học tiếng anh lớp 6",
+    "game học tiếng anh trên điện thoại", "game học tiếng anh miễn phí", "học tiếng anh qua game",
   ],
 });
 
@@ -52,6 +57,8 @@ const FAQS: Faq[] = [
   { q: "Game phù hợp với lứa tuổi nào?", a: "Học sinh tiểu học chơi mục Sách giáo khoa (lớp 1, 3) hoặc mức Dễ (A1–A2). Học sinh THCS, THPT và người đi làm chọn mức Trung bình (B1) hoặc Khó (B2–C1) ở các chủ đề từ vựng và ngữ pháp." },
   { q: "Kiến thức trong game lấy từ đâu?", a: "Mục Sách giáo khoa dùng đúng từ vựng theo Unit sách Global Success mà giáo viên Lucy Tutor đã soạn (giống trang Flashcard tiếng Anh lớp 1–12). Lớp hoặc Unit chưa có từ sẽ hiện \"Đang cập nhật\". Mục Từ vựng và Ngữ pháp gồm 14 chủ đề, mỗi chủ đề chia 3 mức từ A1 đến C1." },
   { q: "Vì sao phải học flashcard trước khi chơi?", a: "Câu hỏi ở 5 cổng kiến thức chỉ lấy trong bộ thẻ bạn vừa học. Học trước rồi chơi giúp bạn nhắc lại từ ngay sau khi học, cách ghi nhớ hiệu quả hơn đọc lại nhiều lần." },
+  { q: "Học tiếng Anh qua game có hiệu quả không?", a: "Game giúp bạn có động lực quay lại mỗi ngày và nhớ lại từ ngay trong lúc chơi, nhưng chỉ hiệu quả khi bạn thật sự phải trả lời câu hỏi thay vì chỉ xem đáp án. Ở Qilin Run, mỗi cổng kiến thức đều yêu cầu chọn hoặc điền đúng từ, trả lời sai vẫn xem được đáp án và giải thích. Game là công cụ ôn tập vui; để tiến bộ đều bạn vẫn nên kết hợp ôn từ theo lịch và luyện nghe, nói, đọc, viết." },
+  { q: "Qilin Run khác gì Nông Trại Qilin?", a: "Qilin Run là game chạy nhảy, chơi ngay không cần đăng nhập, mỗi lượt vài phút để ôn nhanh một bộ thẻ. Nông Trại Qilin là game trồng trọt cần tài khoản: mỗi ô đất là một từ, cây chín theo lịch ôn SRS nên giúp ghi nhớ lâu dài, kèm đơn hàng, chuồng trại và nuôi Qilin." },
   { q: "Chơi trên điện thoại như thế nào?", a: "Cầm dọc thì bấm nút Nhảy lớn bên dưới khung game, bấm 2 lần để nhảy đôi. Cầm ngang thì chạm bất kỳ đâu trên màn chơi để nhảy, khung game tự kéo rộng để nhìn xa hơn. Nút Toàn màn hình giúp chơi không bị thanh trình duyệt che." },
 ];
 
@@ -120,7 +127,36 @@ export default async function Page() {
           </div>
         </section>
 
+        <section className="mt-12 space-y-4 text-foreground/90 leading-relaxed max-w-4xl">
+          <h2 className="ui-section-title text-xl">Vì sao nên học tiếng Anh bằng game?</h2>
+          <p>
+            Học từ vựng bằng cách đọc lại danh sách rất dễ chán và dễ quên. Một game học tiếng Anh tốt giữ bạn quay lại vì có thử thách và phần thưởng, đồng thời buộc bạn phải
+            <b> nhớ lại</b> từ để đi tiếp. Trong Qilin Run, từ vựng và ngữ pháp xuất hiện đúng lúc bạn cần chọn đáp án để mở cổng, nên bạn gặp lại cùng một từ nhiều lần trong
+            ngữ cảnh câu ví dụ thay vì học thuộc lòng một lần. Game phù hợp để khởi động mỗi ngày, ôn nhanh trước giờ kiểm tra hoặc rèn phản xạ; bạn nên kết hợp thêm ôn từ
+            theo lịch để nhớ lâu hơn.
+          </p>
+
+          <h2 className="ui-section-title text-xl pt-4">Game học từ vựng và ngữ pháp tiếng Anh, chơi được trên điện thoại</h2>
+          <p>
+            Qilin Run là <b>game học từ vựng tiếng Anh</b> và <b>game ngữ pháp tiếng Anh</b> chạy ngay trong trình duyệt, không cần tải ứng dụng, không cần đăng ký. Trên điện thoại
+            cầm dọc có nút Nhảy lớn; cầm ngang bạn chạm bất kỳ đâu trên màn hình để nhảy và khung game tự phóng rộng. Bạn có thể bật chế độ toàn màn hình để chơi gọn hơn.
+          </p>
+
+          <h2 className="ui-section-title text-xl pt-4">Trò chơi tiếng Anh cho học sinh từ lớp 1 đến lớp 12</h2>
+          <ul className="list-disc pl-6 space-y-2">
+            <li><b>Tiểu học (lớp 1–5):</b> chọn mục Sách giáo khoa để chơi với từ vựng Global Success theo từng Unit, hoặc mức Dễ (A1–A2) ở các chủ đề gia đình, trường học, đồ ăn.</li>
+            <li><b>THCS (lớp 6–9):</b> ôn từ vựng theo Unit và các thẻ ngữ pháp cơ bản như thì động từ, so sánh, câu bị động.</li>
+            <li><b>THPT (lớp 10–12):</b> chọn mức Trung bình (B1) hoặc Khó (B2–C1) để ôn câu điều kiện, mệnh đề quan hệ, động từ khuyết thiếu và từ vựng học thuật.</li>
+            <li><b>Người đi làm:</b> luyện từ vựng chủ đề công việc, công nghệ, du lịch ở mức B1–C1.</li>
+          </ul>
+          <p>
+            Muốn ôn từ lâu dài kiểu game nông trại, hãy thử{" "}
+            <Link href="/game-nong-trai-hoc-tieng-anh" className="text-primary font-semibold hover:underline">Nông Trại Qilin – game trồng từ vựng, thu hoạch bằng trí nhớ</Link>.
+          </p>
+        </section>
+
         <ToolNextSteps links={[
+          { href: "/game-nong-trai-hoc-tieng-anh", label: "Game nông trại học tiếng Anh Qilin Farm", text: "Trồng từ vựng, cây chín theo lịch ôn SRS để nhớ lâu hơn (cần tài khoản, dùng thử 3 ngày)." },
           { href: "/flashcard-tieng-anh", label: "Flashcard tiếng Anh lớp 1–12", text: "In bộ thẻ từ vựng theo Unit để ôn lại trên giấy." },
           { href: "/kiem-tra-trinh-do-tieng-anh", label: "Kiểm tra trình độ tiếng Anh", text: "Làm bài 30 câu để biết nên chọn mức Dễ, Trung bình hay Khó." },
           { href: "/games/lop-3", label: "Trò chơi tiếng Anh lớp 3", text: "5 trò chơi nhỏ ôn từ vựng và mẫu câu Global Success 3." },
