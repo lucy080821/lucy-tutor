@@ -354,6 +354,7 @@ export function FactorySprite({ cx, cy, wall, roof, emoji, busy, mirror }: { cx:
   );
 }
 
+const PEN_ANIMAL_SIZE: Record<string, number> = { "🐔": 18, "🦆": 18, "🐄": 24, "🐖": 22, "🐑": 22 };
 // ── Chuồng trại: sân rào + chuồng nhỏ + vật nuôi nhún nhảy; đang xây thì là giàn giáo ───────────────────────
 export function PenSprite({ cx, cy, wall, roof, animal, animals, building }: { cx: number; cy: number; wall: string; roof: string; animal: string; animals: number; building?: boolean }) {
   const T: Pt = [cx, cy - 25], R: Pt = [cx + 50, cy], B: Pt = [cx, cy + 25], L: Pt = [cx - 50, cy];
@@ -381,12 +382,20 @@ export function PenSprite({ cx, cy, wall, roof, animal, animals, building }: { c
       <Prism cx={cx} cy={cy - 9} rw={17} rh={8.5} h={18} c={{ front: wall, cap: shade(wall, 0.86), top: wall, line: "#6b5232" }} />
       <polygon points={pts([[cx - 21, cy - 9 - 16], [cx, cy - 9 + 11 - 16], [cx, cy - 9 - 16 - 22]])} fill={roof} stroke={shade(roof, 0.6)} strokeWidth={1} />
       <polygon points={pts([[cx, cy - 9 + 11 - 16], [cx + 21, cy - 9 - 16], [cx, cy - 9 - 16 - 22]])} fill={shade(roof, 0.8)} stroke={shade(roof, 0.6)} strokeWidth={1} />
-      {slots.slice(0, Math.max(0, Math.min(4, animals))).map((p, i) => (
-        <g key={i}><g className="farm-hop" style={{ animationDelay: `${i * 0.45}s`, animationIterationCount: "infinite", animationDuration: `${1.1 + (i % 2) * 0.35}s` }}>
-          <ellipse cx={p[0]} cy={p[1] + 3} rx={8} ry={3} fill="rgba(31,45,61,.18)" />
-          <text x={p[0]} y={p[1] + 4} textAnchor="middle" fontSize={20} style={{ fontFamily: EMOJI_FONT }}>{animal}</text>
-        </g></g>
-      ))}
+      {/* vật nuôi lúc nhúc trong sân: mỗi con đi qua lại theo nhịp riêng (quay mặt theo hướng đi) + nhún nhẹ */}
+      {slots.slice(0, Math.max(0, Math.min(4, animals))).map((p, i) => {
+        const fs = PEN_ANIMAL_SIZE[animal] || 20;
+        return (
+          <g key={i} transform={`translate(${p[0]} ${p[1]})`}>
+            <g className="farm-pen-wander" style={{ animationDelay: `${-i * 1.7}s`, animationDuration: `${6.5 + i * 1.6}s`, ["--ax" as string]: `${i % 2 ? 9 : 12}px`, ["--ay" as string]: `${i % 2 ? 3 : -3}px` }}>
+              <ellipse cx={0} cy={3} rx={fs * 0.4} ry={fs * 0.14} fill="rgba(31,45,61,.18)" />
+              <g className="farm-hop" style={{ animationDelay: `${i * 0.45}s`, animationIterationCount: "infinite", animationDuration: `${0.9 + (i % 3) * 0.3}s` }}>
+                <text x={0} y={4} textAnchor="middle" fontSize={fs} style={{ fontFamily: EMOJI_FONT }}>{animal}</text>
+              </g>
+            </g>
+          </g>
+        );
+      })}
       {rail(L, B, 6, "f1")}{rail(B, R, 6, "f2")}{post(B, 12, "p4")}
     </g>
   );

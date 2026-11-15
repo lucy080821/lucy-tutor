@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Catalog, DecorPlaced, FarmView, PlotView } from "@/lib/farm/api";
 import { formatCountdown } from "@/lib/farm/api";
 import { Cloud, CropSprite, DecorSprite, SoilTile, TILE_H, TILE_W, diamondPoints, emojiSizeOf, type DecorMeta, type Outfit } from "./Sprites";
-import Roamers from "./Roamers";
+import Roamers, { type PenBird } from "./Roamers";
 import { AmbientLife, SkyBackdrop, cloudsFor, skyBackground, skyNow, type SkyInfo } from "./Ambient";
 import { isWetWeather, type WeatherKind } from "@/lib/farm/weather";
 
@@ -74,7 +74,21 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   // Vật nuôi đi dạo khi chơi bình thường / thăm bạn; đang sắp xếp hay đặt đồ thì đứng yên ở ô nhà để còn chọn/dời được
   const roam = !placing && (!!readOnly || mode.type === "normal");
   const animals = useMemo(() => (roam ? farm.layout.filter((d) => catalog.decor[d.key]?.cat === "animal").map((d) => ({ uid: d.uid, key: d.key, x: d.x, y: d.y, emoji: catalog.decor[d.key].emoji, size: emojiSizeOf(d.key) })) : []), [roam, farm.layout, catalog.decor]);
-
+  // Gà/vịt: ban ngày ra sân đi dạo, tối về chuồng (Roamers báo số con còn trong chuồng qua insideMap)
+  const birds = useMemo(() => {
+    if (!roam) return [];
+    const out: PenBird[] = [];
+    for (const d of farm.layout) {
+      const pen = catalog.pens?.[d.key];
+      if (!pen || (pen.animal !== "🐔" && pen.animal !== "🦆")) continue;
+      if (d.build && new Date(d.build.readyAt).getTime() > now) continue;
+      for (let i = 0; i < Math.min(4, d.animals || 0); i++) out.push({ uid: `${d.uid}:b${i}`, pen: d.uid, x: d.x, y: d.y, emoji: pen.animal, size: 24 });
+    }
+    return out;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roam, farm.layout, catalog.pens, Math.floor(now / 30000)]);
+  const [insideMap, setInsideMap] = useState<Record<string, number>>({});
+  const homeTime = phase === "dusk" || phase === "night";
 
   // ── Phóng to / thu nhỏ: thu hẹp viewBox quanh 1 điểm giữa (nét vẫn sắc), kéo để dời, 2 ngón để chụm, Ctrl+lăn chuột ──
   const gridCx = originX + ((W - H) * TILE_W) / 4, gridCy = TOP_PAD + ((W + H - 2) * TILE_H) / 4 + TILE_H / 2;
@@ -240,7 +254,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
             const n = item?.fam ? { xp: joins(item, d, "xp", x + 1, y), xm: joins(item, d, "xm", x - 1, y), yp: joins(item, d, "yp", x, y + 1), ym: joins(item, d, "ym", x, y - 1) } : undefined;
             const busy = !!d.job && new Date(d.job.readyAt).getTime() > now;
             const building = !!d.build && new Date(d.build.readyAt).getTime() > now;
-            const meta: DecorMeta = { fam: item?.fam, gate: item?.gate, style: item?.style, factory: fac ? { wall: fac.wall, roof: fac.roof, emoji: fac.emoji, busy } : undefined, pen: pen ? { wall: pen.wall, roof: pen.roof, animal: pen.animal, animals: d.animals || 0, building } : undefined };
+            const meta: DecorMeta = { fam: item?.fam, gate: item?.gate, style: item?.style, factory: fac ? { wall: fac.wall, roof: fac.roof, emoji: fac.emoji, busy } : undefined, pen: pen ? { wall: pen.wall, roof: pen.roof, animal: pen.animal, animals: roam && insideMap[d.uid] !== undefined ? Math.min(insideMap[d.uid], d.animals || 0) : d.animals || 0, building } : undefined };
             return (
               <g key={`d${d.uid}`} className={`${canEdit || canOpen ? "farm-tile" : ""} ${sel ? "farm-tile-selected" : ""}`} onClick={(e) => { e.stopPropagation(); if (canEdit) onDecorClick?.(d); else if (canOpen) { if (pen) onPenClick?.(d); else onFactoryClick?.(d); } }}>
                 <DecorSprite itemKey={d.key} emoji={item?.emoji || "❔"} cx={cx} cy={cy} n={n} r={d.r ? 1 : 0} meta={meta} />
@@ -299,7 +313,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
           return bar(Math.max(0, Math.min(1, 1 - left / total)), `${prod?.emoji} ${formatCountdown(left)}`);
         })}
         {/* thú cưng + vật nuôi đi dạo */}
-        <Roamers W={W} H={H} toScreen={toScreen} blocked={blocked} animals={animals} sleeping={!!sky.sleeping} petAway={petAway} pet={pet} outfit={outfit} petJumping={petJumping} hearts={hearts} wet={wet} onPetClick={onPetClick} />
+        <Roamers W={W} H={H} toScreen={toScreen} blocked={blocked} animals={animals} sleeping={!!sky.sleeping} petAway={petAway} pet={pet} outfit={outfit} petJumping={petJumping} hearts={hearts} wet={wet} onPetClick={onPetClick} birds={birds} homeTime={homeTime} onInside={setInsideMap} />
         {/* chữ thưởng nổi lên (+xu, +XP...) */}
         {floats.map((f) => {
           const { cx, cy } = toScreen(f.x, f.y);

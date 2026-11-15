@@ -31,6 +31,15 @@
 @keyframes farm-hop { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 @keyframes farm-hop-pet { 0%,100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-7px) rotate(-3deg); } 50% { transform: translateY(0) rotate(0); } 75% { transform: translateY(-7px) rotate(3deg); } }
 .farm-hop { animation: farm-hop .55s ease-in-out 2; }
+/* vật nuôi đi qua lại trong sân chuồng (emoji mặc định nhìn trái → đi sang phải thì lật) */
+@keyframes farm-pen-wander {
+  0% { transform: translate(calc(var(--ax) * -1), calc(var(--ay) * -1)) scaleX(-1); }
+  46% { transform: translate(var(--ax), var(--ay)) scaleX(-1); }
+  54% { transform: translate(var(--ax), var(--ay)) scaleX(1); }
+  96% { transform: translate(calc(var(--ax) * -1), calc(var(--ay) * -1)) scaleX(1); }
+  100% { transform: translate(calc(var(--ax) * -1), calc(var(--ay) * -1)) scaleX(-1); }
+}
+.farm-pen-wander { animation: farm-pen-wander 8s ease-in-out infinite; }
 .farm-hop-pet { animation: farm-hop-pet 1.1s ease-in-out 1; }
 .farm-heart { animation: farm-float-up 1s ease-out both; transform-box: fill-box; }
 .farm-cloud { animation: farm-cloud linear infinite; }
@@ -64,7 +73,7 @@
 .farm-scroll-x { scrollbar-width: thin; }
 
 @media (prefers-reduced-motion: reduce) {
-  .farm-sway, .farm-ready-marker, .farm-pet-idle, .farm-glow, .farm-cloud, .farm-hop, .farm-hop-pet { animation: none; }
+  .farm-sway, .farm-ready-marker, .farm-pet-idle, .farm-glow, .farm-cloud, .farm-hop, .farm-hop-pet, .farm-pen-wander { animation: none; }
 }
 
 /* Toàn màn hình (Fullscreen API hoặc giả lập CSS trên iPhone) */
