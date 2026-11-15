@@ -247,6 +247,25 @@ function modeFor(progress) {
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
+// Tóm tắt nhẹ cho Dashboard ("Nông Trại Qilin" nổi bật): KHÔNG tạo nông trại cho người chưa từng chơi,
+// chỉ đọc số cây chín / Qilin thám hiểm về / vòng quay chưa quay.
+router.get('/summary/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const farm = await prisma.farmState.findUnique({ where: { userId } });
+    if (!farm) return res.json({ started: false });
+    const now = new Date(); const today = C.vnDay();
+    const plots = await prisma.farmPlot.findMany({ where: { userId, progressId: { not: null } }, include: PROGRESS_INCLUDE });
+    const ready = plots.filter((p) => plotView(p, now).status === 'READY').length;
+    const trip = jsonObj(farm.petTrip).active || null;
+    res.json({
+      started: true, level: C.levelFor(farm.harvestCount), coins: farm.coins, planted: plots.length, ready,
+      tripReady: !!trip && new Date(trip.readyAt).getTime() <= now.getTime(), tripOut: !!trip,
+      canSpin: farm.spunOn !== today, fed: farm.petFedOn === today, petName: farm.petName,
+    });
+  } catch (e) { console.error('[farm] summary', e); res.status(500).json({ error: 'Lỗi' }); }
+});
+
 router.get('/state/:userId', async (req, res) => {
   try {
     const state = await buildState(req.params.userId);

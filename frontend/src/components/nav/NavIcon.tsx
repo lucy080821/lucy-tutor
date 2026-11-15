@@ -30,6 +30,7 @@ const PATHS = {
   route: <><circle cx="6" cy="19" r="2" /><circle cx="18" cy="5" r="2" /><path d="M8 19h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7" /></>,
   volume: <path d="M4 9h4l5-4v14l-5-4H4zM17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11" />,
   flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" />,
+  sprout: <><path d="M12 21v-9" /><path d="M12 12c0-4 2.8-6.5 7-6.5 0 4-2.8 6.5-7 6.5z" /><path d="M12 15c0-3-2-5-6-5 0 3 2 5 6 5z" /></>,
   gamepad: <><rect x="2" y="7" width="20" height="11" rx="5" /><path d="M7 10.5v4M5 12.5h4" /><circle cx="16" cy="11.5" r="1" /><circle cx="18" cy="14" r="1" /></>,
   notebook: <><rect x="5" y="3" width="14" height="18" rx="2" /><path d="M9 3v18M12.5 8h3M12.5 12h3" /></>,
   stickyNote: <path d="M5 3h14a2 2 0 0 1 2 2v9l-7 7H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM14 21v-5a2 2 0 0 1 2-2h5M7 8h10M7 12h6" />,

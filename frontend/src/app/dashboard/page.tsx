@@ -55,6 +55,19 @@ export default function StudentDashboard() {
   const [activeTab, setActiveTab] = useState("OVERVIEW");
   const [practiceFilter, setPracticeFilter] = useState<string>("ALL");
   const [user, setUser] = useState<any>(null);
+  // Tóm tắt Nông Trại Qilin để nhắc người học ngay trên Dashboard (cây chín, Qilin về, vòng quay chưa quay)
+  const [farmSum, setFarmSum] = useState<any>(null);
+  useEffect(() => {
+    if (!user?.id) return;
+    let stop = false;
+    const load = () => fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/farm/summary/${user.id}`).then((r) => (r.ok ? r.json() : null)).then((d) => { if (!stop) setFarmSum(d); }).catch(() => { });
+    load();
+    const t = setInterval(load, 60000);
+    const onVis = () => { if (document.visibilityState === 'visible') load(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { stop = true; clearInterval(t); document.removeEventListener('visibilitychange', onVis); };
+  }, [user?.id]);
+  const farmAlerts = (farmSum?.ready || 0) + (farmSum?.tripReady ? 1 : 0);
   const [loading, setLoading] = useState(true);
   const [joinCode, setJoinCode] = useState("");
   const [history, setHistory] = useState<any[]>([]);
@@ -459,7 +472,7 @@ export default function StudentDashboard() {
     ] },
   ];
   const navSections: NavSection[] = [
-    { id: "MAIN", items: [tabItem("OVERVIEW", "Tổng Quan", "dashboard"), { id: "NOTES_LINK", label: "Ghi Chú", icon: "stickyNote", href: "/notes" }] },
+    { id: "MAIN", items: [tabItem("OVERVIEW", "Tổng Quan", "dashboard"), { id: "FARM_LINK", label: "Nông Trại Qilin", icon: "sprout", href: "/farm", badge: farmAlerts > 0 ? farmAlerts : undefined }, { id: "NOTES_LINK", label: "Ghi Chú", icon: "stickyNote", href: "/notes" }] },
     ...(isClassless ? [...practiceSections, classSection] : [classSection, ...practiceSections]),
   ];
 
@@ -924,6 +937,37 @@ export default function StudentDashboard() {
         {activeTab === "OVERVIEW" && (
           <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
             <h1 className="ui-page-title">Tổng Quan Học Tập</h1>
+
+            {/* Nông Trại Qilin — trò chơi nổi bật: luôn có lối vào rõ ràng + nhắc việc đang chờ */}
+            <div className="ui-card overflow-hidden border-l-4 border-l-highlight">
+              <div className="p-4 sm:p-6 flex flex-wrap sm:flex-nowrap items-start sm:items-center gap-3 sm:gap-6 bg-primary-soft">
+                <img src="/images/farm/qilin.webp" alt="Qilin con, linh vật của Nông Trại Qilin" width={360} height={420} loading="eager" className="w-14 sm:w-20 h-auto shrink-0" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-xl sm:text-2xl font-extrabold text-primary">Nông Trại Qilin</h2>
+                    <span className="ui-badge ui-badge-new">Trò chơi</span>
+                  </div>
+                  <p className="text-sm text-foreground/80 mt-1 leading-relaxed">Trồng từ vựng như trong Hay Day: mỗi cây là một từ bạn đang học, thu hoạch bằng cách trả lời đúng. Có thú cưng Qilin, cửa hàng trang trí, nhà máy chế biến và bạn bè để thăm.</p>
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {!farmSum?.started ? (
+                      <span className="ui-badge bg-white text-primary">Chưa chơi lần nào · bắt đầu để nhận xu khởi đầu</span>
+                    ) : (
+                      <>
+                        {farmSum.ready > 0 && <span className="ui-badge bg-emerald-100 text-emerald-800">{farmSum.ready} cây đã chín, thu hoạch ngay</span>}
+                        {farmSum.tripReady && <span className="ui-badge bg-amber-100 text-amber-900">{farmSum.petName} đã thám hiểm về, nhận quà</span>}
+                        {farmSum.canSpin && <span className="ui-badge bg-violet-100 text-violet-800">Vòng quay hôm nay chưa quay</span>}
+                        {!farmSum.fed && <span className="ui-badge bg-pink-100 text-pink-800">{farmSum.petName} chưa được cho ăn hôm nay</span>}
+                        {!farmSum.ready && !farmSum.tripReady && !farmSum.canSpin && farmSum.fed && <span className="ui-badge bg-white text-primary">Nông trại cấp {farmSum.level} đang yên ổn</span>}
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-row sm:flex-col gap-2 w-full sm:w-auto shrink-0 basis-full sm:basis-auto">
+                  <Link href="/farm" className="btn-highlight px-6 py-3 text-sm sm:text-base font-extrabold text-center flex-1 sm:flex-none whitespace-nowrap">{farmSum?.started ? "Vào nông trại" : "Chơi ngay"} →</Link>
+                  <Link href="/game-hoc-tieng-anh" className="btn-outline px-4 py-2 text-xs sm:text-sm font-bold text-center whitespace-nowrap">Qilin Run</Link>
+                </div>
+              </div>
+            </div>
 
             {!user?.classroomsJoined?.length && (
               <div className="ui-card p-5 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-l-4 border-l-primary">
