@@ -1018,6 +1018,11 @@ function fit() {
 }
 function setPlaying(on) { document.body.classList.toggle("playing", on); fit(); }
 window.addEventListener("resize", fit);
+// Xoay điện thoại: trên iOS/Android sự kiện resize có thể tới TRƯỚC khi bố cục kịp đổi → canvas giữ kích thước cũ (mất hình).
+// Đo lại khi hướng đổi, khi khung nhìn thật đổi, và mỗi khi khung chứa đổi kích thước.
+window.addEventListener("orientationchange", () => { fit(); setTimeout(fit, 120); setTimeout(fit, 450); });
+if (window.visualViewport) window.visualViewport.addEventListener("resize", fit);
+if (typeof ResizeObserver !== "undefined") new ResizeObserver(() => fit()).observe(app);
 
 /* ---------- HUD ---------- */
 const HEART = (on) => `<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C1 8.6 3 5 6.6 5c2.1 0 3.5 1.2 4.4 2.5C11.9 6.2 13.3 5 15.4 5 19 5 21 8.6 19.6 11.8 17.5 16.4 12 21 12 21z" fill="${on ? "#ff6b7d" : "rgba(255,255,255,.25)"}" stroke="${on ? "#ffd0d6" : "none"}" stroke-width="1.2"/></svg>`;
@@ -1067,7 +1072,8 @@ function startGame() {
   });
   $("#menu").hidden = true; $("#study").hidden = true; $("#result").hidden = true; $("#pause").hidden = true;
   $("#hud").hidden = false; $("#hProgress").hidden = false; $("#tapHint").hidden = false; $("#tapHint").style.opacity = 1;
-  $("#tapHint").textContent = matchMedia("(orientation: portrait)").matches ? "Bấm nút Nhảy bên dưới, bấm 2 lần để nhảy đôi" : "Chạm màn hình hoặc nhấn Space để nhảy";
+  const setTapText = () => { $("#tapHint").textContent = matchMedia("(orientation: portrait)").matches ? "Bấm nút Nhảy bên dưới, bấm 2 lần để nhảy đôi" : "Chạm màn hình hoặc nhấn Space để nhảy"; };
+  setTapText(); window.addEventListener("resize", setTapText);
   hudAll(); mode = "play"; last = performance.now(); setPlaying(true);
   stage.focus?.();
 }
