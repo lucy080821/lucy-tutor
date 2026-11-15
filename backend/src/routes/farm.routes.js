@@ -447,17 +447,20 @@ router.post('/plots/:plotId/harvest', async (req, res) => {
       becameMastered = correct && newStatus === 'MASTERED' && p.status !== 'MASTERED';
     }
 
-    let coins = 0, gems = 0, xp = 0, produce = 0, overflowSold = 0;
+    let coins = 0, gems = 0, xp = 0, produce = 0, overflowSold = 0, wb = { coins: 1, xp: 1, produce: 1 };
     const inventory = parseJSON(farm.inventory, {});
     if (correct) {
       const buffs = C.petBuffs(farm.petXp, farm.petFedOn === C.vnDay());
       const rate = isEarly ? C.EARLY_REWARD_RATE : 1;
-      coins = Math.round((C.HARVEST_COINS[quality] || 0) * (1 + buffs.coinPct) * rate);
+      // thưởng tăng theo thời gian đã chờ (ôn sớm: tính theo thời gian chờ thực tế tới lúc ôn)
+      const waitedMs = (isEarly ? Date.now() : new Date(view.readyAt).getTime()) - new Date(plot.plantedAt).getTime();
+      wb = C.waitBonus(waitedMs);
+      coins = Math.round((C.HARVEST_COINS[quality] || 0) * (1 + buffs.coinPct) * rate * wb.coins);
       if (farm.boostHarvests > 0) coins *= 2;
-      xp = Math.round(C.HARVEST_XP * (1 + buffs.xpPct) * rate);
+      xp = Math.max(1, Math.round(C.HARVEST_XP * (1 + buffs.xpPct) * rate * wb.xp));
       if (becameMastered) { coins += C.MASTERED_BONUS.coins; gems += C.MASTERED_BONUS.gems; }
       // Nông sản vào kho; kho đầy → phần dư bán tự động nửa giá
-      produce = isEarly ? 1 : (C.PRODUCE_PER_HARVEST[quality] || 1);
+      produce = isEarly ? 1 : (C.PRODUCE_PER_HARVEST[quality] || 1) * wb.produce;
       const used = Object.values(inventory).reduce((a, b) => a + b, 0);
       const room = Math.max(0, farm.barnCapacity - used);
       const stored = Math.min(room, produce);
@@ -481,7 +484,7 @@ router.post('/plots/:plotId/harvest', async (req, res) => {
     await Promise.all(ops);
     const prevLevel = C.levelFor(farm.harvestCount);
     const newLevel = C.levelFor(farm.harvestCount + (correct ? 1 : 0));
-    res.json(await buildState(userId, { result: { correct, early: isEarly, quality, mode, kind, speak: card ? (card.speak || null) : v.word, word: v.word, meaning: v.meaning, example: card ? (card.kind === 'grammar' ? `${v.example} — ${card.explain}` : (card.explain || v.example)) : v.example, coins, gems, xp, produce: produce - overflowSold, produceKey: plot.cropKey, overflowSold, boosted: correct && farm.boostHarvests > 0, becameMastered, levelUp: newLevel > prevLevel ? newLevel : null, srs: { status: newStatus, interval: sm2.interval } } }));
+    res.json(await buildState(userId, { result: { correct, early: isEarly, waitBonus: wb.coins, quality, mode, kind, speak: card ? (card.speak || null) : v.word, word: v.word, meaning: v.meaning, example: card ? (card.kind === 'grammar' ? `${v.example} — ${card.explain}` : (card.explain || v.example)) : v.example, coins, gems, xp, produce: produce - overflowSold, produceKey: plot.cropKey, overflowSold, boosted: correct && farm.boostHarvests > 0, becameMastered, levelUp: newLevel > prevLevel ? newLevel : null, srs: { status: newStatus, interval: sm2.interval } } }));
   } catch (e) { console.error('[farm] harvest', e); res.status(500).json({ error: 'Không thu hoạch được' }); }
 });
 

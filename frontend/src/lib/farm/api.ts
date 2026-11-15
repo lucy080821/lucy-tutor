@@ -55,12 +55,12 @@ export type Catalog = {
   wheel: { id: number; label: string; kind: string }[];
   startPlots: number; maxPlots: number; firstGrowMinutes: number;
   harvestCoins: Record<string, number>; harvestXp: number; masteredBonus: { coins: number; gems: number }; barnBonus: { coins: number };
-  orderTrashCost: number; decorSellRate: number; gemSellCoins: number; early: { rewardRate: number; nextFactor: number }; water: { cut: number; maxPerDay: number; size: number; reward: { coins: number; xp: number } }; petTrips: PetTripDef[]; petPerks: PetPerk[]; petTripWordsPerDay: number; petLevels: number[]; petFeedReward: { coins: number; petXp: number };
+  orderTrashCost: number; decorSellRate: number; gemSellCoins: number; waitTiers: [number, number, number, number][]; early: { rewardRate: number; nextFactor: number }; water: { cut: number; maxPerDay: number; size: number; reward: { coins: number; xp: number } }; petTrips: PetTripDef[]; petPerks: PetPerk[]; petTripWordsPerDay: number; petLevels: number[]; petFeedReward: { coins: number; petXp: number };
   visit: { likeReward: number; giftReward: number; giftCost: number; giftsPerDay: number };
 };
 export type WaterQuiz = { left: number; used: number; max: number; cut: number; items: { progressId: string; meaning: string; hint: string; length: number }[] };
 export type HarvestResult = {
-  early?: boolean; kind?: SeedKind; speak?: string | null; correct: boolean; quality: number; mode: string; word: string; meaning: string; example: string | null;
+  early?: boolean; waitBonus?: number; kind?: SeedKind; speak?: string | null; correct: boolean; quality: number; mode: string; word: string; meaning: string; example: string | null;
   coins: number; gems: number; xp: number; produce: number; produceKey: string | null; overflowSold: number; boosted: boolean; becameMastered: boolean; levelUp: number | null;
   srs: { status: string; interval: number };
 };
@@ -203,3 +203,11 @@ export function sellValue(item: { price: number; currency: string } | undefined,
 export function produceInfo(catalog: { crops: Record<string, { name: string; emoji: string }>; products: Record<string, { name: string; emoji: string }> }, key: string) {
   return catalog.crops[key] || catalog.products?.[key] || { name: key, emoji: "📦" };
 }
+
+// Thưởng theo thời gian chờ của cây — khớp waitBonus() ở backend (chờ lâu → xu/XP/nông sản nhiều hơn)
+export function waitBonusOf(catalog: { waitTiers: [number, number, number, number][] }, waitMs: number) {
+  const min = Math.max(0, waitMs) / 60000; let t = catalog.waitTiers[0];
+  for (const x of catalog.waitTiers) if (min >= x[0]) t = x;
+  return { coins: t[1], xp: t[2], produce: t[3] };
+}
+export const fmtMult = (n: number) => `×${String(Math.round(n * 100) / 100).replace(".", ",")}`;

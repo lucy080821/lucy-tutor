@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Modal from "./Modal";
-import { farmApi, speak, type Catalog, type FarmState, type HarvestResult, type PlotView, type Question } from "@/lib/farm/api";
+import { farmApi, fmtMult, speak, type Catalog, type FarmState, type HarvestResult, type PlotView, type Question } from "@/lib/farm/api";
 import { CropSprite } from "./Sprites";
 import { renderMarked } from "./marked";
 
@@ -123,6 +123,7 @@ export default function HarvestModal({ userId, plot, cropName, nextReadyPlot, ca
               {result.produce > 0 && <span className="ui-badge bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">🧺 +{result.produce} {catalog?.crops[result.produceKey || ""]?.name?.toLowerCase() || "nông sản"} vào kho</span>}
               {result.overflowSold > 0 && <span className="ui-badge bg-orange-100 text-orange-800 px-3 py-1 rounded-full">Kho đầy, {result.overflowSold} nông sản bán nửa giá</span>}
               <span className="ui-badge bg-primary-soft text-primary px-3 py-1 rounded-full">⚡ +{result.xp} XP</span>
+              {(result.waitBonus ?? 1) > 1 && <span className="ui-badge bg-amber-100 text-amber-900 px-3 py-1 rounded-full">⏳ Thưởng chờ lâu {fmtMult(result.waitBonus!)}</span>}
               <span className="ui-badge bg-slate-100 text-slate-700 px-3 py-1 rounded-full">⏳ {result.early ? "Chín lại sớm hơn lịch thường" : `Chín lại sau ${result.srs.interval} ngày`}</span>
             </div>
           ) : (
