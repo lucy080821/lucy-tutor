@@ -79,7 +79,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   // ── Phóng to / thu nhỏ: thu hẹp viewBox quanh 1 điểm giữa (nét vẫn sắc), kéo để dời, 2 ngón để chụm, Ctrl+lăn chuột ──
   const gridCx = originX + ((W - H) * TILE_W) / 4, gridCy = TOP_PAD + ((W + H - 2) * TILE_H) / 4 + TILE_H / 2;
   const [center, setCenter] = useState<{ x: number; y: number } | null>(null);
-  const z = Math.max(1, Math.min(3, zoom));
+  const z = Math.max(1, Math.min(4, zoom));
   const vw = vbW / z, vh = vbH / z;
   const clampN = (v: number, lo: number, hi: number) => (hi < lo ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v)));
   const ccx = clampN(center?.x ?? gridCx, vw / 2, vbW - vw / 2), ccy = clampN(center?.y ?? gridCy, vh / 2, vbH - vh / 2);
@@ -89,9 +89,11 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const cRef = useRef({ x: ccx, y: ccy }); cRef.current = { x: ccx, y: ccy };
   const zcb = useRef(onZoomChange); zcb.current = onZoomChange;
   useEffect(() => { if (z <= 1) setCenter(null); }, [z]);
+  useEffect(() => { setCenter(null); }, [W, H]); // mở rộng đất → về giữa đất mới
+  const [panned, setPanned] = useState(false);
   useEffect(() => {
     const el = svgRef.current; if (!el) return;
-    const wheel = (e: WheelEvent) => { if (!(e.ctrlKey || e.metaKey)) return; e.preventDefault(); zcb.current?.(Math.max(1, Math.min(3, zRef.current * (e.deltaY < 0 ? 1.15 : 1 / 1.15)))); };
+    const wheel = (e: WheelEvent) => { if (!(e.ctrlKey || e.metaKey)) return; e.preventDefault(); zcb.current?.(Math.max(1, Math.min(4, zRef.current * (e.deltaY < 0 ? 1.15 : 1 / 1.15)))); };
     el.addEventListener("wheel", wheel, { passive: false });
     return () => el.removeEventListener("wheel", wheel);
   }, []);
@@ -106,11 +108,11 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const onPM = (e: React.PointerEvent) => {
     const g = gest.current; if (!g.pts.has(e.pointerId)) return;
     g.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (g.pts.size >= 2 && g.pinch) { const [a, b] = [...g.pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); zcb.current?.(Math.max(1, Math.min(3, g.pinch.z * (d / g.pinch.d)))); return; }
+    if (g.pts.size >= 2 && g.pinch) { const [a, b] = [...g.pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); zcb.current?.(Math.max(1, Math.min(4, g.pinch.z * (d / g.pinch.d)))); return; }
     if (g.pts.size === 1 && g.start && zRef.current > 1) {
       const dx = e.clientX - g.start.x, dy = e.clientY - g.start.y;
       if (!g.moved && Math.hypot(dx, dy) > 6) { g.moved = true; try { svgRef.current?.setPointerCapture(e.pointerId); } catch { /* bỏ qua */ } }
-      if (g.moved) { const k = unitsPerPx(); setCenter({ x: g.start.cx - dx * k, y: g.start.cy - dy * k }); }
+      if (g.moved) { if (!panned) setPanned(true); const k = unitsPerPx(); setCenter({ x: g.start.cx - dx * k, y: g.start.cy - dy * k }); }
     }
   };
   const onPU = (e: React.PointerEvent) => { const g = gest.current; g.pts.delete(e.pointerId); if (g.pts.size < 2) g.pinch = undefined; if (g.pts.size === 0) g.start = undefined; };
@@ -294,6 +296,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
         {/* màu trời, đèn vườn, bướm/đom đóm/chim, mưa */}
         <AmbientLife vbW={vbW} vbH={vbH} phase={phase} weather={weather} lamps={lamps} seed={W * 31 + H} />
       </svg>
+      {z > 1.05 && !panned && <div className="farm-pan-hint" aria-hidden>Kéo để xem thêm đất</div>}
     </div>
   );
 }

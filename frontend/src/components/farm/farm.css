@@ -208,3 +208,12 @@
   .farm-dock-toggle { bottom: calc(6px + env(safe-area-inset-bottom) + 62px); }
   .farm-dock-toggle-off { bottom: calc(10px + env(safe-area-inset-bottom)); }
 }
+
+/* gợi ý kéo cảnh khi đất rộng hơn khung nhìn */
+.farm-pan-hint { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); padding: 6px 14px; border-radius: 999px; background: rgba(15,23,42,.72); color: #fff; font-size: 12px; font-weight: 800; pointer-events: none; white-space: nowrap; animation: farm-pop .3s cubic-bezier(.22,1,.36,1) both; }
+@media (max-width: 480px) {
+  .farm-tools { gap: 5px; top: 8px; right: 8px; bottom: 8px; }
+  .farm-tool { width: 32px; height: 32px; border-radius: 11px; }
+  .farm-tool svg { width: 17px; height: 17px; }
+  .farm-pan-hint { bottom: 58px; font-size: 11px; padding: 5px 12px; }
+}

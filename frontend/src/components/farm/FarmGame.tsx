@@ -5,7 +5,7 @@ import "./farm.css";
 import { farmApi, formatCountdown, sellValue, speak, type DecorPlaced, type FarmState, type PlotView } from "@/lib/farm/api";
 import { loadSfxPref, setSfxEnabled, sfx } from "@/lib/farm/sfx";
 import FarmScene, { liveStatus, type FloatText, type SceneMode } from "./FarmScene";
-import type { Outfit } from "./Sprites";
+import { TILE_W, type Outfit } from "./Sprites";
 import { PHASE_LABEL, skyNow } from "./Ambient";
 import { useFarmWeather } from "@/lib/farm/useWeather";
 import { WEATHER_KINDS, WEATHER_LABEL, weatherLabel, type WeatherKind } from "@/lib/farm/weather";
@@ -46,7 +46,12 @@ export default function FarmGame({ userId }: { userId: string }) {
   const [ordersOpen, setOrdersOpen] = useState(false); // chỉ dùng ở chế độ toàn màn hình: ngăn kéo Đơn hàng
   useEffect(() => { try { if (localStorage.getItem("lucy_farm_dock") === "hidden") setDockOpen(false); } catch { /* bỏ qua */ } }, []);
   const toggleDock = () => { sfx.click(); setDockOpen((v) => { try { localStorage.setItem("lucy_farm_dock", v ? "hidden" : "open"); } catch { /* bỏ qua */ } return !v; }); };
-  const stepZoom = (dir: 1 | -1) => { sfx.click(); setZoom((z) => Math.max(1, Math.min(3, Math.round((z + dir * 0.5) * 100) / 100))); };
+  // Đất rộng (sau khi mở rộng) thì mặc định chỉ hiện ~9 ô bề ngang cho rõ, phần còn lại kéo để xem; nút kính lúp thu nhỏ để xem toàn bộ
+  const zoomBase = Math.max(1, (((state?.farm.gridW ?? 8) + (state?.farm.gridH ?? 6)) * TILE_W) / 2 / 900);
+  const zoomMin = 1 / zoomBase, zoomMax = 4 / zoomBase;
+  const clampZoom = (z: number) => Math.max(zoomMin, Math.min(zoomMax, z));
+  const effZoom = clampZoom(zoom) * zoomBase; // 1 = vừa khít toàn bộ đất
+  const stepZoom = (dir: 1 | -1) => { sfx.click(); setZoom((z) => clampZoom(z * (dir > 0 ? 1.35 : 1 / 1.35))); };
   const activePlotRef = useRef<PlotView | null>(null);
   useEffect(() => { activePlotRef.current = activePlot; }, [activePlot]);
   const [toasts, setToasts] = useState<{ id: number; msg: string }[]>([]);
@@ -239,8 +244,8 @@ export default function FarmGame({ userId }: { userId: string }) {
   ];
   const tools: { k: string; title: string; Icon: (p: { size?: number }) => React.ReactElement; on?: boolean; off?: boolean; badge?: string; run: () => void }[] = [
     ...(fs ? [{ k: "ORDERS", title: ordersOpen ? "Đóng đơn hàng" : "Đơn hàng", Icon: IconTruck, on: ordersOpen, badge: readyOrders > 0 ? String(readyOrders) : undefined, run: () => { sfx.click(); setOrdersOpen((v) => !v); } }] : []),
-    { k: "ZIN", title: `Phóng to (đang ${Math.round(zoom * 100)}%)`, Icon: IconZoomIn, off: zoom >= 3, run: () => stepZoom(1) },
-    { k: "ZOUT", title: zoom > 1 ? `Thu nhỏ (đang ${Math.round(zoom * 100)}%)` : "Thu nhỏ (đang vừa khung)", Icon: IconZoomOut, off: zoom <= 1, run: () => stepZoom(-1) },
+    { k: "ZIN", title: `Phóng to (đang ${Math.round(effZoom * 100)}%)`, Icon: IconZoomIn, off: effZoom >= 3.95, run: () => stepZoom(1) },
+    { k: "ZOUT", title: effZoom > 1.01 ? `Thu nhỏ (đang ${Math.round(effZoom * 100)}%)` : "Thu nhỏ (đang xem toàn bộ đất)", Icon: IconZoomOut, off: effZoom <= 1.01, run: () => stepZoom(-1) },
     { k: "EDIT", title: mode.type === "edit" ? "Xong sắp xếp" : "Sắp xếp đất & trang trí", Icon: IconMove, on: mode.type === "edit", run: () => { sfx.click(); setMode(mode.type === "edit" ? { type: "normal" } : { type: "edit", selected: null }); } },
     { k: "SOUND", title: soundOn ? "Tắt âm thanh" : "Bật âm thanh", Icon: soundOn ? IconVolume : IconVolumeOff, on: !soundOn, run: toggleSound },
     { k: "WEATHER", title: wx.status === "ok" ? "Thời tiết theo vị trí (đang bật)" : "Bật thời tiết theo vị trí", Icon: IconWeather, on: wx.status === "ok", run: () => openPanel("WEATHER") },
@@ -288,7 +293,7 @@ export default function FarmGame({ userId }: { userId: string }) {
         )}
 
         <div className={fs ? "relative farm-fs-scene" : "relative"}>
-          <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} sky={sky} weather={weather} zoom={zoom} onZoomChange={setZoom} fit={fs} petAway={!!farm.pet.trip}
+          <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} sky={sky} weather={weather} zoom={effZoom} onZoomChange={(z) => setZoom(clampZoom(z / zoomBase))} fit={fs} petAway={!!farm.pet.trip}
             onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onFactoryClick={onFactoryClick} onPetClick={onPetClick} />
           {readyPlots.length > 0 && mode.type === "normal" && (
             <button onClick={() => { sfx.click(); setActivePlot(readyPlots[0]); setPanel("HARVEST"); }} className="absolute top-3 left-3 z-[5] btn-highlight rounded-full pl-3 pr-4 py-2 font-extrabold shadow-card farm-toast inline-flex items-center gap-2"><IconSprout size={18} />{readyPlots.length} cây chín</button>
