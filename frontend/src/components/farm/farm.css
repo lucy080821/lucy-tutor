@@ -217,3 +217,10 @@
   .farm-tool svg { width: 17px; height: 17px; }
   .farm-pan-hint { bottom: 58px; font-size: 11px; padding: 5px 12px; }
 }
+
+/* Nút thao tác của Qilin: biểu tượng trên, nhãn giữa, ghi chú nhỏ dưới — không bị xuống dòng lung tung ở màn hình hẹp */
+.farm-pet-act { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 76px; padding: 10px 4px; border-radius: 18px; line-height: 1.15; min-width: 0; }
+.farm-pet-act-ico { font-size: 22px; line-height: 1; }
+.farm-pet-act-label { font-size: 15px; font-weight: 800; white-space: nowrap; }
+.farm-pet-act-sub { font-size: 11px; font-weight: 600; opacity: .8; white-space: nowrap; }
+@media (max-width: 380px) { .farm-pet-act-label { font-size: 13.5px; } .farm-pet-act-sub { font-size: 10px; } .farm-pet-act-ico { font-size: 20px; } }

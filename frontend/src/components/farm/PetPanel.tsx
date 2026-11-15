@@ -76,20 +76,20 @@ export default function PetPanel({ userId, farm, catalog, now, onClose, onState 
   return (
     <Modal title={`🐉 ${farm.pet.name}`} subtitle={`Cấp ${localLevel} · đã được vuốt ve ${farm.pet.pats} lần`} onClose={onClose}>
       <div className="text-center">
-        <div className="relative mx-auto w-56 h-48 rounded-3xl overflow-hidden" style={{ background: "linear-gradient(180deg,#e0f2fe,#dcfce7)" }}>
-          <svg viewBox="-70 -125 140 140" className="w-full h-full cursor-pointer" onClick={pat} role="button" aria-label="Vuốt ve">
+        <div className="relative mx-auto w-48 h-44 sm:w-56 sm:h-48 rounded-3xl overflow-hidden" style={{ background: "linear-gradient(180deg,#e0f2fe,#dcfce7)" }}>
+          <svg viewBox="-80 -158 160 176" className="w-full h-full cursor-pointer" onClick={pat} role="button" aria-label="Vuốt ve">
             <ellipse cx={0} cy={10} rx={48} ry={10} fill="rgba(31,45,61,.12)" />
             <g className={jump ? "farm-pet-jump" : "farm-pet-idle"} onAnimationEnd={() => setJump(false)}>
               <PetSprite level={localLevel} size={1.35} outfit={outfit} />
             </g>
           </svg>
-          <div className="absolute top-2 left-0 right-0 text-center"><span className="inline-block bg-white/90 rounded-full px-3 py-1 text-sm font-bold text-primary shadow-card farm-toast" key={phrase}>{phrase}</span></div>
+          <div className="absolute top-1.5 left-0 right-0 text-center px-2"><span className="inline-block max-w-full bg-white/90 rounded-full px-3 py-1 text-xs sm:text-sm font-bold text-primary shadow-card farm-toast" key={phrase}>{phrase}</span></div>
         </div>
 
-        <div className="flex justify-center gap-2 mt-3">
-          <button onClick={() => setTab("PET")} className={`ui-chip ${tab === "PET" ? "ui-chip-active" : ""}`}>🐾 Chăm sóc</button>
-          <button onClick={() => setTab("TRIP")} className={`ui-chip relative ${tab === "TRIP" ? "ui-chip-active" : ""}`}>🧭 Thám hiểm{tripDone && <span className="ml-1 inline-block w-2 h-2 rounded-full bg-red-500 align-middle" />}</button>
-          <button onClick={() => setTab("WARDROBE")} className={`ui-chip ${tab === "WARDROBE" ? "ui-chip-active" : ""}`}>👗 Tủ đồ ({farm.wardrobe.owned.length})</button>
+        <div className="grid grid-cols-3 gap-2 mt-3">
+          <button onClick={() => setTab("PET")} className={`ui-chip justify-center px-2 whitespace-nowrap ${tab === "PET" ? "ui-chip-active" : ""}`}>🐾 Chăm sóc</button>
+          <button onClick={() => setTab("TRIP")} className={`ui-chip justify-center px-2 whitespace-nowrap relative ${tab === "TRIP" ? "ui-chip-active" : ""}`}>🧭 Thám hiểm{tripDone && <span className="ml-1 inline-block w-2 h-2 rounded-full bg-red-500 align-middle" />}</button>
+          <button onClick={() => setTab("WARDROBE")} className={`ui-chip justify-center px-2 whitespace-nowrap ${tab === "WARDROBE" ? "ui-chip-active" : ""}`}>👗 Tủ đồ ({farm.wardrobe.owned.length})</button>
         </div>
 
         {tab === "PET" && (
@@ -99,9 +99,21 @@ export default function PetPanel({ userId, farm, catalog, now, onClose, onState 
               <div className="h-2.5 rounded-full bg-slate-100 overflow-hidden mt-1"><div className="h-full bg-pink-400 transition-all" style={{ width: `${pct}%` }} /></div>
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2">
-              <button onClick={feed} disabled={farm.pet.fedToday || busy} className="btn-primary rounded-2xl py-3 font-bold disabled:opacity-50">🍖 {farm.pet.fedToday ? "Đã ăn" : "Cho ăn"}<div className="text-[10px] font-semibold opacity-80">+{catalog.petFeedReward.coins} xu/ngày</div></button>
-              <button onClick={pat} className="btn-outline rounded-2xl py-3 font-bold">🤚 Vuốt ve<div className="text-[10px] font-semibold opacity-80">+1 XP</div></button>
-              <button onClick={rename} className="btn-outline rounded-2xl py-3 font-bold">✏️ Đổi tên</button>
+              <button onClick={feed} disabled={farm.pet.fedToday || busy} className="farm-pet-act btn-primary disabled:opacity-60">
+                <span className="farm-pet-act-ico">🍖</span>
+                <span className="farm-pet-act-label">{farm.pet.fedToday ? "Đã ăn" : "Cho ăn"}</span>
+                <span className="farm-pet-act-sub">{farm.pet.fedToday ? "Mai ăn tiếp" : `+${catalog.petFeedReward.coins} xu/ngày`}</span>
+              </button>
+              <button onClick={pat} className="farm-pet-act btn-outline">
+                <span className="farm-pet-act-ico">🤚</span>
+                <span className="farm-pet-act-label">Vuốt ve</span>
+                <span className="farm-pet-act-sub">+1 XP</span>
+              </button>
+              <button onClick={rename} className="farm-pet-act btn-outline">
+                <span className="farm-pet-act-ico">✏️</span>
+                <span className="farm-pet-act-label">Đổi tên</span>
+                <span className="farm-pet-act-sub">tối đa 16 ký tự</span>
+              </button>
             </div>
             <div className="mt-4 text-left">
               <p className="text-xs font-bold text-muted uppercase">Kỹ năng của {farm.pet.name}</p>
