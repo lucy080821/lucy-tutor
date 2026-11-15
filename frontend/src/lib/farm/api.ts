@@ -20,8 +20,10 @@ export type PetBuffs = { active: boolean; coinPct: number; orderPct: number; tri
 export type PetTripDef = { tier: number; name: string; emoji: string; minutes: number; minLevel: number; coins: [number, number]; produce: [number, number]; gemChance: number; gemMax: number; words: number; petXp: number };
 export type PetPerk = { level: number; id: string; name: string; desc: string };
 export type TripResult = { tier: number; name: string; coins: number; gems: number; produce: Record<string, number>; overflowCoins: number; words: { word: string; meaning: string; example: string | null }[]; petXp: number };
-export type FactoryJob = { recipe: string; startedAt: string; readyAt: string };
-export type DecorPlaced = { uid: string; key: string; x: number; y: number; r?: 0 | 1; job?: FactoryJob };
+export type FactoryJob = { recipe?: string; startedAt: string; readyAt: string; qty?: number; product?: string };
+export type PenBuild = { startedAt: string; readyAt: string };
+export type PenDef = { name: string; emoji: string; animal: string; animalName: string; product: string; capacity: number; animalPrice: number; feed: Record<string, number>; minutes: number; build: number; buildMinutes: number; buyNow: number; minLevel: number; roof: string; wall: string };
+export type DecorPlaced = { uid: string; key: string; x: number; y: number; r?: 0 | 1; job?: FactoryJob; animals?: number; build?: PenBuild };
 export type FarmView = {
   coins: number; gems: number; gridW: number; gridH: number; layout: DecorPlaced[];
   harvestCount: number; witherCount: number; barnCount: number;
@@ -34,13 +36,14 @@ export type FarmView = {
   ordersDone: number; orderDifficulty: number; barnQuizLeft: number;
 };
 export type OutfitItem = { name: string; emoji: string; slot: string; price: number; currency: "coins" | "gems"; minLevel: number };
-export type DecorItem = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number; cat?: string; fam?: "wall" | "fence" | "hedge"; gate?: boolean; style?: string; factory?: boolean };
+export type DecorItem = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number; cat?: string; fam?: "wall" | "fence" | "hedge"; gate?: boolean; style?: string; factory?: boolean; pen?: boolean; buyNowPrice?: number; buildMinutes?: number };
 export type Recipe = { id: string; product: string; inputs: Record<string, number>; minutes: number };
 export type FactoryDef = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number; wall: string; roof: string; recipes: Recipe[] };
 export type Catalog = {
   crops: Record<string, { name: string; emoji: string }>;
   products: Record<string, { name: string; emoji: string; price: number }>;
   factories: Record<string, FactoryDef>;
+  pens: Record<string, PenDef>;
   decor: Record<string, DecorItem>;
   decorCats: { id: string; name: string }[];
   outfits: Record<string, OutfitItem>;
@@ -74,9 +77,10 @@ export type FarmState = {
   result?: HarvestResult;
   spin?: { segmentId: number; label: string; kind: string; value: number; decorKey: string | null };
   delivered?: { ok: boolean; title: string; customer: string; coins: number; gems: number; xp: number; feedback?: string; corrected?: string; ai?: boolean };
-  bought?: { itemKey: string; price?: number; currency?: string };
+  bought?: { itemKey: string; price?: number; currency?: string; build?: boolean };
   sold?: { key: string; refund: number; currency: string; qty?: number };
   tripResult?: TripResult;
+  penResult?: { product: string; qty: number; price: number };
   watered?: { ok: boolean; word: string; cutMs: number; left: number; coins: number; xp: number };
   crafted?: { started?: string; product?: string; collected?: string; qty?: number; price?: number };
   stored?: { word: string; coins: number };
@@ -130,7 +134,11 @@ export const farmApi = {
   dig: (userId: string, plotId: string) => post<FarmState>(`/plots/${plotId}/dig`, { userId }),
   store: (userId: string, plotId: string) => post<FarmState>(`/plots/${plotId}/store`, { userId }),
   barn: (userId: string) => get<BarnItem[]>(`/barn/${userId}`),
-  buy: (userId: string, itemKey: string, x?: number, y?: number) => post<FarmState>("/buy", { userId, itemKey, x, y }),
+  buy: (userId: string, itemKey: string, x?: number, y?: number, variant?: "build" | "now") => post<FarmState>("/buy", { userId, itemKey, x, y, variant }),
+  penFinish: (userId: string, uid: string) => post<FarmState>("/pen/finish", { userId, uid }),
+  penAnimal: (userId: string, uid: string) => post<FarmState>("/pen/animal", { userId, uid }),
+  penFeed: (userId: string, uid: string) => post<FarmState>("/pen/feed", { userId, uid }),
+  penCollect: (userId: string, uid: string) => post<FarmState>("/pen/collect", { userId, uid }),
   move: (userId: string, kind: "plot" | "decor", id: string, x: number, y: number) => post<FarmState>("/move", { userId, kind, id, x, y }),
   sell: (userId: string, uid: string) => post<FarmState>("/sell", { userId, uid }),
   completeOrder: (userId: string, id: string, sentence?: string) => post<FarmState & { ok?: boolean; feedback?: string; corrected?: string }>(`/orders/${id}/complete`, { userId, sentence }),

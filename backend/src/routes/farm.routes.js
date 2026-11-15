@@ -579,7 +579,7 @@ router.get('/barn/:userId', async (req, res) => {
 // Mua: { userId, itemKey: 'plot' | 'expand' | <decorKey>, x, y }
 router.post('/buy', async (req, res) => {
   try {
-    const { userId, itemKey, x, y } = req.body;
+    const { userId, itemKey, x, y, variant } = req.body;
     const [farm, plots] = await Promise.all([getOrCreateFarm(userId), prisma.farmPlot.findMany({ where: { userId }, select: { x: true, y: true } })]);
     if (!farm) return res.status(404).json({ error: 'User not found' });
     const level = C.levelFor(farm.harvestCount);
@@ -612,7 +612,18 @@ router.post('/buy', async (req, res) => {
     if (level < item.minLevel) return res.status(400).json({ error: `Cần cấp ${item.minLevel}` });
     if (farm[item.currency] < item.price) return res.status(400).json({ error: item.currency === 'gems' ? 'Không đủ kim cương' : 'Không đủ xu' });
     const layout = parseJSON(farm.layout, []);
-    if (item.factory && layout.some((l) => l.key === itemKey)) return res.status(400).json({ error: `Bạn đã có ${item.name} rồi (mỗi loại chỉ mua 1 cái)` });
+    if ((item.factory || item.pen) && layout.some((l) => l.key === itemKey)) return res.status(400).json({ error: `Bạn đã có ${item.name} rồi (mỗi loại chỉ mua 1 cái)` });
+    if (item.pen) {
+      // Chuồng: XÂY (giá gốc, phải đợi) hoặc MUA NGAY (đắt hơn nhiều, có liền)
+      const now = variant === 'now';
+      const price = now ? item.buyNowPrice : item.price;
+      if (farm.coins < price) return res.status(400).json({ error: 'Không đủ xu' });
+      const piece = { uid: crypto.randomUUID(), key: itemKey, x, y, animals: 0 };
+      if (!now) piece.build = { startedAt: new Date().toISOString(), readyAt: new Date(Date.now() + item.buildMinutes * 60000).toISOString() };
+      layout.push(piece);
+      await prisma.farmState.update({ where: { userId }, data: { coins: { decrement: price }, layout: JSON.stringify(layout) } });
+      return res.json(await buildState(userId, { bought: { itemKey, price, currency: 'coins', build: !now } }));
+    }
     layout.push({ uid: crypto.randomUUID(), key: itemKey, x, y });
     await prisma.farmState.update({ where: { userId }, data: { [item.currency]: { decrement: item.price }, layout: JSON.stringify(layout) } });
     res.json(await buildState(userId, { bought: { itemKey, price: item.price, currency: item.currency } }));
@@ -651,7 +662,9 @@ router.post('/sell', async (req, res) => {
     const layout = parseJSON(farm.layout, []);
     const d = layout.find((l) => l.uid === uid);
     if (!d) return res.status(404).json({ error: 'Vật phẩm không tồn tại' });
-    if (d.job) return res.status(400).json({ error: 'Máy đang chế biến — hãy thu thành phẩm trước khi bán' });
+    if (d.job) return res.status(400).json({ error: 'Đang chạy/chờ thu — hãy thu sản phẩm trước khi bán' });
+    if (d.build) return res.status(400).json({ error: 'Chuồng đang xây, chưa bán lại được' });
+    if (d.animals > 0) return res.status(400).json({ error: 'Chuồng còn vật nuôi — bán lại sẽ mất chúng' });
     const refund = C.sellValue(C.DECOR[d.key]);
     await prisma.farmState.update({ where: { userId }, data: { layout: JSON.stringify(layout.filter((l) => l.uid !== uid)), coins: { increment: refund } } });
     res.json(await buildState(userId, { sold: { key: d.key, refund, currency: 'coins' } }));
@@ -691,7 +704,7 @@ router.post('/factory/start', async (req, res) => {
     if (d.job) return res.status(400).json({ error: 'Máy đang chạy rồi' });
     const inventory = parseJSON(farm.inventory, {});
     const missing = Object.entries(recipe.inputs).filter(([k, n]) => (inventory[k] || 0) < n);
-    if (missing.length) return res.status(400).json({ error: `Thiếu nguyên liệu: ${missing.map(([k, n]) => `${C.CROPS[k]?.name || k} ${inventory[k] || 0}/${n}`).join(', ')}` });
+    if (missing.length) return res.status(400).json({ error: `Thiếu nguyên liệu: ${missing.map(([k, n]) => `${C.CROPS[k]?.name || C.PRODUCTS[k]?.name || k} ${inventory[k] || 0}/${n}`).join(', ')}` });
     for (const [k, n] of Object.entries(recipe.inputs)) { inventory[k] -= n; if (inventory[k] <= 0) delete inventory[k]; }
     const nowMs = Date.now();
     const mins = recipe.minutes * (1 - C.petBuffs(farm.petXp, farm.petFedOn === C.vnDay()).factoryTimePct);
@@ -723,6 +736,81 @@ router.post('/factory/collect', async (req, res) => {
     if (r.count === 0) return res.status(409).json({ error: 'Vừa có thay đổi khác, bấm lại nhé' });
     res.json(await buildState(userId, { crafted: { collected: recipe.product, qty: 1, price: C.PRODUCTS[recipe.product].price } }));
   } catch (e) { console.error('[farm] factory collect', e); res.status(500).json({ error: 'Không thu được' }); }
+});
+
+// ── Chuồng trại ─────────────────────────────────────────────────────────────────────────────────────────
+// Trạng thái nằm trong phần tử layout (không cần cột DB mới): { animals, build?: {readyAt}, job?: {readyAt, qty, product} }.
+// Mọi thao tác dùng khoá lạc quan theo updatedAt (gọi song song không nhân đôi sản phẩm / trừ tiền 2 lần).
+async function penCtx(req, res) {
+  const { userId, uid } = req.body;
+  const farm = await getOrCreateFarm(userId);
+  if (!farm) { res.status(404).json({ error: 'User not found' }); return null; }
+  const layout = parseJSON(farm.layout, []);
+  const d = layout.find((l) => l.uid === uid);
+  const pen = d && C.PENS[d.key];
+  if (!pen) { res.status(404).json({ error: 'Chuồng không tồn tại' }); return null; }
+  return { userId, farm, layout, d, pen };
+}
+async function penSave(res, c, data, extra) {
+  const r = await prisma.farmState.updateMany({ where: { userId: c.userId, updatedAt: c.farm.updatedAt }, data: { layout: JSON.stringify(c.layout), ...data } });
+  if (r.count === 0) return res.status(409).json({ error: 'Vừa có thay đổi khác, bấm lại nhé' });
+  return res.json(await buildState(c.userId, extra));
+}
+// Xong ngay: bù thêm phần chênh lệch giữa MUA NGAY và XÂY theo phần thời gian còn lại
+router.post('/pen/finish', async (req, res) => {
+  try {
+    const c = await penCtx(req, res); if (!c) return;
+    if (!c.d.build) return res.status(400).json({ error: 'Chuồng đã xây xong rồi' });
+    const left = new Date(c.d.build.readyAt).getTime() - Date.now();
+    if (left <= 0) { delete c.d.build; return penSave(res, c, {}); }
+    const total = c.pen.buildMinutes * 60000;
+    const cost = Math.max(1, Math.ceil((c.pen.buyNow - c.pen.build) * Math.min(1, left / total)));
+    if (c.farm.coins < cost) return res.status(400).json({ error: `Cần thêm ${cost} xu để xây xong ngay` });
+    delete c.d.build;
+    return penSave(res, c, { coins: { decrement: cost } }, { bought: { itemKey: c.d.key, price: cost, currency: 'coins' } });
+  } catch (e) { console.error('[farm] pen finish', e); res.status(500).json({ error: 'Không hoàn thành được' }); }
+});
+router.post('/pen/animal', async (req, res) => {
+  try {
+    const c = await penCtx(req, res); if (!c) return;
+    if (c.d.build && new Date(c.d.build.readyAt).getTime() > Date.now()) return res.status(400).json({ error: 'Chuồng còn đang xây' });
+    if ((c.d.animals || 0) >= c.pen.capacity) return res.status(400).json({ error: 'Chuồng đã đầy' });
+    if (c.farm.coins < c.pen.animalPrice) return res.status(400).json({ error: 'Không đủ xu' });
+    c.d.animals = (c.d.animals || 0) + 1; delete c.d.build;
+    return penSave(res, c, { coins: { decrement: c.pen.animalPrice } }, { bought: { itemKey: c.d.key, price: c.pen.animalPrice, currency: 'coins' } });
+  } catch (e) { console.error('[farm] pen animal', e); res.status(500).json({ error: 'Không mua được vật nuôi' }); }
+});
+router.post('/pen/feed', async (req, res) => {
+  try {
+    const c = await penCtx(req, res); if (!c) return;
+    if (c.d.build && new Date(c.d.build.readyAt).getTime() > Date.now()) return res.status(400).json({ error: 'Chuồng còn đang xây' });
+    const n = c.d.animals || 0;
+    if (n < 1) return res.status(400).json({ error: 'Chưa có vật nuôi nào trong chuồng' });
+    if (c.d.job) return res.status(400).json({ error: 'Vật nuôi đang no, chờ thu sản phẩm' });
+    const inventory = parseJSON(c.farm.inventory, {});
+    const need = Object.fromEntries(Object.entries(c.pen.feed).map(([k, v]) => [k, v * n]));
+    const missing = Object.entries(need).filter(([k, v]) => (inventory[k] || 0) < v);
+    if (missing.length) return res.status(400).json({ error: `Thiếu thức ăn: ${missing.map(([k, v]) => `${C.CROPS[k]?.name || k} ${inventory[k] || 0}/${v}`).join(', ')}` });
+    for (const [k, v] of Object.entries(need)) { inventory[k] -= v; if (inventory[k] <= 0) delete inventory[k]; }
+    const nowMs = Date.now();
+    c.d.job = { startedAt: new Date(nowMs).toISOString(), readyAt: new Date(nowMs + c.pen.minutes * 60000).toISOString(), qty: n, product: c.pen.product };
+    return penSave(res, c, { inventory: JSON.stringify(inventory) });
+  } catch (e) { console.error('[farm] pen feed', e); res.status(500).json({ error: 'Không cho ăn được' }); }
+});
+router.post('/pen/collect', async (req, res) => {
+  try {
+    const c = await penCtx(req, res); if (!c) return;
+    const job = c.d.job;
+    if (!job) return res.status(400).json({ error: 'Chưa có gì để thu' });
+    if (Date.now() < new Date(job.readyAt).getTime()) return res.status(400).json({ error: 'Chưa xong' });
+    const inventory = parseJSON(c.farm.inventory, {});
+    const used = Object.values(inventory).reduce((a, b) => a + b, 0);
+    if (used + job.qty > c.farm.barnCapacity) return res.status(400).json({ error: `Kho không đủ chỗ cho ${job.qty} sản phẩm — bán bớt hoặc nâng cấp kho` });
+    inventory[job.product] = (inventory[job.product] || 0) + job.qty;
+    const prod = C.PRODUCTS[job.product];
+    delete c.d.job;
+    return penSave(res, c, { inventory: JSON.stringify(inventory) }, { penResult: { product: job.product, qty: job.qty, price: prod.price } });
+  } catch (e) { console.error('[farm] pen collect', e); res.status(500).json({ error: 'Không thu được' }); }
 });
 
 // Chấm câu cho đơn "Viết câu": quy tắc trước, có Groq thì nhờ AI nhận xét thêm

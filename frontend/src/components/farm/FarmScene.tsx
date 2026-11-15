@@ -10,7 +10,7 @@ import { isWetWeather, type WeatherKind } from "@/lib/farm/weather";
 export type SceneMode =
   | { type: "normal" }
   | { type: "edit"; selected: { kind: "plot" | "decor"; id: string } | null }
-  | { type: "place"; itemKey: string; label: string };
+  | { type: "place"; itemKey: string; label: string; variant?: "build" | "now" };
 
 // Chữ thưởng nổi lên trên 1 ô đất (x,y là toạ độ lưới)
 export type FloatText = { id: number; x: number; y: number; text: string; tone: "coin" | "xp" | "gem" | "bad" | "item" };
@@ -23,7 +23,7 @@ type Props = {
   onTileClick?: (x: number, y: number) => void; onPlotClick?: (plot: PlotView) => void;
   zoom?: number; onZoomChange?: (z: number) => void; fit?: boolean; petAway?: boolean; // petAway: Qilin đang đi thám hiểm → không hiện trong vườn
   // fit: vừa khít khung (toàn màn hình), không cuộn ngang
-  onDecorClick?: (d: DecorPlaced) => void; onFactoryClick?: (d: DecorPlaced) => void; onPetClick?: () => void;
+  onDecorClick?: (d: DecorPlaced) => void; onFactoryClick?: (d: DecorPlaced) => void; onPenClick?: (d: DecorPlaced) => void; onPetClick?: () => void;
 };
 
 const TOP_PAD = 90;
@@ -43,7 +43,7 @@ export function liveStatus(plot: PlotView, now: number) {
   return { status: now >= ready ? ("READY" as const) : ("GROWING" as const), growth, msLeft: ready - now };
 }
 
-export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", zoom = 1, onZoomChange, fit, petAway, onTileClick, onPlotClick, onDecorClick, onFactoryClick, onPetClick }: Props) {
+export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", zoom = 1, onZoomChange, fit, petAway, onTileClick, onPlotClick, onDecorClick, onFactoryClick, onPenClick, onPetClick }: Props) {
   const W = farm.gridW, H = farm.gridH;
   const originX = (H * TILE_W) / 2;
   const vbW = ((W + H) * TILE_W) / 2;
@@ -234,13 +234,15 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
             const item = catalog.decor[d.key];
             const sel = selectedId === d.uid;
             const fac = catalog.factories?.[d.key];
+            const pen = catalog.pens?.[d.key];
             const canEdit = !readOnly && mode.type === "edit";
-            const canOpen = !readOnly && mode.type === "normal" && !!fac;
+            const canOpen = !readOnly && mode.type === "normal" && (!!fac || !!pen);
             const n = item?.fam ? { xp: joins(item, d, "xp", x + 1, y), xm: joins(item, d, "xm", x - 1, y), yp: joins(item, d, "yp", x, y + 1), ym: joins(item, d, "ym", x, y - 1) } : undefined;
             const busy = !!d.job && new Date(d.job.readyAt).getTime() > now;
-            const meta: DecorMeta = { fam: item?.fam, gate: item?.gate, style: item?.style, factory: fac ? { wall: fac.wall, roof: fac.roof, emoji: fac.emoji, busy } : undefined };
+            const building = !!d.build && new Date(d.build.readyAt).getTime() > now;
+            const meta: DecorMeta = { fam: item?.fam, gate: item?.gate, style: item?.style, factory: fac ? { wall: fac.wall, roof: fac.roof, emoji: fac.emoji, busy } : undefined, pen: pen ? { wall: pen.wall, roof: pen.roof, animal: pen.animal, animals: d.animals || 0, building } : undefined };
             return (
-              <g key={`d${d.uid}`} className={`${canEdit || canOpen ? "farm-tile" : ""} ${sel ? "farm-tile-selected" : ""}`} onClick={(e) => { e.stopPropagation(); if (canEdit) onDecorClick?.(d); else if (canOpen) onFactoryClick?.(d); }}>
+              <g key={`d${d.uid}`} className={`${canEdit || canOpen ? "farm-tile" : ""} ${sel ? "farm-tile-selected" : ""}`} onClick={(e) => { e.stopPropagation(); if (canEdit) onDecorClick?.(d); else if (canOpen) { if (pen) onPenClick?.(d); else onFactoryClick?.(d); } }}>
                 <DecorSprite itemKey={d.key} emoji={item?.emoji || "❔"} cx={cx} cy={cy} n={n} r={d.r ? 1 : 0} meta={meta} />
               </g>
             );
@@ -261,26 +263,40 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
             </g>
           );
         })}
-        {/* nhà máy: thanh tiến độ / bong bóng "xong rồi" */}
-        {farm.layout.filter((d) => d.job && catalog.factories?.[d.key]).map((d) => {
+        {/* nhà máy + chuồng: thanh tiến độ (đang xây / đang chạy) hoặc bong bóng "xong rồi" */}
+        {farm.layout.map((d) => {
+          const fac = catalog.factories?.[d.key]; const pen = catalog.pens?.[d.key];
+          if (!fac && !pen) return null;
           const { cx, cy } = toScreen(d.x, d.y);
-          const left = new Date(d.job!.readyAt).getTime() - now;
-          const fac = catalog.factories[d.key];
-          const rec = fac.recipes.find((r) => r.id === d.job!.recipe);
-          const prod = rec ? catalog.products[rec.product] : null;
-          if (left <= 0) return (
-            <g key={`j${d.uid}`} transform={`translate(${cx} ${cy - 96})`} pointerEvents="none"><g className="farm-ready-marker">
+          const ring = (emoji: string) => (
+            <g key={`j${d.uid}`} transform={`translate(${cx} ${cy - (pen ? 70 : 96)})`} pointerEvents="none"><g className="farm-ready-marker">
               <circle cx={0} cy={0} r={15} fill="#f9a95a" stroke="#fff" strokeWidth={2.5} />
-              <text x={0} y={6} textAnchor="middle" fontSize={17} style={{ fontFamily: "'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif" }}>{prod?.emoji || "!"}</text>
+              <text x={0} y={6} textAnchor="middle" fontSize={17} style={{ fontFamily: "'Segoe UI Emoji','Apple Color Emoji','Noto Color Emoji',sans-serif" }}>{emoji}</text>
             </g></g>
           );
-          const total = (rec?.minutes || 1) * 60000; const pct = Math.max(0, Math.min(1, 1 - left / total));
-          return (
-            <g key={`j${d.uid}`} transform={`translate(${cx} ${cy + 24})`} pointerEvents="none">
+          const bar = (pct: number, label: string) => (
+            <g key={`j${d.uid}`} transform={`translate(${cx} ${cy + 26})`} pointerEvents="none">
               <rect x={-22} y={0} width={44} height={6} rx={3} className="farm-growth-bg" /><rect x={-22} y={0} width={44 * pct} height={6} rx={3} className="farm-growth-fg" />
-              <text x={0} y={17} textAnchor="middle" fontSize={11} fontWeight={700} fill="#1f2d3d" style={{ paintOrder: "stroke", stroke: "#fff", strokeWidth: 3 }}>{prod?.emoji} {formatCountdown(left)}</text>
+              <text x={0} y={17} textAnchor="middle" fontSize={11} fontWeight={700} fill="#1f2d3d" style={{ paintOrder: "stroke", stroke: "#fff", strokeWidth: 3 }}>{label}</text>
             </g>
           );
+          if (pen && d.build) {
+            const left = new Date(d.build.readyAt).getTime() - now;
+            if (left > 0) return bar(Math.max(0, Math.min(1, 1 - left / (pen.buildMinutes * 60000))), `🔨 ${formatCountdown(left)}`);
+            return ring("🏠");
+          }
+          if (!d.job) return null;
+          const left = new Date(d.job.readyAt).getTime() - now;
+          if (pen) {
+            const prod = catalog.products[d.job.product || pen.product];
+            if (left <= 0) return ring(prod?.emoji || "!");
+            return bar(Math.max(0, Math.min(1, 1 - left / (pen.minutes * 60000))), `${prod?.emoji} ${formatCountdown(left)}`);
+          }
+          const rec = fac!.recipes.find((r) => r.id === d.job!.recipe);
+          const prod = rec ? catalog.products[rec.product] : null;
+          if (left <= 0) return ring(prod?.emoji || "!");
+          const total = (rec?.minutes || 1) * 60000;
+          return bar(Math.max(0, Math.min(1, 1 - left / total)), `${prod?.emoji} ${formatCountdown(left)}`);
         })}
         {/* thú cưng + vật nuôi đi dạo */}
         <Roamers W={W} H={H} toScreen={toScreen} blocked={blocked} animals={animals} sleeping={!!sky.sleeping} petAway={petAway} pet={pet} outfit={outfit} petJumping={petJumping} hearts={hearts} wet={wet} onPetClick={onPetClick} />

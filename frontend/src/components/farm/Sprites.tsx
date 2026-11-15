@@ -354,6 +354,44 @@ export function FactorySprite({ cx, cy, wall, roof, emoji, busy, mirror }: { cx:
   );
 }
 
+// ── Chuồng trại: sân rào + chuồng nhỏ + vật nuôi nhún nhảy; đang xây thì là giàn giáo ───────────────────────
+export function PenSprite({ cx, cy, wall, roof, animal, animals, building }: { cx: number; cy: number; wall: string; roof: string; animal: string; animals: number; building?: boolean }) {
+  const T: Pt = [cx, cy - 25], R: Pt = [cx + 50, cy], B: Pt = [cx, cy + 25], L: Pt = [cx - 50, cy];
+  const rail = (P: Pt, Q: Pt, h: number, k: string, w = 2.6) => <line key={k} x1={P[0]} y1={P[1] - h} x2={Q[0]} y2={Q[1] - h} stroke="#a9703b" strokeWidth={w} strokeLinecap="round" />;
+  const post = (P: Pt, h: number, k: string) => <line key={k} x1={P[0]} y1={P[1]} x2={P[0]} y2={P[1] - h} stroke="#7a4f26" strokeWidth={3.4} strokeLinecap="round" />;
+  const slots: Pt[] = [[cx - 20, cy + 4], [cx + 16, cy + 6], [cx - 3, cy + 15], [cx + 24, cy - 3]];
+  if (building) {
+    return (
+      <g>
+        <polygon points={diamondPoints(cx, cy, TILE_W - 8, TILE_H - 4)} fill="#d8c39a" stroke="#b49a68" strokeWidth={1.5} strokeDasharray="6 4" />
+        {[L, T, R, B].map((P, i) => post([P[0] * 0.78 + cx * 0.22, P[1] * 0.78 + cy * 0.22], 30, `bp${i}`))}
+        {rail([L[0] * 0.78 + cx * 0.22, L[1] * 0.78 + cy * 0.22], [T[0] * 0.78 + cx * 0.22, T[1] * 0.78 + cy * 0.22], 26, "bh1")}
+        {rail([T[0] * 0.78 + cx * 0.22, T[1] * 0.78 + cy * 0.22], [R[0] * 0.78 + cx * 0.22, R[1] * 0.78 + cy * 0.22], 26, "bh2")}
+        {rail([L[0] * 0.78 + cx * 0.22, L[1] * 0.78 + cy * 0.22], [B[0] * 0.78 + cx * 0.22, B[1] * 0.78 + cy * 0.22], 14, "bh3")}
+        <g className="farm-hop"><text x={cx} y={cy - 8} textAnchor="middle" fontSize={26} style={{ fontFamily: EMOJI_FONT }}>🔨</text></g>
+      </g>
+    );
+  }
+  return (
+    <g>
+      <polygon points={diamondPoints(cx, cy, TILE_W - 6, TILE_H - 3)} fill="#d6c3a0" stroke="#b49a68" strokeWidth={1.2} />
+      {rail(L, T, 9, "r1")}{rail(L, T, 16, "r2")}{rail(T, R, 9, "r3")}{rail(T, R, 16, "r4")}
+      {post(L, 20, "p1")}{post(T, 20, "p2")}{post(R, 20, "p3")}
+      {/* chuồng nhỏ phía sau */}
+      <Prism cx={cx} cy={cy - 9} rw={17} rh={8.5} h={18} c={{ front: wall, cap: shade(wall, 0.86), top: wall, line: "#6b5232" }} />
+      <polygon points={pts([[cx - 21, cy - 9 - 16], [cx, cy - 9 + 11 - 16], [cx, cy - 9 - 16 - 22]])} fill={roof} stroke={shade(roof, 0.6)} strokeWidth={1} />
+      <polygon points={pts([[cx, cy - 9 + 11 - 16], [cx + 21, cy - 9 - 16], [cx, cy - 9 - 16 - 22]])} fill={shade(roof, 0.8)} stroke={shade(roof, 0.6)} strokeWidth={1} />
+      {slots.slice(0, Math.max(0, Math.min(4, animals))).map((p, i) => (
+        <g key={i}><g className="farm-hop" style={{ animationDelay: `${i * 0.45}s`, animationIterationCount: "infinite", animationDuration: `${1.1 + (i % 2) * 0.35}s` }}>
+          <ellipse cx={p[0]} cy={p[1] + 3} rx={8} ry={3} fill="rgba(31,45,61,.18)" />
+          <text x={p[0]} y={p[1] + 4} textAnchor="middle" fontSize={20} style={{ fontFamily: EMOJI_FONT }}>{animal}</text>
+        </g></g>
+      ))}
+      {rail(L, B, 6, "f1")}{rail(B, R, 6, "f2")}{post(B, 12, "p4")}
+    </g>
+  );
+}
+
 // Cỡ chữ emoji theo món (cây/nhà to, hoa/nấm nhỏ)
 const EMOJI_SIZE: Record<string, number> = {
   tree: 58, pine: 58, cherry: 58, palm: 60, bamboo: 48, house: 62, windmill: 66, tent: 50, castle: 70, pagoda: 64, hut: 56, barnhouse: 58, tractor: 52, bridge: 56, boat: 44,
@@ -372,13 +410,14 @@ export function EmojiDecor({ emoji, size = 40, cx, cy }: { emoji: string; size?:
   );
 }
 
-export type DecorMeta = { fam?: "wall" | "fence" | "hedge"; gate?: boolean; style?: string; factory?: { wall: string; roof: string; emoji: string; busy?: boolean } };
+export type DecorMeta = { pen?: { wall: string; roof: string; animal: string; animals: number; building: boolean }; fam?: "wall" | "fence" | "hedge"; gate?: boolean; style?: string; factory?: { wall: string; roof: string; emoji: string; busy?: boolean } };
 // r: hướng (0/1). Tường/rào/cổng đổi trục x ↔ y; đồ khác lật ngang. meta lấy từ catalog (gate/fam/style) + nhà máy.
 export function DecorSprite({ itemKey, emoji, cx, cy, isPath, n, r = 0, meta }: { itemKey?: string; emoji: string; cx: number; cy: number; isPath?: boolean; n?: Neighbors; r?: 0 | 1; meta?: DecorMeta }) {
   if (isPath) return <polygon points={diamondPoints(cx, cy, TILE_W - 6, TILE_H - 3)} fill="#d6c3a5" stroke="#b9a47f" strokeWidth={1.5} />;
   const nb = n || { xp: false, xm: false, yp: false, ym: false };
   if (meta?.gate && meta.fam) return <GatePiece style={meta.style || "wood"} fam={meta.fam} cx={cx} cy={cy} axis={r ? 1 : 0} n={nb} />;
   if (meta?.fam) return <ConnectedPiece kind={meta.fam} cx={cx} cy={cy} n={nb} axis={r ? 1 : 0} />;
+  if (meta?.pen) return <PenSprite cx={cx} cy={cy} wall={meta.pen.wall} roof={meta.pen.roof} animal={meta.pen.animal} animals={meta.pen.animals} building={meta.pen.building} />;
   if (meta?.factory) return <FactorySprite cx={cx} cy={cy} wall={meta.factory.wall} roof={meta.factory.roof} emoji={meta.factory.emoji} busy={meta.factory.busy} mirror={!!r} />;
   if (r) return <g transform={`translate(${cx} 0) scale(-1 1) translate(${-cx} 0)`}><DecorBody itemKey={itemKey} emoji={emoji} cx={cx} cy={cy} /></g>;
   return <DecorBody itemKey={itemKey} emoji={emoji} cx={cx} cy={cy} />;

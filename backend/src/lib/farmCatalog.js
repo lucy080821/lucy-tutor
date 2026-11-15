@@ -226,9 +226,35 @@ const FACTORIES = {
 };
 for (const [k, f] of Object.entries(FACTORIES)) DECOR[k] = { name: f.name, emoji: f.emoji, price: f.price, currency: f.currency, minLevel: f.minLevel, cat: 'factory', factory: true };
 
+// ── Chuồng trại: nuôi vật nuôi → cho ăn (nông sản trong kho) → thu sữa/trứng/... ─────────────────────────
+// XÂY: rẻ nhưng phải đợi `buildMinutes`; MUA NGAY: có liền nhưng đắt hơn nhiều (~3,5 lần). Mỗi loại chuồng chỉ có 1 cái.
+// Mỗi vật nuôi tốn `feed` (mỗi con) mỗi lần cho ăn, sau `minutes` phút cả chuồng cho `animals` sản phẩm.
+const PENS = {
+  coop:      { name: 'Chuồng gà',  emoji: '🐔', animal: '🐔', animalName: 'Gà mái',  product: 'egg',      capacity: 4, animalPrice: 120, feed: { corn: 1 },      minutes: 20, build: 250,  buildMinutes: 8,  buyNow: 900,  minLevel: 3, roof: '#c0392b', wall: '#f3d9a4' },
+  duckpen:   { name: 'Chuồng vịt', emoji: '🦆', animal: '🦆', animalName: 'Vịt bầu', product: 'duck_egg', capacity: 4, animalPrice: 160, feed: { wheat: 2 },     minutes: 30, build: 400,  buildMinutes: 15, buyNow: 1400, minLevel: 4, roof: '#2e86c1', wall: '#d6eaf8' },
+  cowbarn:   { name: 'Chuồng bò',  emoji: '🐄', animal: '🐄', animalName: 'Bò sữa', product: 'milk',     capacity: 3, animalPrice: 350, feed: { carrot: 2 },    minutes: 45, build: 700,  buildMinutes: 30, buyNow: 2600, minLevel: 5, roof: '#8e44ad', wall: '#f4ecd8' },
+  pigsty:    { name: 'Chuồng heo', emoji: '🐖', animal: '🐖', animalName: 'Heo hồng', product: 'bacon',   capacity: 3, animalPrice: 420, feed: { corn: 2 },      minutes: 60, build: 900,  buildMinutes: 45, buyNow: 3300, minLevel: 6, roof: '#b9770e', wall: '#fadbd8' },
+  sheepfold: { name: 'Chuồng cừu', emoji: '🐑', animal: '🐑', animalName: 'Cừu bông', product: 'wool',    capacity: 3, animalPrice: 500, feed: { sunflower: 2 }, minutes: 90, build: 1200, buildMinutes: 60, buyNow: 4200, minLevel: 7, roof: '#27ae60', wall: '#eafaf1' },
+};
+Object.assign(PRODUCTS, {
+  egg:      { name: 'Trứng gà',      emoji: '🥚', price: 14 },
+  duck_egg: { name: 'Trứng vịt',     emoji: '🥚', price: 20 },
+  milk:     { name: 'Sữa bò',        emoji: '🥛', price: 28 },
+  bacon:    { name: 'Thịt xông khói', emoji: '🥓', price: 40 },
+  wool:     { name: 'Len cừu',       emoji: '🧶', price: 55 },
+  cake:     { name: 'Bánh kem',      emoji: '🎂', price: 150 },
+  cheese:   { name: 'Phô mai',       emoji: '🧀', price: 100 },
+  sandwich: { name: 'Sandwich xông khói', emoji: '🥪', price: 230 },
+});
+Object.assign(PRODUCE_PRICE, Object.fromEntries(Object.entries(PRODUCTS).map(([k, v]) => [k, v.price])));
+// Công thức nhà máy dùng sản phẩm chăn nuôi làm nguyên liệu (thêm đầu ra giá trị cao cho trứng/sữa/thịt)
+FACTORIES.bakery.recipes.push({ id: 'cake', product: 'cake', inputs: { egg: 2, milk: 1, wheat: 2 }, minutes: 12 });
+FACTORIES.kitchen.recipes.push({ id: 'cheese', product: 'cheese', inputs: { milk: 2 }, minutes: 8 }, { id: 'sandwich', product: 'sandwich', inputs: { bread: 1, bacon: 1, tomato: 1 }, minutes: 15 });
+for (const [k, p] of Object.entries(PENS)) DECOR[k] = { name: p.name, emoji: p.emoji, price: p.build, currency: 'coins', minLevel: p.minLevel, cat: 'pen', pen: true, buyNowPrice: p.buyNow, buildMinutes: p.buildMinutes };
+
 const DECOR_CATS = [
   { id: 'all', name: 'Tất cả' }, { id: 'plant', name: 'Cây & hoa' }, { id: 'animal', name: 'Vật nuôi' },
-  { id: 'build', name: 'Đường & rào' }, { id: 'gate', name: 'Cổng' }, { id: 'factory', name: 'Nhà máy' }, { id: 'building', name: 'Công trình' }, { id: 'fun', name: 'Vui chơi' },
+  { id: 'build', name: 'Đường & rào' }, { id: 'gate', name: 'Cổng' }, { id: 'factory', name: 'Nhà máy' }, { id: 'pen', name: 'Chuồng trại' }, { id: 'building', name: 'Công trình' }, { id: 'fun', name: 'Vui chơi' },
 ];
 
 // ── Trang phục Qilin (đeo lên ảnh linh vật theo slot; emoji, không vẽ tay) ──────
@@ -449,7 +475,7 @@ function vnDay(d = new Date()) {
 // Gói gửi về frontend (chỉ phần cần hiển thị giá/tên)
 function publicCatalog() {
   return {
-    crops: CROPS, products: PRODUCTS, factories: FACTORIES, decor: DECOR, decorCats: DECOR_CATS, outfits: OUTFITS, outfitSlots: OUTFIT_SLOTS, producePrice: PRODUCE_PRICE, barnTiers: BARN_TIERS, barnQuiz: BARN_QUIZ, expansions: EXPANSIONS, wheel: WHEEL.map(({ id, label, kind }) => ({ id, label, kind })),
+    crops: CROPS, products: PRODUCTS, factories: FACTORIES, pens: PENS, decor: DECOR, decorCats: DECOR_CATS, outfits: OUTFITS, outfitSlots: OUTFIT_SLOTS, producePrice: PRODUCE_PRICE, barnTiers: BARN_TIERS, barnQuiz: BARN_QUIZ, expansions: EXPANSIONS, wheel: WHEEL.map(({ id, label, kind }) => ({ id, label, kind })),
     startPlots: START_PLOTS, maxPlots: MAX_PLOTS, firstGrowMinutes: FIRST_GROW_MINUTES,
     harvestCoins: HARVEST_COINS, harvestXp: HARVEST_XP, masteredBonus: MASTERED_BONUS, barnBonus: BARN_BONUS,
     orderTrashCost: ORDER_TRASH_COST, decorSellRate: DECOR_SELL_RATE, gemSellCoins: GEM_SELL_COINS,
@@ -461,7 +487,7 @@ function publicCatalog() {
 module.exports = {
   CROPS, CROP_KEYS, TOPIC_CROP, cropForTopic, FIRST_GROW_MINUTES,
   levelFor, harvestsForLevel, START_PLOTS, MAX_PLOTS, plotPrice, EXPANSIONS,
-  DECOR, PRODUCTS, FACTORIES, DECOR_SELL_RATE, GEM_SELL_COINS, sellValue, HARVEST_COINS, HARVEST_XP, MASTERED_BONUS, BARN_BONUS, WITHER_PENALTY_COINS,
+  DECOR, PRODUCTS, FACTORIES, PENS, DECOR_SELL_RATE, GEM_SELL_COINS, sellValue, HARVEST_COINS, HARVEST_XP, MASTERED_BONUS, BARN_BONUS, WITHER_PENALTY_COINS,
   CUSTOMERS, ORDER_SLOTS, makeOrderTemplate, orderDifficulty, ORDER_TRASH_COST,
   PRODUCE_PRICE, PRODUCE_PER_HARVEST, BARN_TIERS, BARN_FULL_SELL_RATE, BARN_QUIZ, OUTFITS, OUTFIT_SLOTS, DECOR_CATS,
   WHEEL, WHEEL_DECOR_POOL, EARLY_REWARD_RATE, EARLY_NEXT_FACTOR, WATER_CUT, WATER_MAX_PER_DAY, WATER_QUIZ_SIZE, WATER_REWARD, PET_TRIPS, PET_TRIP_WORDS_PER_DAY, PET_TRIP_LEVEL_BONUS, PET_PERKS, petBuffs, PET_FEED_REWARD, PET_PAT_XP, PET_LEVELS, petLevelFor,

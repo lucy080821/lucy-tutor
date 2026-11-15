@@ -10,7 +10,7 @@ import { PetSprite } from "./Sprites";
 // Trang phục: mua xong mặc luôn, đổi đồ ở panel thú cưng.
 export default function ShopPanel({ userId, farm, catalog, onClose, onPick, onExpand, onState, onToast }: {
   userId: string; farm: FarmView; catalog: Catalog; onClose: () => void;
-  onPick: (itemKey: string, label: string) => void; onExpand: () => void; onState: (s: FarmState) => void; onToast: (m: string) => void;
+  onPick: (itemKey: string, label: string, variant?: "build" | "now") => void; onExpand: () => void; onState: (s: FarmState) => void; onToast: (m: string) => void;
 }) {
   const [tab, setTab] = useState<"DECOR" | "OUTFIT" | "LAND" | "SELL">("DECOR");
   const [cat, setCat] = useState("all");
@@ -79,6 +79,32 @@ export default function ShopPanel({ userId, farm, catalog, onClose, onPick, onEx
               const ok = afford(d.price, d.currency);
               const have = !!d.factory && farm.layout.some((l) => l.key === key);
               const fac = d.factory ? catalog.factories[key] : undefined;
+              const penDef = d.pen ? catalog.pens[key] : undefined;
+              const penHave = !!penDef && farm.layout.some((l) => l.key === key);
+              if (penDef) {
+                const canBuild = !locked && !penHave && farm.coins >= d.price, canNow = !locked && !penHave && farm.coins >= (d.buyNowPrice || 0);
+                return (
+                  <div key={key} className="relative rounded-2xl border border-line bg-white p-3 col-span-2">
+                    <div className="flex items-center gap-3">
+                      <div className="text-4xl leading-none">{d.emoji}</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-foreground leading-tight">{d.name}</p>
+                        <p className="text-[11px] text-muted leading-tight">{penDef.capacity} chỗ · ra {catalog.products[penDef.product].emoji} {catalog.products[penDef.product].name.toLowerCase()}</p>
+                      </div>
+                      {locked && <span className="ui-badge text-[10px] bg-slate-100 text-slate-600">🔒 Cấp {d.minLevel}</span>}
+                      {penHave && <span className="ui-badge text-[10px] bg-emerald-100 text-emerald-800">Đã có</span>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <button disabled={!canBuild} onClick={() => onPick(key, d.name, "build")} className="rounded-xl border border-line px-2 py-2 text-left hover:border-primary disabled:opacity-50">
+                        <p className="text-sm font-extrabold text-primary">🔨 Xây · 🪙 {d.price}</p><p className="text-[11px] text-muted">đợi {d.buildMinutes} phút</p>
+                      </button>
+                      <button disabled={!canNow} onClick={() => onPick(key, d.name, "now")} className="rounded-xl border border-amber-300 bg-amber-50 px-2 py-2 text-left hover:border-amber-500 disabled:opacity-50">
+                        <p className="text-sm font-extrabold text-amber-800">⚡ Mua ngay · 🪙 {d.buyNowPrice}</p><p className="text-[11px] text-amber-700">có liền, đắt gấp {Math.round((d.buyNowPrice || 0) / d.price * 10) / 10} lần</p>
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
               return (
                 <button key={key} disabled={locked || !ok || have} onClick={() => onPick(key, d.name)}
                   className="farm-item relative rounded-2xl border border-line bg-white p-3 text-left disabled:opacity-50 disabled:cursor-not-allowed hover:border-primary">

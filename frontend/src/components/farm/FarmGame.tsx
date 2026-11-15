@@ -20,12 +20,13 @@ import WheelPanel from "./WheelPanel";
 import NeighborsPanel from "./NeighborsPanel";
 import BarnPanel from "./BarnPanel";
 import FactoryPanel from "./FactoryPanel";
+import PenPanel from "./PenPanel";
 import GrowingPanel from "./GrowingPanel";
 import WaterModal from "./WaterModal";
 import QuestsPanel from "./QuestsPanel";
 import Modal from "./Modal";
 
-type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "FACTORY" | "GROW" | "WATER" | "QUESTS" | "WEATHER" | "HELP";
+type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "FACTORY" | "PEN" | "GROW" | "WATER" | "QUESTS" | "WEATHER" | "HELP";
 const TUT_KEY = "lucy_farm_tut_v2";
 
 async function confetti(opts: any) {
@@ -42,6 +43,7 @@ export default function FarmGame({ userId }: { userId: string }) {
   const [questTab, setQuestTab] = useState<"DAILY" | "ACH">("DAILY");
   const [activePlot, setActivePlot] = useState<PlotView | null>(null);
   const [factoryUid, setFactoryUid] = useState<string | null>(null);
+  const [penUid, setPenUid] = useState<string | null>(null);
   const [earlyMode, setEarlyMode] = useState(false); // thu hoạch kiểu "ôn sớm" cho cây chưa chín
   // Phóng to/thu nhỏ cảnh (1–3×) và ẩn/hiện thanh điều hướng trên điện thoại (nhớ lựa chọn)
   const [zoom, setZoom] = useState(1);
@@ -175,9 +177,9 @@ export default function FarmGame({ userId }: { userId: string }) {
     if (!state) return;
     try {
       if (mode.type === "place") {
-        const s = await farmApi.buy(userId, mode.itemKey, x, y); applyState(s);
+        const s = await farmApi.buy(userId, mode.itemKey, x, y, mode.variant); applyState(s);
         addFloat(x, y, `-${s.bought?.price ?? ""}`, "bad");
-        toast(`Đã đặt ${mode.label} · −${s.bought?.price ?? ""} ${s.bought?.currency === "gems" ? "kim cương" : "xu"}`);
+        toast(s.bought?.build ? `Bắt đầu xây ${mode.label} · −${s.bought?.price} xu` : `Đã đặt ${mode.label} · −${s.bought?.price ?? ""} ${s.bought?.currency === "gems" ? "kim cương" : "xu"}`);
         if (!["path", "fence", "flower", "rock", "wall", "bush"].includes(mode.itemKey)) setMode({ type: "normal" });
         else if (s.farm.coins < (s.catalog.decor[mode.itemKey]?.price ?? 0)) setMode({ type: "normal" });
       } else if (mode.type === "edit" && mode.selected) {
@@ -192,6 +194,7 @@ export default function FarmGame({ userId }: { userId: string }) {
     sfx.pop();
     setMode({ type: "edit", selected: mode.selected?.id === d.uid ? null : { kind: "decor", id: d.uid } });
   };
+  const onPenClick = (d: DecorPlaced) => { sfx.pop(); setPenUid(d.uid); setPanel("PEN"); };
   const onFactoryClick = (d: DecorPlaced) => { sfx.pop(); setFactoryUid(d.uid); setPanel("FACTORY"); };
   const selectedDecor = state && mode.type === "edit" && mode.selected?.kind === "decor" ? state.farm.layout.find((l) => l.uid === mode.selected!.id) : undefined;
   const rotateSelected = async () => {
@@ -294,7 +297,7 @@ export default function FarmGame({ userId }: { userId: string }) {
 
         <div className={fs ? "relative farm-fs-scene" : "relative"}>
           <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} sky={sky} weather={weather} zoom={effZoom} onZoomChange={(z) => setZoom(clampZoom(z / zoomBase))} fit={fs} petAway={!!farm.pet.trip}
-            onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onFactoryClick={onFactoryClick} onPetClick={onPetClick} />
+            onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onFactoryClick={onFactoryClick} onPenClick={onPenClick} onPetClick={onPetClick} />
           {readyPlots.length > 0 && mode.type === "normal" && (
             <button onClick={() => { sfx.click(); setActivePlot(readyPlots[0]); setPanel("HARVEST"); }} className="absolute top-3 left-3 z-[5] btn-highlight rounded-full pl-3 pr-4 py-2 font-extrabold shadow-card farm-toast inline-flex items-center gap-2"><IconSprout size={18} />{readyPlots.length} cây chín</button>
           )}
@@ -361,7 +364,7 @@ export default function FarmGame({ userId }: { userId: string }) {
         <HarvestModal userId={userId} plot={activePlot} cropName={catalog.crops[activePlot.cropKey || ""]?.name || "cây"} nextReadyPlot={nextReadyAfter(activePlot.id)}
           early={earlyMode} onClose={() => { setPanel(null); setEarlyMode(false); }} onState={applyState} onNext={(p) => { setEarlyMode(false); setActivePlot(p); }} catalog={catalog} />
       )}
-      {panel === "SHOP" && <ShopPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} onPick={(k, label) => { setPanel(null); setMode({ type: "place", itemKey: k, label }); }} onExpand={expand} />}
+      {panel === "SHOP" && <ShopPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} onPick={(k, label, variant) => { setPanel(null); setMode({ type: "place", itemKey: k, label, variant }); }} onExpand={expand} />}
       {panel === "PET" && <PetPanel userId={userId} farm={farm} catalog={catalog} now={now} onClose={() => { setPanel(null); load(); }} onState={applyState} />}
       {panel === "WHEEL" && <WheelPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} />}
       {panel === "NEIGHBORS" && <NeighborsPanel userId={userId} catalog={catalog} sky={sky} weather={weather} onClose={() => setPanel(null)} onToast={toast} onRefresh={load} />}
@@ -372,6 +375,7 @@ export default function FarmGame({ userId }: { userId: string }) {
       {panel === "WATER" && activePlot && (() => { const fresh = state.plots.find((p) => p.id === activePlot.id) || activePlot; return (
         <WaterModal userId={userId} plot={fresh} now={now} onClose={() => setPanel("GROW")} onState={applyState} onToast={toast} />
       ); })()}
+      {panel === "PEN" && penUid && <PenPanel userId={userId} uid={penUid} farm={farm} catalog={catalog} now={now} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "FACTORY" && factoryUid && <FactoryPanel userId={userId} uid={factoryUid} farm={farm} catalog={catalog} now={now} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "BARN" && <BarnPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "WEATHER" && <WeatherPanel status={wx.status} data={wx.data} error={wx.error} sky={sky} previewKind={wxPreview} onEnable={wx.enable} onDisable={wx.disable} onRefresh={wx.refresh} onClose={() => setPanel(null)} />}
