@@ -28,7 +28,7 @@ export type FarmView = {
   coins: number; gems: number; gridW: number; gridH: number; layout: DecorPlaced[];
   harvestCount: number; witherCount: number; barnCount: number;
   level: number; levelStart: number; nextLevelAt: number;
-  plotCount: number; plotPrice: number | null; nextExpansion: { w: number; h: number; price: number; minLevel: number } | null;
+  plotCount: number; plotPrice: number | null; nextExpansion: { price: number; minLevel: number; canW: boolean; canH: boolean } | null;
   pet: { name: string; xp: number; level: number; fedToday: boolean; pats: number; trip: PetTripActive | null; buffs: PetBuffs };
   canSpin: boolean; boostHarvests: number;
   inventory: Record<string, number>; barnCapacity: number; barnUsed: number; barnTier: number; nextBarnTier: { capacity: number; price: number } | null;
@@ -51,7 +51,7 @@ export type Catalog = {
   producePrice: Record<string, number>;
   barnTiers: { capacity: number; price: number }[];
   barnQuiz: { size: number; coinsPerCorrect: number; dailyRewarded: number };
-  expansions: { w: number; h: number; price: number; minLevel: number }[];
+  expand: { baseW: number; baseH: number; maxW: number; maxH: number };
   wheel: { id: number; label: string; kind: string }[];
   startPlots: number; maxPlots: number; firstGrowMinutes: number;
   harvestCoins: Record<string, number>; harvestXp: number; masteredBonus: { coins: number; gems: number }; barnBonus: { coins: number };
@@ -134,7 +134,7 @@ export const farmApi = {
   dig: (userId: string, plotId: string) => post<FarmState>(`/plots/${plotId}/dig`, { userId }),
   store: (userId: string, plotId: string) => post<FarmState>(`/plots/${plotId}/store`, { userId }),
   barn: (userId: string) => get<BarnItem[]>(`/barn/${userId}`),
-  buy: (userId: string, itemKey: string, x?: number, y?: number, variant?: "build" | "now") => post<FarmState>("/buy", { userId, itemKey, x, y, variant }),
+  buy: (userId: string, itemKey: string, x?: number, y?: number, variant?: "build" | "now" | "w" | "h") => post<FarmState>("/buy", { userId, itemKey, x, y, variant }),
   penFinish: (userId: string, uid: string) => post<FarmState>("/pen/finish", { userId, uid }),
   penAnimal: (userId: string, uid: string) => post<FarmState>("/pen/animal", { userId, uid }),
   penFeed: (userId: string, uid: string) => post<FarmState>("/pen/feed", { userId, uid }),

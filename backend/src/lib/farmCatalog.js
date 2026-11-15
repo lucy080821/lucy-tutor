@@ -70,12 +70,12 @@ function plotPrice(currentCount) {
   const n = Math.max(0, currentCount - START_PLOTS);
   return 150 + n * 80 + Math.floor(n * n * 6);
 }
-const EXPANSIONS = [
-  { w: 8,  h: 6,  price: 0,    minLevel: 1 },
-  { w: 10, h: 7,  price: 700,  minLevel: 3 },
-  { w: 12, h: 8,  price: 2200, minLevel: 6 },
-  { w: 14, h: 9,  price: 6000, minLevel: 10 },
-];
+// Mở rộng đất: mỗi lần +1 hàng theo CHIỀU NGANG (w) hoặc CHIỀU DỌC (h) do người chơi chọn; giá/cấp tăng theo số lần đã mở
+const EXPAND = { baseW: 8, baseH: 6, maxW: 16, maxH: 12 };
+function expansionStep(w, h) { return Math.max(0, (w - EXPAND.baseW) + (h - EXPAND.baseH)); } // số lần đã mở
+function expansionCost(n) { // n = lần mở thứ n (bắt đầu từ 1)
+  return { price: Math.round((300 + 200 * (n - 1) + 40 * (n - 1) * (n - 1)) / 50) * 50, minLevel: Math.min(14, 1 + Math.ceil(n * 0.8)) };
+}
 
 // ── Cửa hàng trang trí (giải trí thuần) ───────────────────────────────────────
 // currency: 'coins' | 'gems'. w/h: số ô chiếm. minLevel: cấp mở khoá.
@@ -486,7 +486,7 @@ function vnDay(d = new Date()) {
 // Gói gửi về frontend (chỉ phần cần hiển thị giá/tên)
 function publicCatalog() {
   return {
-    crops: CROPS, products: PRODUCTS, factories: FACTORIES, pens: PENS, decor: DECOR, decorCats: DECOR_CATS, outfits: OUTFITS, outfitSlots: OUTFIT_SLOTS, producePrice: PRODUCE_PRICE, barnTiers: BARN_TIERS, barnQuiz: BARN_QUIZ, expansions: EXPANSIONS, wheel: WHEEL.map(({ id, label, kind }) => ({ id, label, kind })),
+    crops: CROPS, products: PRODUCTS, factories: FACTORIES, pens: PENS, decor: DECOR, decorCats: DECOR_CATS, outfits: OUTFITS, outfitSlots: OUTFIT_SLOTS, producePrice: PRODUCE_PRICE, barnTiers: BARN_TIERS, barnQuiz: BARN_QUIZ, expand: EXPAND, wheel: WHEEL.map(({ id, label, kind }) => ({ id, label, kind })),
     startPlots: START_PLOTS, maxPlots: MAX_PLOTS, firstGrowMinutes: FIRST_GROW_MINUTES,
     harvestCoins: HARVEST_COINS, harvestXp: HARVEST_XP, masteredBonus: MASTERED_BONUS, barnBonus: BARN_BONUS,
     orderTrashCost: ORDER_TRASH_COST, decorSellRate: DECOR_SELL_RATE, gemSellCoins: GEM_SELL_COINS,
@@ -497,7 +497,7 @@ function publicCatalog() {
 
 module.exports = {
   CROPS, CROP_KEYS, TOPIC_CROP, cropForTopic, FIRST_GROW_MINUTES,
-  levelFor, harvestsForLevel, START_PLOTS, MAX_PLOTS, plotPrice, EXPANSIONS,
+  levelFor, harvestsForLevel, START_PLOTS, MAX_PLOTS, plotPrice, EXPAND, expansionStep, expansionCost,
   DECOR, PRODUCTS, FACTORIES, PENS, WAIT_TIERS, waitBonus, DECOR_SELL_RATE, GEM_SELL_COINS, sellValue, HARVEST_COINS, HARVEST_XP, MASTERED_BONUS, BARN_BONUS, WITHER_PENALTY_COINS,
   CUSTOMERS, ORDER_SLOTS, makeOrderTemplate, orderDifficulty, ORDER_TRASH_COST,
   PRODUCE_PRICE, PRODUCE_PER_HARVEST, BARN_TIERS, BARN_FULL_SELL_RATE, BARN_QUIZ, OUTFITS, OUTFIT_SLOTS, DECOR_CATS,

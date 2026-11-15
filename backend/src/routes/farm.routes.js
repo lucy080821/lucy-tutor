@@ -94,8 +94,8 @@ function orderView(o, inventory = {}) {
 
 function farmView(farm, plotCount) {
   const level = C.levelFor(farm.harvestCount);
-  const expIdx = Math.max(0, C.EXPANSIONS.findIndex((e) => e.w === farm.gridW && e.h === farm.gridH));
-  const nextExpansion = C.EXPANSIONS[expIdx + 1] || null;
+  const canW = farm.gridW < C.EXPAND.maxW, canH = farm.gridH < C.EXPAND.maxH;
+  const nextExpansion = canW || canH ? { ...C.expansionCost(C.expansionStep(farm.gridW, farm.gridH) + 1), canW, canH } : null;
   const today = C.vnDay();
   const inventory = parseJSON(farm.inventory, {});
   const barnTierIdx = Math.max(0, C.BARN_TIERS.findIndex((t) => t.capacity === farm.barnCapacity));
@@ -589,12 +589,14 @@ router.post('/buy', async (req, res) => {
     const occ = occupiedSet(farm, plots);
 
     if (itemKey === 'expand') {
-      const idx = C.EXPANSIONS.findIndex((e) => e.w === farm.gridW && e.h === farm.gridH);
-      const next = C.EXPANSIONS[idx + 1];
-      if (!next) return res.status(400).json({ error: 'Đất đã rộng tối đa' });
+      const axis = variant === 'h' ? 'h' : variant === 'w' ? 'w' : null;
+      if (!axis) return res.status(400).json({ error: 'Chọn mở rộng theo chiều ngang hay chiều dọc' });
+      if (axis === 'w' ? farm.gridW >= C.EXPAND.maxW : farm.gridH >= C.EXPAND.maxH) return res.status(400).json({ error: axis === 'w' ? 'Chiều ngang đã rộng tối đa' : 'Chiều dọc đã rộng tối đa' });
+      const next = C.expansionCost(C.expansionStep(farm.gridW, farm.gridH) + 1);
       if (level < next.minLevel) return res.status(400).json({ error: `Cần cấp ${next.minLevel} để mở rộng` });
-      if (farm.coins < next.price) return res.status(400).json({ error: 'Không đủ xu' });
-      await prisma.farmState.update({ where: { userId }, data: { coins: { decrement: next.price }, gridW: next.w, gridH: next.h } });
+      // khoá lạc quan: bấm đôi/song song chỉ mở 1 lần (điều kiện gridW/gridH + đủ xu nằm trong WHERE)
+      const upd = await prisma.farmState.updateMany({ where: { userId, gridW: farm.gridW, gridH: farm.gridH, coins: { gte: next.price } }, data: { coins: { decrement: next.price }, ...(axis === 'w' ? { gridW: { increment: 1 } } : { gridH: { increment: 1 } }) } });
+      if (!upd.count) return res.status(400).json({ error: farm.coins < next.price ? 'Không đủ xu' : 'Thử lại nhé' });
       return res.json(await buildState(userId, { bought: { itemKey } }));
     }
     if (!inGrid(farm, x, y)) return res.status(400).json({ error: 'Vị trí ngoài lưới' });

@@ -216,8 +216,8 @@ export default function FarmGame({ userId }: { userId: string }) {
     farmApi.patPet(userId).catch(() => { });
   };
 
-  const expand = async () => {
-    try { const s = await farmApi.buy(userId, "expand"); applyState(s); setPanel(null); toast(`Đã mở rộng đất lên ${s.farm.gridW}×${s.farm.gridH}`); confetti({}); } catch (e: any) { swalAlert("", e.message, "info"); }
+  const expand = async (axis: "w" | "h") => {
+    try { const s = await farmApi.buy(userId, "expand", undefined, undefined, axis); applyState(s); setPanel(null); toast(`Đã mở rộng đất ${axis === "w" ? "theo chiều ngang" : "theo chiều dọc"} lên ${s.farm.gridW}×${s.farm.gridH}`); confetti({}); } catch (e: any) { swalAlert("", e.message, "info"); }
   };
 
   const closeTut = () => { try { localStorage.setItem(TUT_KEY, "1"); } catch { /* bỏ qua */ } setPanel(null); };

@@ -10,7 +10,7 @@ import { PetSprite } from "./Sprites";
 // Trang phục: mua xong mặc luôn, đổi đồ ở panel thú cưng.
 export default function ShopPanel({ userId, farm, catalog, onClose, onPick, onExpand, onState, onToast }: {
   userId: string; farm: FarmView; catalog: Catalog; onClose: () => void;
-  onPick: (itemKey: string, label: string, variant?: "build" | "now") => void; onExpand: () => void; onState: (s: FarmState) => void; onToast: (m: string) => void;
+  onPick: (itemKey: string, label: string, variant?: "build" | "now") => void; onExpand: (axis: "w" | "h") => void; onState: (s: FarmState) => void; onToast: (m: string) => void;
 }) {
   const [tab, setTab] = useState<"DECOR" | "OUTFIT" | "LAND" | "SELL">("DECOR");
   const [cat, setCat] = useState("all");
@@ -221,9 +221,14 @@ export default function ShopPanel({ userId, farm, catalog, onClose, onPick, onEx
             <div className="text-4xl">🗺️</div>
             <div className="flex-1 min-w-0">
               <p className="font-extrabold text-foreground">Mở rộng đất</p>
-              <p className="text-sm text-muted">Lưới hiện tại {farm.gridW}×{farm.gridH}. {exp ? `Bậc tiếp theo ${exp.w}×${exp.h}, cần cấp ${exp.minLevel}.` : "Đã rộng tối đa."}</p>
+              <p className="text-sm text-muted">Đất hiện tại {farm.gridW}×{farm.gridH} ô. {exp ? `Mỗi lần mở thêm 1 hàng, chọn theo chiều ngang hoặc chiều dọc. Cần cấp ${exp.minLevel}.` : "Đã rộng tối đa."}</p>
+              {exp && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button disabled={!exp.canW || farm.coins < exp.price || farm.level < exp.minLevel} onClick={() => onExpand("w")} className="btn-primary rounded-full px-4 py-2 text-sm font-bold disabled:opacity-50">Mở ngang ↘ {farm.gridW + 1}×{farm.gridH} · 🪙 {exp.price}</button>
+                  <button disabled={!exp.canH || farm.coins < exp.price || farm.level < exp.minLevel} onClick={() => onExpand("h")} className="btn-outline rounded-full px-4 py-2 text-sm font-bold disabled:opacity-50">Mở dọc ↙ {farm.gridW}×{farm.gridH + 1} · 🪙 {exp.price}</button>
+                </div>
+              )}
             </div>
-            {exp && <button disabled={farm.coins < exp.price || farm.level < exp.minLevel} onClick={onExpand} className="btn-primary rounded-full px-5 py-2.5 font-bold disabled:opacity-50">🪙 {exp.price}</button>}
           </div>
           <p className="text-xs text-muted">Mẹo: kim cương không rút ngắn thời gian cây lớn (đó là lịch ôn tối ưu của bạn) — chỉ dùng để mua đồ hiếm.</p>
         </div>
