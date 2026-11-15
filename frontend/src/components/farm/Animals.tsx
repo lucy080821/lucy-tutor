@@ -124,33 +124,47 @@ function Body({ kind }: { kind: AnimalKind }) {
         <Leg x={-14} y={-14} len={14} w={3.2} c="#a16a35" foot="#2b1d12" ph={1} /><Leg x={7} y={-14} len={14} w={3.2} c="#a16a35" foot="#2b1d12" ph={1} />
       </g>
     );
-    case "cat": return (
+    case "cat": return ( // mèo mướp cam nhìn nghiêng (giống emoji 🐈): đuôi cong dựng lên, sọc, tai nhọn, râu
       <g>
-        <Leg x={-6} y={-6} len={6} w={3} c="#f59e5b" ph={0} /><Leg x={8} y={-6} len={6} w={3} c="#f59e5b" ph={0} />
-        <path d="M14 -10 q10 -2 9 -12 q-1 -5 -4 -4" stroke="#ea8a3f" strokeWidth={3.2} fill="none" strokeLinecap="round" />
+        <path d="M15 -14 C25 -14 28 -25 22 -33" stroke="#e98a3c" strokeWidth={4.2} fill="none" strokeLinecap="round" />
+        <path d="M24.2 -22 l3.2 -1.2 M25.6 -27 l3 -1.8 M22.6 -31.2 l2.6 -2.2" stroke="#b9561b" strokeWidth={1.4} strokeLinecap="round" />
+        <Leg x={9} y={-9.5} len={9.5} w={3.8} c="#f2a24f" foot="#fff3df" ph={0} /><Leg x={-8} y={-9.5} len={9.5} w={3.6} c="#f2a24f" foot="#fff3df" ph={0} />
         <g>
-          <ellipse cx={2} cy={-11} rx={13} ry={7.6} fill="#fbab63" stroke="#ea8a3f" strokeWidth={0.9} />
-          <path d="M-2 -17 v5 M3 -18 v6 M8 -17 v5" stroke="#e07a2c" strokeWidth={1.6} strokeLinecap="round" />
-          <circle cx={-11} cy={-16.5} r={6.4} fill="#fbab63" stroke="#ea8a3f" strokeWidth={0.9} />
-          <path d="M-16 -21 l1 -6 l4.4 3.4 z M-7.5 -22 l3.4 -5 l1.8 5.6 z" fill="#fbab63" stroke="#ea8a3f" strokeWidth={0.8} />
-          <circle cx={-13.6} cy={-17.4} r={1.1} fill="#111" /><circle cx={-9} cy={-17.4} r={1.1} fill="#111" /><path d="M-12 -14.6 l1 1 l1 -1 z" fill="#f48fb1" />
-          <path d="M-15 -15 l-5 -.6 M-15 -14 l-5 1.4" stroke="#b45309" strokeWidth={0.6} />
+          <path d="M-12 -13 C-12 -22.5 -3 -23.5 5 -22.5 C14 -22 18 -18 17.5 -12.5 C17 -8 11 -8 5 -8 L-6 -8 C-10 -8 -12 -10 -12 -13 Z" fill="#f4a64f" stroke="#d97c2a" strokeWidth={0.9} />
+          <path d="M-5 -21.6 q-1 4 0 6.6 M1 -22.4 q-1 4.4 0 7.2 M7 -22 q-1 4.2 0 7 M12.6 -19.4 q-1 3.4 0 5.8" stroke="#c9631b" strokeWidth={1.5} fill="none" strokeLinecap="round" />
+          <path d="M-8 -11 Q2 -6.8 13 -10.4 Q8 -8 0 -8 Q-6 -8 -8 -11 Z" fill="#fde2bc" />
         </g>
-        <Leg x={-9} y={-6} len={6} w={3} c="#fbab63" ph={1} /><Leg x={5} y={-6} len={6} w={3} c="#fbab63" ph={1} />
+        <Leg x={12.5} y={-9.5} len={9.5} w={3.8} c="#f7b469" foot="#fff3df" ph={1} /><Leg x={-11.5} y={-9.5} len={9.5} w={3.6} c="#f7b469" foot="#fff3df" ph={1} />
+        <g>
+          <path d="M-21.4 -26 L-20.6 -35.6 L-14.6 -29.6 Z" fill="#f4a64f" stroke="#d97c2a" strokeWidth={0.9} strokeLinejoin="round" /><path d="M-20 -28 L-19.8 -32.6 L-17 -29.6 Z" fill="#f9b6c1" />
+          <path d="M-14.4 -29.6 L-9.4 -36 L-8.2 -26.4 Z" fill="#f4a64f" stroke="#d97c2a" strokeWidth={0.9} strokeLinejoin="round" /><path d="M-13 -29 L-9.8 -33 L-9.4 -28 Z" fill="#f9b6c1" />
+          <circle cx={-15.4} cy={-21.6} r={7.6} fill="#f4a64f" stroke="#d97c2a" strokeWidth={0.9} />
+          <path d="M-17 -28.4 v3.4 M-14 -29 v3.6 M-11.4 -28 v3" stroke="#c9631b" strokeWidth={1.3} strokeLinecap="round" />
+          <ellipse cx={-20.2} cy={-19.4} rx={3.6} ry={2.8} fill="#fff1dc" /><path d="M-22.8 -21.2 l2.4 0 l-1.2 1.6 z" fill="#ef7f9a" />
+          <ellipse cx={-18.4} cy={-23.8} rx={1.3} ry={1.7} fill="#1f2937" /><ellipse cx={-12.4} cy={-23.8} rx={1.2} ry={1.6} fill="#1f2937" /><circle cx={-18} cy={-24.5} r={0.5} fill="#fff" /><circle cx={-12} cy={-24.4} r={0.45} fill="#fff" />
+          <path d="M-22 -19.6 l-5.2 -1.2 M-22 -18.8 l-5.4 0.8 M-10 -19.6 l1 -.2" stroke="#8a4a1c" strokeWidth={0.55} strokeLinecap="round" />
+        </g>
       </g>
     );
-    case "dog": return (
+    case "dog": return ( // chó vàng tai cụp nhìn nghiêng (giống emoji 🐕): mõm dài, tai nâu cụp, vòng cổ đỏ, đuôi cong dựng
       <g>
-        <Leg x={-8} y={-9} len={9} w={3.4} c="#c28a4a" ph={0} /><Leg x={9} y={-9} len={9} w={3.4} c="#c28a4a" ph={0} />
-        <path d="M15 -17 q8 -6 8 -14" stroke="#b07434" strokeWidth={3.2} fill="none" strokeLinecap="round" />
+        <path d="M16 -21 C25 -23 27 -31 23 -36" stroke="#c98d4a" strokeWidth={4.2} fill="none" strokeLinecap="round" />
+        <Leg x={10} y={-10.5} len={10.5} w={4} c="#d9a35f" foot="#f6dcb2" ph={0} /><Leg x={-8.5} y={-10.5} len={10.5} w={4} c="#d9a35f" foot="#f6dcb2" ph={0} />
         <g>
-          <rect x={-14} y={-22} width={32} height={13.5} rx={6.8} fill="#d7a063" stroke="#b07434" strokeWidth={0.9} />
-          <rect x={-18} y={-30} width={14} height={13} rx={5.5} fill="#d7a063" stroke="#b07434" strokeWidth={0.9} />
-          <rect x={-24} y={-24} width={10} height={7} rx={3.4} fill="#f1d3a5" stroke="#b07434" strokeWidth={0.8} /><circle cx={-24} cy={-22.5} r={1.6} fill="#111" />
-          <path d="M-9 -31 q4 -1 4 6 q-4 1 -5 -2 z" fill="#8a5a2b" /><circle cx={-12.5} cy={-26} r={1.1} fill="#111" />
-          <path d="M-20 -17 q1.5 4 3.4 0" fill="#f87171" />
+          <path d="M-14 -16 C-14 -24.5 -6 -25 4 -24.6 C14 -24.4 18.4 -22 18.2 -16 C18 -10 14 -9.6 8 -9.6 L-6 -9.6 C-11 -9.6 -14 -11 -14 -16 Z" fill="#dcA561" stroke="#b9792f" strokeWidth={0.9} />
+          <path d="M-4 -24.6 C2 -24.6 9 -24.4 13 -22.4 C9 -17 3 -17.5 -1 -18.5 C-5 -19.6 -6 -22.4 -4 -24.6 Z" fill="#c98a45" />
+          <path d="M-9 -12 Q2 -8.6 14 -11.6 Q9 -9.6 1 -9.6 Q-6 -9.6 -9 -12 Z" fill="#f6dcb2" />
         </g>
-        <Leg x={-11.5} y={-9} len={9} w={3.4} c="#d7a063" ph={1} /><Leg x={5.5} y={-9} len={9} w={3.4} c="#d7a063" ph={1} />
+        <Leg x={13.6} y={-10.5} len={10.5} w={4} c="#e6b574" foot="#f6dcb2" ph={1} /><Leg x={-12} y={-10.5} len={10.5} w={4} c="#e6b574" foot="#f6dcb2" ph={1} />
+        <g>
+          <path d="M-14.5 -25 L-10.5 -19.4 L-15 -17.4 Z" fill="#a8672b" />
+          <rect x={-22.4} y={-34.6} width={15.6} height={14} rx={6.4} fill="#dcA561" stroke="#b9792f" strokeWidth={0.9} />
+          <path d="M-30.6 -28.4 C-30.6 -31 -26.4 -31.4 -21.6 -30.6 L-21 -22.6 C-26 -21.6 -30.6 -22.6 -30.6 -25.4 Z" fill="#f6dcb2" stroke="#b9792f" strokeWidth={0.9} strokeLinejoin="round" />
+          <ellipse cx={-30.4} cy={-28.4} rx={2.1} ry={1.7} fill="#2b1d12" /><path d="M-29 -24.6 q3 1.6 6 .4" stroke="#8a5326" strokeWidth={0.7} fill="none" strokeLinecap="round" />
+          <circle cx={-17.4} cy={-29.4} r={1.35} fill="#1f1308" /><circle cx={-17} cy={-29.9} r={0.45} fill="#fff" />
+          <path d="M-11.4 -33.4 C-6 -35.2 -4.4 -26.6 -6.8 -20.4 C-10.8 -20.2 -13.4 -26.2 -11.4 -33.4 Z" fill="#8a5326" stroke="#6b3f1a" strokeWidth={0.7} />
+          <path d="M-14 -21 L-7.6 -19.6 L-7.8 -15.6 L-14 -17 Z" fill="#dc2626" /><circle cx={-10.4} cy={-14.8} r={1.9} fill="#facc15" stroke="#ca8a04" strokeWidth={0.5} />
+        </g>
       </g>
     );
     case "peacock": return (

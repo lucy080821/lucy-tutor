@@ -222,6 +222,18 @@ export default function FarmGame({ userId }: { userId: string }) {
 
   const closeTut = () => { try { localStorage.setItem(TUT_KEY, "1"); } catch { /* bỏ qua */ } setPanel(null); };
 
+  // Ngăn kéo Đơn hàng (toàn màn hình) đè lên cảnh → bấm ra ngoài / Esc để đóng (trên điện thoại không có chỗ nào khác để tắt)
+  useEffect(() => {
+    if (!(fs && ordersOpen)) return;
+    const down = (e: PointerEvent) => {
+      const t = e.target as Element | null;
+      if (t?.closest?.(".farm-fs-drawer, .farm-tools, .swal2-container, .farm-modal-backdrop")) return;
+      setOrdersOpen(false);
+    };
+    const key = (e: KeyboardEvent) => { if (e.key === "Escape") setOrdersOpen(false); };
+    document.addEventListener("pointerdown", down, true); document.addEventListener("keydown", key);
+    return () => { document.removeEventListener("pointerdown", down, true); document.removeEventListener("keydown", key); };
+  }, [fs, ordersOpen]);
   if (error) return <div className="ui-card p-8 text-center"><p className="text-red-600 font-bold">{error}</p><button onClick={load} className="btn-primary rounded-full px-5 py-2.5 mt-4 font-bold">Thử lại</button></div>;
   if (!state) return <div className="ui-card p-8 text-center text-muted">Đang mở cổng nông trại...</div>;
 
@@ -305,9 +317,16 @@ export default function FarmGame({ userId }: { userId: string }) {
             {tools.map((t) => <button key={t.k} onClick={t.run} disabled={t.off} title={t.title} aria-label={t.title} className={`farm-tool ${t.on ? "farm-tool-on" : ""}`}><t.Icon size={19} />{t.badge && <span className="farm-tool-badge">{t.badge}</span>}</button>)}
           </div>
           {fs && ordersOpen && (
+            <>
+            <div className="farm-fs-scrim" onClick={() => setOrdersOpen(false)} aria-hidden="true" />
             <div className="farm-fs-drawer farm-toast" role="dialog" aria-label="Đơn hàng">
+              <div className="sticky top-0 z-10 bg-white/95 border-b border-line flex items-center justify-between gap-2 pl-4 pr-2 py-1.5">
+                <span className="text-xs text-muted font-semibold">Chạm ra ngoài để đóng</span>
+                <button onClick={() => setOrdersOpen(false)} aria-label="Đóng đơn hàng" className="w-9 h-9 rounded-full hover:bg-primary-soft text-muted hover:text-primary text-xl font-bold flex items-center justify-center">×</button>
+              </div>
               <OrdersPanel userId={userId} orders={orders} catalog={catalog} coins={farm.coins} difficulty={farm.orderDifficulty} onState={applyState} onToast={toast} />
             </div>
+            </>
           )}
           <button className="farm-phase" onClick={() => openPanel("WEATHER")} title={wx.status === "ok" ? "Xem dự báo thời tiết" : "Bật thời tiết thật theo vị trí của bạn"}>
             <b>{sky.label}</b><span>{PHASE_LABEL[sky.phase]}</span>
