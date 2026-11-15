@@ -72,6 +72,12 @@ export default function OrdersPanel({ userId, orders, catalog, coins, difficulty
                 </div>
               ) : (
                 <div className="mt-2 space-y-2">
+                  {!!o.requirement.words?.length && (
+                    <p className="text-xs text-muted leading-relaxed">
+                      Từ cần dùng: {o.requirement.words.map((w, i) => <span key={w}>{i > 0 && " và "}<b className="text-primary">{w}</b>{o.requirement.meanings?.[i] ? ` (${o.requirement.meanings[i]})` : ""}</span>)}.
+                      Viết câu tiếng Anh có chứa từ đó, được chia dạng (plays, played…).
+                    </p>
+                  )}
                   <textarea value={sentences[o.id] || ""} onChange={(e) => setSentences((s) => ({ ...s, [o.id]: e.target.value }))} rows={2} placeholder={`Viết 1 câu tiếng Anh (≥ ${o.requirement.minWords ?? 4} từ) dùng ${o.requirement.words?.map((w) => `"${w}"`).join(" và ")}...`} className="ui-input w-full text-sm" />
                   {fb && !fb.ok && <div className="rounded-xl bg-amber-50 text-amber-900 text-xs px-3 py-2 font-semibold">{fb.text}{fb.corrected && <div className="mt-1 italic font-normal">Gợi ý: {fb.corrected}</div>}</div>}
                 </div>

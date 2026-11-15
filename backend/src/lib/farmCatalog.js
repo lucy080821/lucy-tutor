@@ -334,7 +334,7 @@ function makeOrderTemplate(kind, difficulty, ctx = {}) {
     case 'SENTENCE': {
       const words = ctx.words || [];
       const title = words.length > 1 ? `Viết 1 câu dùng cả "${words[0]}" và "${words[1]}"` : `Viết 1 câu dùng từ "${words[0]}"`;
-      return { kind, customer, title, requirement: { words, minWords: Math.min(12, 4 + Math.floor(lv / 2)) }, rewardCoins: 60 + 30 * words.length + lv * 8, rewardGems: words.length > 1 ? 1 : 0, rewardXp: 10 + lv };
+      return { kind, customer, title, requirement: { words, meanings: ctx.meanings || [], minWords: Math.min(12, 4 + Math.floor(lv / 2)) }, rewardCoins: 60 + 30 * words.length + lv * 8, rewardGems: words.length > 1 ? 1 : 0, rewardXp: 10 + lv };
     }
     default:
       return makeOrderTemplate('HARVEST', level);

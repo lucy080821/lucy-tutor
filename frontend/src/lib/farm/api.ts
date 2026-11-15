@@ -11,7 +11,7 @@ export type PlotView = {
 };
 export type OrderView = {
   id: string; kind: "HARVEST" | "HARVEST_CROP" | "PLANT" | "SENTENCE" | "PRODUCE"; customer: string; title: string;
-  requirement: { need?: number; cropKey?: string; words?: string[]; minWords?: number; items?: Record<string, number> };
+  requirement: { need?: number; cropKey?: string; words?: string[]; meanings?: string[]; minWords?: number; items?: Record<string, number> };
   progress: number; need: number; ready: boolean; have?: Record<string, number>;
   rewardCoins: number; rewardGems: number; rewardXp: number; createdAt: string;
 };

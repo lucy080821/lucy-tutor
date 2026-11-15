@@ -118,7 +118,17 @@ function farmView(farm, plotCount) {
 
 // Bảo đảm luôn có đủ ORDER_SLOTS đơn đang mở (sinh thêm theo cấp + cây đang trồng)
 async function ensureOrders(userId, farm, plots) {
-  const open = await prisma.farmOrder.findMany({ where: { userId, status: 'OPEN' }, orderBy: { createdAt: 'asc' } });
+  let open = await prisma.farmOrder.findMany({ where: { userId, status: 'OPEN' }, orderBy: { createdAt: 'asc' } });
+  // Đơn "Viết câu" cũ lỡ lấy thẻ ngữ pháp/phát âm làm "từ" (vd "/z/") thì không viết được → bỏ đi để sinh đơn mới
+  const sentenceOrders = open.filter((o) => o.kind === 'SENTENCE');
+  if (sentenceOrders.length) {
+    const wordsOf = (o) => (parseJSON(o.requirement, {}).words || []).map(String);
+    const all = [...new Set(sentenceOrders.flatMap(wordsOf))];
+    const cardRows = all.length ? await prisma.userVocabProgress.findMany({ where: { userId, vocab: { pos: { in: ['grammar', 'pron'] }, word: { in: all } } }, select: { vocab: { select: { word: true } } } }) : [];
+    const cardWords = new Set(cardRows.map((r) => r.vocab.word));
+    const bad = sentenceOrders.filter((o) => wordsOf(o).some((w) => cardWords.has(w) || /^\/.*\/$/.test(w.trim())));
+    if (bad.length) { await prisma.farmOrder.deleteMany({ where: { id: { in: bad.map((o) => o.id) }, userId, status: 'OPEN' } }); open = open.filter((o) => !bad.includes(o)); }
+  }
   const missing = C.ORDER_SLOTS - open.length;
   if (missing <= 0) return open;
   const level = C.levelFor(farm.harvestCount);
@@ -127,7 +137,10 @@ async function ensureOrders(userId, farm, plots) {
   const cropKeys = [...new Set(planted.map((p) => p.cropKey).filter(Boolean))];
   const inventory = parseJSON(farm.inventory, {});
   const produceKeys = [...new Set([...cropKeys, ...Object.keys(inventory).filter((k) => inventory[k] > 0 && C.CROPS[k])])];
-  const sentenceWords = planted.filter((p) => p.progress.repetitions >= 1).map((p) => p.progress.vocab.word);
+  // Chỉ dùng TỪ VỰNG thật (không phải thẻ ngữ pháp/phát âm như "/z/" hay "has been" — không thể bắt viết câu "dùng" chúng)
+  const sentencePool = planted.filter((p) => p.progress.repetitions >= 1 && p.progress.vocab.pos !== 'grammar' && p.progress.vocab.pos !== 'pron' && /^[A-Za-z][A-Za-z' -]*$/.test(p.progress.vocab.word.trim()))
+    .map((p) => ({ word: p.progress.vocab.word.trim(), meaning: p.progress.vocab.meaning || '' }));
+  const sentenceWords = sentencePool.map((x) => x.word);
   const kindsOpen = new Set(open.map((o) => o.kind));
   const data = [];
   for (let i = 0; i < missing; i++) {
@@ -141,7 +154,7 @@ async function ensureOrders(userId, farm, plots) {
     const ctx = {};
     if (kind === 'HARVEST_CROP') ctx.cropKey = cropKeys[Math.floor(Math.random() * cropKeys.length)];
     if (kind === 'PRODUCE') ctx.cropKeys = produceKeys;
-    if (kind === 'SENTENCE') { ctx.words = shuffle(sentenceWords).slice(0, difficulty >= 3 && sentenceWords.length > 1 && Math.random() < 0.5 ? 2 : 1); kindsOpen.add('SENTENCE'); }
+    if (kind === 'SENTENCE') { const pick = shuffle(sentencePool).slice(0, difficulty >= 3 && sentencePool.length > 1 && Math.random() < 0.5 ? 2 : 1); ctx.words = pick.map((x) => x.word); ctx.meanings = pick.map((x) => x.meaning); kindsOpen.add('SENTENCE'); }
     const t = C.makeOrderTemplate(kind, difficulty, ctx);
     data.push({ userId, kind: t.kind, customer: t.customer, title: t.title, requirement: JSON.stringify(t.requirement), rewardCoins: t.rewardCoins, rewardGems: t.rewardGems, rewardXp: t.rewardXp });
   }
@@ -819,12 +832,12 @@ router.post('/pen/collect', async (req, res) => {
 });
 
 // Chấm câu cho đơn "Viết câu": quy tắc trước, có Groq thì nhờ AI nhận xét thêm
-async function gradeSentence(sentence, words, minWords = 4) {
+async function gradeSentence(sentence, words, minWords = 4, meanings = []) {
   const s = String(sentence || '').trim();
   const lower = s.toLowerCase();
   const missing = words.filter((w) => { const lw = w.toLowerCase(); return !(lower.includes(lw) || (lw.length > 4 && lower.includes(lw.slice(0, -1)))); });
   const tokens = s.split(/\s+/).filter(Boolean);
-  if (missing.length) return { ok: false, feedback: `Câu chưa dùng từ: ${missing.map((m) => `"${m}"`).join(', ')}.` };
+  if (missing.length) return { ok: false, feedback: `Câu chưa có từ ${missing.map((m) => { const i = words.indexOf(m); return `"${m}"${meanings[i] ? ` (${meanings[i]})` : ''}`; }).join(', ')}. Bạn có thể chia dạng từ (thêm -s, -ed, -ing…) nhưng phải giữ nguyên gốc từ.` };
   if (tokens.length < minWords) return { ok: false, feedback: `Câu quá ngắn — khách này muốn ít nhất ${minWords} từ nhé.` };
   if (!groq) return { ok: true, feedback: 'Khách hài lòng! (chấm theo quy tắc, chưa có AI nhận xét)', ai: false };
   try {
@@ -855,7 +868,7 @@ router.post('/orders/:id/complete', async (req, res) => {
     const farm = await prisma.farmState.findUnique({ where: { userId } });
     const inventory = parseJSON(farm.inventory, {});
     if (order.kind === 'SENTENCE') {
-      graded = await gradeSentence(sentence, reqm.words || [], reqm.minWords || 4);
+      graded = await gradeSentence(sentence, reqm.words || [], reqm.minWords || 4, reqm.meanings || []);
       if (!graded.ok) return res.json({ ok: false, feedback: graded.feedback, corrected: graded.corrected });
     } else if (order.kind === 'PRODUCE') {
       const items = reqm.items || {};

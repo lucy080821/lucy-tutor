@@ -24,7 +24,7 @@ import PenPanel from "./PenPanel";
 import GrowingPanel from "./GrowingPanel";
 import WaterModal from "./WaterModal";
 import QuestsPanel from "./QuestsPanel";
-import Modal from "./Modal";
+import HelpPanel from "./HelpPanel";
 
 type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "FACTORY" | "PEN" | "GROW" | "WATER" | "QUESTS" | "WEATHER" | "HELP";
 const TUT_KEY = "lucy_farm_tut_v2";
@@ -399,23 +399,7 @@ export default function FarmGame({ userId }: { userId: string }) {
       {panel === "BARN" && <BarnPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "WEATHER" && <WeatherPanel status={wx.status} data={wx.data} error={wx.error} sky={sky} previewKind={wxPreview} onEnable={wx.enable} onDisable={wx.disable} onRefresh={wx.refresh} onClose={() => setPanel(null)} />}
       {panel === "QUESTS" && <QuestsPanel userId={userId} quests={quests} achievements={achievements} initialTab={questTab} onClose={() => setPanel(null)} onState={applyState} />}
-      {panel === "HELP" && (
-        <Modal title="Chào mừng tới Nông Trại Qilin!" subtitle="Vừa chơi vừa nhớ từ — cây lớn theo đúng lịch ôn của bạn" onClose={closeTut}
-          footer={<button onClick={closeTut} className="btn-primary rounded-full px-6 py-2.5 font-bold w-full">Bắt đầu trồng!</button>}>
-          <ol className="space-y-3 text-sm text-foreground">
-            {([
-              ["sprout", "Bấm ô đất trống (dấu +) để chọn 1 từ và trồng. Xem thẻ từ trước khi trồng."],
-              ["seed", "Cây chín lần đầu sau 10 phút. Những lần sau chín theo lịch ôn SRS (1 ngày, 6 ngày, lâu hơn). Không mua được thời gian!"],
-              ["pen", "Cây chín hiện dấu ! — bấm để thu hoạch bằng cách trả lời 1 câu về từ đó. Đúng được xu, XP và nông sản; sai thì cây héo, học lại sau 10 phút."],
-              ["truck", "Giao đơn hàng cho khách để nhận thưởng lớn, càng giao nhiều đơn càng khó. Đơn 'Viết câu' được AI chấm; đơn nông sản lấy hàng từ Kho."],
-              ["target", "Mỗi ngày có 4 nhiệm vụ và 1 rương thưởng; Thành tựu là các mốc dài hạn. Vào mục Nhiệm vụ để nhận thưởng."],
-              ["palette", "Phần chơi thuần: trang trí nông trại, mua trang phục cho Qilin con, vòng quay mỗi ngày, thăm nông trại và xem Bảng vàng của bạn bè."],
-              ["star", "Từ nhớ lâu hơn 21 ngày = thuộc lòng. Cất vào kho để lấy chỗ trồng từ mới, hoặc ôn kho từ để kiếm thêm xu."],
-              ["wheel", "Cảnh nông trại đổi theo giờ thật (bình minh, sáng, trưa, chiều, hoàng hôn, đêm; khuya Qilin đi ngủ). Bấm nút đám mây bên phải để bật thời tiết thật theo vị trí của bạn (nắng, mưa, giông...). Nút loa để tắt âm thanh."],
-            ] as [string, string][]).map(([i, t]) => <li key={t} className="flex gap-3 items-start"><span className="farm-ring !w-9 !h-9 mt-0.5"><NamedIcon name={i} size={18} /></span><span className="pt-1">{t}</span></li>)}
-          </ol>
-        </Modal>
-      )}
+      {panel === "HELP" && <HelpPanel onClose={closeTut} />}
     </div>
   );
 }
