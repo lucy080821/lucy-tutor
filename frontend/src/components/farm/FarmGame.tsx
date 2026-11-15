@@ -20,10 +20,12 @@ import WheelPanel from "./WheelPanel";
 import NeighborsPanel from "./NeighborsPanel";
 import BarnPanel from "./BarnPanel";
 import FactoryPanel from "./FactoryPanel";
+import GrowingPanel from "./GrowingPanel";
+import WaterModal from "./WaterModal";
 import QuestsPanel from "./QuestsPanel";
 import Modal from "./Modal";
 
-type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "FACTORY" | "QUESTS" | "WEATHER" | "HELP";
+type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "FACTORY" | "GROW" | "WATER" | "QUESTS" | "WEATHER" | "HELP";
 const TUT_KEY = "lucy_farm_tut_v2";
 
 async function confetti(opts: any) {
@@ -40,6 +42,7 @@ export default function FarmGame({ userId }: { userId: string }) {
   const [questTab, setQuestTab] = useState<"DAILY" | "ACH">("DAILY");
   const [activePlot, setActivePlot] = useState<PlotView | null>(null);
   const [factoryUid, setFactoryUid] = useState<string | null>(null);
+  const [earlyMode, setEarlyMode] = useState(false); // thu hoạch kiểu "ôn sớm" cho cây chưa chín
   // Phóng to/thu nhỏ cảnh (1–3×) và ẩn/hiện thanh điều hướng trên điện thoại (nhớ lựa chọn)
   const [zoom, setZoom] = useState(1);
   const [dockOpen, setDockOpen] = useState(true);
@@ -149,26 +152,23 @@ export default function FarmGame({ userId }: { userId: string }) {
   const openPanel = (p: Panel) => { sfx.click(); setPanel(p); };
 
   // ── Tương tác trên đất ─────────────────────────────────────────────────────
+  // Nhổ cây (hoặc cất kho nếu đã thuộc lòng)
+  const removeOrStore = async (plot: PlotView) => {
+    const mastered = plot.srs?.status === "MASTERED";
+    try {
+      if (mastered) { const s = await farmApi.store(userId, plot.id); applyState(s); addFloat(plot.x, plot.y, `+${s.stored?.coins}`, "coin"); toast(`Đã cất "${s.stored?.word}" vào kho · +${s.stored?.coins} xu`); }
+      else { const ok = await fire({ title: "Nhổ cây này?", text: "Từ vẫn còn trong deck SRS, chỉ rời khỏi ô đất.", icon: "warning", showCancelButton: true, confirmButtonText: "Nhổ", cancelButtonText: "Thôi", confirmButtonColor: "#b45309" }); if (ok.isConfirmed) applyState(await farmApi.dig(userId, plot.id)); }
+    } catch (e: any) { swalAlert("Lỗi", e.message, "error"); }
+  };
   const onPlotClick = async (plot: PlotView) => {
     if (!state) return;
     if (mode.type === "edit") { setMode({ type: "edit", selected: { kind: "plot", id: plot.id } }); return; }
     const live = liveStatus(plot, now);
     sfx.pop();
     if (plot.status === "EMPTY") { setActivePlot(plot); setPanel("SEED"); return; }
-    if (live.status === "READY") { setActivePlot(plot); setPanel("HARVEST"); return; }
-    // Đang lớn: xem thẻ từ + tuỳ chọn nhổ / cất kho
-    const mastered = plot.srs?.status === "MASTERED";
-    const r = await fire({
-      title: plot.word, html: `<p class="text-lg">${plot.meaning}</p>${plot.example ? `<p class="text-sm italic mt-2 opacity-70">“${plot.example}”</p>` : ""}<p class="text-sm mt-3">Chín sau <b>${formatCountdown(live.msLeft)}</b>${plot.wilted ? " (cây đang héo, học lại từ đầu)" : ""}<br/>Đã nhớ đúng ${plot.srs?.repetitions ?? 0} lần · ${plot.srs?.status === "MASTERED" ? "Thuộc lòng" : plot.srs?.status === "REVIEWING" ? "Đang ôn" : "Mới"}</p>`,
-      showDenyButton: true, showCancelButton: true, confirmButtonText: "Nghe", denyButtonText: mastered ? "Cất kho (+xu)" : "Nhổ cây", cancelButtonText: "Đóng", confirmButtonColor: "#1E3A8A", denyButtonColor: mastered ? "#059669" : "#b45309",
-    });
-    if (r.isConfirmed) { speak(plot.word || ""); return; }
-    if (r.isDenied) {
-      try {
-        if (mastered) { const s = await farmApi.store(userId, plot.id); applyState(s); addFloat(plot.x, plot.y, `+${s.stored?.coins}`, "coin"); toast(`Đã cất "${s.stored?.word}" vào kho · +${s.stored?.coins} xu`); }
-        else { const ok = await fire({ title: "Nhổ cây này?", text: "Từ vẫn còn trong deck SRS, chỉ rời khỏi ô đất.", icon: "warning", showCancelButton: true, confirmButtonText: "Nhổ", cancelButtonText: "Thôi", confirmButtonColor: "#b45309" }); if (ok.isConfirmed) applyState(await farmApi.dig(userId, plot.id)); }
-      } catch (e: any) { swalAlert("Lỗi", e.message, "error"); }
-    }
+    if (live.status === "READY") { setEarlyMode(false); setActivePlot(plot); setPanel("HARVEST"); return; }
+    // Đang lớn: xem thẻ từ + Ôn sớm / Tưới nước / Nhổ hoặc Cất kho
+    setActivePlot(plot); setPanel("GROW");
   };
 
   const onTileClick = async (x: number, y: number) => {
@@ -359,12 +359,19 @@ export default function FarmGame({ userId }: { userId: string }) {
       {panel === "SEED" && activePlot && <SeedPicker userId={userId} plot={activePlot} catalog={catalog} onClose={() => setPanel(null)} onState={(s) => { applyState(s); toast("Đã trồng! Chín lần đầu sau 10 phút."); }} />}
       {panel === "HARVEST" && activePlot && (
         <HarvestModal userId={userId} plot={activePlot} cropName={catalog.crops[activePlot.cropKey || ""]?.name || "cây"} nextReadyPlot={nextReadyAfter(activePlot.id)}
-          onClose={() => setPanel(null)} onState={applyState} onNext={(p) => setActivePlot(p)} catalog={catalog} />
+          early={earlyMode} onClose={() => { setPanel(null); setEarlyMode(false); }} onState={applyState} onNext={(p) => { setEarlyMode(false); setActivePlot(p); }} catalog={catalog} />
       )}
       {panel === "SHOP" && <ShopPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} onPick={(k, label) => { setPanel(null); setMode({ type: "place", itemKey: k, label }); }} onExpand={expand} />}
       {panel === "PET" && <PetPanel userId={userId} farm={farm} catalog={catalog} now={now} onClose={() => { setPanel(null); load(); }} onState={applyState} />}
       {panel === "WHEEL" && <WheelPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} />}
       {panel === "NEIGHBORS" && <NeighborsPanel userId={userId} catalog={catalog} sky={sky} weather={weather} onClose={() => setPanel(null)} onToast={toast} onRefresh={load} />}
+      {panel === "GROW" && activePlot && (() => { const fresh = state.plots.find((p) => p.id === activePlot.id) || activePlot; return (
+        <GrowingPanel plot={fresh} catalog={catalog} now={now} onClose={() => setPanel(null)}
+          onEarly={() => { setEarlyMode(true); setPanel("HARVEST"); }} onWater={() => setPanel("WATER")} onRemove={() => { setPanel(null); removeOrStore(fresh); }} />
+      ); })()}
+      {panel === "WATER" && activePlot && (() => { const fresh = state.plots.find((p) => p.id === activePlot.id) || activePlot; return (
+        <WaterModal userId={userId} plot={fresh} now={now} onClose={() => setPanel("GROW")} onState={applyState} onToast={toast} />
+      ); })()}
       {panel === "FACTORY" && factoryUid && <FactoryPanel userId={userId} uid={factoryUid} farm={farm} catalog={catalog} now={now} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "BARN" && <BarnPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "WEATHER" && <WeatherPanel status={wx.status} data={wx.data} error={wx.error} sky={sky} previewKind={wxPreview} onEnable={wx.enable} onDisable={wx.disable} onRefresh={wx.refresh} onClose={() => setPanel(null)} />}

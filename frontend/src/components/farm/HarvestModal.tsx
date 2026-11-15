@@ -5,8 +5,8 @@ import { farmApi, speak, type Catalog, type FarmState, type HarvestResult, type 
 import { CropSprite } from "./Sprites";
 
 // Thu hoạch = ôn từ. Dạng câu hỏi do server quyết định theo số lần đã nhớ (xem farm.routes.js modeFor).
-export default function HarvestModal({ userId, plot, cropName, nextReadyPlot, catalog, onClose, onState, onNext }: {
-  userId: string; plot: PlotView; cropName: string; nextReadyPlot: PlotView | null; catalog?: Catalog;
+export default function HarvestModal({ userId, plot, cropName, nextReadyPlot, catalog, early = false, onClose, onState, onNext }: {
+  userId: string; plot: PlotView; early?: boolean; cropName: string; nextReadyPlot: PlotView | null; catalog?: Catalog;
   onClose: () => void; onState: (s: FarmState) => void; onNext: (p: PlotView) => void;
 }) {
   const [q, setQ] = useState<Question | null>(null);
@@ -21,20 +21,20 @@ export default function HarvestModal({ userId, plot, cropName, nextReadyPlot, ca
   useEffect(() => {
     let alive = true;
     setQ(null); setErr(null); setAnswer(""); setPicked(null); setShowHint(false); setResult(null);
-    farmApi.question(userId, plot.id).then((x) => { if (!alive) return; setQ(x); if (x.mode === "LISTEN" && x.speak) setTimeout(() => speak(x.speak!), 300); })
+    farmApi.question(userId, plot.id, early).then((x) => { if (!alive) return; setQ(x); if (x.mode === "LISTEN" && x.speak) setTimeout(() => speak(x.speak!), 300); })
       .catch((e) => alive && setErr(e.message));
     return () => { alive = false; };
-  }, [userId, plot.id]);
+  }, [userId, plot.id, early]);
   useEffect(() => { if (q && (q.mode === "TYPE" || q.mode === "FILL")) inputRef.current?.focus(); }, [q]);
 
   const submit = async (a: string) => {
     if (busy || !q) return;
     setBusy(true);
     try {
-      const s = await farmApi.harvest(userId, plot.id, a, showHint);
+      const s = await farmApi.harvest(userId, plot.id, a, showHint, early);
       setResult(s.result || null);
       onState(s);
-      if (s.result) speak(s.result.word);
+      if (s.result && s.result.word) speak(s.result.word);
     } catch (e: any) { setErr(e.message); }
     setBusy(false);
   };
@@ -42,7 +42,7 @@ export default function HarvestModal({ userId, plot, cropName, nextReadyPlot, ca
   const modeLabel: Record<string, string> = { CHOICE: "Chọn từ đúng với nghĩa", LISTEN: "Nghe và chọn nghĩa", TYPE: "Gõ từ tiếng Anh", FILL: "Điền từ vào câu" };
 
   return (
-    <Modal title={result ? (result.correct ? "🌾 Thu hoạch thành công!" : "🥀 Cây héo rồi...") : `Thu hoạch ${cropName}`} subtitle={!result && q ? modeLabel[q.mode] : undefined} onClose={onClose}>
+    <Modal title={result ? (result.correct ? (early ? "✍️ Ôn sớm thành công!" : "🌾 Thu hoạch thành công!") : early ? "Chưa đúng, thử lại sau nhé" : "🥀 Cây héo rồi...") : early ? `Ôn sớm ${cropName}` : `Thu hoạch ${cropName}`} subtitle={!result && q ? modeLabel[q.mode] : undefined} onClose={onClose}>
       {err && <div className="rounded-xl bg-red-50 text-red-700 px-4 py-3 text-sm font-semibold">{err}</div>}
       {!q && !err && <div className="py-10 text-center text-muted">Đang hái câu hỏi...</div>}
 
@@ -84,16 +84,23 @@ export default function HarvestModal({ userId, plot, cropName, nextReadyPlot, ca
                 className="ui-input w-full text-lg font-bold" />
               {showHint && q.hint && <p className="text-center font-mono text-xl tracking-widest text-primary">{q.hint}</p>}
               <div className="flex flex-wrap gap-2 justify-between">
-                <button type="button" onClick={() => setShowHint(true)} disabled={showHint} className="btn-outline rounded-full px-4 py-2.5 font-bold disabled:opacity-50">💡 Gợi ý (ít xu hơn)</button>
-                <button type="submit" disabled={busy || !answer.trim()} className="btn-primary rounded-full px-6 py-2.5 font-bold disabled:opacity-50">{busy ? "Đang chấm..." : "Thu hoạch"}</button>
+                {early ? <span className="text-xs text-muted self-center">Ôn sớm: gõ từ, không dùng gợi ý</span> : <button type="button" onClick={() => setShowHint(true)} disabled={showHint} className="btn-outline rounded-full px-4 py-2.5 font-bold disabled:opacity-50">💡 Gợi ý (ít xu hơn)</button>}
+                <button type="submit" disabled={busy || !answer.trim()} className="btn-primary rounded-full px-6 py-2.5 font-bold disabled:opacity-50">{busy ? "Đang chấm..." : early ? "Nộp bài" : "Thu hoạch"}</button>
               </div>
             </form>
           )}
-          <p className="text-xs text-muted text-center">Từ đang ở lần nhớ thứ {plot.srs?.repetitions ?? 0}. Trả lời sai thì cây héo và sau 10 phút học lại từ đầu.</p>
+          <p className="text-xs text-muted text-center">{early ? `Cây chưa chín nhưng bạn học trước: thưởng giảm còn ${Math.round((catalog?.early?.rewardRate ?? 0.5) * 100)}%. Trả lời sai thì cây vẫn lớn bình thường, không héo.` : `Từ đang ở lần nhớ thứ ${plot.srs?.repetitions ?? 0}. Trả lời sai thì cây héo và sau 10 phút học lại từ đầu.`}</p>
         </div>
       )}
 
-      {result && (
+      {result && result.early && !result.correct && (
+        <div className="space-y-4 text-center">
+          <p className="rounded-2xl bg-amber-50 px-4 py-4 text-amber-900 font-semibold">Chưa đúng. Cây vẫn đang lớn, không héo. Xem lại thẻ từ rồi thử ôn sớm lần nữa, hoặc đợi cây chín nhé.</p>
+          <div className="flex flex-wrap gap-2 justify-center"><button onClick={onClose} className="btn-outline rounded-full px-5 py-2.5 font-bold">Đóng</button></div>
+        </div>
+      )}
+
+      {result && !(result.early && !result.correct) && (
         <div className="space-y-4 text-center">
           <div className={`rounded-2xl px-4 py-4 ${result.correct ? "bg-emerald-50" : "bg-amber-50"}`}>
             <p className="text-3xl font-extrabold text-primary">{result.word}</p>
@@ -108,7 +115,7 @@ export default function HarvestModal({ userId, plot, cropName, nextReadyPlot, ca
               {result.produce > 0 && <span className="ui-badge bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">🧺 +{result.produce} {catalog?.crops[result.produceKey || ""]?.name?.toLowerCase() || "nông sản"} vào kho</span>}
               {result.overflowSold > 0 && <span className="ui-badge bg-orange-100 text-orange-800 px-3 py-1 rounded-full">Kho đầy, {result.overflowSold} nông sản bán nửa giá</span>}
               <span className="ui-badge bg-primary-soft text-primary px-3 py-1 rounded-full">⚡ +{result.xp} XP</span>
-              <span className="ui-badge bg-slate-100 text-slate-700 px-3 py-1 rounded-full">⏳ Chín lại sau {result.srs.interval} ngày</span>
+              <span className="ui-badge bg-slate-100 text-slate-700 px-3 py-1 rounded-full">⏳ {result.early ? "Chín lại sớm hơn lịch thường" : `Chín lại sau ${result.srs.interval} ngày`}</span>
             </div>
           ) : (
             <p className="text-sm text-amber-800 font-semibold">Chưa đúng. Cây héo và sẽ mọc lại sau 10 phút — xem kỹ từ ở trên rồi quay lại nhé!</p>

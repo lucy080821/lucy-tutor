@@ -341,8 +341,9 @@ router.get('/plots/:plotId/question', async (req, res) => {
     const plot = await prisma.farmPlot.findFirst({ where: { id: req.params.plotId, userId: String(userId) }, include: PROGRESS_INCLUDE });
     if (!plot || !plot.progress) return res.status(404).json({ error: 'Ô đất trống' });
     const view = plotView(plot);
-    if (view.status !== 'READY') return res.status(400).json({ error: 'Cây chưa chín', readyAt: view.readyAt });
-    const v = plot.progress.vocab; const mode = modeFor(plot.progress);
+    const early = req.query.early === '1' && view.status !== 'READY'; // ôn sớm: câu khó hơn (điền từ / gõ từ)
+    if (view.status !== 'READY' && !early) return res.status(400).json({ error: 'Cây chưa chín', readyAt: view.readyAt });
+    const v = plot.progress.vocab; const mode = early ? 'FILL' : modeFor(plot.progress);
     const q = { plotId: plot.id, mode, word: null, meaning: null, hint: null, options: null, speak: null, sentence: null };
     if (mode === 'CHOICE' || mode === 'LISTEN') {
       // Nhiễu: lấy từ các cây khác của học viên trước, thiếu thì lấy từ kho hạt giống
@@ -366,16 +367,18 @@ router.get('/plots/:plotId/question', async (req, res) => {
 // Thu hoạch = trả lời. { userId, answer, usedHint } → chấm, SM-2, thưởng. Sai → cây héo, học lại sau 10 phút.
 router.post('/plots/:plotId/harvest', async (req, res) => {
   try {
-    const { userId, answer, usedHint } = req.body;
+    const { userId, answer, usedHint, early } = req.body;
     const [plot, farm] = await Promise.all([
       prisma.farmPlot.findFirst({ where: { id: req.params.plotId, userId }, include: PROGRESS_INCLUDE }),
       prisma.farmState.findUnique({ where: { userId } }),
     ]);
     if (!plot || !plot.progress || !farm) return res.status(404).json({ error: 'Ô đất trống' });
     const view = plotView(plot);
-    if (view.status !== 'READY') return res.status(400).json({ error: 'Cây chưa chín' });
+    const isEarly = !!early && view.status !== 'READY';
+    if (view.status !== 'READY' && !isEarly) return res.status(400).json({ error: 'Cây chưa chín' });
+    if (isEarly && usedHint) return res.status(400).json({ error: 'Ôn sớm không dùng gợi ý' });
 
-    const p = plot.progress; const v = p.vocab; const mode = modeFor(p);
+    const p = plot.progress; const v = p.vocab; const mode = isEarly ? 'TYPE' : modeFor(p);
     let quality;
     const a = String(answer || '');
     if (mode === 'CHOICE') quality = clean(a) === clean(v.word) ? 4 : 1;
@@ -388,20 +391,33 @@ router.post('/plots/:plotId/harvest', async (req, res) => {
       else quality = 1;
     }
     const correct = quality >= 3;
-    const sm2 = calculateSM2(quality, p.repetitions, p.easeFactor, p.interval);
-    const newStatus = statusAfterReview(quality, sm2.interval, p.status);
-    const becameMastered = correct && newStatus === 'MASTERED' && p.status !== 'MASTERED';
+    // Ôn sớm sai: không phạt, không đổi gì (cây vẫn đang lớn) và KHÔNG lộ đáp án để không đoán lại ngay
+    if (isEarly && !correct) {
+      return res.json(await buildState(userId, { result: { correct: false, early: true, quality, mode, word: '', meaning: '', example: null, coins: 0, gems: 0, xp: 0, produce: 0, produceKey: plot.cropKey, overflowSold: 0, boosted: false, becameMastered: false, levelUp: null, srs: { status: p.status, interval: p.interval } } }));
+    }
+    let sm2, newStatus, becameMastered;
+    if (isEarly && p.repetitions > 0) {
+      // ôn sớm đúng = học thêm: giữ nguyên trạng thái SM-2, chỉ hẹn lần chín kế tiếp sớm hơn (60% khoảng ôn, tối thiểu 6 giờ)
+      const days = Math.max(0.25, (p.interval || 1) * C.EARLY_NEXT_FACTOR);
+      sm2 = { nextReviewDate: new Date(Date.now() + days * 86400000), interval: p.interval };
+      newStatus = p.status; becameMastered = false;
+    } else {
+      sm2 = calculateSM2(quality, p.repetitions, p.easeFactor, p.interval);
+      newStatus = statusAfterReview(quality, sm2.interval, p.status);
+      becameMastered = correct && newStatus === 'MASTERED' && p.status !== 'MASTERED';
+    }
 
     let coins = 0, gems = 0, xp = 0, produce = 0, overflowSold = 0;
     const inventory = parseJSON(farm.inventory, {});
     if (correct) {
       const buffs = C.petBuffs(farm.petXp, farm.petFedOn === C.vnDay());
-      coins = Math.round((C.HARVEST_COINS[quality] || 0) * (1 + buffs.coinPct));
+      const rate = isEarly ? C.EARLY_REWARD_RATE : 1;
+      coins = Math.round((C.HARVEST_COINS[quality] || 0) * (1 + buffs.coinPct) * rate);
       if (farm.boostHarvests > 0) coins *= 2;
-      xp = Math.round(C.HARVEST_XP * (1 + buffs.xpPct));
+      xp = Math.round(C.HARVEST_XP * (1 + buffs.xpPct) * rate);
       if (becameMastered) { coins += C.MASTERED_BONUS.coins; gems += C.MASTERED_BONUS.gems; }
       // Nông sản vào kho; kho đầy → phần dư bán tự động nửa giá
-      produce = C.PRODUCE_PER_HARVEST[quality] || 1;
+      produce = isEarly ? 1 : (C.PRODUCE_PER_HARVEST[quality] || 1);
       const used = Object.values(inventory).reduce((a, b) => a + b, 0);
       const room = Math.max(0, farm.barnCapacity - used);
       const stored = Math.min(room, produce);
@@ -425,8 +441,65 @@ router.post('/plots/:plotId/harvest', async (req, res) => {
     await Promise.all(ops);
     const prevLevel = C.levelFor(farm.harvestCount);
     const newLevel = C.levelFor(farm.harvestCount + (correct ? 1 : 0));
-    res.json(await buildState(userId, { result: { correct, quality, mode, word: v.word, meaning: v.meaning, example: v.example, coins, gems, xp, produce: produce - overflowSold, produceKey: plot.cropKey, overflowSold, boosted: correct && farm.boostHarvests > 0, becameMastered, levelUp: newLevel > prevLevel ? newLevel : null, srs: { status: newStatus, interval: sm2.interval } } }));
+    res.json(await buildState(userId, { result: { correct, early: isEarly, quality, mode, word: v.word, meaning: v.meaning, example: v.example, coins, gems, xp, produce: produce - overflowSold, produceKey: plot.cropKey, overflowSold, boosted: correct && farm.boostHarvests > 0, becameMastered, levelUp: newLevel > prevLevel ? newLevel : null, srs: { status: newStatus, interval: sm2.interval } } }));
   } catch (e) { console.error('[farm] harvest', e); res.status(500).json({ error: 'Không thu hoạch được' }); }
+});
+
+// ── Tưới nước bằng kiến thức: trả lời 1 từ ĐÃ HỌC khác → cây rút 10% thời gian còn lại (tối đa 3 lần/cây/ngày) ──
+// Rút ngắn bằng cách dời mốc chín (nextReviewDate, hoặc plantedAt với cây mới trồng lần đầu).
+async function waterCandidates(userId, plot) {
+  const rows = await prisma.userVocabProgress.findMany({
+    where: { userId, repetitions: { gte: 1 }, id: { not: plot.progressId } },
+    include: { vocab: true }, take: 80,
+  });
+  return rows.filter((r) => r.vocab && r.vocab.word && r.vocab.meaning);
+}
+router.get('/plots/:plotId/water', async (req, res) => {
+  try {
+    const userId = String(req.query.userId || '');
+    const plot = await prisma.farmPlot.findFirst({ where: { id: req.params.plotId, userId }, include: PROGRESS_INCLUDE });
+    if (!plot || !plot.progress) return res.status(404).json({ error: 'Ô đất trống' });
+    const view = plotView(plot);
+    if (view.status !== 'GROWING') return res.status(400).json({ error: 'Cây này không cần tưới' });
+    const farm = await prisma.farmState.findUnique({ where: { userId } });
+    const daily = jsonObj(farm.daily); const used = daily.day === C.vnDay() ? (jsonObj(daily.water)[plot.id] || 0) : 0;
+    const left = Math.max(0, C.WATER_MAX_PER_DAY - used);
+    const pool = shuffle(await waterCandidates(userId, plot)).slice(0, Math.max(1, Math.min(C.WATER_QUIZ_SIZE, left || 0)));
+    res.json({
+      left, used, max: C.WATER_MAX_PER_DAY, cut: C.WATER_CUT,
+      items: left ? pool.map((r) => ({ progressId: r.id, meaning: r.vocab.meaning, hint: hintMask(r.vocab.word), length: r.vocab.word.length })) : [],
+    });
+  } catch (e) { console.error('[farm] water quiz', e); res.status(500).json({ error: 'Không tạo được câu hỏi tưới nước' }); }
+});
+router.post('/plots/:plotId/water', async (req, res) => {
+  try {
+    const { userId, progressId, answer } = req.body;
+    const plot = await prisma.farmPlot.findFirst({ where: { id: req.params.plotId, userId }, include: PROGRESS_INCLUDE });
+    if (!plot || !plot.progress) return res.status(404).json({ error: 'Ô đất trống' });
+    const view = plotView(plot);
+    if (view.status !== 'GROWING') return res.status(400).json({ error: 'Cây này không cần tưới nữa' });
+    const farm = await prisma.farmState.findUnique({ where: { userId } });
+    if (!farm) return res.status(404).json({ error: 'User not found' });
+    const { farm: farm2, daily } = await ensureDaily(farm);
+    const waterMap = jsonObj(daily.water); const used = waterMap[plot.id] || 0;
+    if (used >= C.WATER_MAX_PER_DAY) return res.status(400).json({ error: 'Hôm nay cây này đã được tưới đủ rồi' });
+    const t = await prisma.userVocabProgress.findFirst({ where: { id: String(progressId), userId, repetitions: { gte: 1 } }, include: { vocab: true } });
+    if (!t || t.id === plot.progressId) return res.status(400).json({ error: 'Từ không hợp lệ' });
+    const ca = clean(answer), cw = clean(t.vocab.word);
+    const ok = !!ca && (ca === cw || (cw.length >= 6 && levenshtein(ca, cw) <= 1));
+    if (!ok) return res.json({ ok: false, left: C.WATER_MAX_PER_DAY - used });
+    // rút 10% thời gian còn lại
+    const readyAt = readyAtFor(plot).getTime(); const nowMs = Date.now();
+    const cut = Math.max(0, Math.floor((readyAt - nowMs) * C.WATER_CUT));
+    const ops = [];
+    if (plot.progress.repetitions === 0) ops.push(prisma.farmPlot.update({ where: { id: plot.id }, data: { plantedAt: new Date(new Date(plot.plantedAt).getTime() - cut) } }));
+    else ops.push(prisma.userVocabProgress.update({ where: { id: plot.progress.id }, data: { nextReviewDate: new Date(new Date(plot.progress.nextReviewDate).getTime() - cut) } }));
+    // khoá lạc quan: tưới song song không vượt hạn mức
+    const lock = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm2.updatedAt }, data: { daily: { ...daily, water: { ...waterMap, [plot.id]: used + 1 } }, coins: { increment: C.WATER_REWARD.coins } } });
+    if (lock.count === 0) return res.status(409).json({ error: 'Vừa có thay đổi khác, thử lại nhé' });
+    await Promise.all([...ops, prisma.user.update({ where: { id: userId }, data: { totalXP: { increment: C.WATER_REWARD.xp } }, select: { id: true } })]);
+    res.json(await buildState(userId, { watered: { ok: true, word: t.vocab.word, cutMs: cut, left: C.WATER_MAX_PER_DAY - used - 1, coins: C.WATER_REWARD.coins, xp: C.WATER_REWARD.xp } }));
+  } catch (e) { console.error('[farm] water', e); res.status(500).json({ error: 'Không tưới được' }); }
 });
 
 // Nhổ cây (từ vẫn còn trong deck SRS)

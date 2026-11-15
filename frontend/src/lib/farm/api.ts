@@ -52,11 +52,12 @@ export type Catalog = {
   wheel: { id: number; label: string; kind: string }[];
   startPlots: number; maxPlots: number; firstGrowMinutes: number;
   harvestCoins: Record<string, number>; harvestXp: number; masteredBonus: { coins: number; gems: number }; barnBonus: { coins: number };
-  orderTrashCost: number; decorSellRate: number; gemSellCoins: number; petTrips: PetTripDef[]; petPerks: PetPerk[]; petTripWordsPerDay: number; petLevels: number[]; petFeedReward: { coins: number; petXp: number };
+  orderTrashCost: number; decorSellRate: number; gemSellCoins: number; early: { rewardRate: number; nextFactor: number }; water: { cut: number; maxPerDay: number; size: number; reward: { coins: number; xp: number } }; petTrips: PetTripDef[]; petPerks: PetPerk[]; petTripWordsPerDay: number; petLevels: number[]; petFeedReward: { coins: number; petXp: number };
   visit: { likeReward: number; giftReward: number; giftCost: number; giftsPerDay: number };
 };
+export type WaterQuiz = { left: number; used: number; max: number; cut: number; items: { progressId: string; meaning: string; hint: string; length: number }[] };
 export type HarvestResult = {
-  correct: boolean; quality: number; mode: string; word: string; meaning: string; example: string | null;
+  early?: boolean; correct: boolean; quality: number; mode: string; word: string; meaning: string; example: string | null;
   coins: number; gems: number; xp: number; produce: number; produceKey: string | null; overflowSold: number; boosted: boolean; becameMastered: boolean; levelUp: number | null;
   srs: { status: string; interval: number };
 };
@@ -76,6 +77,7 @@ export type FarmState = {
   bought?: { itemKey: string; price?: number; currency?: string };
   sold?: { key: string; refund: number; currency: string; qty?: number };
   tripResult?: TripResult;
+  watered?: { ok: boolean; word: string; cutMs: number; left: number; coins: number; xp: number };
   crafted?: { started?: string; product?: string; collected?: string; qty?: number; price?: number };
   stored?: { word: string; coins: number };
   fed?: { coins: number; petXp: number };
@@ -116,8 +118,10 @@ export const farmApi = {
   seedTopics: (userId: string) => get<{ topics: SeedTopic[] }>(`/seeds/${userId}`),
   seedTopic: (userId: string, topic: string) => get<{ topic: { id: string; name: string; cropKey: string }; items: SeedTopicItem[] }>(`/seeds/${userId}?topic=${encodeURIComponent(topic)}`),
   plant: (userId: string, plotId: string, src: { progressId?: string; seed?: { topicId: string; word: string } }) => post<FarmState>("/plant", { userId, plotId, ...src }),
-  question: (userId: string, plotId: string) => get<Question>(`/plots/${plotId}/question?userId=${userId}`),
-  harvest: (userId: string, plotId: string, answer: string, usedHint: boolean) => post<FarmState>(`/plots/${plotId}/harvest`, { userId, answer, usedHint }),
+  question: (userId: string, plotId: string, early = false) => get<Question>(`/plots/${plotId}/question?userId=${userId}${early ? "&early=1" : ""}`),
+  harvest: (userId: string, plotId: string, answer: string, usedHint: boolean, early = false) => post<FarmState>(`/plots/${plotId}/harvest`, { userId, answer, usedHint, early }),
+  waterQuiz: (userId: string, plotId: string) => get<WaterQuiz>(`/plots/${plotId}/water?userId=${userId}`),
+  water: (userId: string, plotId: string, progressId: string, answer: string) => post<FarmState & { ok?: boolean }>(`/plots/${plotId}/water`, { userId, progressId, answer }),
   dig: (userId: string, plotId: string) => post<FarmState>(`/plots/${plotId}/dig`, { userId }),
   store: (userId: string, plotId: string) => post<FarmState>(`/plots/${plotId}/store`, { userId }),
   barn: (userId: string) => get<BarnItem[]>(`/barn/${userId}`),

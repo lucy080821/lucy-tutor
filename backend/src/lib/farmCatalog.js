@@ -384,6 +384,17 @@ function petBuffs(petXp, fed) {
   return { active: !!fed, coinPct: on(2) ? 0.1 : 0, orderPct: on(3) ? 0.1 : 0, tripTimePct: on(4) ? 0.2 : 0, factoryTimePct: on(5) ? 0.15 : 0, xpPct: on(6) ? 0.25 : 0 };
 }
 
+// ── Rút ngắn thời gian chờ mà vẫn học ──────────────────────────────────────────────────────────
+// Thời gian cây lớn = lịch ôn SRS nên KHÔNG mua được bằng xu/kim cương. Hai cách rút ngắn đều là học thêm:
+// 1) ÔN SỚM: thu hoạch cây chưa chín bằng câu khó (gõ từ, không gợi ý): thưởng giảm, lịch SM-2 không được "đẩy xa" như ôn đúng hạn.
+// 2) TƯỚI NƯỚC: trả lời đúng 1 từ ĐÃ HỌC KHÁC → cây rút 10% thời gian còn lại (tối đa 3 lần/cây/ngày).
+const EARLY_REWARD_RATE = 0.5;     // thưởng xu/XP khi ôn sớm
+const EARLY_NEXT_FACTOR = 0.6;     // ôn sớm đúng → lần chín kế tiếp sau 60% khoảng ôn hiện tại (ít nhất 6 giờ)
+const WATER_CUT = 0.1;             // mỗi lần tưới đúng rút 10% thời gian còn lại
+const WATER_MAX_PER_DAY = 3;       // số lần tưới tối đa cho mỗi cây mỗi ngày
+const WATER_QUIZ_SIZE = 3;
+const WATER_REWARD = { coins: 3, xp: 1 };
+
 const QUEST_STAT_KEYS = ['harvests', 'orders', 'plants', 'sold', 'feeds', 'spins', 'trips'];
 // Bộ đếm ghi bằng SQL nguyên tử (bumpStats trong farm.routes.js) — danh sách trắng
 const TRACKED_STATS = ['plants', 'sold', 'feeds', 'spins', 'trips', 'sentences', 'quizCorrect', 'likes', 'gifts', 'mastered'];
@@ -435,7 +446,7 @@ function publicCatalog() {
     startPlots: START_PLOTS, maxPlots: MAX_PLOTS, firstGrowMinutes: FIRST_GROW_MINUTES,
     harvestCoins: HARVEST_COINS, harvestXp: HARVEST_XP, masteredBonus: MASTERED_BONUS, barnBonus: BARN_BONUS,
     orderTrashCost: ORDER_TRASH_COST, decorSellRate: DECOR_SELL_RATE, gemSellCoins: GEM_SELL_COINS,
-    petLevels: PET_LEVELS, petFeedReward: PET_FEED_REWARD, petTrips: PET_TRIPS, petPerks: PET_PERKS, petTripWordsPerDay: PET_TRIP_WORDS_PER_DAY,
+    petLevels: PET_LEVELS, petFeedReward: PET_FEED_REWARD, early: { rewardRate: EARLY_REWARD_RATE, nextFactor: EARLY_NEXT_FACTOR }, water: { cut: WATER_CUT, maxPerDay: WATER_MAX_PER_DAY, size: WATER_QUIZ_SIZE, reward: WATER_REWARD }, petTrips: PET_TRIPS, petPerks: PET_PERKS, petTripWordsPerDay: PET_TRIP_WORDS_PER_DAY,
     visit: { likeReward: VISIT_LIKE_REWARD, giftReward: VISIT_GIFT_REWARD, giftCost: VISIT_GIFT_COST, giftsPerDay: VISIT_GIFTS_PER_DAY },
   };
 }
@@ -446,7 +457,7 @@ module.exports = {
   DECOR, PRODUCTS, FACTORIES, DECOR_SELL_RATE, GEM_SELL_COINS, sellValue, HARVEST_COINS, HARVEST_XP, MASTERED_BONUS, BARN_BONUS, WITHER_PENALTY_COINS,
   CUSTOMERS, ORDER_SLOTS, makeOrderTemplate, orderDifficulty, ORDER_TRASH_COST,
   PRODUCE_PRICE, PRODUCE_PER_HARVEST, BARN_TIERS, BARN_FULL_SELL_RATE, BARN_QUIZ, OUTFITS, OUTFIT_SLOTS, DECOR_CATS,
-  WHEEL, WHEEL_DECOR_POOL, PET_TRIPS, PET_TRIP_WORDS_PER_DAY, PET_TRIP_LEVEL_BONUS, PET_PERKS, petBuffs, PET_FEED_REWARD, PET_PAT_XP, PET_LEVELS, petLevelFor,
+  WHEEL, WHEEL_DECOR_POOL, EARLY_REWARD_RATE, EARLY_NEXT_FACTOR, WATER_CUT, WATER_MAX_PER_DAY, WATER_QUIZ_SIZE, WATER_REWARD, PET_TRIPS, PET_TRIP_WORDS_PER_DAY, PET_TRIP_LEVEL_BONUS, PET_PERKS, petBuffs, PET_FEED_REWARD, PET_PAT_XP, PET_LEVELS, petLevelFor,
   VISIT_LIKE_REWARD, VISIT_GIFT_REWARD, VISIT_GIFT_COST, VISIT_GIFTS_PER_DAY, vnDay, publicCatalog,
   dailyQuestDefs, questChest, QUEST_STAT_KEYS, TRACKED_STATS, ACHIEVEMENTS, statValue,
 };
