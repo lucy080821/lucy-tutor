@@ -5,7 +5,9 @@ const crypto = require('crypto');
 const prisma = require('../lib/prisma');
 const { calculateSM2, statusAfterReview } = require('../lib/sm2');
 const C = require('../lib/farmCatalog');
-const SEEDS = require('../data/farmSeeds.json');
+const SC = require('../lib/farmSeedCatalog');
+const { getFlashcardSnapshot } = require('../utils/flashcardCatalog');
+const SEEDS = SC.VOCAB; // chỉ từ vựng (ngữ pháp/phát âm xem SC.TOPICS)
 const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
 
 const router = express.Router();
@@ -239,10 +241,13 @@ async function bumpOrders(userId, kind, amount = 1, cropKey = null) {
 // Dạng câu hỏi thu hoạch theo số lần đã nhớ đúng: 0 → chọn từ, 1 → nghe chọn nghĩa,
 // ≥2 → gõ từ (xen kẽ điền vào câu ví dụ). Server và client cùng suy ra từ `repetitions`.
 function modeFor(progress) {
-  const r = progress.repetitions;
+  const v = progress.vocab; const kind = SC.kindOfVocab(v); const r = progress.repetitions;
+  // Thẻ phát âm: luôn nhiều lựa chọn. Thẻ ngữ pháp: chọn đáp án ở 2 lần đầu, sau đó gõ lại đáp án vào câu có chỗ trống.
+  if (kind === 'pron') return SC.cardOf(v) ? 'CARD' : 'TYPE';
+  if (kind === 'grammar') return !SC.cardOf(v) ? 'TYPE' : r >= 2 ? 'FILL' : 'CARD';
   if (r === 0) return 'CHOICE';
   if (r === 1) return 'LISTEN';
-  return progress.vocab.example && r % 2 === 0 ? 'FILL' : 'TYPE';
+  return v.example && r % 2 === 0 ? 'FILL' : 'TYPE';
 }
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
@@ -285,15 +290,29 @@ router.get('/seeds/:userId', async (req, res) => {
       });
       return res.json({ source: 'deck', items: rows.map((r) => ({ progressId: r.id, word: r.vocab.word, meaning: r.vocab.meaning, phonetic: r.vocab.phonetic, example: r.vocab.example, pos: r.vocab.pos, srs: { status: r.status, repetitions: r.repetitions }, fromLesson: !!r.vocab.lessonId })) });
     }
-    const topics = SEEDS.map((t) => ({ id: t.id, name: t.name, desc: t.desc, count: t.words.length, cropKey: C.TOPIC_CROP[t.id] }));
+    // Sách giáo khoa theo lớp/unit: lấy từ kho flashcard công khai (từ giáo viên đã soạn trong DB)
+    if (source === 'sgk') {
+      const snap = getFlashcardSnapshot();
+      if (!req.query.grade) return res.json({ source: 'sgk', grades: snap.grades.map((g) => ({ grade: g.grade, units: g.units.map((u) => ({ key: u.key, title: u.title, count: u.cards.length })) })) });
+      const g = snap.grades.find((x) => x.grade === Number(req.query.grade));
+      const u = g && g.units.find((x) => String(x.key) === String(req.query.unit));
+      if (!u) return res.status(404).json({ error: 'Không có unit này' });
+      const have = await prisma.userVocabProgress.findMany({ where: { userId, vocab: { word: { in: u.cards.map((c) => c.en), mode: 'insensitive' } } }, select: { id: true, vocab: { select: { word: true } }, farmPlot: { select: { id: true } } } });
+      const map = new Map(have.map((h) => [h.vocab.word.toLowerCase(), h]));
+      return res.json({ source: 'sgk', items: u.cards.map((c) => { const h = map.get(c.en.toLowerCase()); return { word: c.en, meaning: c.vi, phonetic: c.phonetic || null, example: c.example || null, pos: c.pos || null, inDeck: !!h, planted: !!(h && h.farmPlot), progressId: h ? h.id : null }; }) });
+    }
+    const topics = SC.TOPICS.map((t) => ({ id: t.id, kind: t.kind, name: t.name, desc: t.desc, count: t.words.length, cropKey: C.TOPIC_CROP[t.id] }));
     if (!topic) return res.json({ source: 'topics', topics });
-    const t = SEEDS.find((x) => x.id === topic);
+    const t = SC.BY_ID.get(topic);
     if (!t) return res.status(404).json({ error: 'Chủ đề không tồn tại' });
-    // Từ nào đã có trong deck của học viên (để đánh dấu "đã có"/"đang trồng")
-    const words = t.words.map((w) => w.word.toLowerCase());
-    const have = await prisma.userVocabProgress.findMany({ where: { userId, vocab: { word: { in: words, mode: 'insensitive' } } }, select: { id: true, vocab: { select: { word: true } }, farmPlot: { select: { id: true } } } });
-    const map = new Map(have.map((h) => [h.vocab.word.toLowerCase(), h]));
-    res.json({ source: 'topic', topic: { id: t.id, name: t.name, cropKey: C.TOPIC_CROP[t.id] }, items: t.words.map((w) => { const h = map.get(w.word.toLowerCase()); return { ...w, inDeck: !!h, planted: !!(h && h.farmPlot), progressId: h ? h.id : null }; }) });
+    const pos = SC.posOfKind(t.kind);
+    // Thẻ nào đã có trong deck của học viên (để đánh dấu "đã có"/"đang trồng")
+    const sel = { id: true, vocab: { select: { word: true, meaning: true } }, farmPlot: { select: { id: true } } };
+    const have = pos
+      ? await prisma.userVocabProgress.findMany({ where: { userId, vocab: { pos, meaning: { in: t.words.map((w) => w.meaning) } } }, select: sel })
+      : await prisma.userVocabProgress.findMany({ where: { userId, vocab: { word: { in: t.words.map((w) => w.word.toLowerCase()), mode: 'insensitive' } } }, select: sel });
+    const map = new Map(have.map((h) => [pos ? SC.keyOf(pos, h.vocab.word, h.vocab.meaning) : h.vocab.word.toLowerCase(), h]));
+    res.json({ source: 'topic', topic: { id: t.id, kind: t.kind, name: t.name, cropKey: C.TOPIC_CROP[t.id] }, items: t.words.map((w) => { const h = map.get(pos ? SC.keyOf(pos, w.word, w.meaning) : w.word.toLowerCase()); return { ...w, kind: t.kind, inDeck: !!h, planted: !!(h && h.farmPlot), progressId: h ? h.id : null }; }) });
   } catch (e) { console.error('[farm] seeds', e); res.status(500).json({ error: 'Không tải được hạt giống' }); }
 });
 
@@ -307,14 +326,26 @@ router.post('/plant', async (req, res) => {
 
     let pid = progressId; let cropKey = null;
     if (!pid && seed) {
-      const t = SEEDS.find((x) => x.id === seed.topicId);
-      const w = t && t.words.find((x) => x.word.toLowerCase() === String(seed.word || '').toLowerCase());
-      if (!w) return res.status(400).json({ error: 'Hạt giống không hợp lệ' });
-      cropKey = C.cropForTopic(t.id);
-      const existing = await prisma.userVocabProgress.findFirst({ where: { userId, vocab: { word: { equals: w.word, mode: 'insensitive' } } }, select: { id: true } });
+      let spec = null; // { word, meaning, example, phonetic, pos }
+      if (seed.sgk) {
+        const g = getFlashcardSnapshot().grades.find((x) => x.grade === Number(seed.sgk.grade));
+        const u = g && g.units.find((x) => String(x.key) === String(seed.sgk.unit));
+        const c = u && u.cards.find((x) => x.en.toLowerCase() === String(seed.sgk.en || '').toLowerCase());
+        if (!c) return res.status(400).json({ error: 'Hạt giống không hợp lệ' });
+        spec = { word: c.en, meaning: c.vi, example: c.example || null, phonetic: c.phonetic || null, pos: c.pos || null };
+      } else {
+        const f = SC.findSeed(seed.topicId, seed.id || seed.word);
+        if (!f) return res.status(400).json({ error: 'Hạt giống không hợp lệ' });
+        cropKey = C.cropForTopic(f.topic.id);
+        spec = { word: f.seed.word, meaning: f.seed.meaning, example: f.seed.example || null, phonetic: f.seed.phonetic || null, pos: SC.posOfKind(f.topic.kind) };
+      }
+      const isCard = spec.pos === 'grammar' || spec.pos === 'pron';
+      const existing = await prisma.userVocabProgress.findFirst({
+        where: { userId, vocab: isCard ? { pos: spec.pos, word: spec.word, meaning: spec.meaning } : { word: { equals: spec.word, mode: 'insensitive' } } }, select: { id: true },
+      });
       if (existing) pid = existing.id;
       else {
-        const vocab = await prisma.vocabItem.create({ data: { word: w.word, meaning: w.meaning, example: w.example || null, addedByUserId: userId, progress: { create: { userId } } }, select: { progress: { select: { id: true } } } });
+        const vocab = await prisma.vocabItem.create({ data: { word: spec.word, meaning: spec.meaning, example: spec.example, phonetic: spec.phonetic, pos: spec.pos, addedByUserId: userId, progress: { create: { userId } } }, select: { progress: { select: { id: true } } } });
         pid = vocab.progress[0].id;
       }
     }
@@ -343,9 +374,15 @@ router.get('/plots/:plotId/question', async (req, res) => {
     const view = plotView(plot);
     const early = req.query.early === '1' && view.status !== 'READY'; // ôn sớm: câu khó hơn (điền từ / gõ từ)
     if (view.status !== 'READY' && !early) return res.status(400).json({ error: 'Cây chưa chín', readyAt: view.readyAt });
-    const v = plot.progress.vocab; const mode = early ? 'FILL' : modeFor(plot.progress);
+    const v = plot.progress.vocab; const card = SC.cardOf(v); const kind = SC.kindOfVocab(v);
+    const mode = early ? (kind === 'pron' ? 'CARD' : 'FILL') : modeFor(plot.progress);
     const q = { plotId: plot.id, mode, word: null, meaning: null, hint: null, options: null, speak: null, sentence: null };
-    if (mode === 'CHOICE' || mode === 'LISTEN') {
+    if (mode === 'CARD' && card) {
+      // Thẻ ngữ pháp / phát âm: câu hỏi + các lựa chọn có sẵn trong dữ liệu
+      q.kind = kind; q.type = card.type; q.prompt = card.prompt || v.meaning;
+      q.sentence = card.blank || null; q.meaning = card.blank ? v.meaning : null;
+      q.options = shuffle(card.options); q.speak = card.speak || null;
+    } else if (mode === 'CHOICE' || mode === 'LISTEN') {
       // Nhiễu: lấy từ các cây khác của học viên trước, thiếu thì lấy từ kho hạt giống
       const others = await prisma.farmPlot.findMany({ where: { userId: String(userId), progressId: { not: null }, id: { not: plot.id } }, include: PROGRESS_INCLUDE, take: 40 });
       const pool = shuffle([...others.map((o) => ({ word: o.progress.vocab.word, meaning: o.progress.vocab.meaning })), ...shuffle(ALL_SEED_WORDS).slice(0, 30)])
@@ -356,10 +393,10 @@ router.get('/plots/:plotId/question', async (req, res) => {
       else { q.speak = v.word; q.options = shuffle([v.meaning, ...distract.map((d) => d.meaning)]); }
     } else if (mode === 'FILL') {
       const re = new RegExp(v.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      q.sentence = re.test(v.example) ? v.example.replace(re, '_____') : null;
+      q.sentence = card && card.blank ? card.blank : (re.test(v.example) ? v.example.replace(re, '_____') : null);
       if (!q.sentence) { q.mode = 'TYPE'; }
       q.meaning = v.meaning; q.hint = hintMask(v.word);
-    } else { q.meaning = v.meaning; q.hint = hintMask(v.word); }
+    } else { q.mode = 'TYPE'; q.meaning = v.meaning; q.hint = hintMask(v.word); }
     res.json(q);
   } catch (e) { console.error('[farm] question', e); res.status(500).json({ error: 'Không tạo được câu hỏi' }); }
 });
@@ -378,15 +415,18 @@ router.post('/plots/:plotId/harvest', async (req, res) => {
     if (view.status !== 'READY' && !isEarly) return res.status(400).json({ error: 'Cây chưa chín' });
     if (isEarly && usedHint) return res.status(400).json({ error: 'Ôn sớm không dùng gợi ý' });
 
-    const p = plot.progress; const v = p.vocab; const mode = isEarly ? 'TYPE' : modeFor(p);
+    const p = plot.progress; const v = p.vocab; const kind = SC.kindOfVocab(v); const card = SC.cardOf(v);
+    const mode = isEarly ? (kind === 'pron' && card ? 'CARD' : 'TYPE') : modeFor(p);
     let quality;
     const a = String(answer || '');
-    if (mode === 'CHOICE') quality = clean(a) === clean(v.word) ? 4 : 1;
+    if (mode === 'CARD') quality = a.trim() === String(v.word).trim() ? 4 : 1;
+    else if (mode === 'CHOICE') quality = clean(a) === clean(v.word) ? 4 : 1;
     else if (mode === 'LISTEN') quality = clean(a) === clean(v.meaning) ? 4 : 1;
     else {
       const ca = clean(a), cw = clean(v.word);
       if (!ca) quality = 1;
       else if (ca === cw) quality = usedHint ? 4 : 5;
+      else if (kind === 'grammar') quality = 1; // ngữ pháp: phải đúng từng chữ (sai 1 chữ là sai dạng)
       else if (levenshtein(ca, cw) <= 2) quality = 3;
       else quality = 1;
     }
@@ -441,7 +481,7 @@ router.post('/plots/:plotId/harvest', async (req, res) => {
     await Promise.all(ops);
     const prevLevel = C.levelFor(farm.harvestCount);
     const newLevel = C.levelFor(farm.harvestCount + (correct ? 1 : 0));
-    res.json(await buildState(userId, { result: { correct, early: isEarly, quality, mode, word: v.word, meaning: v.meaning, example: v.example, coins, gems, xp, produce: produce - overflowSold, produceKey: plot.cropKey, overflowSold, boosted: correct && farm.boostHarvests > 0, becameMastered, levelUp: newLevel > prevLevel ? newLevel : null, srs: { status: newStatus, interval: sm2.interval } } }));
+    res.json(await buildState(userId, { result: { correct, early: isEarly, quality, mode, kind, speak: card ? (card.speak || null) : v.word, word: v.word, meaning: v.meaning, example: card ? (card.kind === 'grammar' ? `${v.example} — ${card.explain}` : (card.explain || v.example)) : v.example, coins, gems, xp, produce: produce - overflowSold, produceKey: plot.cropKey, overflowSold, boosted: correct && farm.boostHarvests > 0, becameMastered, levelUp: newLevel > prevLevel ? newLevel : null, srs: { status: newStatus, interval: sm2.interval } } }));
   } catch (e) { console.error('[farm] harvest', e); res.status(500).json({ error: 'Không thu hoạch được' }); }
 });
 
@@ -449,7 +489,7 @@ router.post('/plots/:plotId/harvest', async (req, res) => {
 // Rút ngắn bằng cách dời mốc chín (nextReviewDate, hoặc plantedAt với cây mới trồng lần đầu).
 async function waterCandidates(userId, plot) {
   const rows = await prisma.userVocabProgress.findMany({
-    where: { userId, repetitions: { gte: 1 }, id: { not: plot.progressId } },
+    where: { userId, repetitions: { gte: 1 }, id: { not: plot.progressId }, vocab: { OR: [{ pos: null }, { pos: { notIn: ['grammar', 'pron'] } }] } },
     include: { vocab: true }, take: 80,
   });
   return rows.filter((r) => r.vocab && r.vocab.word && r.vocab.meaning);
@@ -483,7 +523,7 @@ router.post('/plots/:plotId/water', async (req, res) => {
     const { farm: farm2, daily } = await ensureDaily(farm);
     const waterMap = jsonObj(daily.water); const used = waterMap[plot.id] || 0;
     if (used >= C.WATER_MAX_PER_DAY) return res.status(400).json({ error: 'Hôm nay cây này đã được tưới đủ rồi' });
-    const t = await prisma.userVocabProgress.findFirst({ where: { id: String(progressId), userId, repetitions: { gte: 1 } }, include: { vocab: true } });
+    const t = await prisma.userVocabProgress.findFirst({ where: { id: String(progressId), userId, repetitions: { gte: 1 }, vocab: { OR: [{ pos: null }, { pos: { notIn: ['grammar', 'pron'] } }] } }, include: { vocab: true } });
     if (!t || t.id === plot.progressId) return res.status(400).json({ error: 'Từ không hợp lệ' });
     const ca = clean(answer), cw = clean(t.vocab.word);
     const ok = !!ca && (ca === cw || (cw.length >= 6 && levenshtein(ca, cw) <= 1));
@@ -531,7 +571,7 @@ router.post('/plots/:plotId/store', async (req, res) => {
 // Kho từ đã thuộc (MASTERED) của học viên — cả từ đang trồng lẫn đã cất
 router.get('/barn/:userId', async (req, res) => {
   try {
-    const rows = await prisma.userVocabProgress.findMany({ where: { userId: req.params.userId, status: 'MASTERED' }, include: { vocab: { select: { word: true, meaning: true, phonetic: true, example: true } }, farmPlot: { select: { id: true } } }, orderBy: { lastReviewedAt: 'desc' } });
+    const rows = await prisma.userVocabProgress.findMany({ where: { userId: req.params.userId, status: 'MASTERED', vocab: { OR: [{ pos: null }, { pos: { notIn: ['grammar', 'pron'] } }] } }, include: { vocab: { select: { word: true, meaning: true, phonetic: true, example: true } }, farmPlot: { select: { id: true } } }, orderBy: { lastReviewedAt: 'desc' } });
     res.json(rows.map((r) => ({ progressId: r.id, ...r.vocab, interval: r.interval, onPlot: !!r.farmPlot })));
   } catch (e) { res.status(500).json({ error: 'Không tải được kho' }); }
 });
@@ -1001,7 +1041,7 @@ router.post('/barn/upgrade', async (req, res) => {
 // Ôn kho từ: 5 từ MASTERED ngẫu nhiên (gõ từ theo nghĩa) — không đổi lịch SRS, chỉ thưởng xu (giới hạn/ngày)
 router.get('/barn/quiz/:userId', async (req, res) => {
   try {
-    const rows = await prisma.userVocabProgress.findMany({ where: { userId: req.params.userId, status: 'MASTERED' }, select: { id: true, vocab: { select: { word: true, meaning: true, example: true } } } });
+    const rows = await prisma.userVocabProgress.findMany({ where: { userId: req.params.userId, status: 'MASTERED', vocab: { OR: [{ pos: null }, { pos: { notIn: ['grammar', 'pron'] } }] } }, select: { id: true, vocab: { select: { word: true, meaning: true, example: true } } } });
     const pick = shuffle(rows).slice(0, C.BARN_QUIZ.size);
     res.json({ items: pick.map((r) => ({ progressId: r.id, meaning: r.vocab.meaning, hint: hintMask(r.vocab.word), example: r.vocab.example && new RegExp(r.vocab.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(r.vocab.example) ? r.vocab.example.replace(new RegExp(r.vocab.word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i'), '_____') : null })), total: rows.length });
   } catch (e) { console.error('[farm] barn quiz', e); res.status(500).json({ error: 'Không tạo được bài ôn' }); }

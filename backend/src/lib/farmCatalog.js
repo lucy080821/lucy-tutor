@@ -16,6 +16,13 @@ const CROPS = {
 const TOPIC_CROP = {
   family: 'sunflower', school: 'wheat', food: 'tomato', travel: 'corn',
   work: 'carrot', health: 'strawberry', environment: 'pumpkin', tech: 'grape',
+  home: 'carrot', clothes: 'strawberry', animals: 'corn', weather: 'sunflower', sports: 'pumpkin', hobbies: 'grape',
+  shopping: 'tomato', city: 'wheat', feelings: 'strawberry', time: 'carrot', culture: 'pumpkin', science: 'grape',
+  // ngữ pháp
+  'g-present': 'wheat', 'g-past': 'corn', 'g-article': 'carrot', 'g-prep': 'tomato', 'g-compare': 'sunflower',
+  'g-passive': 'pumpkin', 'g-condition': 'grape', 'g-clause': 'strawberry', 'g-modal': 'wheat',
+  // phát âm
+  'p-ed': 'sunflower', 'p-s': 'tomato', 'p-stress': 'strawberry', 'p-min': 'corn', 'p-ipa': 'grape', 'p-odd': 'pumpkin',
 };
 const CROP_KEYS = Object.keys(CROPS);
 function cropForTopic(topicId) {

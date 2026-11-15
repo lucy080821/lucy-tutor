@@ -11,11 +11,16 @@ export default function GrowingPanel({ plot, catalog, now, onClose, onEarly, onW
   const live = liveStatus(plot, now);
   const mastered = plot.srs?.status === "MASTERED";
   const ratePct = Math.round(catalog.early.rewardRate * 100);
+  const isCard = plot.pos === "grammar" || plot.pos === "pron";
+  const kindLabel = plot.pos === "grammar" ? "Ngữ pháp" : plot.pos === "pron" ? "Phát âm" : "Nghĩa";
+  const mask = (plot.word || "").split(" ").map((w) => (w ? w[0] + " _".repeat(Math.max(0, w.length - 1)) : "")).join("   ");
   return (
-    <Modal title={plot.word || "Cây đang lớn"} subtitle={live.status === "READY" ? "Cây đã chín!" : `Chín sau ${formatCountdown(live.msLeft)}${plot.wilted ? " (đang héo, học lại từ đầu)" : ""}`} onClose={onClose}>
+    <Modal title={mastered ? plot.word || "Cây đã thuộc" : "Cây đang lớn"} subtitle={live.status === "READY" ? "Cây đã chín!" : `Chín sau ${formatCountdown(live.msLeft)}${plot.wilted ? " (đang héo, học lại từ đầu)" : ""}`} onClose={onClose}>
+      {/* Chưa thuộc thì chỉ hiện nghĩa/gợi ý, KHÔNG lộ từ và câu ví dụ để "Ôn sớm" và "Tưới nước" vẫn là nhớ lại thật */}
       <div className="rounded-2xl bg-primary-soft px-4 py-3 text-center">
+        <p className="text-xs uppercase tracking-wide text-muted font-bold">{kindLabel}</p>
         <p className="text-xl font-extrabold text-primary">{plot.meaning}</p>
-        {plot.example && <p className="text-sm italic text-muted mt-1">“{plot.example}”</p>}
+        {mastered ? (plot.example && <p className="text-sm italic text-muted mt-1">“{plot.example}”</p>) : (isCard ? null : <p className="font-mono text-lg tracking-widest text-primary mt-1">{mask}</p>)}
         <p className="text-xs text-muted mt-2">Đã nhớ đúng {plot.srs?.repetitions ?? 0} lần · {mastered ? "Thuộc lòng" : plot.srs?.status === "REVIEWING" ? "Đang ôn" : "Mới"}</p>
       </div>
       <p className="text-xs font-bold text-muted uppercase mt-4 mb-2">Muốn không phải chờ?</p>
@@ -30,7 +35,7 @@ export default function GrowingPanel({ plot, catalog, now, onClose, onEarly, onW
         </button>
       </div>
       <div className="grid grid-cols-2 gap-2 mt-3">
-        <button onClick={() => speak(plot.word || "")} className="btn-outline rounded-full px-4 py-2.5 font-bold">🔊 Nghe</button>
+        <button onClick={() => speak(plot.word || "")} disabled={isCard} className="btn-outline rounded-full px-4 py-2.5 font-bold disabled:opacity-40">🔊 Nghe</button>
         <button onClick={onRemove} className="btn-ghost rounded-full px-4 py-2.5 font-bold text-amber-700">{mastered ? "Cất kho (+xu)" : "Nhổ cây"}</button>
       </div>
     </Modal>

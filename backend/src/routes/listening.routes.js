@@ -349,7 +349,7 @@ router.get('/queue/:userId', async (req, res) => {
     // Deck + accessible clips are independent — fetch concurrently
     const [deckProgress, clips] = await Promise.all([
       prisma.userVocabProgress.findMany({
-        where: { userId },
+        where: { userId, vocab: { OR: [{ pos: null }, { pos: { notIn: ['grammar', 'pron'] } }] } },
         include: { vocab: true },
         orderBy: { nextReviewDate: 'asc' },
         take: 200

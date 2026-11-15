@@ -1,0 +1,1305 @@
+[
+ {
+  "id": "p-ed",
+  "kind": "pron",
+  "name": "Đuôi -ed",
+  "desc": "/t/, /d/ hay /ɪd/?",
+  "words": [
+   {
+    "id": "p-ed-1",
+    "word": "/t/",
+    "meaning": "Đuôi -ed của “watched” đọc là gì?",
+    "prompt": "Đuôi -ed của “watched” đọc là gì?",
+    "example": "Âm cuối /tʃ/ là âm vô thanh → -ed đọc /t/.",
+    "options": [
+     "/t/",
+     "/d/",
+     "/ɪd/"
+    ],
+    "explain": "Âm cuối /tʃ/ là âm vô thanh → -ed đọc /t/.",
+    "speak": "watched",
+    "tier": "easy",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-ed-2",
+    "word": "/d/",
+    "meaning": "Đuôi -ed của “played” đọc là gì?",
+    "prompt": "Đuôi -ed của “played” đọc là gì?",
+    "example": "Âm cuối /eɪ/ là âm hữu thanh → -ed đọc /d/.",
+    "options": [
+     "/t/",
+     "/d/",
+     "/ɪd/"
+    ],
+    "explain": "Âm cuối /eɪ/ là âm hữu thanh → -ed đọc /d/.",
+    "speak": "played",
+    "tier": "easy",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-ed-3",
+    "word": "/ɪd/",
+    "meaning": "Đuôi -ed của “wanted” đọc là gì?",
+    "prompt": "Đuôi -ed của “wanted” đọc là gì?",
+    "example": "Động từ tận cùng /t/ hoặc /d/ → -ed đọc /ɪd/.",
+    "options": [
+     "/t/",
+     "/d/",
+     "/ɪd/"
+    ],
+    "explain": "Động từ tận cùng /t/ hoặc /d/ → -ed đọc /ɪd/.",
+    "speak": "wanted",
+    "tier": "easy",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-ed-4",
+    "word": "/t/",
+    "meaning": "Đuôi -ed của “helped” đọc là gì?",
+    "prompt": "Đuôi -ed của “helped” đọc là gì?",
+    "example": "Âm cuối /p/ là âm vô thanh → -ed đọc /t/.",
+    "options": [
+     "/t/",
+     "/d/",
+     "/ɪd/"
+    ],
+    "explain": "Âm cuối /p/ là âm vô thanh → -ed đọc /t/.",
+    "speak": "helped",
+    "tier": "easy",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-ed-5",
+    "word": "/d/",
+    "meaning": "Đuôi -ed của “cleaned” đọc là gì?",
+    "prompt": "Đuôi -ed của “cleaned” đọc là gì?",
+    "example": "Âm cuối /n/ là âm hữu thanh → -ed đọc /d/.",
+    "options": [
+     "/t/",
+     "/d/",
+     "/ɪd/"
+    ],
+    "explain": "Âm cuối /n/ là âm hữu thanh → -ed đọc /d/.",
+    "speak": "cleaned",
+    "tier": "medium",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-ed-6",
+    "word": "/ɪd/",
+    "meaning": "Đuôi -ed của “needed” đọc là gì?",
+    "prompt": "Đuôi -ed của “needed” đọc là gì?",
+    "example": "Động từ tận cùng /d/ → -ed đọc /ɪd/.",
+    "options": [
+     "/t/",
+     "/d/",
+     "/ɪd/"
+    ],
+    "explain": "Động từ tận cùng /d/ → -ed đọc /ɪd/.",
+    "speak": "needed",
+    "tier": "medium",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-ed-7",
+    "word": "/t/",
+    "meaning": "Đuôi -ed của “stopped” đọc là gì?",
+    "prompt": "Đuôi -ed của “stopped” đọc là gì?",
+    "example": "Âm cuối /p/ là âm vô thanh → -ed đọc /t/.",
+    "options": [
+     "/t/",
+     "/d/",
+     "/ɪd/"
+    ],
+    "explain": "Âm cuối /p/ là âm vô thanh → -ed đọc /t/.",
+    "speak": "stopped",
+    "tier": "medium",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-ed-8",
+    "word": "/d/",
+    "meaning": "Đuôi -ed của “opened” đọc là gì?",
+    "prompt": "Đuôi -ed của “opened” đọc là gì?",
+    "example": "Âm cuối /n/ là âm hữu thanh → -ed đọc /d/.",
+    "options": [
+     "/t/",
+     "/d/",
+     "/ɪd/"
+    ],
+    "explain": "Âm cuối /n/ là âm hữu thanh → -ed đọc /d/.",
+    "speak": "opened",
+    "tier": "medium",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-ed-9",
+    "word": "/ɪd/",
+    "meaning": "Đuôi -ed của “decided” đọc là gì?",
+    "prompt": "Đuôi -ed của “decided” đọc là gì?",
+    "example": "Động từ tận cùng /d/ → -ed đọc /ɪd/.",
+    "options": [
+     "/t/",
+     "/d/",
+     "/ɪd/"
+    ],
+    "explain": "Động từ tận cùng /d/ → -ed đọc /ɪd/.",
+    "speak": "decided",
+    "tier": "hard",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-ed-10",
+    "word": "/t/",
+    "meaning": "Đuôi -ed của “washed” đọc là gì?",
+    "prompt": "Đuôi -ed của “washed” đọc là gì?",
+    "example": "Âm cuối /ʃ/ là âm vô thanh → -ed đọc /t/.",
+    "options": [
+     "/t/",
+     "/d/",
+     "/ɪd/"
+    ],
+    "explain": "Âm cuối /ʃ/ là âm vô thanh → -ed đọc /t/.",
+    "speak": "washed",
+    "tier": "hard",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-ed-11",
+    "word": "/d/",
+    "meaning": "Đuôi -ed của “lived” đọc là gì?",
+    "prompt": "Đuôi -ed của “lived” đọc là gì?",
+    "example": "Âm cuối /v/ là âm hữu thanh → -ed đọc /d/.",
+    "options": [
+     "/t/",
+     "/d/",
+     "/ɪd/"
+    ],
+    "explain": "Âm cuối /v/ là âm hữu thanh → -ed đọc /d/.",
+    "speak": "lived",
+    "tier": "hard",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-ed-12",
+    "word": "/ɪd/",
+    "meaning": "Đuôi -ed của “visited” đọc là gì?",
+    "prompt": "Đuôi -ed của “visited” đọc là gì?",
+    "example": "Động từ tận cùng /t/ → -ed đọc /ɪd/.",
+    "options": [
+     "/t/",
+     "/d/",
+     "/ɪd/"
+    ],
+    "explain": "Động từ tận cùng /t/ → -ed đọc /ɪd/.",
+    "speak": "visited",
+    "tier": "hard",
+    "cefr": "A2",
+    "type": "ending"
+   }
+  ]
+ },
+ {
+  "id": "p-s",
+  "kind": "pron",
+  "name": "Đuôi -s / -es",
+  "desc": "/s/, /z/ hay /ɪz/?",
+  "words": [
+   {
+    "id": "p-s-1",
+    "word": "/s/",
+    "meaning": "Đuôi -s/-es của “books” đọc là gì?",
+    "prompt": "Đuôi -s/-es của “books” đọc là gì?",
+    "example": "Âm cuối /k/ là âm vô thanh → -s đọc /s/.",
+    "options": [
+     "/s/",
+     "/z/",
+     "/ɪz/"
+    ],
+    "explain": "Âm cuối /k/ là âm vô thanh → -s đọc /s/.",
+    "speak": "books",
+    "tier": "easy",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-s-2",
+    "word": "/z/",
+    "meaning": "Đuôi -s/-es của “dogs” đọc là gì?",
+    "prompt": "Đuôi -s/-es của “dogs” đọc là gì?",
+    "example": "Âm cuối /g/ là âm hữu thanh → -s đọc /z/.",
+    "options": [
+     "/s/",
+     "/z/",
+     "/ɪz/"
+    ],
+    "explain": "Âm cuối /g/ là âm hữu thanh → -s đọc /z/.",
+    "speak": "dogs",
+    "tier": "easy",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-s-3",
+    "word": "/ɪz/",
+    "meaning": "Đuôi -s/-es của “buses” đọc là gì?",
+    "prompt": "Đuôi -s/-es của “buses” đọc là gì?",
+    "example": "Từ tận cùng âm gió (/s/, /z/, /ʃ/, /tʃ/, /dʒ/) → -es đọc /ɪz/.",
+    "options": [
+     "/s/",
+     "/z/",
+     "/ɪz/"
+    ],
+    "explain": "Từ tận cùng âm gió (/s/, /z/, /ʃ/, /tʃ/, /dʒ/) → -es đọc /ɪz/.",
+    "speak": "buses",
+    "tier": "easy",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-s-4",
+    "word": "/s/",
+    "meaning": "Đuôi -s/-es của “cats” đọc là gì?",
+    "prompt": "Đuôi -s/-es của “cats” đọc là gì?",
+    "example": "Âm cuối /t/ là âm vô thanh → -s đọc /s/.",
+    "options": [
+     "/s/",
+     "/z/",
+     "/ɪz/"
+    ],
+    "explain": "Âm cuối /t/ là âm vô thanh → -s đọc /s/.",
+    "speak": "cats",
+    "tier": "easy",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-s-5",
+    "word": "/z/",
+    "meaning": "Đuôi -s/-es của “pens” đọc là gì?",
+    "prompt": "Đuôi -s/-es của “pens” đọc là gì?",
+    "example": "Âm cuối /n/ là âm hữu thanh → -s đọc /z/.",
+    "options": [
+     "/s/",
+     "/z/",
+     "/ɪz/"
+    ],
+    "explain": "Âm cuối /n/ là âm hữu thanh → -s đọc /z/.",
+    "speak": "pens",
+    "tier": "medium",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-s-6",
+    "word": "/ɪz/",
+    "meaning": "Đuôi -s/-es của “watches” đọc là gì?",
+    "prompt": "Đuôi -s/-es của “watches” đọc là gì?",
+    "example": "Từ tận cùng /tʃ/ → -es đọc /ɪz/.",
+    "options": [
+     "/s/",
+     "/z/",
+     "/ɪz/"
+    ],
+    "explain": "Từ tận cùng /tʃ/ → -es đọc /ɪz/.",
+    "speak": "watches",
+    "tier": "medium",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-s-7",
+    "word": "/s/",
+    "meaning": "Đuôi -s/-es của “cups” đọc là gì?",
+    "prompt": "Đuôi -s/-es của “cups” đọc là gì?",
+    "example": "Âm cuối /p/ là âm vô thanh → -s đọc /s/.",
+    "options": [
+     "/s/",
+     "/z/",
+     "/ɪz/"
+    ],
+    "explain": "Âm cuối /p/ là âm vô thanh → -s đọc /s/.",
+    "speak": "cups",
+    "tier": "medium",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-s-8",
+    "word": "/ɪz/",
+    "meaning": "Đuôi -s/-es của “boxes” đọc là gì?",
+    "prompt": "Đuôi -s/-es của “boxes” đọc là gì?",
+    "example": "Từ tận cùng /s/ → -es đọc /ɪz/.",
+    "options": [
+     "/s/",
+     "/z/",
+     "/ɪz/"
+    ],
+    "explain": "Từ tận cùng /s/ → -es đọc /ɪz/.",
+    "speak": "boxes",
+    "tier": "medium",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-s-9",
+    "word": "/z/",
+    "meaning": "Đuôi -s/-es của “days” đọc là gì?",
+    "prompt": "Đuôi -s/-es của “days” đọc là gì?",
+    "example": "Âm cuối là nguyên âm (hữu thanh) → -s đọc /z/.",
+    "options": [
+     "/s/",
+     "/z/",
+     "/ɪz/"
+    ],
+    "explain": "Âm cuối là nguyên âm (hữu thanh) → -s đọc /z/.",
+    "speak": "days",
+    "tier": "hard",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-s-10",
+    "word": "/s/",
+    "meaning": "Đuôi -s/-es của “hats” đọc là gì?",
+    "prompt": "Đuôi -s/-es của “hats” đọc là gì?",
+    "example": "Âm cuối /t/ là âm vô thanh → -s đọc /s/.",
+    "options": [
+     "/s/",
+     "/z/",
+     "/ɪz/"
+    ],
+    "explain": "Âm cuối /t/ là âm vô thanh → -s đọc /s/.",
+    "speak": "hats",
+    "tier": "hard",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-s-11",
+    "word": "/ɪz/",
+    "meaning": "Đuôi -s/-es của “roses” đọc là gì?",
+    "prompt": "Đuôi -s/-es của “roses” đọc là gì?",
+    "example": "Từ tận cùng /z/ → -es đọc /ɪz/.",
+    "options": [
+     "/s/",
+     "/z/",
+     "/ɪz/"
+    ],
+    "explain": "Từ tận cùng /z/ → -es đọc /ɪz/.",
+    "speak": "roses",
+    "tier": "hard",
+    "cefr": "A2",
+    "type": "ending"
+   },
+   {
+    "id": "p-s-12",
+    "word": "/z/",
+    "meaning": "Đuôi -s/-es của “birds” đọc là gì?",
+    "prompt": "Đuôi -s/-es của “birds” đọc là gì?",
+    "example": "Âm cuối /d/ là âm hữu thanh → -s đọc /z/.",
+    "options": [
+     "/s/",
+     "/z/",
+     "/ɪz/"
+    ],
+    "explain": "Âm cuối /d/ là âm hữu thanh → -s đọc /z/.",
+    "speak": "birds",
+    "tier": "hard",
+    "cefr": "A2",
+    "type": "ending"
+   }
+  ]
+ },
+ {
+  "id": "p-stress",
+  "kind": "pron",
+  "name": "Trọng âm",
+  "desc": "Từ 2–3 âm tiết hay gặp",
+  "words": [
+   {
+    "id": "p-stress-1",
+    "word": "Âm tiết 2",
+    "meaning": "Trọng âm của “hotel” rơi vào âm tiết nào?",
+    "prompt": "Trọng âm của “hotel” rơi vào âm tiết nào?",
+    "example": "Danh từ hai âm tiết, trọng âm rơi vào âm tiết 2: hoˈtel.",
+    "options": [
+     "Âm tiết 1",
+     "Âm tiết 2"
+    ],
+    "explain": "Danh từ hai âm tiết, trọng âm rơi vào âm tiết 2: hoˈtel.",
+    "speak": "hotel",
+    "tier": "easy",
+    "cefr": "B1",
+    "type": "stress"
+   },
+   {
+    "id": "p-stress-2",
+    "word": "Âm tiết 1",
+    "meaning": "Trọng âm của “teacher” rơi vào âm tiết nào?",
+    "prompt": "Trọng âm của “teacher” rơi vào âm tiết nào?",
+    "example": "Danh từ hai âm tiết thường nhấn âm 1: ˈteacher.",
+    "options": [
+     "Âm tiết 1",
+     "Âm tiết 2"
+    ],
+    "explain": "Danh từ hai âm tiết thường nhấn âm 1: ˈteacher.",
+    "speak": "teacher",
+    "tier": "easy",
+    "cefr": "B1",
+    "type": "stress"
+   },
+   {
+    "id": "p-stress-3",
+    "word": "Âm tiết 2",
+    "meaning": "Trọng âm của “because” rơi vào âm tiết nào?",
+    "prompt": "Trọng âm của “because” rơi vào âm tiết nào?",
+    "example": "Liên từ be-cause nhấn âm 2: beˈcause.",
+    "options": [
+     "Âm tiết 1",
+     "Âm tiết 2"
+    ],
+    "explain": "Liên từ be-cause nhấn âm 2: beˈcause.",
+    "speak": "because",
+    "tier": "easy",
+    "cefr": "B1",
+    "type": "stress"
+   },
+   {
+    "id": "p-stress-4",
+    "word": "Âm tiết 1",
+    "meaning": "Trọng âm của “garden” rơi vào âm tiết nào?",
+    "prompt": "Trọng âm của “garden” rơi vào âm tiết nào?",
+    "example": "ˈgarden: nhấn âm 1.",
+    "options": [
+     "Âm tiết 1",
+     "Âm tiết 2"
+    ],
+    "explain": "ˈgarden: nhấn âm 1.",
+    "speak": "garden",
+    "tier": "easy",
+    "cefr": "B1",
+    "type": "stress"
+   },
+   {
+    "id": "p-stress-5",
+    "word": "Âm tiết 2",
+    "meaning": "Trọng âm của “police” rơi vào âm tiết nào?",
+    "prompt": "Trọng âm của “police” rơi vào âm tiết nào?",
+    "example": "poˈlice: nhấn âm 2.",
+    "options": [
+     "Âm tiết 1",
+     "Âm tiết 2"
+    ],
+    "explain": "poˈlice: nhấn âm 2.",
+    "speak": "police",
+    "tier": "medium",
+    "cefr": "B1",
+    "type": "stress"
+   },
+   {
+    "id": "p-stress-6",
+    "word": "Âm tiết 2",
+    "meaning": "Trọng âm của “important” rơi vào âm tiết nào?",
+    "prompt": "Trọng âm của “important” rơi vào âm tiết nào?",
+    "example": "imˈportant: nhấn âm 2.",
+    "options": [
+     "Âm tiết 1",
+     "Âm tiết 2",
+     "Âm tiết 3"
+    ],
+    "explain": "imˈportant: nhấn âm 2.",
+    "speak": "important",
+    "tier": "medium",
+    "cefr": "B1",
+    "type": "stress"
+   },
+   {
+    "id": "p-stress-7",
+    "word": "Âm tiết 2",
+    "meaning": "Trọng âm của “banana” rơi vào âm tiết nào?",
+    "prompt": "Trọng âm của “banana” rơi vào âm tiết nào?",
+    "example": "baˈnana: nhấn âm 2.",
+    "options": [
+     "Âm tiết 1",
+     "Âm tiết 2",
+     "Âm tiết 3"
+    ],
+    "explain": "baˈnana: nhấn âm 2.",
+    "speak": "banana",
+    "tier": "medium",
+    "cefr": "B1",
+    "type": "stress"
+   },
+   {
+    "id": "p-stress-8",
+    "word": "Âm tiết 1",
+    "meaning": "Trọng âm của “beautiful” rơi vào âm tiết nào?",
+    "prompt": "Trọng âm của “beautiful” rơi vào âm tiết nào?",
+    "example": "ˈbeautiful: nhấn âm 1.",
+    "options": [
+     "Âm tiết 1",
+     "Âm tiết 2",
+     "Âm tiết 3"
+    ],
+    "explain": "ˈbeautiful: nhấn âm 1.",
+    "speak": "beautiful",
+    "tier": "medium",
+    "cefr": "B1",
+    "type": "stress"
+   },
+   {
+    "id": "p-stress-9",
+    "word": "Âm tiết 2",
+    "meaning": "Trọng âm của “computer” rơi vào âm tiết nào?",
+    "prompt": "Trọng âm của “computer” rơi vào âm tiết nào?",
+    "example": "comˈputer: nhấn âm 2.",
+    "options": [
+     "Âm tiết 1",
+     "Âm tiết 2",
+     "Âm tiết 3"
+    ],
+    "explain": "comˈputer: nhấn âm 2.",
+    "speak": "computer",
+    "tier": "hard",
+    "cefr": "B1",
+    "type": "stress"
+   },
+   {
+    "id": "p-stress-10",
+    "word": "Âm tiết 1",
+    "meaning": "Trọng âm của “family” rơi vào âm tiết nào?",
+    "prompt": "Trọng âm của “family” rơi vào âm tiết nào?",
+    "example": "ˈfamily: nhấn âm 1.",
+    "options": [
+     "Âm tiết 1",
+     "Âm tiết 2",
+     "Âm tiết 3"
+    ],
+    "explain": "ˈfamily: nhấn âm 1.",
+    "speak": "family",
+    "tier": "hard",
+    "cefr": "B1",
+    "type": "stress"
+   },
+   {
+    "id": "p-stress-11",
+    "word": "Âm tiết 2",
+    "meaning": "Trọng âm của “tomorrow” rơi vào âm tiết nào?",
+    "prompt": "Trọng âm của “tomorrow” rơi vào âm tiết nào?",
+    "example": "toˈmorrow: nhấn âm 2.",
+    "options": [
+     "Âm tiết 1",
+     "Âm tiết 2",
+     "Âm tiết 3"
+    ],
+    "explain": "toˈmorrow: nhấn âm 2.",
+    "speak": "tomorrow",
+    "tier": "hard",
+    "cefr": "B1",
+    "type": "stress"
+   },
+   {
+    "id": "p-stress-12",
+    "word": "Âm tiết 2",
+    "meaning": "Trọng âm của “potato” rơi vào âm tiết nào?",
+    "prompt": "Trọng âm của “potato” rơi vào âm tiết nào?",
+    "example": "poˈtato: nhấn âm 2.",
+    "options": [
+     "Âm tiết 1",
+     "Âm tiết 2",
+     "Âm tiết 3"
+    ],
+    "explain": "poˈtato: nhấn âm 2.",
+    "speak": "potato",
+    "tier": "hard",
+    "cefr": "B1",
+    "type": "stress"
+   }
+  ]
+ },
+ {
+  "id": "p-min",
+  "kind": "pron",
+  "name": "Cặp âm dễ nhầm",
+  "desc": "Nghe và phân biệt ship – sheep...",
+  "words": [
+   {
+    "id": "p-min-1",
+    "word": "ship",
+    "meaning": "Nghe và chọn đúng từ (dễ nhầm với “sheep”)",
+    "prompt": "Nghe và chọn từ bạn nghe được.",
+    "example": "ship /ʃɪp/ (tàu) khác sheep /ʃiːp/ (cừu): nguyên âm ngắn /ɪ/ và dài /iː/.",
+    "options": [
+     "ship",
+     "sheep",
+     "chip",
+     "sip"
+    ],
+    "explain": "ship /ʃɪp/ (tàu) khác sheep /ʃiːp/ (cừu): nguyên âm ngắn /ɪ/ và dài /iː/.",
+    "speak": "ship",
+    "tier": "easy",
+    "cefr": "A2",
+    "type": "sound"
+   },
+   {
+    "id": "p-min-2",
+    "word": "bed",
+    "meaning": "Nghe và chọn đúng từ (dễ nhầm với “bad”)",
+    "prompt": "Nghe và chọn từ bạn nghe được.",
+    "example": "bed /bed/ (giường) khác bad /bæd/ (xấu).",
+    "options": [
+     "bed",
+     "bad",
+     "bid",
+     "bud"
+    ],
+    "explain": "bed /bed/ (giường) khác bad /bæd/ (xấu).",
+    "speak": "bed",
+    "tier": "easy",
+    "cefr": "A2",
+    "type": "sound"
+   },
+   {
+    "id": "p-min-3",
+    "word": "leave",
+    "meaning": "Nghe và chọn đúng từ (dễ nhầm với “live”)",
+    "prompt": "Nghe và chọn từ bạn nghe được.",
+    "example": "leave /liːv/ (rời đi) có nguyên âm dài, live /lɪv/ có nguyên âm ngắn.",
+    "options": [
+     "leave",
+     "live",
+     "love",
+     "leaf"
+    ],
+    "explain": "leave /liːv/ (rời đi) có nguyên âm dài, live /lɪv/ có nguyên âm ngắn.",
+    "speak": "leave",
+    "tier": "easy",
+    "cefr": "A2",
+    "type": "sound"
+   },
+   {
+    "id": "p-min-4",
+    "word": "fool",
+    "meaning": "Nghe và chọn đúng từ (dễ nhầm với “full”)",
+    "prompt": "Nghe và chọn từ bạn nghe được.",
+    "example": "fool /fuːl/ (kẻ ngốc) nguyên âm dài, full /fʊl/ (đầy) nguyên âm ngắn.",
+    "options": [
+     "fool",
+     "full",
+     "foul",
+     "fall"
+    ],
+    "explain": "fool /fuːl/ (kẻ ngốc) nguyên âm dài, full /fʊl/ (đầy) nguyên âm ngắn.",
+    "speak": "fool",
+    "tier": "easy",
+    "cefr": "A2",
+    "type": "sound"
+   },
+   {
+    "id": "p-min-5",
+    "word": "cut",
+    "meaning": "Nghe và chọn đúng từ (dễ nhầm với “cat”)",
+    "prompt": "Nghe và chọn từ bạn nghe được.",
+    "example": "cut /kʌt/ khác cat /kæt/ khác cot /kɒt/.",
+    "options": [
+     "cut",
+     "cat",
+     "cot",
+     "cart"
+    ],
+    "explain": "cut /kʌt/ khác cat /kæt/ khác cot /kɒt/.",
+    "speak": "cut",
+    "tier": "medium",
+    "cefr": "A2",
+    "type": "sound"
+   },
+   {
+    "id": "p-min-6",
+    "word": "pen",
+    "meaning": "Nghe và chọn đúng từ (dễ nhầm với “pan”)",
+    "prompt": "Nghe và chọn từ bạn nghe được.",
+    "example": "pen /pen/ (bút) khác pan /pæn/ (chảo).",
+    "options": [
+     "pen",
+     "pan",
+     "pin",
+     "pun"
+    ],
+    "explain": "pen /pen/ (bút) khác pan /pæn/ (chảo).",
+    "speak": "pen",
+    "tier": "medium",
+    "cefr": "A2",
+    "type": "sound"
+   },
+   {
+    "id": "p-min-7",
+    "word": "seat",
+    "meaning": "Nghe và chọn đúng từ (dễ nhầm với “sit”)",
+    "prompt": "Nghe và chọn từ bạn nghe được.",
+    "example": "seat /siːt/ (ghế) nguyên âm dài, sit /sɪt/ (ngồi) nguyên âm ngắn.",
+    "options": [
+     "seat",
+     "sit",
+     "set",
+     "sat"
+    ],
+    "explain": "seat /siːt/ (ghế) nguyên âm dài, sit /sɪt/ (ngồi) nguyên âm ngắn.",
+    "speak": "seat",
+    "tier": "medium",
+    "cefr": "A2",
+    "type": "sound"
+   },
+   {
+    "id": "p-min-8",
+    "word": "hot",
+    "meaning": "Nghe và chọn đúng từ (dễ nhầm với “hat”)",
+    "prompt": "Nghe và chọn từ bạn nghe được.",
+    "example": "hot /hɒt/ (nóng) khác hat /hæt/ (mũ).",
+    "options": [
+     "hot",
+     "hat",
+     "hut",
+     "hurt"
+    ],
+    "explain": "hot /hɒt/ (nóng) khác hat /hæt/ (mũ).",
+    "speak": "hot",
+    "tier": "medium",
+    "cefr": "A2",
+    "type": "sound"
+   },
+   {
+    "id": "p-min-9",
+    "word": "think",
+    "meaning": "Nghe và chọn đúng từ (dễ nhầm với “sink”)",
+    "prompt": "Nghe và chọn từ bạn nghe được.",
+    "example": "think /θɪŋk/ bắt đầu bằng /θ/, sink /sɪŋk/ bắt đầu bằng /s/.",
+    "options": [
+     "think",
+     "sink",
+     "thank",
+     "thick"
+    ],
+    "explain": "think /θɪŋk/ bắt đầu bằng /θ/, sink /sɪŋk/ bắt đầu bằng /s/.",
+    "speak": "think",
+    "tier": "hard",
+    "cefr": "A2",
+    "type": "sound"
+   },
+   {
+    "id": "p-min-10",
+    "word": "right",
+    "meaning": "Nghe và chọn đúng từ (dễ nhầm với “light”)",
+    "prompt": "Nghe và chọn từ bạn nghe được.",
+    "example": "right /raɪt/ bắt đầu bằng /r/, light /laɪt/ bắt đầu bằng /l/.",
+    "options": [
+     "right",
+     "light",
+     "ride",
+     "rice"
+    ],
+    "explain": "right /raɪt/ bắt đầu bằng /r/, light /laɪt/ bắt đầu bằng /l/.",
+    "speak": "right",
+    "tier": "hard",
+    "cefr": "A2",
+    "type": "sound"
+   },
+   {
+    "id": "p-min-11",
+    "word": "very",
+    "meaning": "Nghe và chọn đúng từ (dễ nhầm với “berry”)",
+    "prompt": "Nghe và chọn từ bạn nghe được.",
+    "example": "very /ˈveri/ bắt đầu bằng /v/, berry /ˈberi/ bắt đầu bằng /b/.",
+    "options": [
+     "very",
+     "berry",
+     "merry",
+     "ferry"
+    ],
+    "explain": "very /ˈveri/ bắt đầu bằng /v/, berry /ˈberi/ bắt đầu bằng /b/.",
+    "speak": "very",
+    "tier": "hard",
+    "cefr": "A2",
+    "type": "sound"
+   },
+   {
+    "id": "p-min-12",
+    "word": "share",
+    "meaning": "Nghe và chọn đúng từ (dễ nhầm với “chair”)",
+    "prompt": "Nghe và chọn từ bạn nghe được.",
+    "example": "share /ʃeə/ bắt đầu bằng /ʃ/, chair /tʃeə/ bắt đầu bằng /tʃ/.",
+    "options": [
+     "share",
+     "chair",
+     "cheer",
+     "sheer"
+    ],
+    "explain": "share /ʃeə/ bắt đầu bằng /ʃ/, chair /tʃeə/ bắt đầu bằng /tʃ/.",
+    "speak": "share",
+    "tier": "hard",
+    "cefr": "A2",
+    "type": "sound"
+   }
+  ]
+ },
+ {
+  "id": "p-ipa",
+  "kind": "pron",
+  "name": "Phiên âm IPA",
+  "desc": "Đọc phiên âm, đoán từ",
+  "words": [
+   {
+    "id": "p-ipa-1",
+    "word": "children",
+    "meaning": "/ˈtʃɪldrən/ là từ nào?",
+    "prompt": "Phiên âm /ˈtʃɪldrən/ là từ nào?",
+    "example": "children = trẻ em.",
+    "options": [
+     "children",
+     "chicken",
+     "child",
+     "kitchen"
+    ],
+    "explain": "children = trẻ em.",
+    "speak": "children",
+    "phonetic": "/ˈtʃɪldrən/",
+    "tier": "easy",
+    "cefr": "B1",
+    "type": "ipa"
+   },
+   {
+    "id": "p-ipa-2",
+    "word": "beautiful",
+    "meaning": "/ˈbjuːtɪfl/ là từ nào?",
+    "prompt": "Phiên âm /ˈbjuːtɪfl/ là từ nào?",
+    "example": "beautiful = đẹp.",
+    "options": [
+     "beautiful",
+     "bountiful",
+     "butterfly",
+     "beauty"
+    ],
+    "explain": "beautiful = đẹp.",
+    "speak": "beautiful",
+    "phonetic": "/ˈbjuːtɪfl/",
+    "tier": "easy",
+    "cefr": "B1",
+    "type": "ipa"
+   },
+   {
+    "id": "p-ipa-3",
+    "word": "vegetable",
+    "meaning": "/ˈvedʒtəbl/ là từ nào?",
+    "prompt": "Phiên âm /ˈvedʒtəbl/ là từ nào?",
+    "example": "vegetable = rau củ.",
+    "options": [
+     "vegetable",
+     "vegetarian",
+     "valuable",
+     "variable"
+    ],
+    "explain": "vegetable = rau củ.",
+    "speak": "vegetable",
+    "phonetic": "/ˈvedʒtəbl/",
+    "tier": "easy",
+    "cefr": "B1",
+    "type": "ipa"
+   },
+   {
+    "id": "p-ipa-4",
+    "word": "comfortable",
+    "meaning": "/ˈkʌmftəbl/ là từ nào?",
+    "prompt": "Phiên âm /ˈkʌmftəbl/ là từ nào?",
+    "example": "comfortable = thoải mái.",
+    "options": [
+     "comfortable",
+     "comparable",
+     "considerable",
+     "convenient"
+    ],
+    "explain": "comfortable = thoải mái.",
+    "speak": "comfortable",
+    "phonetic": "/ˈkʌmftəbl/",
+    "tier": "easy",
+    "cefr": "B1",
+    "type": "ipa"
+   },
+   {
+    "id": "p-ipa-5",
+    "word": "Wednesday",
+    "meaning": "/ˈwenzdeɪ/ là từ nào?",
+    "prompt": "Phiên âm /ˈwenzdeɪ/ là từ nào?",
+    "example": "Wednesday = thứ Tư (chữ d không đọc).",
+    "options": [
+     "Wednesday",
+     "Thursday",
+     "Tuesday",
+     "weekend"
+    ],
+    "explain": "Wednesday = thứ Tư (chữ d không đọc).",
+    "speak": "Wednesday",
+    "phonetic": "/ˈwenzdeɪ/",
+    "tier": "medium",
+    "cefr": "B1",
+    "type": "ipa"
+   },
+   {
+    "id": "p-ipa-6",
+    "word": "February",
+    "meaning": "/ˈfebruəri/ là từ nào?",
+    "prompt": "Phiên âm /ˈfebruəri/ là từ nào?",
+    "example": "February = tháng Hai.",
+    "options": [
+     "February",
+     "January",
+     "library",
+     "secretary"
+    ],
+    "explain": "February = tháng Hai.",
+    "speak": "February",
+    "phonetic": "/ˈfebruəri/",
+    "tier": "medium",
+    "cefr": "B1",
+    "type": "ipa"
+   },
+   {
+    "id": "p-ipa-7",
+    "word": "library",
+    "meaning": "/ˈlaɪbrəri/ là từ nào?",
+    "prompt": "Phiên âm /ˈlaɪbrəri/ là từ nào?",
+    "example": "library = thư viện.",
+    "options": [
+     "library",
+     "liberty",
+     "literary",
+     "lively"
+    ],
+    "explain": "library = thư viện.",
+    "speak": "library",
+    "phonetic": "/ˈlaɪbrəri/",
+    "tier": "medium",
+    "cefr": "B1",
+    "type": "ipa"
+   },
+   {
+    "id": "p-ipa-8",
+    "word": "business",
+    "meaning": "/ˈbɪznəs/ là từ nào?",
+    "prompt": "Phiên âm /ˈbɪznəs/ là từ nào?",
+    "example": "business = công việc kinh doanh.",
+    "options": [
+     "business",
+     "busy",
+     "bus",
+     "biscuit"
+    ],
+    "explain": "business = công việc kinh doanh.",
+    "speak": "business",
+    "phonetic": "/ˈbɪznəs/",
+    "tier": "medium",
+    "cefr": "B1",
+    "type": "ipa"
+   },
+   {
+    "id": "p-ipa-9",
+    "word": "island",
+    "meaning": "/ˈaɪlənd/ là từ nào?",
+    "prompt": "Phiên âm /ˈaɪlənd/ là từ nào?",
+    "example": "island = hòn đảo (chữ s không đọc).",
+    "options": [
+     "island",
+     "Ireland",
+     "Iceland",
+     "inland"
+    ],
+    "explain": "island = hòn đảo (chữ s không đọc).",
+    "speak": "island",
+    "phonetic": "/ˈaɪlənd/",
+    "tier": "hard",
+    "cefr": "B1",
+    "type": "ipa"
+   },
+   {
+    "id": "p-ipa-10",
+    "word": "answer",
+    "meaning": "/ˈɑːnsə/ là từ nào?",
+    "prompt": "Phiên âm /ˈɑːnsə/ là từ nào?",
+    "example": "answer = câu trả lời (chữ w không đọc).",
+    "options": [
+     "answer",
+     "another",
+     "anchor",
+     "enough"
+    ],
+    "explain": "answer = câu trả lời (chữ w không đọc).",
+    "speak": "answer",
+    "phonetic": "/ˈɑːnsə/",
+    "tier": "hard",
+    "cefr": "B1",
+    "type": "ipa"
+   },
+   {
+    "id": "p-ipa-11",
+    "word": "honest",
+    "meaning": "/ˈɒnɪst/ là từ nào?",
+    "prompt": "Phiên âm /ˈɒnɪst/ là từ nào?",
+    "example": "honest = trung thực (chữ h không đọc ở âm đầu: /ˈɒnɪst/).",
+    "options": [
+     "honest",
+     "harvest",
+     "honour",
+     "hungry"
+    ],
+    "explain": "honest = trung thực (chữ h không đọc ở âm đầu: /ˈɒnɪst/).",
+    "speak": "honest",
+    "phonetic": "/ˈɒnɪst/",
+    "tier": "hard",
+    "cefr": "B1",
+    "type": "ipa"
+   },
+   {
+    "id": "p-ipa-12",
+    "word": "mountain",
+    "meaning": "/ˈmaʊntɪn/ là từ nào?",
+    "prompt": "Phiên âm /ˈmaʊntɪn/ là từ nào?",
+    "example": "mountain = ngọn núi.",
+    "options": [
+     "mountain",
+     "fountain",
+     "maintain",
+     "mounting"
+    ],
+    "explain": "mountain = ngọn núi.",
+    "speak": "mountain",
+    "phonetic": "/ˈmaʊntɪn/",
+    "tier": "hard",
+    "cefr": "B1",
+    "type": "ipa"
+   }
+  ]
+ },
+ {
+  "id": "p-odd",
+  "kind": "pron",
+  "name": "Chọn từ phát âm khác",
+  "desc": "Dạng bài thi THPT",
+  "words": [
+   {
+    "id": "p-odd-1",
+    "word": "b[oo]k",
+    "meaning": "Chọn từ có phần gạch chân phát âm khác: b[oo]k / f[oo]d / m[oo]n / p[oo]l",
+    "prompt": "Chọn từ có phần gạch chân phát âm KHÁC các từ còn lại.",
+    "example": "book đọc /ʊ/, còn food, moon, pool đọc /uː/.",
+    "options": [
+     "b[oo]k",
+     "f[oo]d",
+     "m[oo]n",
+     "p[oo]l"
+    ],
+    "explain": "book đọc /ʊ/, còn food, moon, pool đọc /uː/.",
+    "tier": "easy",
+    "cefr": "B1",
+    "type": "odd"
+   },
+   {
+    "id": "p-odd-2",
+    "word": "[ch]orus",
+    "meaning": "Chọn từ có phần gạch chân phát âm khác: [ch]air / [ch]ild / [ch]orus / [ch]icken",
+    "prompt": "Chọn từ có phần gạch chân phát âm KHÁC các từ còn lại.",
+    "example": "chorus đọc /k/, các từ còn lại đọc /tʃ/.",
+    "options": [
+     "[ch]air",
+     "[ch]ild",
+     "[ch]orus",
+     "[ch]icken"
+    ],
+    "explain": "chorus đọc /k/, các từ còn lại đọc /tʃ/.",
+    "tier": "easy",
+    "cefr": "B1",
+    "type": "odd"
+   },
+   {
+    "id": "p-odd-3",
+    "word": "sp[ea]k",
+    "meaning": "Chọn từ có phần gạch chân phát âm khác: br[ea]d / h[ea]d / sp[ea]k / d[ea]d",
+    "prompt": "Chọn từ có phần gạch chân phát âm KHÁC các từ còn lại.",
+    "example": "speak đọc /iː/, các từ còn lại đọc /e/.",
+    "options": [
+     "br[ea]d",
+     "h[ea]d",
+     "sp[ea]k",
+     "d[ea]d"
+    ],
+    "explain": "speak đọc /iː/, các từ còn lại đọc /e/.",
+    "tier": "easy",
+    "cefr": "B1",
+    "type": "odd"
+   },
+   {
+    "id": "p-odd-4",
+    "word": "[th]en",
+    "meaning": "Chọn từ có phần gạch chân phát âm khác: [th]ink / [th]ank / [th]en / [th]ree",
+    "prompt": "Chọn từ có phần gạch chân phát âm KHÁC các từ còn lại.",
+    "example": "then đọc /ð/, các từ còn lại đọc /θ/.",
+    "options": [
+     "[th]ink",
+     "[th]ank",
+     "[th]en",
+     "[th]ree"
+    ],
+    "explain": "then đọc /ð/, các từ còn lại đọc /θ/.",
+    "tier": "easy",
+    "cefr": "B1",
+    "type": "odd"
+   },
+   {
+    "id": "p-odd-5",
+    "word": "t[a]ble",
+    "meaning": "Chọn từ có phần gạch chân phát âm khác: c[a]t / h[a]t / t[a]ble / b[a]g",
+    "prompt": "Chọn từ có phần gạch chân phát âm KHÁC các từ còn lại.",
+    "example": "table đọc /eɪ/, các từ còn lại đọc /æ/.",
+    "options": [
+     "c[a]t",
+     "h[a]t",
+     "t[a]ble",
+     "b[a]g"
+    ],
+    "explain": "table đọc /eɪ/, các từ còn lại đọc /æ/.",
+    "tier": "medium",
+    "cefr": "B1",
+    "type": "odd"
+   },
+   {
+    "id": "p-odd-6",
+    "word": "c[ou]ntry",
+    "meaning": "Chọn từ có phần gạch chân phát âm khác: s[ou]p / gr[ou]p / y[ou] / c[ou]ntry",
+    "prompt": "Chọn từ có phần gạch chân phát âm KHÁC các từ còn lại.",
+    "example": "country đọc /ʌ/, các từ còn lại đọc /uː/.",
+    "options": [
+     "s[ou]p",
+     "gr[ou]p",
+     "y[ou]",
+     "c[ou]ntry"
+    ],
+    "explain": "country đọc /ʌ/, các từ còn lại đọc /uː/.",
+    "tier": "medium",
+    "cefr": "B1",
+    "type": "odd"
+   },
+   {
+    "id": "p-odd-7",
+    "word": "[g]ym",
+    "meaning": "Chọn từ có phần gạch chân phát âm khác: [g]ive / [g]ood / [g]ym / [g]ate",
+    "prompt": "Chọn từ có phần gạch chân phát âm KHÁC các từ còn lại.",
+    "example": "gym đọc /dʒ/, các từ còn lại đọc /g/.",
+    "options": [
+     "[g]ive",
+     "[g]ood",
+     "[g]ym",
+     "[g]ate"
+    ],
+    "explain": "gym đọc /dʒ/, các từ còn lại đọc /g/.",
+    "tier": "medium",
+    "cefr": "B1",
+    "type": "odd"
+   },
+   {
+    "id": "p-odd-8",
+    "word": "n[o]se",
+    "meaning": "Chọn từ có phần gạch chân phát âm khác: h[o]t / n[o]t / st[o]p / n[o]se",
+    "prompt": "Chọn từ có phần gạch chân phát âm KHÁC các từ còn lại.",
+    "example": "nose đọc /əʊ/, các từ còn lại đọc /ɒ/.",
+    "options": [
+     "h[o]t",
+     "n[o]t",
+     "st[o]p",
+     "n[o]se"
+    ],
+    "explain": "nose đọc /əʊ/, các từ còn lại đọc /ɒ/.",
+    "tier": "medium",
+    "cefr": "B1",
+    "type": "odd"
+   },
+   {
+    "id": "p-odd-9",
+    "word": "h[i]gh",
+    "meaning": "Chọn từ có phần gạch chân phát âm khác: f[i]sh / w[i]n / h[i]gh / s[i]t",
+    "prompt": "Chọn từ có phần gạch chân phát âm KHÁC các từ còn lại.",
+    "example": "high đọc /aɪ/, các từ còn lại đọc /ɪ/.",
+    "options": [
+     "f[i]sh",
+     "w[i]n",
+     "h[i]gh",
+     "s[i]t"
+    ],
+    "explain": "high đọc /aɪ/, các từ còn lại đọc /ɪ/.",
+    "tier": "hard",
+    "cefr": "B1",
+    "type": "odd"
+   },
+   {
+    "id": "p-odd-10",
+    "word": "play[ed]",
+    "meaning": "Chọn từ có phần gạch chân phát âm khác: play[ed] / want[ed] / need[ed] / visit[ed]",
+    "prompt": "Chọn từ có phần gạch chân phát âm KHÁC các từ còn lại.",
+    "example": "played đọc /d/, các từ còn lại đọc /ɪd/.",
+    "options": [
+     "play[ed]",
+     "want[ed]",
+     "need[ed]",
+     "visit[ed]"
+    ],
+    "explain": "played đọc /d/, các từ còn lại đọc /ɪd/.",
+    "tier": "hard",
+    "cefr": "B1",
+    "type": "odd"
+   },
+   {
+    "id": "p-odd-11",
+    "word": "dog[s]",
+    "meaning": "Chọn từ có phần gạch chân phát âm khác: book[s] / dog[s] / cat[s] / cup[s]",
+    "prompt": "Chọn từ có phần gạch chân phát âm KHÁC các từ còn lại.",
+    "example": "dogs đọc /z/, các từ còn lại đọc /s/.",
+    "options": [
+     "book[s]",
+     "dog[s]",
+     "cat[s]",
+     "cup[s]"
+    ],
+    "explain": "dogs đọc /z/, các từ còn lại đọc /s/.",
+    "tier": "hard",
+    "cefr": "B1",
+    "type": "odd"
+   },
+   {
+    "id": "p-odd-12",
+    "word": "[s]ugar",
+    "meaning": "Chọn từ có phần gạch chân phát âm khác: [s]ugar / [s]un / [s]ee / [s]it",
+    "prompt": "Chọn từ có phần gạch chân phát âm KHÁC các từ còn lại.",
+    "example": "sugar đọc /ʃ/, các từ còn lại đọc /s/.",
+    "options": [
+     "[s]ugar",
+     "[s]un",
+     "[s]ee",
+     "[s]it"
+    ],
+    "explain": "sugar đọc /ʃ/, các từ còn lại đọc /s/.",
+    "tier": "hard",
+    "cefr": "B1",
+    "type": "odd"
+   }
+  ]
+ }
+]

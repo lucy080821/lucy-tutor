@@ -57,7 +57,7 @@ export type Catalog = {
 };
 export type WaterQuiz = { left: number; used: number; max: number; cut: number; items: { progressId: string; meaning: string; hint: string; length: number }[] };
 export type HarvestResult = {
-  early?: boolean; correct: boolean; quality: number; mode: string; word: string; meaning: string; example: string | null;
+  early?: boolean; kind?: SeedKind; speak?: string | null; correct: boolean; quality: number; mode: string; word: string; meaning: string; example: string | null;
   coins: number; gems: number; xp: number; produce: number; produceKey: string | null; overflowSold: number; boosted: boolean; becameMastered: boolean; levelUp: number | null;
   srs: { status: string; interval: number };
 };
@@ -86,12 +86,15 @@ export type FarmState = {
   claimedReward?: { kind: "QUEST" | "CHEST" | "ACHIEVEMENT"; name: string; coins: number; gems: number; xp: number; tiers?: number };
 };
 export type Question = {
-  plotId: string; mode: "CHOICE" | "LISTEN" | "TYPE" | "FILL";
+  plotId: string; mode: "CHOICE" | "LISTEN" | "TYPE" | "FILL" | "CARD"; kind?: SeedKind; type?: string; prompt?: string;
   meaning: string | null; hint: string | null; options: string[] | null; speak: string | null; sentence: string | null;
 };
 export type SeedDeckItem = { progressId: string; word: string; meaning: string; phonetic: string | null; example: string | null; pos: string | null; srs: { status: string; repetitions: number }; fromLesson: boolean };
-export type SeedTopic = { id: string; name: string; desc: string; count: number; cropKey: string };
-export type SeedTopicItem = { word: string; meaning: string; cefr: string; example: string; tier: string; inDeck: boolean; planted: boolean; progressId: string | null };
+export type SeedKind = "vocab" | "grammar" | "pron";
+export type SeedTopic = { id: string; kind: SeedKind; name: string; desc: string; count: number; cropKey: string };
+export type SeedTopicItem = { id?: string; kind?: SeedKind; word: string; meaning: string; cefr: string; example: string; tier: string; blank?: string; explain?: string; options?: string[]; speak?: string; phonetic?: string; type?: string; inDeck: boolean; planted: boolean; progressId: string | null };
+export type SgkGrade = { grade: number; units: { key: number; title: string; count: number }[] };
+export type SgkItem = { word: string; meaning: string; phonetic: string | null; example: string | null; pos: string | null; inDeck: boolean; planted: boolean; progressId: string | null };
 export type Neighbor = { id: string; name: string; level: number; harvestCount: number; barnCount: number; petName?: string; petLevel: number; streak: number; equipped: Record<string, string>; lastActive: string; likedToday: boolean; giftedToday: boolean };
 export type NeighborGroup = { id: string; name: string; mine: boolean; members: Neighbor[] };
 export type VisitView = { now: string; owner: { id: string; name: string; totalXP: number; streakCount: number }; farm: FarmView; plots: PlotView[]; likes: number; catalog: Catalog };
@@ -117,7 +120,9 @@ export const farmApi = {
   seedsDeck: (userId: string) => get<{ items: SeedDeckItem[] }>(`/seeds/${userId}?source=deck`),
   seedTopics: (userId: string) => get<{ topics: SeedTopic[] }>(`/seeds/${userId}`),
   seedTopic: (userId: string, topic: string) => get<{ topic: { id: string; name: string; cropKey: string }; items: SeedTopicItem[] }>(`/seeds/${userId}?topic=${encodeURIComponent(topic)}`),
-  plant: (userId: string, plotId: string, src: { progressId?: string; seed?: { topicId: string; word: string } }) => post<FarmState>("/plant", { userId, plotId, ...src }),
+  seedsSgk: (userId: string) => get<{ grades: SgkGrade[] }>(`/seeds/${userId}?source=sgk`),
+  seedsSgkUnit: (userId: string, grade: number, unit: number) => get<{ items: SgkItem[] }>(`/seeds/${userId}?source=sgk&grade=${grade}&unit=${unit}`),
+  plant: (userId: string, plotId: string, src: { progressId?: string; seed?: { topicId?: string; word?: string; id?: string; sgk?: { grade: number; unit: number; en: string } } }) => post<FarmState>("/plant", { userId, plotId, ...src }),
   question: (userId: string, plotId: string, early = false) => get<Question>(`/plots/${plotId}/question?userId=${userId}${early ? "&early=1" : ""}`),
   harvest: (userId: string, plotId: string, answer: string, usedHint: boolean, early = false) => post<FarmState>(`/plots/${plotId}/harvest`, { userId, answer, usedHint, early }),
   waterQuiz: (userId: string, plotId: string) => get<WaterQuiz>(`/plots/${plotId}/water?userId=${userId}`),

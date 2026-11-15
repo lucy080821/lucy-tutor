@@ -1,0 +1,1856 @@
+[
+ {
+  "id": "g-present",
+  "kind": "grammar",
+  "name": "Thì hiện tại",
+  "desc": "Hiện tại đơn, hiện tại tiếp diễn và động từ trạng thái",
+  "words": [
+   {
+    "id": "g-present-1",
+    "word": "goes",
+    "meaning": "Hiện tại đơn, chủ ngữ she",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She goes to school by bike every day.",
+    "blank": "She _____ to school by bike every day.",
+    "options": [
+     "goes",
+     "go",
+     "going",
+     "gone"
+    ],
+    "explain": "Chủ ngữ ngôi thứ ba số ít (he/she/it) thì động từ thêm -s/-es.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-present-2",
+    "word": "is raining",
+    "meaning": "Hành động đang xảy ra",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "Look! It is raining now.",
+    "blank": "Look! It _____ now.",
+    "options": [
+     "is raining",
+     "rains",
+     "rain",
+     "rained"
+    ],
+    "explain": "Có Look!/now → hiện tại tiếp diễn: am/is/are + V-ing.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-present-3",
+    "word": "doesn't",
+    "meaning": "Phủ định hiện tại đơn, chủ ngữ he",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "He doesn't like coffee.",
+    "blank": "He _____ like coffee.",
+    "options": [
+     "doesn't",
+     "don't",
+     "isn't",
+     "hasn't"
+    ],
+    "explain": "Với he/she/it, phủ định hiện tại đơn dùng doesn't + động từ nguyên mẫu.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-present-4",
+    "word": "Do",
+    "meaning": "Câu hỏi hiện tại đơn, chủ ngữ you",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "Do you play football on Sundays?",
+    "blank": "_____ you play football on Sundays?",
+    "options": [
+     "Do",
+     "Does",
+     "Are",
+     "Is"
+    ],
+    "explain": "Với I/you/we/they, câu hỏi hiện tại đơn dùng Do + S + V?",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-present-5",
+    "word": "usually",
+    "meaning": "Trạng từ của hiện tại đơn",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I usually get up at six o'clock.",
+    "blank": "I _____ get up at six o'clock.",
+    "options": [
+     "usually",
+     "now",
+     "at the moment",
+     "yesterday"
+    ],
+    "explain": "Trạng từ tần suất (usually, always, often) đi với hiện tại đơn.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-present-6",
+    "word": "are studying",
+    "meaning": "Hành động đang diễn ra",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "They are studying for the exam now.",
+    "blank": "They _____ for the exam now.",
+    "options": [
+     "are studying",
+     "study",
+     "studies",
+     "studied"
+    ],
+    "explain": "now → hiện tại tiếp diễn: are + V-ing.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-present-7",
+    "word": "has",
+    "meaning": "Hiện tại đơn của have, chủ ngữ my brother",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "My brother has two cats.",
+    "blank": "My brother _____ two cats.",
+    "options": [
+     "has",
+     "have",
+     "having",
+     "haves"
+    ],
+    "explain": "Ngôi thứ ba số ít: have → has.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-present-8",
+    "word": "Does",
+    "meaning": "Câu hỏi hiện tại đơn, chủ ngữ he",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "Does he like pizza?",
+    "blank": "_____ he like pizza?",
+    "options": [
+     "Does",
+     "Do",
+     "Is",
+     "Are"
+    ],
+    "explain": "Với he/she/it, câu hỏi hiện tại đơn dùng Does + S + V?",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-present-9",
+    "word": "am",
+    "meaning": "Động từ to be với chủ ngữ I",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I am a student.",
+    "blank": "I _____ a student.",
+    "options": [
+     "am",
+     "is",
+     "are",
+     "be"
+    ],
+    "explain": "I đi với am, he/she/it đi với is, you/we/they đi với are.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-present-10",
+    "word": "know",
+    "meaning": "Động từ chỉ trạng thái",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I know the answer.",
+    "blank": "I _____ the answer.",
+    "options": [
+     "know",
+     "am knowing",
+     "knowing",
+     "knew"
+    ],
+    "explain": "Động từ trạng thái (know, like, want...) thường không chia ở thì tiếp diễn.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-present-11",
+    "word": "doesn't have",
+    "meaning": "Phủ định hiện tại đơn với have",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She doesn't have any brothers.",
+    "blank": "She _____ any brothers.",
+    "options": [
+     "doesn't have",
+     "don't have",
+     "doesn't has",
+     "hasn't have"
+    ],
+    "explain": "doesn't + động từ nguyên mẫu (have), không thêm -s lần nữa.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-present-12",
+    "word": "washes",
+    "meaning": "Hiện tại đơn, ngôi thứ ba số ít",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "My mother washes the dishes after dinner.",
+    "blank": "My mother _____ the dishes after dinner.",
+    "options": [
+     "washes",
+     "wash",
+     "washs",
+     "washing"
+    ],
+    "explain": "Động từ tận cùng -sh, -ch, -s, -x, -o thì thêm -es.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   }
+  ]
+ },
+ {
+  "id": "g-past",
+  "kind": "grammar",
+  "name": "Quá khứ & hiện tại hoàn thành",
+  "desc": "Quá khứ đơn, quá khứ tiếp diễn và hiện tại hoàn thành",
+  "words": [
+   {
+    "id": "g-past-1",
+    "word": "went",
+    "meaning": "Quá khứ đơn của go",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "Yesterday I went to the cinema.",
+    "blank": "Yesterday I _____ to the cinema.",
+    "options": [
+     "went",
+     "go",
+     "goes",
+     "gone"
+    ],
+    "explain": "Có yesterday → quá khứ đơn; go là động từ bất quy tắc: went.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-past-2",
+    "word": "didn't",
+    "meaning": "Phủ định quá khứ đơn",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She didn't come to the party last night.",
+    "blank": "She _____ come to the party last night.",
+    "options": [
+     "didn't",
+     "don't",
+     "wasn't",
+     "hasn't"
+    ],
+    "explain": "Phủ định quá khứ đơn: didn't + động từ nguyên mẫu.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-past-3",
+    "word": "was watching",
+    "meaning": "Hành động đang diễn ra thì bị chen ngang",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I was watching TV when the phone rang.",
+    "blank": "I _____ TV when the phone rang.",
+    "options": [
+     "was watching",
+     "watched",
+     "am watching",
+     "watch"
+    ],
+    "explain": "Quá khứ tiếp diễn (was/were + V-ing) cho hành động đang diễn ra trong quá khứ.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-past-4",
+    "word": "have lived",
+    "meaning": "Hiện tại hoàn thành với for",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I have lived here for five years.",
+    "blank": "I _____ here for five years.",
+    "options": [
+     "have lived",
+     "lived",
+     "am living",
+     "live"
+    ],
+    "explain": "for + khoảng thời gian, kéo dài đến hiện tại → have/has + V3.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-past-5",
+    "word": "since",
+    "meaning": "Mốc thời gian trong hiện tại hoàn thành",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "We have known each other since 2015.",
+    "blank": "We have known each other _____ 2015.",
+    "options": [
+     "since",
+     "for",
+     "ago",
+     "during"
+    ],
+    "explain": "since + mốc thời gian (2015, Monday...); for + khoảng thời gian.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-past-6",
+    "word": "for",
+    "meaning": "Khoảng thời gian trong hiện tại hoàn thành",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She has worked here for three years.",
+    "blank": "She has worked here _____ three years.",
+    "options": [
+     "for",
+     "since",
+     "ago",
+     "from"
+    ],
+    "explain": "for + khoảng thời gian (three years, two weeks).",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-past-7",
+    "word": "Have",
+    "meaning": "Câu hỏi trải nghiệm",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "Have you ever been to Japan?",
+    "blank": "_____ you ever been to Japan?",
+    "options": [
+     "Have",
+     "Has",
+     "Did",
+     "Do"
+    ],
+    "explain": "ever → hiện tại hoàn thành; chủ ngữ you đi với Have.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-past-8",
+    "word": "already",
+    "meaning": "Trạng từ trong câu khẳng định hoàn thành",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I have already finished my homework.",
+    "blank": "I have _____ finished my homework.",
+    "options": [
+     "already",
+     "yet",
+     "ago",
+     "tomorrow"
+    ],
+    "explain": "already thường dùng trong câu khẳng định của hiện tại hoàn thành.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-past-9",
+    "word": "yet",
+    "meaning": "Trạng từ trong câu phủ định hoàn thành",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I haven't finished my homework yet.",
+    "blank": "I haven't finished my homework _____.",
+    "options": [
+     "yet",
+     "already",
+     "ago",
+     "since"
+    ],
+    "explain": "yet đứng cuối câu phủ định/nghi vấn của hiện tại hoàn thành.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-past-10",
+    "word": "has gone",
+    "meaning": "Đã đi và chưa về",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "Tom has gone to the market, so he isn't here now.",
+    "blank": "Tom _____ to the market, so he isn't here now.",
+    "options": [
+     "has gone",
+     "has been",
+     "went",
+     "goes"
+    ],
+    "explain": "has gone = đã đi và hiện không ở đây; has been = đã từng đến và đã về.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-past-11",
+    "word": "bought",
+    "meaning": "Quá khứ đơn của buy",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She bought a new bag last week.",
+    "blank": "She _____ a new bag last week.",
+    "options": [
+     "bought",
+     "buyed",
+     "buy",
+     "buys"
+    ],
+    "explain": "buy là động từ bất quy tắc: buy → bought → bought.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-past-12",
+    "word": "ago",
+    "meaning": "Trạng từ chỉ thời gian trong quá khứ",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "We moved to this city two years ago.",
+    "blank": "We moved to this city two years _____.",
+    "options": [
+     "ago",
+     "before",
+     "for",
+     "since"
+    ],
+    "explain": "khoảng thời gian + ago dùng với quá khứ đơn.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   }
+  ]
+ },
+ {
+  "id": "g-article",
+  "kind": "grammar",
+  "name": "Mạo từ & lượng từ",
+  "desc": "a/an/the và some, any, much, many, a few, a little",
+  "words": [
+   {
+    "id": "g-article-1",
+    "word": "an",
+    "meaning": "Mạo từ trước nguyên âm",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She is an engineer.",
+    "blank": "She is _____ engineer.",
+    "options": [
+     "an",
+     "a",
+     "the",
+     "some"
+    ],
+    "explain": "Dùng an trước từ bắt đầu bằng nguyên âm (engineer).",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-article-2",
+    "word": "a",
+    "meaning": "Mạo từ trước âm /j/",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She works at a university.",
+    "blank": "She works at _____ university.",
+    "options": [
+     "a",
+     "an",
+     "the",
+     "any"
+    ],
+    "explain": "university bắt đầu bằng âm /j/ (phụ âm) nên dùng a.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-article-3",
+    "word": "an",
+    "meaning": "Mạo từ trước chữ h câm",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "It takes an hour to get there.",
+    "blank": "It takes _____ hour to get there.",
+    "options": [
+     "an",
+     "a",
+     "the",
+     "some"
+    ],
+    "explain": "hour có h câm, đọc là /aʊə/ nên dùng an.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-article-4",
+    "word": "The",
+    "meaning": "Vật duy nhất",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "The sun rises in the east.",
+    "blank": "_____ sun rises in the east.",
+    "options": [
+     "The",
+     "A",
+     "An",
+     "Some"
+    ],
+    "explain": "Vật duy nhất (the sun, the moon) dùng mạo từ the.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-article-5",
+    "word": "some",
+    "meaning": "Lời yêu cầu/lời mời",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I'd like some water, please.",
+    "blank": "I'd like _____ water, please.",
+    "options": [
+     "some",
+     "any",
+     "much",
+     "a"
+    ],
+    "explain": "some dùng trong câu khẳng định, lời mời, lời yêu cầu.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-article-6",
+    "word": "any",
+    "meaning": "Lượng từ trong câu hỏi",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "Do you have any questions?",
+    "blank": "Do you have _____ questions?",
+    "options": [
+     "any",
+     "some",
+     "a",
+     "many"
+    ],
+    "explain": "any dùng trong câu phủ định và câu hỏi.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-article-7",
+    "word": "much",
+    "meaning": "Danh từ không đếm được",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "How much money do you have?",
+    "blank": "How _____ money do you have?",
+    "options": [
+     "much",
+     "many",
+     "a few",
+     "several"
+    ],
+    "explain": "money là danh từ không đếm được → how much.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-article-8",
+    "word": "many",
+    "meaning": "Danh từ đếm được số nhiều",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "How many students are there in your class?",
+    "blank": "How _____ students are there in your class?",
+    "options": [
+     "many",
+     "much",
+     "a little",
+     "little"
+    ],
+    "explain": "students đếm được số nhiều → how many.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-article-9",
+    "word": "a few",
+    "meaning": "Một vài (đếm được)",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I have a few friends in this city.",
+    "blank": "I have _____ friends in this city.",
+    "options": [
+     "a few",
+     "a little",
+     "little",
+     "much"
+    ],
+    "explain": "a few + danh từ đếm được số nhiều; a little + danh từ không đếm được.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-article-10",
+    "word": "a little",
+    "meaning": "Một chút (không đếm được)",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "Can I have a little sugar in my tea?",
+    "blank": "Can I have _____ sugar in my tea?",
+    "options": [
+     "a little",
+     "a few",
+     "few",
+     "many"
+    ],
+    "explain": "sugar không đếm được → a little.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-article-11",
+    "word": "the",
+    "meaning": "Mạo từ với nhạc cụ",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She plays the piano very well.",
+    "blank": "She plays _____ piano very well.",
+    "options": [
+     "the",
+     "a",
+     "an",
+     "some"
+    ],
+    "explain": "play + the + nhạc cụ.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-article-12",
+    "word": "a lot of",
+    "meaning": "Nhiều (không đếm được)",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "There is a lot of traffic in the city.",
+    "blank": "There is _____ traffic in the city.",
+    "options": [
+     "a lot of",
+     "many",
+     "a few",
+     "several"
+    ],
+    "explain": "traffic không đếm được; a lot of dùng được với cả đếm được và không đếm được.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   }
+  ]
+ },
+ {
+  "id": "g-prep",
+  "kind": "grammar",
+  "name": "Giới từ",
+  "desc": "in/on/at, giới từ chỉ nơi chốn, phương tiện và tính từ + giới từ",
+  "words": [
+   {
+    "id": "g-prep-1",
+    "word": "in",
+    "meaning": "Giới từ chỉ tháng",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "My birthday is in May.",
+    "blank": "My birthday is _____ May.",
+    "options": [
+     "in",
+     "on",
+     "at",
+     "by"
+    ],
+    "explain": "in + tháng/năm/mùa.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-prep-2",
+    "word": "on",
+    "meaning": "Giới từ chỉ thứ trong tuần",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "The meeting is on Monday.",
+    "blank": "The meeting is _____ Monday.",
+    "options": [
+     "on",
+     "in",
+     "at",
+     "to"
+    ],
+    "explain": "on + thứ/ngày cụ thể.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-prep-3",
+    "word": "at",
+    "meaning": "Giới từ chỉ giờ",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I get up at six o'clock.",
+    "blank": "I get up _____ six o'clock.",
+    "options": [
+     "at",
+     "in",
+     "on",
+     "for"
+    ],
+    "explain": "at + giờ cụ thể.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-prep-4",
+    "word": "at",
+    "meaning": "Giới từ chỉ địa điểm cụ thể",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She is waiting at the bus stop.",
+    "blank": "She is waiting _____ the bus stop.",
+    "options": [
+     "at",
+     "in",
+     "on",
+     "by"
+    ],
+    "explain": "at + địa điểm cụ thể (bus stop, station).",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-prep-5",
+    "word": "in",
+    "meaning": "Giới từ chỉ thành phố",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "He lives in Hanoi.",
+    "blank": "He lives _____ Hanoi.",
+    "options": [
+     "in",
+     "at",
+     "on",
+     "to"
+    ],
+    "explain": "in + thành phố/quốc gia.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-prep-6",
+    "word": "by",
+    "meaning": "Giới từ chỉ phương tiện",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "We went to the beach by bus.",
+    "blank": "We went to the beach _____ bus.",
+    "options": [
+     "by",
+     "with",
+     "on",
+     "in"
+    ],
+    "explain": "by + phương tiện (by bus, by car).",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-prep-7",
+    "word": "with",
+    "meaning": "Giới từ chỉ dụng cụ",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She cut the paper with scissors.",
+    "blank": "She cut the paper _____ scissors.",
+    "options": [
+     "with",
+     "by",
+     "in",
+     "of"
+    ],
+    "explain": "with + dụng cụ dùng để làm việc gì.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-prep-8",
+    "word": "to",
+    "meaning": "Giới từ chỉ hướng di chuyển",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I'm going to the market.",
+    "blank": "I'm going _____ the market.",
+    "options": [
+     "to",
+     "at",
+     "in",
+     "for"
+    ],
+    "explain": "go to + nơi chốn.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-prep-9",
+    "word": "of",
+    "meaning": "Tính từ + giới từ",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She is afraid of spiders.",
+    "blank": "She is afraid _____ spiders.",
+    "options": [
+     "of",
+     "for",
+     "at",
+     "on"
+    ],
+    "explain": "afraid of = sợ.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-prep-10",
+    "word": "about",
+    "meaning": "Động từ + giới từ",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "We talked about the project.",
+    "blank": "We talked _____ the project.",
+    "options": [
+     "about",
+     "of",
+     "to",
+     "on"
+    ],
+    "explain": "talk about = nói về.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-prep-11",
+    "word": "in",
+    "meaning": "Tính từ + giới từ",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "He is interested in history.",
+    "blank": "He is interested _____ history.",
+    "options": [
+     "in",
+     "on",
+     "at",
+     "of"
+    ],
+    "explain": "interested in = quan tâm đến.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-prep-12",
+    "word": "between",
+    "meaning": "Ở giữa hai vật",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "The shop is between the bank and the post office.",
+    "blank": "The shop is _____ the bank and the post office.",
+    "options": [
+     "between",
+     "among",
+     "through",
+     "over"
+    ],
+    "explain": "between dùng cho hai đối tượng; among cho nhiều hơn hai.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   }
+  ]
+ },
+ {
+  "id": "g-compare",
+  "kind": "grammar",
+  "name": "So sánh",
+  "desc": "So sánh hơn, so sánh nhất và so sánh bằng",
+  "words": [
+   {
+    "id": "g-compare-1",
+    "word": "taller",
+    "meaning": "So sánh hơn của tall",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "Tom is taller than his brother.",
+    "blank": "Tom is _____ than his brother.",
+    "options": [
+     "taller",
+     "tall",
+     "tallest",
+     "more tall"
+    ],
+    "explain": "Tính từ ngắn + -er + than.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-compare-2",
+    "word": "the most expensive",
+    "meaning": "So sánh nhất của expensive",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "This is the most expensive watch in the shop.",
+    "blank": "This is _____ watch in the shop.",
+    "options": [
+     "the most expensive",
+     "more expensive",
+     "most expensive",
+     "the expensivest"
+    ],
+    "explain": "Tính từ dài: the most + adj.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-compare-3",
+    "word": "better",
+    "meaning": "So sánh hơn của good",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "This book is better than that one.",
+    "blank": "This book is _____ than that one.",
+    "options": [
+     "better",
+     "gooder",
+     "more good",
+     "best"
+    ],
+    "explain": "good → better → best (bất quy tắc).",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-compare-4",
+    "word": "as",
+    "meaning": "So sánh bằng",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She is as tall as her mother.",
+    "blank": "She is as tall _____ her mother.",
+    "options": [
+     "as",
+     "than",
+     "like",
+     "so"
+    ],
+    "explain": "as + adj + as.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-compare-5",
+    "word": "the best",
+    "meaning": "So sánh nhất của good",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She is the best student in our class.",
+    "blank": "She is _____ student in our class.",
+    "options": [
+     "the best",
+     "better",
+     "the better",
+     "best"
+    ],
+    "explain": "the + best khi so sánh nhất trong một nhóm.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-compare-6",
+    "word": "more interesting",
+    "meaning": "So sánh hơn của interesting",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "This film is more interesting than the last one.",
+    "blank": "This film is _____ than the last one.",
+    "options": [
+     "more interesting",
+     "interestinger",
+     "most interesting",
+     "interesting more"
+    ],
+    "explain": "Tính từ dài: more + adj + than.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-compare-7",
+    "word": "worse",
+    "meaning": "So sánh hơn của bad",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "The weather today is worse than yesterday.",
+    "blank": "The weather today is _____ than yesterday.",
+    "options": [
+     "worse",
+     "badder",
+     "more bad",
+     "worst"
+    ],
+    "explain": "bad → worse → worst (bất quy tắc).",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-compare-8",
+    "word": "The more",
+    "meaning": "So sánh kép",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "The more you practise, the better you will speak.",
+    "blank": "_____ you practise, the better you will speak.",
+    "options": [
+     "The more",
+     "More",
+     "The most",
+     "The much"
+    ],
+    "explain": "The + so sánh hơn, the + so sánh hơn.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-compare-9",
+    "word": "less",
+    "meaning": "Ít hơn",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "This phone is less expensive than that one.",
+    "blank": "This phone is _____ expensive than that one.",
+    "options": [
+     "less",
+     "fewer",
+     "lesser",
+     "more less"
+    ],
+    "explain": "less + adj + than.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   }
+  ]
+ },
+ {
+  "id": "g-passive",
+  "kind": "grammar",
+  "name": "Câu bị động",
+  "desc": "Bị động ở nhiều thì và với động từ khuyết thiếu",
+  "words": [
+   {
+    "id": "g-passive-1",
+    "word": "was built",
+    "meaning": "Bị động quá khứ đơn",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "This bridge was built in 1990.",
+    "blank": "This bridge _____ in 1990.",
+    "options": [
+     "was built",
+     "built",
+     "is building",
+     "has build"
+    ],
+    "explain": "Bị động quá khứ đơn: was/were + V3.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-passive-2",
+    "word": "is spoken",
+    "meaning": "Bị động hiện tại đơn",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "English is spoken in many countries.",
+    "blank": "English _____ in many countries.",
+    "options": [
+     "is spoken",
+     "speaks",
+     "is speaking",
+     "spoke"
+    ],
+    "explain": "Bị động hiện tại đơn: am/is/are + V3.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-passive-3",
+    "word": "been",
+    "meaning": "Bị động hiện tại hoàn thành",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "The homework has been finished.",
+    "blank": "The homework has _____ finished.",
+    "options": [
+     "been",
+     "be",
+     "being",
+     "was"
+    ],
+    "explain": "Hiện tại hoàn thành bị động: have/has + been + V3.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-passive-4",
+    "word": "by",
+    "meaning": "Tác nhân trong câu bị động",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "The song was written by a famous singer.",
+    "blank": "The song was written _____ a famous singer.",
+    "options": [
+     "by",
+     "with",
+     "from",
+     "of"
+    ],
+    "explain": "by + người/vật thực hiện hành động.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-passive-5",
+    "word": "will be held",
+    "meaning": "Bị động tương lai",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "The meeting will be held tomorrow.",
+    "blank": "The meeting _____ tomorrow.",
+    "options": [
+     "will be held",
+     "will hold",
+     "will be holding",
+     "holds"
+    ],
+    "explain": "Bị động tương lai: will + be + V3.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-passive-6",
+    "word": "are made",
+    "meaning": "Bị động hiện tại đơn, số nhiều",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "These shoes are made in Vietnam.",
+    "blank": "These shoes _____ in Vietnam.",
+    "options": [
+     "are made",
+     "make",
+     "are making",
+     "made"
+    ],
+    "explain": "Chủ ngữ số nhiều → are + V3.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-passive-7",
+    "word": "was stolen",
+    "meaning": "Bị động quá khứ đơn của steal",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "My bike was stolen last night.",
+    "blank": "My bike _____ last night.",
+    "options": [
+     "was stolen",
+     "stole",
+     "was stealing",
+     "has stole"
+    ],
+    "explain": "steal → stole → stolen; bị động: was + stolen.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-passive-8",
+    "word": "is being repaired",
+    "meaning": "Bị động hiện tại tiếp diễn",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "The road is being repaired at the moment.",
+    "blank": "The road _____ at the moment.",
+    "options": [
+     "is being repaired",
+     "is repairing",
+     "repairs",
+     "was repaired"
+    ],
+    "explain": "Hiện tại tiếp diễn bị động: is/are + being + V3.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-passive-9",
+    "word": "must be done",
+    "meaning": "Bị động với động từ khuyết thiếu",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "The work must be done before Friday.",
+    "blank": "The work _____ before Friday.",
+    "options": [
+     "must be done",
+     "must do",
+     "must be doing",
+     "must done"
+    ],
+    "explain": "modal + be + V3.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-passive-10",
+    "word": "were invited",
+    "meaning": "Bị động quá khứ đơn, số nhiều",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "They were invited to the wedding.",
+    "blank": "They _____ to the wedding.",
+    "options": [
+     "were invited",
+     "invited",
+     "were inviting",
+     "have invited"
+    ],
+    "explain": "Chủ ngữ số nhiều trong quá khứ → were + V3.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   }
+  ]
+ },
+ {
+  "id": "g-condition",
+  "kind": "grammar",
+  "name": "Câu điều kiện & wish",
+  "desc": "Điều kiện loại 1, 2, 3, unless và wish",
+  "words": [
+   {
+    "id": "g-condition-1",
+    "word": "rains",
+    "meaning": "Điều kiện loại 1, mệnh đề if",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "If it rains tomorrow, we will stay at home.",
+    "blank": "If it _____ tomorrow, we will stay at home.",
+    "options": [
+     "rains",
+     "will rain",
+     "rained",
+     "would rain"
+    ],
+    "explain": "Loại 1: If + hiện tại đơn, S + will + V.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-condition-2",
+    "word": "will pass",
+    "meaning": "Điều kiện loại 1, mệnh đề chính",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "If you study hard, you will pass the exam.",
+    "blank": "If you study hard, you _____ the exam.",
+    "options": [
+     "will pass",
+     "would pass",
+     "passes",
+     "passed"
+    ],
+    "explain": "Loại 1: mệnh đề chính dùng will + V.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-condition-3",
+    "word": "would buy",
+    "meaning": "Điều kiện loại 2, mệnh đề chính",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "If I had more money, I would buy a new car.",
+    "blank": "If I had more money, I _____ a new car.",
+    "options": [
+     "would buy",
+     "will buy",
+     "bought",
+     "buys"
+    ],
+    "explain": "Loại 2 (không có thật ở hiện tại): If + quá khứ đơn, S + would + V.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-condition-4",
+    "word": "had",
+    "meaning": "Điều kiện loại 2, mệnh đề if",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "If I had a bike, I would ride to school.",
+    "blank": "If I _____ a bike, I would ride to school.",
+    "options": [
+     "had",
+     "have",
+     "would have",
+     "has"
+    ],
+    "explain": "Loại 2: mệnh đề if dùng quá khứ đơn.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-condition-5",
+    "word": "had studied",
+    "meaning": "Điều kiện loại 3, mệnh đề if",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "If she had studied harder, she would have passed.",
+    "blank": "If she _____ harder, she would have passed.",
+    "options": [
+     "had studied",
+     "studied",
+     "have studied",
+     "would study"
+    ],
+    "explain": "Loại 3 (trái với quá khứ): If + quá khứ hoàn thành, S + would have + V3.",
+    "cefr": "B2",
+    "tier": "hard",
+    "type": "grammar"
+   },
+   {
+    "id": "g-condition-6",
+    "word": "Unless",
+    "meaning": "Nếu không",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "Unless you hurry, you will miss the bus.",
+    "blank": "_____ you hurry, you will miss the bus.",
+    "options": [
+     "Unless",
+     "If",
+     "Because",
+     "Although"
+    ],
+    "explain": "Unless = If ... not.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-condition-7",
+    "word": "could",
+    "meaning": "Ước điều không có thật ở hiện tại",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I wish I could fly.",
+    "blank": "I wish I _____ fly.",
+    "options": [
+     "could",
+     "can",
+     "will",
+     "am able"
+    ],
+    "explain": "wish + quá khứ đơn/could cho điều ước ở hiện tại.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-condition-8",
+    "word": "were",
+    "meaning": "Ước điều không có thật ở hiện tại",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I wish it were summer now.",
+    "blank": "I wish it _____ summer now.",
+    "options": [
+     "were",
+     "is",
+     "will be",
+     "are"
+    ],
+    "explain": "wish + were/quá khứ cho điều ước ở hiện tại.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-condition-9",
+    "word": "had been",
+    "meaning": "Ước về điều đã xảy ra trong quá khứ",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I wish I had been there.",
+    "blank": "I wish I _____ there.",
+    "options": [
+     "had been",
+     "was",
+     "have been",
+     "would be"
+    ],
+    "explain": "wish + quá khứ hoàn thành cho điều tiếc nuối ở quá khứ.",
+    "cefr": "B2",
+    "tier": "hard",
+    "type": "grammar"
+   },
+   {
+    "id": "g-condition-10",
+    "word": "would help",
+    "meaning": "Điều kiện loại 2, mệnh đề chính",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "If she were here, she would help us.",
+    "blank": "If she were here, she _____ us.",
+    "options": [
+     "would help",
+     "will help",
+     "helps",
+     "helped"
+    ],
+    "explain": "Loại 2: mệnh đề chính dùng would + V.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   }
+  ]
+ },
+ {
+  "id": "g-clause",
+  "kind": "grammar",
+  "name": "Mệnh đề quan hệ & liên từ",
+  "desc": "who, which, where, whose và các liên từ thông dụng",
+  "words": [
+   {
+    "id": "g-clause-1",
+    "word": "who",
+    "meaning": "Đại từ quan hệ chỉ người",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "The woman who lives next door is a doctor.",
+    "blank": "The woman _____ lives next door is a doctor.",
+    "options": [
+     "who",
+     "which",
+     "whose",
+     "where"
+    ],
+    "explain": "who thay cho người, làm chủ ngữ trong mệnh đề quan hệ.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-clause-2",
+    "word": "which",
+    "meaning": "Đại từ quan hệ chỉ vật",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "This is the book which I bought yesterday.",
+    "blank": "This is the book _____ I bought yesterday.",
+    "options": [
+     "which",
+     "who",
+     "where",
+     "whose"
+    ],
+    "explain": "which thay cho vật.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-clause-3",
+    "word": "where",
+    "meaning": "Quan hệ chỉ nơi chốn",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "That is the school where I studied.",
+    "blank": "That is the school _____ I studied.",
+    "options": [
+     "where",
+     "which",
+     "who",
+     "when"
+    ],
+    "explain": "where thay cho nơi chốn.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-clause-4",
+    "word": "whose",
+    "meaning": "Quan hệ chỉ sở hữu",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She has a friend whose father is a pilot.",
+    "blank": "She has a friend _____ father is a pilot.",
+    "options": [
+     "whose",
+     "who",
+     "which",
+     "whom"
+    ],
+    "explain": "whose + danh từ = của người/vật đó.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-clause-5",
+    "word": "but",
+    "meaning": "Liên từ chỉ sự đối lập",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I like tea, but I don't like coffee.",
+    "blank": "I like tea, _____ I don't like coffee.",
+    "options": [
+     "but",
+     "because",
+     "so",
+     "or"
+    ],
+    "explain": "but nối hai ý trái ngược.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-clause-6",
+    "word": "so",
+    "meaning": "Liên từ chỉ kết quả",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "It was raining, so we stayed inside.",
+    "blank": "It was raining, _____ we stayed inside.",
+    "options": [
+     "so",
+     "because",
+     "but",
+     "although"
+    ],
+    "explain": "so + kết quả.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-clause-7",
+    "word": "because",
+    "meaning": "Liên từ chỉ nguyên nhân",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She stayed at home because she was sick.",
+    "blank": "She stayed at home _____ she was sick.",
+    "options": [
+     "because",
+     "so",
+     "but",
+     "however"
+    ],
+    "explain": "because + nguyên nhân.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-clause-8",
+    "word": "Although",
+    "meaning": "Liên từ chỉ sự nhượng bộ",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "Although it was cold, we went swimming.",
+    "blank": "_____ it was cold, we went swimming.",
+    "options": [
+     "Although",
+     "Because",
+     "So",
+     "Despite"
+    ],
+    "explain": "Although + mệnh đề (S + V); Despite + danh từ/V-ing.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-clause-9",
+    "word": "However",
+    "meaning": "Trạng từ liên kết chỉ sự đối lập",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "The test was difficult. However, I passed it.",
+    "blank": "The test was difficult. _____, I passed it.",
+    "options": [
+     "However",
+     "Because",
+     "Although",
+     "Therefore"
+    ],
+    "explain": "However đứng đầu câu, có dấu phẩy phía sau.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-clause-10",
+    "word": "when",
+    "meaning": "Liên từ thời gian",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I will call you when I arrive.",
+    "blank": "I will call you _____ I arrive.",
+    "options": [
+     "when",
+     "while",
+     "until",
+     "unless"
+    ],
+    "explain": "when + mệnh đề thời gian (hiện tại đơn cho tương lai).",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   }
+  ]
+ },
+ {
+  "id": "g-modal",
+  "kind": "grammar",
+  "name": "Động từ khuyết thiếu & dạng động từ",
+  "desc": "can, must, should và V-ing/to V sau động từ",
+  "words": [
+   {
+    "id": "g-modal-1",
+    "word": "can",
+    "meaning": "Khả năng",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She can speak three languages.",
+    "blank": "She _____ speak three languages.",
+    "options": [
+     "can",
+     "must",
+     "should",
+     "would"
+    ],
+    "explain": "can + V diễn tả khả năng.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-modal-2",
+    "word": "must",
+    "meaning": "Bắt buộc",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "You must wear a seatbelt in the car.",
+    "blank": "You _____ wear a seatbelt in the car.",
+    "options": [
+     "must",
+     "can",
+     "may",
+     "would"
+    ],
+    "explain": "must + V diễn tả sự bắt buộc.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-modal-3",
+    "word": "should",
+    "meaning": "Lời khuyên",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "You should drink more water.",
+    "blank": "You _____ drink more water.",
+    "options": [
+     "should",
+     "must",
+     "can",
+     "will"
+    ],
+    "explain": "should + V dùng để khuyên.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-modal-4",
+    "word": "don't have to",
+    "meaning": "Không bắt buộc",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "You don't have to wear a uniform on Saturdays.",
+    "blank": "You _____ wear a uniform on Saturdays.",
+    "options": [
+     "don't have to",
+     "mustn't",
+     "can't",
+     "shouldn't"
+    ],
+    "explain": "don't have to = không cần phải; mustn't = cấm.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-modal-5",
+    "word": "may",
+    "meaning": "Khả năng có thể xảy ra",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "It may rain this afternoon, so take an umbrella.",
+    "blank": "It _____ rain this afternoon, so take an umbrella.",
+    "options": [
+     "may",
+     "must",
+     "would",
+     "shall"
+    ],
+    "explain": "may + V diễn tả điều có thể xảy ra.",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-modal-6",
+    "word": "to go",
+    "meaning": "want + gì",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I want to go to the park.",
+    "blank": "I want _____ to the park.",
+    "options": [
+     "to go",
+     "go",
+     "going",
+     "went"
+    ],
+    "explain": "want + to V.",
+    "cefr": "A1",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-modal-7",
+    "word": "going",
+    "meaning": "enjoy + gì",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "She enjoys going to the cinema.",
+    "blank": "She enjoys _____ to the cinema.",
+    "options": [
+     "going",
+     "go",
+     "to go",
+     "went"
+    ],
+    "explain": "enjoy + V-ing.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-modal-8",
+    "word": "to see",
+    "meaning": "hope + gì",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I hope to see you soon.",
+    "blank": "I hope _____ you soon.",
+    "options": [
+     "to see",
+     "see",
+     "seeing",
+     "saw"
+    ],
+    "explain": "hope + to V.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-modal-9",
+    "word": "stay",
+    "meaning": "let + gì",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "My parents let me stay up late.",
+    "blank": "My parents let me _____ up late.",
+    "options": [
+     "stay",
+     "to stay",
+     "staying",
+     "stayed"
+    ],
+    "explain": "let + O + V (không có to).",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   },
+   {
+    "id": "g-modal-10",
+    "word": "to study",
+    "meaning": "decide + gì",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "He decided to study abroad.",
+    "blank": "He decided _____ abroad.",
+    "options": [
+     "to study",
+     "study",
+     "studying",
+     "studied"
+    ],
+    "explain": "decide + to V.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-modal-11",
+    "word": "swimming",
+    "meaning": "Giới từ + gì",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "He is good at swimming.",
+    "blank": "He is good at _____.",
+    "options": [
+     "swimming",
+     "swim",
+     "to swim",
+     "swum"
+    ],
+    "explain": "Sau giới từ dùng V-ing.",
+    "cefr": "A2",
+    "tier": "easy",
+    "type": "grammar"
+   },
+   {
+    "id": "g-modal-12",
+    "word": "used to",
+    "meaning": "Thói quen trong quá khứ",
+    "prompt": "Chọn đáp án đúng để điền vào chỗ trống.",
+    "example": "I used to play football when I was a child.",
+    "blank": "I _____ play football when I was a child.",
+    "options": [
+     "used to",
+     "use to",
+     "used",
+     "was use to"
+    ],
+    "explain": "used to + V = đã từng (thói quen quá khứ).",
+    "cefr": "B1",
+    "tier": "medium",
+    "type": "grammar"
+   }
+  ]
+ }
+]

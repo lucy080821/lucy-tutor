@@ -18,7 +18,7 @@ router.get('/practice-set/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
     const deck = await prisma.userVocabProgress.findMany({
-      where: { userId },
+      where: { userId, vocab: { OR: [{ pos: null }, { pos: { notIn: ['grammar', 'pron'] } }] } },
       select: { vocabId: true, vocab: { select: { word: true, phonetic: true, example: true, meaning: true } } },
       orderBy: { nextReviewDate: 'asc' },
       take: 200
