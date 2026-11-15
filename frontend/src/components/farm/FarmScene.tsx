@@ -82,7 +82,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
       const pen = catalog.pens?.[d.key];
       if (!pen || (pen.animal !== "🐔" && pen.animal !== "🦆")) continue;
       if (d.build && new Date(d.build.readyAt).getTime() > now) continue;
-      for (let i = 0; i < Math.min(4, d.animals || 0); i++) out.push({ uid: `${d.uid}:b${i}`, pen: d.uid, x: d.x, y: d.y, emoji: pen.animal, size: 24 });
+      for (let i = 0; i < Math.min(4, d.animals || 0); i++) out.push({ uid: `${d.uid}:b${i}`, pen: d.uid, x: d.x, y: d.y, emoji: pen.animal, size: 30 });
     }
     return out;
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -1,6 +1,7 @@
 "use client";
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { EmojiDecor, PetSprite, type Outfit } from "./Sprites";
+import { PetSprite, EmojiDecor, type Outfit } from "./Sprites";
+import AnimalSprite, { isAnimalKind, KIND_BY_EMOJI } from "./Animals";
 
 // Thú cưng + vật nuôi đi dạo quanh vườn: mỗi nhịp bước sang 1 ô kề còn trống (không đi xuyên ô đất/đồ trang trí),
 // vật nuôi chỉ quanh ô nhà của nó (≤ 3 ô), Qilin đi cả vườn. Có nhún nhảy mỗi bước, vật nuôi quay mặt theo hướng đi.
@@ -8,7 +9,7 @@ import { EmojiDecor, PetSprite, type Outfit } from "./Sprites";
 export type Roamer = { uid: string; key: string; x: number; y: number; emoji: string; size: number };
 // Gà/vịt của chuồng: ban ngày ra sân đi dạo, chiều tối (dusk/night) tự đi về chuồng rồi ẩn vào trong
 export type PenBird = { uid: string; pen: string; x: number; y: number; emoji: string; size: number };
-type Walker = { id: string; hx: number; hy: number; x: number; y: number; face: 1 | -1; dir: number; nextAt: number; hop: number; pen?: string; inside?: boolean; arriving?: boolean; stuck?: number };
+type Walker = { id: string; hx: number; hy: number; x: number; y: number; face: 1 | -1; dir: number; nextAt: number; hop: number; poke?: number; walking?: boolean; moveUntil?: number; pen?: string; inside?: boolean; arriving?: boolean; stuck?: number };
 
 const NB: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const STEP_MS = 1150; // khớp transition trong .farm-walker
@@ -88,19 +89,20 @@ export default memo(function Roamers({ W, H, toScreen, blocked, animals, sleepin
       if (typeof document !== "undefined" && document.hidden) return;
       const now = Date.now(); const m = walkers.current; let moved = false;
       for (const w of m.values()) {
+        if (w.walking && now >= (w.moveUntil || 0)) { w.walking = false; moved = true; } // dừng chân → chân thôi đung đưa
         if (now < w.nextAt) continue;
         w.nextAt = now + STEP_MS + Math.random() * (w.id === "pet" ? 1400 : 2200);
         if (w.pen) { // gà/vịt của chuồng
           if (w.inside) {
             if (homeRef.current) continue; // tối rồi: ở yên trong chuồng
-            w.inside = false; w.arriving = false; w.stuck = 0; w.x = w.hx; w.y = w.hy; w.hop++; moved = true; // sáng: lục tục ra sân
+            w.inside = false; w.arriving = false; w.stuck = 0; w.x = w.hx; w.y = w.hy; w.hop++; w.walking = false; moved = true; // sáng: lục tục ra sân
             continue;
           }
           if (homeRef.current) { // về chuồng theo đường ngắn nhất (BFS qua ô trống)
             if (w.arriving) { w.inside = true; w.arriving = false; moved = true; continue; }
             if (w.x === w.hx && w.y === w.hy) { w.inside = true; moved = true; continue; }
             const step = stepHome(w, W, H, blockedRef.current, m);
-            if (step) { const sdx = (step[0] - w.x) - (step[1] - w.y); if (sdx !== 0) w.face = sdx > 0 ? -1 : 1; w.x = step[0]; w.y = step[1]; w.hop++; moved = true; if (w.x === w.hx && w.y === w.hy) w.arriving = true; }
+            if (step) { const sdx = (step[0] - w.x) - (step[1] - w.y); if (sdx !== 0) w.face = sdx > 0 ? -1 : 1; w.x = step[0]; w.y = step[1]; w.hop++; w.walking = true; w.moveUntil = now + STEP_MS + 150; moved = true; if (w.x === w.hx && w.y === w.hy) w.arriving = true; }
             else if ((w.stuck = (w.stuck || 0) + 1) > 5) { w.inside = true; moved = true; } // kẹt đường thì chui thẳng vào
             continue;
           }
@@ -113,7 +115,7 @@ export default memo(function Roamers({ W, H, toScreen, blocked, animals, sleepin
         const pick = opts.find((o) => o.i === w.dir && Math.random() < 0.6) || opts[Math.floor(Math.random() * opts.length)];
         const sdx = (pick.x - w.x) - (pick.y - w.y); // dịch chuyển ngang trên màn hình
         if (sdx !== 0) w.face = sdx > 0 ? -1 : 1; // emoji vật nuôi mặc định nhìn sang trái
-        w.dir = pick.i; w.x = pick.x; w.y = pick.y; w.hop++; moved = true;
+        w.dir = pick.i; w.x = pick.x; w.y = pick.y; w.hop++; w.walking = true; w.moveUntil = now + STEP_MS + 150; moved = true;
       }
       if (moved) { reportInside(); setTick((n) => n + 1); }
     }, 400);
@@ -123,7 +125,7 @@ export default memo(function Roamers({ W, H, toScreen, blocked, animals, sleepin
   const list = [...walkers.current.values()].sort((a, b) => a.x + a.y - (b.x + b.y) || a.x - b.x);
   const byUid = new Map(animals.map((a) => [a.uid, a]));
   const byBird = new Map(birds.map((b) => [b.uid, { uid: b.uid, key: b.pen, x: b.x, y: b.y, emoji: b.emoji, size: b.size } as Roamer]));
-  const nudge = (w: Walker) => { w.hop++; setTick((n) => n + 1); };
+  const nudge = (w: Walker) => { w.poke = (w.poke || 0) + 1; setTick((n) => n + 1); };
 
   return (
     <g>
@@ -134,7 +136,7 @@ export default memo(function Roamers({ W, H, toScreen, blocked, animals, sleepin
           if (petAway) return null;
           return (
             <g key="pet" className="farm-walker" style={style} onClick={(e) => { e.stopPropagation(); onPetClick?.(); }} role="button" aria-label={pet.name}>
-              <g key={w.hop} className={w.hop ? "farm-hop-pet" : ""}>
+              <g className={w.walking ? "farm-pet-walk" : ""}>
                 <g className={petJumping ? "farm-pet-jump" : "farm-pet-idle"} style={{ cursor: onPetClick ? "pointer" : "default" }}>
                   <PetSprite level={pet.level} size={0.9} outfit={outfit} />
                 </g>
@@ -148,10 +150,13 @@ export default memo(function Roamers({ W, H, toScreen, blocked, animals, sleepin
         }
         if (w.inside) return null;
         const a = byUid.get(w.id) || byBird.get(w.id); if (!a) return null;
+        const kind = isAnimalKind(a.key) ? a.key : KIND_BY_EMOJI[a.emoji];
         return (
           <g key={w.id} className="farm-walker" style={style} onClick={(e) => { e.stopPropagation(); nudge(w); }} role="img" aria-label={a.key}>
-            <g key={w.hop} className={w.hop ? "farm-hop" : ""}>
-              <g transform={`scale(${w.face} 1)`} style={{ cursor: "pointer" }}><EmojiDecor emoji={a.emoji} size={a.size} cx={0} cy={0} /></g>
+            <g key={w.poke || 0} className={w.poke ? "farm-hop" : ""}>
+              <g transform={`scale(${w.face} 1)`} style={{ cursor: "pointer" }}>
+                {kind ? <g transform="translate(0 6)"><AnimalSprite kind={kind} size={a.size} walking={!!w.walking} /></g> : <EmojiDecor emoji={a.emoji} size={a.size} cx={0} cy={0} />}
+              </g>
             </g>
           </g>
         );

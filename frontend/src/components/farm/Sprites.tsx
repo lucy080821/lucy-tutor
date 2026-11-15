@@ -1,5 +1,6 @@
 "use client";
 import type { ReactNode } from "react";
+import AnimalSprite, { isAnimalKind, KIND_BY_EMOJI } from "./Animals";
 // Sprite SVG cho Nông Trại Qilin: cây trồng theo giai đoạn, trang trí, thú cưng Qilin con.
 // Mọi sprite vẽ quanh gốc (0,0) = chân cây/đáy vật, hướng lên trên (y âm).
 
@@ -354,7 +355,7 @@ export function FactorySprite({ cx, cy, wall, roof, emoji, busy, mirror }: { cx:
   );
 }
 
-const PEN_ANIMAL_SIZE: Record<string, number> = { "🐔": 18, "🦆": 18, "🐄": 24, "🐖": 22, "🐑": 22 };
+const PEN_ANIMAL_SIZE: Record<string, number> = { "🐔": 24, "🦆": 24, "🐄": 27, "🐖": 25, "🐑": 25 };
 // ── Chuồng trại: sân rào + chuồng nhỏ + vật nuôi nhún nhảy; đang xây thì là giàn giáo ───────────────────────
 export function PenSprite({ cx, cy, wall, roof, animal, animals, building }: { cx: number; cy: number; wall: string; roof: string; animal: string; animals: number; building?: boolean }) {
   const T: Pt = [cx, cy - 25], R: Pt = [cx + 50, cy], B: Pt = [cx, cy + 25], L: Pt = [cx - 50, cy];
@@ -388,10 +389,7 @@ export function PenSprite({ cx, cy, wall, roof, animal, animals, building }: { c
         return (
           <g key={i} transform={`translate(${p[0]} ${p[1]})`}>
             <g className="farm-pen-wander" style={{ animationDelay: `${-i * 1.7}s`, animationDuration: `${6.5 + i * 1.6}s`, ["--ax" as string]: `${i % 2 ? 9 : 12}px`, ["--ay" as string]: `${i % 2 ? 3 : -3}px` }}>
-              <ellipse cx={0} cy={3} rx={fs * 0.4} ry={fs * 0.14} fill="rgba(31,45,61,.18)" />
-              <g className="farm-hop" style={{ animationDelay: `${i * 0.45}s`, animationIterationCount: "infinite", animationDuration: `${0.9 + (i % 3) * 0.3}s` }}>
-                <text x={0} y={4} textAnchor="middle" fontSize={fs} style={{ fontFamily: EMOJI_FONT }}>{animal}</text>
-              </g>
+              {KIND_BY_EMOJI[animal] ? <g className="farm-hop" style={{ animationDelay: `${i * 0.45}s`, animationIterationCount: "infinite", animationDuration: `${0.9 + (i % 3) * 0.3}s` }}><AnimalSprite kind={KIND_BY_EMOJI[animal]} size={fs} /></g> : <text x={0} y={4} textAnchor="middle" fontSize={fs} style={{ fontFamily: EMOJI_FONT }}>{animal}</text>}
             </g>
           </g>
         );
@@ -432,6 +430,7 @@ export function DecorSprite({ itemKey, emoji, cx, cy, isPath, n, r = 0, meta }: 
   return <DecorBody itemKey={itemKey} emoji={emoji} cx={cx} cy={cy} />;
 }
 function DecorBody({ itemKey, emoji, cx, cy }: { itemKey?: string; emoji: string; cx: number; cy: number }) {
+  if (itemKey && isAnimalKind(itemKey)) return <g transform={`translate(${cx} ${cy + 6})`}><AnimalSprite kind={itemKey} size={emojiSizeOf(itemKey)} /></g>;
   const shadow = (rx: number, ry: number) => <ellipse cx={cx} cy={cy + 4} rx={rx} ry={ry} fill="rgba(31,45,61,.2)" />;
   switch (itemKey) {
     case "rock": return (

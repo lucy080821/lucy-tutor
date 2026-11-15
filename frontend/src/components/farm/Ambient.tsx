@@ -183,8 +183,10 @@ export const AmbientLife = memo(function AmbientLife({ vbW, vbH, phase, weather,
       ))}
       {(phase === "morning" || phase === "afternoon") && nice && (
         <>
-          <g className="farm-cloud" style={{ animationDuration: "52s", animationDelay: "-14s" }}><g transform="translate(0 38)"><text fontSize={15}>🐦</text></g></g>
-          <g className="farm-cloud" style={{ animationDuration: "74s", animationDelay: "-40s" }}><g transform="translate(0 70)"><text fontSize={13}>🐦</text></g></g>
+          <g className="farm-cloud" style={{ animationDuration: "52s", animationDelay: "-14s" }}><g transform="translate(0 38)">
+            <FlyingBird s={1.3} d={0} /><g transform="translate(-30 14)"><FlyingBird s={1.05} d={0.11} /></g><g transform="translate(-54 3)"><FlyingBird s={0.9} d={0.2} /></g>
+          </g></g>
+          <g className="farm-cloud" style={{ animationDuration: "74s", animationDelay: "-40s" }}><g transform="translate(0 74)"><FlyingBird s={1.1} d={0.06} /></g></g>
         </>
       )}
       {drops.map((d) => <line key={d.k} x1={d.x} y1={d.y} x2={d.x - (weather === "storm" ? 9 : 6)} y2={d.y + (weather === "drizzle" ? 12 : weather === "storm" ? 24 : 18)} stroke={weather === "drizzle" ? "rgba(255,255,255,.45)" : "rgba(255,255,255,.62)"} strokeWidth={weather === "drizzle" ? 1 : 1.4} strokeLinecap="round" className="farm-rain" style={{ animationDelay: `${d.d}s`, animationDuration: `${dropDur}s`, ["--h" as any]: `${vbH + 90}px`, ["--w" as any]: weather === "storm" ? "-52px" : "-34px" }} />)}
@@ -193,3 +195,19 @@ export const AmbientLife = memo(function AmbientLife({ vbW, vbH, phase, weather,
     </g>
   );
 });
+
+// Chim bay nhìn nghiêng (quay mặt phải): thân + đầu + mỏ + đuôi, 2 cánh vỗ lên xuống quanh vai, cả con nhấp nhô nhẹ
+function FlyingBird({ s = 1, d = 0 }: { s?: number; d?: number }) {
+  const wing = "M0 0 Q-2 -11 -10 -12 Q-6 -5 -4 0 Z";
+  return (
+    <g transform={`scale(${s})`}>
+      <g className="farm-fly-bob" style={{ animationDelay: `${-d * 9}s` }}>
+        <g transform="translate(-1 -1)"><g className="farm-wing" style={{ animationDelay: `${-d}s` }}><path d={wing} fill="#8fa3bf" stroke="#64748b" strokeWidth={0.5} /></g></g>
+        <path d="M-6 0 L-12 -2.4 L-11 1.2 Z" fill="#475569" />
+        <ellipse cx={0} cy={0} rx={6.6} ry={2.8} fill="#475569" /><ellipse cx={0.8} cy={1} rx={4.4} ry={1.5} fill="#cbd5e1" />
+        <circle cx={6} cy={-1.2} r={2.4} fill="#475569" /><path d="M8 -1.6 L11.2 -0.8 L8 -0.2 Z" fill="#f59e0b" /><circle cx={6.8} cy={-1.8} r={0.5} fill="#fff" />
+        <g transform="translate(1 -0.6)"><g className="farm-wing" style={{ animationDelay: `${-d - 0.12}s` }}><path d={wing} fill="#b6c4d8" stroke="#64748b" strokeWidth={0.5} /></g></g>
+      </g>
+    </g>
+  );
+}

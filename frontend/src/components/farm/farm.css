@@ -28,6 +28,21 @@
 .farm-pet-move { transition: transform 1.8s cubic-bezier(.45,.05,.3,1); }
 /* đi dạo: trượt đều sang ô kế tiếp, mỗi bước nhún 2 nhịp */
 .farm-walker { transition: transform 1.15s linear; }
+/* chân vật nuôi đung đưa khi đi (nhóm cha có .farm-walking), đứng yên thì tạm dừng */
+@keyframes farm-bob { from { transform: translateY(0); } to { transform: translateY(-1.5px); } }
+@keyframes farm-pet-walk { 0%,100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-4px) rotate(-2deg); } 75% { transform: translateY(-4px) rotate(2deg); } }
+/* đi bộ: 2 ảnh tư thế chân A/B đổi nhau theo nhịp bước */
+@keyframes farm-pose-a { 0% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes farm-pose-b { 0% { opacity: 0; } 50% { opacity: 1; } }
+.farm-pose-a { animation: farm-pose-a .44s step-end infinite; }
+.farm-pose-b { animation: farm-pose-b .44s step-end infinite; }
+.farm-bob { animation: farm-bob .44s ease-in-out infinite alternate; }
+.farm-pet-walk { animation: farm-pet-walk .6s ease-in-out infinite; }
+/* chim bay: vỗ cánh + nhấp nhô */
+@keyframes farm-wing { from { transform: rotate(-58deg); } to { transform: rotate(34deg); } }
+@keyframes farm-fly-bob { from { transform: translateY(-3px); } to { transform: translateY(4px); } }
+.farm-wing { animation: farm-wing .3s ease-in-out infinite alternate; }
+.farm-fly-bob { animation: farm-fly-bob 1.9s ease-in-out infinite alternate; }
 @keyframes farm-hop { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 @keyframes farm-hop-pet { 0%,100% { transform: translateY(0) rotate(0); } 25% { transform: translateY(-7px) rotate(-3deg); } 50% { transform: translateY(0) rotate(0); } 75% { transform: translateY(-7px) rotate(3deg); } }
 .farm-hop { animation: farm-hop .55s ease-in-out 2; }
@@ -73,7 +88,8 @@
 .farm-scroll-x { scrollbar-width: thin; }
 
 @media (prefers-reduced-motion: reduce) {
-  .farm-sway, .farm-ready-marker, .farm-pet-idle, .farm-glow, .farm-cloud, .farm-hop, .farm-hop-pet, .farm-pen-wander { animation: none; }
+  .farm-sway, .farm-ready-marker, .farm-pet-idle, .farm-glow, .farm-cloud, .farm-hop, .farm-hop-pet, .farm-pen-wander, .farm-bob, .farm-pose-a, .farm-pose-b, .farm-pet-walk, .farm-wing, .farm-fly-bob { animation: none;  }
+  .farm-pose-b { display: none; }
 }
 
 /* Toàn màn hình (Fullscreen API hoặc giả lập CSS trên iPhone) */
