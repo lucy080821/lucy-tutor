@@ -25,8 +25,9 @@ import GrowingPanel from "./GrowingPanel";
 import WaterModal from "./WaterModal";
 import QuestsPanel from "./QuestsPanel";
 import HelpPanel from "./HelpPanel";
+import WellPanel from "./WellPanel";
 
-type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "FACTORY" | "PEN" | "GROW" | "WATER" | "QUESTS" | "WEATHER" | "HELP";
+type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "FACTORY" | "PEN" | "GROW" | "WELL" | "WATER" | "QUESTS" | "WEATHER" | "HELP";
 const TUT_KEY = "lucy_farm_tut_v2";
 
 async function confetti(opts: any) {
@@ -195,6 +196,7 @@ export default function FarmGame({ userId }: { userId: string }) {
     setMode({ type: "edit", selected: mode.selected?.id === d.uid ? null : { kind: "decor", id: d.uid } });
   };
   const onPenClick = (d: DecorPlaced) => { sfx.pop(); setPenUid(d.uid); setPanel("PEN"); };
+  const onWellClick = () => { sfx.pop(); setPanel("WELL"); };
   const onFactoryClick = (d: DecorPlaced) => { sfx.pop(); setFactoryUid(d.uid); setPanel("FACTORY"); };
   const selectedDecor = state && mode.type === "edit" && mode.selected?.kind === "decor" ? state.farm.layout.find((l) => l.uid === mode.selected!.id) : undefined;
   const rotateSelected = async () => {
@@ -309,7 +311,7 @@ export default function FarmGame({ userId }: { userId: string }) {
 
         <div className={fs ? "relative farm-fs-scene" : "relative"}>
           <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} sky={sky} weather={weather} zoom={effZoom} onZoomChange={(z) => setZoom(clampZoom(z / zoomBase))} fit={fs} petAway={!!farm.pet.trip}
-            onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onFactoryClick={onFactoryClick} onPenClick={onPenClick} onPetClick={onPetClick} />
+            onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onFactoryClick={onFactoryClick} onPenClick={onPenClick} onWellClick={onWellClick} onPetClick={onPetClick} />
           {readyPlots.length > 0 && mode.type === "normal" && (
             <button onClick={() => { sfx.click(); setActivePlot(readyPlots[0]); setPanel("HARVEST"); }} className="absolute top-3 left-3 z-[5] btn-highlight rounded-full pl-3 pr-4 py-2 font-extrabold shadow-card farm-toast inline-flex items-center gap-2"><IconSprout size={18} />{readyPlots.length} cây chín</button>
           )}
@@ -389,7 +391,7 @@ export default function FarmGame({ userId }: { userId: string }) {
       {panel === "NEIGHBORS" && <NeighborsPanel userId={userId} catalog={catalog} sky={sky} weather={weather} onClose={() => setPanel(null)} onToast={toast} onRefresh={load} />}
       {panel === "GROW" && activePlot && (() => { const fresh = state.plots.find((p) => p.id === activePlot.id) || activePlot; return (
         <GrowingPanel plot={fresh} catalog={catalog} now={now} onClose={() => setPanel(null)}
-          onEarly={() => { setEarlyMode(true); setPanel("HARVEST"); }} onWater={() => setPanel("WATER")} onRemove={() => { setPanel(null); removeOrStore(fresh); }} />
+          onEarly={() => { setEarlyMode(true); setPanel("HARVEST"); }} wells={farm.wells} waterMax={farm.waterMax} onShop={() => setPanel("SHOP")} onWater={() => setPanel("WATER")} onRemove={() => { setPanel(null); removeOrStore(fresh); }} />
       ); })()}
       {panel === "WATER" && activePlot && (() => { const fresh = state.plots.find((p) => p.id === activePlot.id) || activePlot; return (
         <WaterModal userId={userId} plot={fresh} now={now} onClose={() => setPanel("GROW")} onState={applyState} onToast={toast} />
@@ -399,6 +401,7 @@ export default function FarmGame({ userId }: { userId: string }) {
       {panel === "BARN" && <BarnPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "WEATHER" && <WeatherPanel status={wx.status} data={wx.data} error={wx.error} sky={sky} previewKind={wxPreview} onEnable={wx.enable} onDisable={wx.disable} onRefresh={wx.refresh} onClose={() => setPanel(null)} />}
       {panel === "QUESTS" && <QuestsPanel userId={userId} quests={quests} achievements={achievements} initialTab={questTab} onClose={() => setPanel(null)} onState={applyState} />}
+      {panel === "WELL" && <WellPanel farm={farm} plots={state.plots} catalog={catalog} now={now} onPick={(p) => { setActivePlot(p); setPanel("WATER"); }} onShop={() => setPanel("SHOP")} onClose={() => setPanel(null)} />}
       {panel === "HELP" && <HelpPanel onClose={closeTut} />}
     </div>
   );

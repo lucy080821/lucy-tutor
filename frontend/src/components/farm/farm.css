@@ -38,6 +38,11 @@
 .farm-pose-b { animation: farm-pose-b .44s step-end infinite; }
 .farm-bob { animation: farm-bob .44s ease-in-out infinite alternate; }
 .farm-pet-walk { animation: farm-pet-walk .6s ease-in-out infinite; }
+/* thác nước hòn non bộ + gợn sóng mặt ao */
+@keyframes farm-fall { to { stroke-dashoffset: -14; } }
+@keyframes farm-ripple { 0% { transform: scale(.55); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
+.farm-fall { stroke-dasharray: 5 5; animation: farm-fall .55s linear infinite; }
+.farm-ripple { transform-box: fill-box; transform-origin: center; animation: farm-ripple 2.6s ease-out infinite; }
 /* chim bay: vỗ cánh + nhấp nhô */
 @keyframes farm-wing { from { transform: rotate(-58deg); } to { transform: rotate(34deg); } }
 @keyframes farm-fly-bob { from { transform: translateY(-3px); } to { transform: translateY(4px); } }
@@ -88,7 +93,7 @@
 .farm-scroll-x { scrollbar-width: thin; }
 
 @media (prefers-reduced-motion: reduce) {
-  .farm-sway, .farm-ready-marker, .farm-pet-idle, .farm-glow, .farm-cloud, .farm-hop, .farm-hop-pet, .farm-pen-wander, .farm-bob, .farm-pose-a, .farm-pose-b, .farm-pet-walk, .farm-wing, .farm-fly-bob { animation: none;  }
+  .farm-sway, .farm-ready-marker, .farm-pet-idle, .farm-glow, .farm-cloud, .farm-hop, .farm-hop-pet, .farm-pen-wander, .farm-fall, .farm-ripple, .farm-bob, .farm-pose-a, .farm-pose-b, .farm-pet-walk, .farm-wing, .farm-fly-bob { animation: none;  }
   .farm-pose-b { display: none; }
 }
 

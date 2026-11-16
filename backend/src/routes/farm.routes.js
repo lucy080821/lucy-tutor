@@ -92,10 +92,11 @@ function orderView(o, inventory = {}) {
     ready: o.kind !== 'SENTENCE' && o.progress >= need, rewardCoins: o.rewardCoins, rewardGems: o.rewardGems, rewardXp: o.rewardXp, createdAt: o.createdAt };
 }
 
+const wellsOf = (farm) => parseJSON(farm.layout, []).filter((d) => d.key === 'well').length;
 function farmView(farm, plotCount) {
   const level = C.levelFor(farm.harvestCount);
-  const canW = farm.gridW < C.EXPAND.maxW, canH = farm.gridH < C.EXPAND.maxH;
-  const nextExpansion = canW || canH ? { ...C.expansionCost(C.expansionStep(farm.gridW, farm.gridH) + 1), canW, canH } : null;
+  const offerW = C.expansionOffer(farm.gridW, farm.gridH, 'w'), offerH = C.expansionOffer(farm.gridW, farm.gridH, 'h');
+  const nextExpansion = offerW || offerH ? { w: offerW, h: offerH } : null;
   const today = C.vnDay();
   const inventory = parseJSON(farm.inventory, {});
   const barnTierIdx = Math.max(0, C.BARN_TIERS.findIndex((t) => t.capacity === farm.barnCapacity));
@@ -110,6 +111,7 @@ function farmView(farm, plotCount) {
     barnQuizLeft: Math.max(0, C.BARN_QUIZ.dailyRewarded - (farm.barnQuizOn === today ? farm.barnQuizCount : 0)),
     harvestCount: farm.harvestCount, witherCount: farm.witherCount, barnCount: farm.barnCount,
     level, levelStart: C.harvestsForLevel(level), nextLevelAt: C.harvestsForLevel(level + 1),
+    wells: wellsOf(farm), waterMax: C.waterMaxFor(wellsOf(farm)),
     plotCount, plotPrice: plotCount < C.MAX_PLOTS ? C.plotPrice(plotCount) : null, nextExpansion,
     pet: { name: farm.petName, xp: farm.petXp, level: C.petLevelFor(farm.petXp), fedToday: farm.petFedOn === today, pats: farm.petPats, trip: jsonObj(farm.petTrip).active || null, buffs: C.petBuffs(farm.petXp, farm.petFedOn === today) },
     canSpin: farm.spunOn !== today, boostHarvests: farm.boostHarvests,
@@ -229,7 +231,7 @@ async function buildState(userId, extra = {}) {
   const orders = await ensureOrders(userId, farm, plots);
   const now = new Date();
   const inventory = parseJSON(farm.inventory, {});
-  return { now, farm: farmView(farm, plots.length), plots: plots.map((p) => plotView(p, now)), orders: orders.map((o) => orderView(o, inventory)), user, catalog: C.publicCatalog(),
+  return { now, farm: farmView(farm, plots.length), plots: plots.map((p) => ({ ...plotView(p, now), waterUsed: daily && daily.day === C.vnDay() ? (jsonObj(daily.water)[p.id] || 0) : 0 })), orders: orders.map((o) => orderView(o, inventory)), user, catalog: C.publicCatalog(),
     quests: questsView(farm, daily), achievements: achievementsView(farm, user), ...extra };
 }
 
@@ -518,11 +520,13 @@ router.get('/plots/:plotId/water', async (req, res) => {
     const view = plotView(plot);
     if (view.status !== 'GROWING') return res.status(400).json({ error: 'Cây này không cần tưới' });
     const farm = await prisma.farmState.findUnique({ where: { userId } });
+    const waterMax = C.waterMaxFor(wellsOf(farm));
+    if (!waterMax) return res.status(400).json({ error: 'Cần xây Giếng nước trước mới tưới nước được (Cửa hàng › Công trình).', needWell: true });
     const daily = jsonObj(farm.daily); const used = daily.day === C.vnDay() ? (jsonObj(daily.water)[plot.id] || 0) : 0;
-    const left = Math.max(0, C.WATER_MAX_PER_DAY - used);
+    const left = Math.max(0, waterMax - used);
     const pool = shuffle(await waterCandidates(userId, plot)).slice(0, Math.max(1, Math.min(C.WATER_QUIZ_SIZE, left || 0)));
     res.json({
-      left, used, max: C.WATER_MAX_PER_DAY, cut: C.WATER_CUT,
+      left, used, max: waterMax, cut: C.WATER_CUT,
       items: left ? pool.map((r) => ({ progressId: r.id, meaning: r.vocab.meaning, hint: hintMask(r.vocab.word), length: r.vocab.word.length })) : [],
     });
   } catch (e) { console.error('[farm] water quiz', e); res.status(500).json({ error: 'Không tạo được câu hỏi tưới nước' }); }
@@ -537,13 +541,15 @@ router.post('/plots/:plotId/water', async (req, res) => {
     const farm = await prisma.farmState.findUnique({ where: { userId } });
     if (!farm) return res.status(404).json({ error: 'User not found' });
     const { farm: farm2, daily } = await ensureDaily(farm);
+    const waterMax = C.waterMaxFor(wellsOf(farm2));
+    if (!waterMax) return res.status(400).json({ error: 'Cần xây Giếng nước trước mới tưới nước được.', needWell: true });
     const waterMap = jsonObj(daily.water); const used = waterMap[plot.id] || 0;
-    if (used >= C.WATER_MAX_PER_DAY) return res.status(400).json({ error: 'Hôm nay cây này đã được tưới đủ rồi' });
+    if (used >= waterMax) return res.status(400).json({ error: 'Hôm nay cây này đã được tưới đủ rồi' });
     const t = await prisma.userVocabProgress.findFirst({ where: { id: String(progressId), userId, repetitions: { gte: 1 }, vocab: { OR: [{ pos: null }, { pos: { notIn: ['grammar', 'pron'] } }] } }, include: { vocab: true } });
     if (!t || t.id === plot.progressId) return res.status(400).json({ error: 'Từ không hợp lệ' });
     const ca = clean(answer), cw = clean(t.vocab.word);
     const ok = !!ca && (ca === cw || (cw.length >= 6 && levenshtein(ca, cw) <= 1));
-    if (!ok) return res.json({ ok: false, left: C.WATER_MAX_PER_DAY - used });
+    if (!ok) return res.json({ ok: false, left: waterMax - used });
     // rút 10% thời gian còn lại
     const readyAt = readyAtFor(plot).getTime(); const nowMs = Date.now();
     const cut = Math.max(0, Math.floor((readyAt - nowMs) * C.WATER_CUT));
@@ -554,7 +560,7 @@ router.post('/plots/:plotId/water', async (req, res) => {
     const lock = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm2.updatedAt }, data: { daily: { ...daily, water: { ...waterMap, [plot.id]: used + 1 } }, coins: { increment: C.WATER_REWARD.coins } } });
     if (lock.count === 0) return res.status(409).json({ error: 'Vừa có thay đổi khác, thử lại nhé' });
     await Promise.all([...ops, prisma.user.update({ where: { id: userId }, data: { totalXP: { increment: C.WATER_REWARD.xp } }, select: { id: true } })]);
-    res.json(await buildState(userId, { watered: { ok: true, word: t.vocab.word, cutMs: cut, left: C.WATER_MAX_PER_DAY - used - 1, coins: C.WATER_REWARD.coins, xp: C.WATER_REWARD.xp } }));
+    res.json(await buildState(userId, { watered: { ok: true, word: t.vocab.word, cutMs: cut, left: waterMax - used - 1, coins: C.WATER_REWARD.coins, xp: C.WATER_REWARD.xp } }));
   } catch (e) { console.error('[farm] water', e); res.status(500).json({ error: 'Không tưới được' }); }
 });
 
@@ -604,11 +610,11 @@ router.post('/buy', async (req, res) => {
     if (itemKey === 'expand') {
       const axis = variant === 'h' ? 'h' : variant === 'w' ? 'w' : null;
       if (!axis) return res.status(400).json({ error: 'Chọn mở rộng theo chiều ngang hay chiều dọc' });
-      if (axis === 'w' ? farm.gridW >= C.EXPAND.maxW : farm.gridH >= C.EXPAND.maxH) return res.status(400).json({ error: axis === 'w' ? 'Chiều ngang đã rộng tối đa' : 'Chiều dọc đã rộng tối đa' });
-      const next = C.expansionCost(C.expansionStep(farm.gridW, farm.gridH) + 1);
+      const next = C.expansionOffer(farm.gridW, farm.gridH, axis);
+      if (!next) return res.status(400).json({ error: axis === 'w' ? 'Chiều ngang đã rộng tối đa' : 'Chiều dọc đã rộng tối đa' });
       if (level < next.minLevel) return res.status(400).json({ error: `Cần cấp ${next.minLevel} để mở rộng` });
       // khoá lạc quan: bấm đôi/song song chỉ mở 1 lần (điều kiện gridW/gridH + đủ xu nằm trong WHERE)
-      const upd = await prisma.farmState.updateMany({ where: { userId, gridW: farm.gridW, gridH: farm.gridH, coins: { gte: next.price } }, data: { coins: { decrement: next.price }, ...(axis === 'w' ? { gridW: { increment: 1 } } : { gridH: { increment: 1 } }) } });
+      const upd = await prisma.farmState.updateMany({ where: { userId, gridW: farm.gridW, gridH: farm.gridH, coins: { gte: next.price } }, data: { coins: { decrement: next.price }, ...(axis === 'w' ? { gridW: { increment: next.add } } : { gridH: { increment: next.add } }) } });
       if (!upd.count) return res.status(400).json({ error: farm.coins < next.price ? 'Không đủ xu' : 'Thử lại nhé' });
       return res.json(await buildState(userId, { bought: { itemKey } }));
     }
@@ -631,6 +637,7 @@ router.post('/buy', async (req, res) => {
     if (farm[item.currency] < item.price) return res.status(400).json({ error: item.currency === 'gems' ? 'Không đủ kim cương' : 'Không đủ xu' });
     const layout = parseJSON(farm.layout, []);
     if ((item.factory || item.pen) && layout.some((l) => l.key === itemKey)) return res.status(400).json({ error: `Bạn đã có ${item.name} rồi (mỗi loại chỉ mua 1 cái)` });
+    if (item.maxCount && layout.filter((l) => l.key === itemKey).length >= item.maxCount) return res.status(400).json({ error: `Chỉ được có tối đa ${item.maxCount} ${item.name.toLowerCase()}` });
     if (item.pen) {
       // Chuồng: XÂY (giá gốc, phải đợi) hoặc MUA NGAY (đắt hơn nhiều, có liền)
       const now = variant === 'now';

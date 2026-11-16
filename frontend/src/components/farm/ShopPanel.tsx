@@ -221,11 +221,15 @@ export default function ShopPanel({ userId, farm, catalog, onClose, onPick, onEx
             <div className="text-4xl">🗺️</div>
             <div className="flex-1 min-w-0">
               <p className="font-extrabold text-foreground">Mở rộng đất</p>
-              <p className="text-sm text-muted">Đất hiện tại {farm.gridW}×{farm.gridH} ô. {exp ? `Mỗi lần mở thêm 1 hàng, chọn theo chiều ngang hoặc chiều dọc. Cần cấp ${exp.minLevel}.` : "Đã rộng tối đa."}</p>
+              <p className="text-sm text-muted">Đất hiện tại {farm.gridW}×{farm.gridH} ô. {exp ? "Mua một lần được thêm cả dải đất: mở ngang thêm 3 cột, mở dọc thêm 2 hàng." : "Đã rộng tối đa."}</p>
               {exp && (
                 <div className="mt-2 flex flex-wrap gap-2">
-                  <button disabled={!exp.canW || farm.coins < exp.price || farm.level < exp.minLevel} onClick={() => onExpand("w")} className="btn-primary rounded-full px-4 py-2 text-sm font-bold disabled:opacity-50">Mở ngang ↘ {farm.gridW + 1}×{farm.gridH} · 🪙 {exp.price}</button>
-                  <button disabled={!exp.canH || farm.coins < exp.price || farm.level < exp.minLevel} onClick={() => onExpand("h")} className="btn-outline rounded-full px-4 py-2 text-sm font-bold disabled:opacity-50">Mở dọc ↙ {farm.gridW}×{farm.gridH + 1} · 🪙 {exp.price}</button>
+                  {([["w", exp.w, "Mở ngang ↘", "btn-primary"], ["h", exp.h, "Mở dọc ↙", "btn-outline"]] as const).map(([axis, o, label, cls]) => o ? (
+                    <div key={axis} className="flex flex-col gap-1">
+                      <button disabled={farm.coins < o.price || farm.level < o.minLevel} onClick={() => onExpand(axis)} className={`${cls} rounded-full px-4 py-2 text-sm font-bold disabled:opacity-50`}>{label} +{o.add} {axis === "w" ? "cột" : "hàng"} → {o.newW}×{o.newH} · 🪙 {o.price}</button>
+                      <span className="text-[11px] text-muted px-2">Thêm {o.tiles} ô · cần cấp {o.minLevel}{farm.level < o.minLevel ? " (chưa đủ cấp)" : ""}</span>
+                    </div>
+                  ) : <span key={axis} className="ui-badge self-start">{axis === "w" ? "Chiều ngang" : "Chiều dọc"} đã tối đa</span>)}
                 </div>
               )}
             </div>

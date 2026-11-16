@@ -5,8 +5,8 @@ import { liveStatus } from "./FarmScene";
 
 // Cây đang lớn: xem thẻ từ + các cách rút ngắn thời gian chờ mà VẪN HỌC (không mua được thời gian bằng xu):
 // Ôn sớm (gõ từ, thưởng giảm) · Tưới nước (trả lời từ đã học khác, rút 10% thời gian còn lại) · Nhổ / Cất kho.
-export default function GrowingPanel({ plot, catalog, now, onClose, onEarly, onWater, onRemove }: {
-  plot: PlotView; catalog: Catalog; now: number; onClose: () => void; onEarly: () => void; onWater: () => void; onRemove: () => void;
+export default function GrowingPanel({ plot, catalog, now, wells = 0, waterMax = 0, onClose, onEarly, onWater, onShop, onRemove }: {
+  plot: PlotView; catalog: Catalog; now: number; wells?: number; waterMax?: number; onClose: () => void; onEarly: () => void; onWater: () => void; onShop?: () => void; onRemove: () => void;
 }) {
   const live = liveStatus(plot, now);
   const mastered = plot.srs?.status === "MASTERED";
@@ -32,10 +32,17 @@ export default function GrowingPanel({ plot, catalog, now, onClose, onEarly, onW
           <p className="font-extrabold text-primary">✍️ Ôn sớm</p>
           <p className="text-xs text-muted mt-0.5">Gõ từ tiếng Anh, không gợi ý. Đúng thì thu hoạch ngay, thưởng {ratePct}%; sai thì cây vẫn lớn, không héo.</p>
         </button>
-        <button onClick={onWater} className="farm-item text-left rounded-2xl border border-line bg-white px-4 py-3 hover:border-primary">
-          <p className="font-extrabold text-primary">💧 Tưới nước bằng kiến thức</p>
-          <p className="text-xs text-muted mt-0.5">Trả lời 1 từ bạn đã học: cây rút {Math.round(catalog.water.cut * 100)}% thời gian còn lại (tối đa {catalog.water.maxPerDay} lần/ngày cho mỗi cây).</p>
-        </button>
+        {wells <= 0 ? (
+          <button onClick={onShop} className="farm-item text-left rounded-2xl border border-dashed border-line bg-slate-50 px-4 py-3 hover:border-primary">
+            <p className="font-extrabold text-muted">💧 Tưới nước — cần có Giếng nước</p>
+            <p className="text-xs text-muted mt-0.5">Xây 1 giếng ({catalog.decor.well?.price ?? 100} xu, Cửa hàng › Công trình) để lấy nước tưới cây. Bấm để mở cửa hàng.</p>
+          </button>
+        ) : (
+          <button onClick={onWater} disabled={(plot.waterUsed || 0) >= waterMax} className="farm-item text-left rounded-2xl border border-line bg-white px-4 py-3 hover:border-primary disabled:opacity-60">
+            <p className="font-extrabold text-primary">💧 Tưới nước bằng kiến thức</p>
+            <p className="text-xs text-muted mt-0.5">Trả lời 1 từ bạn đã học: cây rút {Math.round(catalog.water.cut * 100)}% thời gian còn lại. Hôm nay cây này đã tưới {plot.waterUsed || 0}/{waterMax} lần ({wells} giếng).</p>
+          </button>
+        )}
       </div>
       <div className="grid grid-cols-2 gap-2 mt-3">
         <button onClick={() => speak(plot.word || "")} disabled={isCard} className="btn-outline rounded-full px-4 py-2.5 font-bold disabled:opacity-40">🔊 Nghe</button>

@@ -23,7 +23,7 @@ type Props = {
   onTileClick?: (x: number, y: number) => void; onPlotClick?: (plot: PlotView) => void;
   zoom?: number; onZoomChange?: (z: number) => void; fit?: boolean; petAway?: boolean; // petAway: Qilin đang đi thám hiểm → không hiện trong vườn
   // fit: vừa khít khung (toàn màn hình), không cuộn ngang
-  onDecorClick?: (d: DecorPlaced) => void; onFactoryClick?: (d: DecorPlaced) => void; onPenClick?: (d: DecorPlaced) => void; onPetClick?: () => void;
+  onDecorClick?: (d: DecorPlaced) => void; onFactoryClick?: (d: DecorPlaced) => void; onPenClick?: (d: DecorPlaced) => void; onWellClick?: (d: DecorPlaced) => void; onPetClick?: () => void;
 };
 
 const TOP_PAD = 90;
@@ -43,7 +43,7 @@ export function liveStatus(plot: PlotView, now: number) {
   return { status: now >= ready ? ("READY" as const) : ("GROWING" as const), growth, msLeft: ready - now };
 }
 
-export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", zoom = 1, onZoomChange, fit, petAway, onTileClick, onPlotClick, onDecorClick, onFactoryClick, onPenClick, onPetClick }: Props) {
+export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", zoom = 1, onZoomChange, fit, petAway, onTileClick, onPlotClick, onDecorClick, onFactoryClick, onPenClick, onWellClick, onPetClick }: Props) {
   const W = farm.gridW, H = farm.gridH;
   const originX = (H * TILE_W) / 2;
   const vbW = ((W + H) * TILE_W) / 2;
@@ -250,13 +250,13 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
             const fac = catalog.factories?.[d.key];
             const pen = catalog.pens?.[d.key];
             const canEdit = !readOnly && mode.type === "edit";
-            const canOpen = !readOnly && mode.type === "normal" && (!!fac || !!pen);
+            const canOpen = !readOnly && mode.type === "normal" && (!!fac || !!pen || d.key === "well");
             const n = item?.fam ? { xp: joins(item, d, "xp", x + 1, y), xm: joins(item, d, "xm", x - 1, y), yp: joins(item, d, "yp", x, y + 1), ym: joins(item, d, "ym", x, y - 1) } : undefined;
             const busy = !!d.job && new Date(d.job.readyAt).getTime() > now;
             const building = !!d.build && new Date(d.build.readyAt).getTime() > now;
             const meta: DecorMeta = { fam: item?.fam, gate: item?.gate, style: item?.style, factory: fac ? { wall: fac.wall, roof: fac.roof, emoji: fac.emoji, busy } : undefined, pen: pen ? { wall: pen.wall, roof: pen.roof, animal: pen.animal, animals: roam && insideMap[d.uid] !== undefined ? Math.min(insideMap[d.uid], d.animals || 0) : d.animals || 0, building } : undefined };
             return (
-              <g key={`d${d.uid}`} className={`${canEdit || canOpen ? "farm-tile" : ""} ${sel ? "farm-tile-selected" : ""}`} onClick={(e) => { e.stopPropagation(); if (canEdit) onDecorClick?.(d); else if (canOpen) { if (pen) onPenClick?.(d); else onFactoryClick?.(d); } }}>
+              <g key={`d${d.uid}`} className={`${canEdit || canOpen ? "farm-tile" : ""} ${sel ? "farm-tile-selected" : ""}`} onClick={(e) => { e.stopPropagation(); if (canEdit) onDecorClick?.(d); else if (canOpen) { if (pen) onPenClick?.(d); else if (d.key === "well") onWellClick?.(d); else onFactoryClick?.(d); } }}>
                 <DecorSprite itemKey={d.key} emoji={item?.emoji || "❔"} cx={cx} cy={cy} n={n} r={d.r ? 1 : 0} meta={meta} />
               </g>
             );

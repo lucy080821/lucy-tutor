@@ -399,6 +399,118 @@ export function PenSprite({ cx, cy, wall, roof, animal, animals, building }: { c
   );
 }
 
+// ── Nhà ở, ao cá koi, ao sen, hòn non bộ: vẽ SVG isometric (1 ô, cao hơn ô) ──────────────────────────
+const HOUSES: Record<string, { wall: string; side: number; roof: string; floors: number; door: string; trim: string; chimney: boolean; balcony?: boolean }> = {
+  house:     { wall: "#c99a62", side: 0.86, roof: "#7b4a2a", floors: 1, door: "#5b3a1e", trim: "#8a5a2b", chimney: true },   // nhà gỗ cũ
+  cottage:   { wall: "#e2b36f", side: 0.86, roof: "#b03a2e", floors: 1, door: "#7a4f26", trim: "#8a5a2b", chimney: true },
+  tilehouse: { wall: "#f4e8cc", side: 0.88, roof: "#476a9c", floors: 1, door: "#9a5b2a", trim: "#b8a477", chimney: true },
+  villa:     { wall: "#fafbfd", side: 0.9,  roof: "#c0572f", floors: 2, door: "#5b3a1e", trim: "#9aa3af", chimney: true, balcony: true },
+};
+export const BUILDING_KINDS = new Set([...Object.keys(HOUSES), "koipond", "lotuspond", "rockery"]);
+function HouseSprite({ cx, cy, k }: { cx: number; cy: number; k: string }) {
+  const h = HOUSES[k]; const W = 34, Hh = 17, wallH = 26 * h.floors, roofH = 24;
+  const Lp: Pt = [cx - W, cy], Bp: Pt = [cx, cy + Hh], Rp: Pt = [cx + W, cy];
+  const A: Pt = [cx, cy - wallH - roofH];
+  const eave = (p: Pt, ox: number, oy: number): Pt => [p[0] + ox, p[1] - wallH + oy];
+  const L2 = eave(Lp, -7, 2), B2 = eave(Bp, 0, 5), R2 = eave(Rp, 7, 2);
+  const door0 = lerp(Lp, Bp, 0.18), door1 = lerp(Lp, Bp, 0.38);
+  const winL0 = lerp(Lp, Bp, 0.58), winL1 = lerp(Lp, Bp, 0.82);
+  const winR = [[0.2, 0.42], [0.58, 0.82]] as const;
+  const stroke = shade(h.trim, 0.6);
+  const rows = Array.from({ length: h.floors }, (_, i) => i);
+  return (
+    <g>
+      <ellipse cx={cx} cy={cy + 6} rx={W + 12} ry={Hh + 5} fill="rgba(31,45,61,.2)" />
+      <g strokeLinejoin="round">
+        <polygon points={pts([Lp, Bp, raise(Bp, wallH), raise(Lp, wallH)])} fill={h.wall} stroke={stroke} strokeWidth={1} />
+        <polygon points={pts([Bp, Rp, raise(Rp, wallH), raise(Bp, wallH)])} fill={shade(h.wall, h.side)} stroke={stroke} strokeWidth={1} />
+        {rows.map((i) => (
+          <g key={i}>
+            {i === 0
+              ? <polygon points={pts([door0, door1, raise(door1, 17), raise(door0, 17)])} fill={h.door} stroke="#3a2412" strokeWidth={0.9} />
+              : <polygon points={pts([raise(winL0, 26 + 6), raise(winL1, 26 + 6), raise(winL1, 26 + 18), raise(winL0, 26 + 18)])} fill="#cfeaff" stroke={stroke} strokeWidth={0.9} />}
+            {i === 0 && <polygon points={pts([raise(winL0, 7), raise(winL1, 7), raise(winL1, 18), raise(winL0, 18)])} fill="#cfeaff" stroke={stroke} strokeWidth={0.9} />}
+            {winR.map(([a, b], j) => { const p0 = lerp(Bp, Rp, a), p1 = lerp(Bp, Rp, b); const y0 = 26 * i + 8, y1 = 26 * i + 19; return <polygon key={j} points={pts([raise(p0, y0), raise(p1, y0), raise(p1, y1), raise(p0, y1)])} fill="#cfeaff" stroke={stroke} strokeWidth={0.9} />; })}
+          </g>
+        ))}
+        {h.balcony && <polygon points={pts([raise(lerp(Bp, Rp, 0.15), 28), raise(lerp(Bp, Rp, 0.85), 28), raise(lerp(Bp, Rp, 0.85), 33), raise(lerp(Bp, Rp, 0.15), 33)])} fill="#9aa3af" stroke={stroke} strokeWidth={0.8} />}
+        <polygon points={pts([L2, B2, A])} fill={h.roof} stroke={shade(h.roof, 0.6)} strokeWidth={1} />
+        <polygon points={pts([B2, R2, A])} fill={shade(h.roof, 0.8)} stroke={shade(h.roof, 0.6)} strokeWidth={1} />
+        {h.chimney && <Prism cx={cx + 14} cy={cy - wallH - 8} rw={4.5} rh={2.2} h={14} c={{ front: "#b45a3c", cap: "#8f4429", top: "#d98264", line: "#5b2a18" }} />}
+        {/* khóm hoa trước nhà */}
+        {[[-26, 15], [-18, 20]].map(([dx, dy], i) => <g key={i}><circle cx={cx + dx} cy={cy + dy} r={3.4} fill="#3f9142" /><circle cx={cx + dx} cy={cy + dy - 3} r={2} fill={i ? "#f9a8d4" : "#fde047"} /></g>)}
+      </g>
+    </g>
+  );
+}
+function KoiPondSprite({ cx, cy }: { cx: number; cy: number }) {
+  const koi = (ax: number, ay: number, dur: number, delay: number, body: string, spot: string, s = 1) => (
+    <g transform={`translate(${cx} ${cy + 1})`}><g className="farm-pen-wander" style={{ animationDuration: `${dur}s`, animationDelay: `${delay}s`, ["--ax" as string]: `${ax}px`, ["--ay" as string]: `${ay}px` }}>
+      <g transform={`scale(${s})`}><path d="M-8 0 Q-2 -4 6 0 Q-2 4 -8 0Z" fill={body} /><path d="M6 0 L11 -3.4 L11 3.4Z" fill={body} /><circle cx={-4} cy={-0.5} r={1.8} fill={spot} /><circle cx={-6.6} cy={-0.8} r={0.7} fill="#1f2937" /></g>
+    </g></g>
+  );
+  return (
+    <g>
+      <ellipse cx={cx} cy={cy + 3} rx={44} ry={22} fill="#8a919b" stroke="#5b616b" strokeWidth={1.2} />
+      {[-38, -22, -6, 12, 28, 40].map((dx, i) => <ellipse key={i} cx={cx + dx} cy={cy + 3 + (Math.abs(dx) > 30 ? 1 : (i % 2 ? 16 : -14))} rx={7} ry={3.8} fill={i % 2 ? "#a3a9b3" : "#b8bdc6"} stroke="#5b616b" strokeWidth={0.7} />)}
+      <ellipse cx={cx} cy={cy} rx={37} ry={17.5} fill="#2f86c9" stroke="#1f5f95" strokeWidth={1.2} />
+      <ellipse cx={cx - 6} cy={cy - 4} rx={22} ry={7.5} fill="#6cc0f0" opacity={0.6} />
+      <ellipse cx={cx + 10} cy={cy + 2} rx={12} ry={4.5} fill="none" stroke="#d6efff" strokeWidth={1.1} className="farm-ripple" />
+      {koi(14, 3, 8, 0, "#fb923c", "#fff7ed")}{koi(11, -3, 10.5, -3, "#fff7ed", "#ef4444", 0.9)}{koi(9, 4, 7, -5, "#ef4444", "#fde68a", 0.8)}
+      {[[-18, 4], [20, -5]].map(([dx, dy], i) => <g key={i}><ellipse cx={cx + dx} cy={cy + dy} rx={6.5} ry={3} fill="#4caf50" stroke="#2e7d32" strokeWidth={0.8} />{i === 0 && <circle cx={cx + dx} cy={cy + dy - 2} r={2.2} fill="#f9a8d4" />}</g>)}
+      <path d={`M${cx - 40} ${cy + 4} v-13 M${cx - 36} ${cy + 7} v-17`} stroke="#5b8c2a" strokeWidth={2} strokeLinecap="round" />
+    </g>
+  );
+}
+function LotusPondSprite({ cx, cy }: { cx: number; cy: number }) {
+  const lotus = (dx: number, dy: number, s: number, d: number) => (
+    <g transform={`translate(${cx + dx} ${cy + dy})`}><g className="farm-sway" style={{ animationDelay: `${d}s` }}>
+      <g transform={`scale(${s})`}>
+        <path d="M0 0 L-9 -7 Q-4 -12 0 -4Z M0 0 L9 -7 Q4 -12 0 -4Z" fill="#f9a8d4" stroke="#db2777" strokeWidth={0.6} />
+        <path d="M0 0 L-5 -12 Q0 -16 5 -12Z" fill="#fbcfe8" stroke="#db2777" strokeWidth={0.6} /><circle cx={0} cy={-5} r={1.7} fill="#fde047" />
+      </g>
+    </g></g>
+  );
+  return (
+    <g>
+      <ellipse cx={cx} cy={cy + 3} rx={42} ry={21} fill="#9a7b4f" stroke="#6b5232" strokeWidth={1.2} />
+      <ellipse cx={cx} cy={cy} rx={36} ry={17} fill="#3a8f8a" stroke="#256b66" strokeWidth={1.2} />
+      <ellipse cx={cx - 5} cy={cy - 3} rx={20} ry={7} fill="#7fd0c8" opacity={0.55} />
+      {[[-22, 3, 8], [-8, 8, 7], [14, 7, 8.5], [24, -2, 7], [2, -7, 7.5], [-26, -5, 6]].map(([dx, dy, r], i) => <ellipse key={i} cx={cx + dx} cy={cy + dy} rx={r} ry={r * 0.46} fill="#43a047" stroke="#2e7d32" strokeWidth={0.8} />)}
+      {lotus(-9, 5, 1, 0)}{lotus(14, 5, 1.1, -0.8)}{lotus(0, -5, 0.9, -1.6)}
+    </g>
+  );
+}
+function RockerySprite({ cx, cy }: { cx: number; cy: number }) {
+  return (
+    <g>
+      <ellipse cx={cx} cy={cy + 4} rx={42} ry={20} fill="#8a919b" stroke="#5b616b" strokeWidth={1.2} />
+      <ellipse cx={cx} cy={cy + 2} rx={36} ry={16.5} fill="#2f86c9" stroke="#1f5f95" strokeWidth={1.2} />
+      <ellipse cx={cx} cy={cy + 3} rx={10} ry={3.6} fill="none" stroke="#d6efff" strokeWidth={1.2} className="farm-ripple" />
+      <g strokeLinejoin="round">
+        <polygon points={`${cx - 22},${cy + 2} ${cx - 16},${cy - 20} ${cx - 2},${cy - 30} ${cx + 8},${cy - 18} ${cx + 22},${cy - 8} ${cx + 18},${cy + 4} ${cx},${cy + 9}`} fill="#8f959f" stroke="#555b66" strokeWidth={1.2} />
+        <polygon points={`${cx - 16},${cy - 20} ${cx - 2},${cy - 30} ${cx + 8},${cy - 18} ${cx - 4},${cy - 12}`} fill="#b3b8c1" stroke="#555b66" strokeWidth={1} />
+        <polygon points={`${cx - 2},${cy - 30} ${cx + 4},${cy - 46} ${cx + 12},${cy - 34} ${cx + 8},${cy - 18}`} fill="#9da3ad" stroke="#555b66" strokeWidth={1} />
+        <polygon points={`${cx + 4},${cy - 46} ${cx + 9},${cy - 50} ${cx + 12},${cy - 34}`} fill="#c4c9d1" stroke="#555b66" strokeWidth={0.8} />
+        <path d={`M${cx - 20} ${cy - 4} L${cx - 10} ${cy - 10} M${cx + 12} ${cy - 2} L${cx + 4} ${cy - 8}`} stroke="#6e747f" strokeWidth={1} fill="none" />
+      </g>
+      {/* thác nước chảy xuống hồ */}
+      <path d={`M${cx - 3} ${cy - 22} Q${cx - 4} ${cy - 8} ${cx - 5} ${cy + 5}`} stroke="#bfe6ff" strokeWidth={4.2} fill="none" strokeLinecap="round" opacity={0.85} />
+      <path d={`M${cx - 3} ${cy - 22} Q${cx - 4} ${cy - 8} ${cx - 5} ${cy + 5}`} stroke="#ffffff" strokeWidth={1.6} fill="none" strokeLinecap="round" className="farm-fall" />
+      {/* cây tùng trên đỉnh */}
+      <rect x={cx + 5.5} y={cy - 58} width={2.6} height={9} fill="#6b4423" />
+      {[[-4, -58, 7], [8, -63, 7.5], [16, -57, 6]].map(([dx, dy, r], i) => <circle key={i} cx={cx + dx + 2} cy={cy + dy} r={r} fill={i === 1 ? "#2e7d32" : "#388e3c"} stroke="#1b5e20" strokeWidth={0.7} />)}
+      {[[-20, 4], [20, 3]].map(([dx, dy], i) => <ellipse key={i} cx={cx + dx} cy={cy + dy + 6} rx={5} ry={2.4} fill="#a3a9b3" stroke="#555b66" strokeWidth={0.7} />)}
+    </g>
+  );
+}
+export function BuildingSprite({ kind, cx, cy }: { kind: string; cx: number; cy: number }) {
+  if (kind === "koipond") return <KoiPondSprite cx={cx} cy={cy} />;
+  if (kind === "lotuspond") return <LotusPondSprite cx={cx} cy={cy} />;
+  if (kind === "rockery") return <RockerySprite cx={cx} cy={cy} />;
+  return <HouseSprite cx={cx} cy={cy} k={kind} />;
+}
+
 // Cỡ chữ emoji theo món (cây/nhà to, hoa/nấm nhỏ)
 const EMOJI_SIZE: Record<string, number> = {
   tree: 58, pine: 58, cherry: 58, palm: 60, bamboo: 48, house: 62, windmill: 66, tent: 50, castle: 70, pagoda: 64, hut: 56, barnhouse: 58, tractor: 52, bridge: 56, boat: 44,
@@ -430,6 +542,7 @@ export function DecorSprite({ itemKey, emoji, cx, cy, isPath, n, r = 0, meta }: 
   return <DecorBody itemKey={itemKey} emoji={emoji} cx={cx} cy={cy} />;
 }
 function DecorBody({ itemKey, emoji, cx, cy }: { itemKey?: string; emoji: string; cx: number; cy: number }) {
+  if (itemKey && BUILDING_KINDS.has(itemKey)) return <BuildingSprite kind={itemKey} cx={cx} cy={cy} />;
   if (itemKey && isAnimalKind(itemKey)) return <g transform={`translate(${cx} ${cy + 6})`}><AnimalSprite kind={itemKey} size={emojiSizeOf(itemKey)} /></g>;
   const shadow = (rx: number, ry: number) => <ellipse cx={cx} cy={cy + 4} rx={rx} ry={ry} fill="rgba(31,45,61,.2)" />;
   switch (itemKey) {

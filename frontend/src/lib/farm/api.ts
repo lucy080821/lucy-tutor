@@ -7,7 +7,7 @@ export type PlotView = {
   id: string; x: number; y: number; cropKey: string | null; plantedAt: string | null;
   status: PlotStatus; growth?: number; readyAt?: string; wilted?: boolean;
   progressId?: string; word?: string; meaning?: string; phonetic?: string | null; example?: string | null; pos?: string | null;
-  srs?: { status: string; repetitions: number; interval: number };
+  srs?: { status: string; repetitions: number; interval: number }; waterUsed?: number;
 };
 export type OrderView = {
   id: string; kind: "HARVEST" | "HARVEST_CROP" | "PLANT" | "SENTENCE" | "PRODUCE"; customer: string; title: string;
@@ -23,12 +23,14 @@ export type TripResult = { tier: number; name: string; coins: number; gems: numb
 export type FactoryJob = { recipe?: string; startedAt: string; readyAt: string; qty?: number; product?: string };
 export type PenBuild = { startedAt: string; readyAt: string };
 export type PenDef = { name: string; emoji: string; animal: string; animalName: string; product: string; capacity: number; animalPrice: number; feed: Record<string, number>; minutes: number; build: number; buildMinutes: number; buyNow: number; minLevel: number; roof: string; wall: string };
+export type ExpansionOffer = { axis: "w" | "h"; add: number; tiles: number; newW: number; newH: number; price: number; minLevel: number };
 export type DecorPlaced = { uid: string; key: string; x: number; y: number; r?: 0 | 1; job?: FactoryJob; animals?: number; build?: PenBuild };
 export type FarmView = {
   coins: number; gems: number; gridW: number; gridH: number; layout: DecorPlaced[];
   harvestCount: number; witherCount: number; barnCount: number;
   level: number; levelStart: number; nextLevelAt: number;
-  plotCount: number; plotPrice: number | null; nextExpansion: { price: number; minLevel: number; canW: boolean; canH: boolean } | null;
+  wells: number; waterMax: number;
+  plotCount: number; plotPrice: number | null; nextExpansion: { w: ExpansionOffer | null; h: ExpansionOffer | null } | null;
   pet: { name: string; xp: number; level: number; fedToday: boolean; pats: number; trip: PetTripActive | null; buffs: PetBuffs };
   canSpin: boolean; boostHarvests: number;
   inventory: Record<string, number>; barnCapacity: number; barnUsed: number; barnTier: number; nextBarnTier: { capacity: number; price: number } | null;
@@ -36,7 +38,7 @@ export type FarmView = {
   ordersDone: number; orderDifficulty: number; barnQuizLeft: number;
 };
 export type OutfitItem = { name: string; emoji: string; slot: string; price: number; currency: "coins" | "gems"; minLevel: number };
-export type DecorItem = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number; cat?: string; fam?: "wall" | "fence" | "hedge"; gate?: boolean; style?: string; factory?: boolean; pen?: boolean; buyNowPrice?: number; buildMinutes?: number };
+export type DecorItem = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number; cat?: string; fam?: "wall" | "fence" | "hedge"; gate?: boolean; style?: string; factory?: boolean; pen?: boolean; buyNowPrice?: number; buildMinutes?: number; maxCount?: number };
 export type Recipe = { id: string; product: string; inputs: Record<string, number>; minutes: number };
 export type FactoryDef = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number; wall: string; roof: string; recipes: Recipe[] };
 export type Catalog = {
@@ -51,7 +53,7 @@ export type Catalog = {
   producePrice: Record<string, number>;
   barnTiers: { capacity: number; price: number }[];
   barnQuiz: { size: number; coinsPerCorrect: number; dailyRewarded: number };
-  expand: { baseW: number; baseH: number; maxW: number; maxH: number };
+  expand: { baseW: number; baseH: number; maxW: number; maxH: number; addW: number; addH: number };
   wheel: { id: number; label: string; kind: string }[];
   startPlots: number; maxPlots: number; firstGrowMinutes: number;
   harvestCoins: Record<string, number>; harvestXp: number; masteredBonus: { coins: number; gems: number }; barnBonus: { coins: number };

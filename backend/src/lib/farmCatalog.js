@@ -70,11 +70,19 @@ function plotPrice(currentCount) {
   const n = Math.max(0, currentCount - START_PLOTS);
   return 150 + n * 80 + Math.floor(n * n * 6);
 }
-// Mở rộng đất: mỗi lần +1 hàng theo CHIỀU NGANG (w) hoặc CHIỀU DỌC (h) do người chơi chọn; giá/cấp tăng theo số lần đã mở
-const EXPAND = { baseW: 8, baseH: 6, maxW: 16, maxH: 12 };
-function expansionStep(w, h) { return Math.max(0, (w - EXPAND.baseW) + (h - EXPAND.baseH)); } // số lần đã mở
-function expansionCost(n) { // n = lần mở thứ n (bắt đầu từ 1)
-  return { price: Math.round((300 + 200 * (n - 1) + 40 * (n - 1) * (n - 1)) / 50) * 50, minLevel: Math.min(14, 1 + Math.ceil(n * 0.8)) };
+// Mở rộng đất: người chơi chọn CHIỀU NGANG (w) → thêm dải 3 cột, hoặc CHIỀU DỌC (h) → thêm dải 2 hàng (chạy hết cạnh đất nên đất luôn là hình chữ nhật).
+// Giá = số ô thêm × đơn giá/ô (đơn giá tăng theo diện tích hiện có); cấp yêu cầu tăng theo diện tích.
+const EXPAND = { baseW: 8, baseH: 6, maxW: 20, maxH: 14, addW: 3, addH: 2 };
+function expansionOffer(w, h, axis) {
+  const room = axis === 'w' ? EXPAND.maxW - w : EXPAND.maxH - h;
+  const add = Math.min(axis === 'w' ? EXPAND.addW : EXPAND.addH, room);
+  if (add <= 0) return null;
+  const cur = w * h, tiles = axis === 'w' ? add * h : add * w;
+  return {
+    axis, add, tiles, newW: axis === 'w' ? w + add : w, newH: axis === 'h' ? h + add : h,
+    price: Math.max(50, Math.round((tiles * (30 + cur * 0.55)) / 50) * 50),
+    minLevel: Math.max(2, Math.min(14, 2 + Math.floor((cur - EXPAND.baseW * EXPAND.baseH) / 22))),
+  };
 }
 
 // ── Cửa hàng trang trí (giải trí thuần) ───────────────────────────────────────
@@ -93,7 +101,7 @@ const DECOR = {
   lamp:       { name: 'Đèn vườn',        emoji: '🏮', price: 120, currency: 'coins', minLevel: 3 },
   scarecrow:  { name: 'Bù nhìn',         emoji: '🧑‍🌾', price: 140, currency: 'coins', minLevel: 3 },
   pine:       { name: 'Cây thông',       emoji: '🌲', price: 150, currency: 'coins', minLevel: 4 },
-  well:       { name: 'Giếng nước',      emoji: '🪣', price: 220, currency: 'coins', minLevel: 4 },
+  well:       { name: 'Giếng nước',      emoji: '🪣', price: 100, currency: 'coins', minLevel: 1, maxCount: 3 }, // cần có giếng mới tưới nước được; mỗi giếng thêm 1 lượt tưới/cây/ngày
   pond:       { name: 'Ao cá',           emoji: '🏞️', price: 300, currency: 'coins', minLevel: 5 },
   cherry:     { name: 'Cây anh đào',     emoji: '🌸', price: 350, currency: 'coins', minLevel: 5 },
   beehive:    { name: 'Tổ ong',          emoji: '🍯', price: 400, currency: 'coins', minLevel: 6 },
@@ -136,6 +144,13 @@ const DECOR_EXTRA = {
   palm:      { name: 'Cây dừa',         emoji: '🌴', price: 160,  currency: 'coins', minLevel: 4, cat: 'plant' },
   potted:    { name: 'Chậu cây',        emoji: '🪴', price: 60,   currency: 'coins', minLevel: 1, cat: 'plant' },
   bonsai:    { name: 'Bonsai',          emoji: '🪾', price: 3,    currency: 'gems',  minLevel: 5, cat: 'plant' },
+  // Nhà ở, ao, hòn non bộ (vẽ SVG riêng trong Sprites.tsx › BuildingSprite)
+  cottage:   { name: 'Nhà gỗ nhỏ',      emoji: '🏠', price: 600,  currency: 'coins', minLevel: 3, cat: 'building' },
+  tilehouse: { name: 'Nhà ngói',        emoji: '🏡', price: 1500, currency: 'coins', minLevel: 7, cat: 'building' },
+  villa:     { name: 'Biệt thự 2 tầng', emoji: '🏘️', price: 18,   currency: 'gems',  minLevel: 10, cat: 'building' },
+  koipond:   { name: 'Ao cá koi',       emoji: '🐟', price: 700,  currency: 'coins', minLevel: 5, cat: 'building' },
+  lotuspond: { name: 'Ao sen',          emoji: '🪷', price: 500,  currency: 'coins', minLevel: 4, cat: 'building' },
+  rockery:   { name: 'Hòn non bộ',      emoji: '🗻', price: 900,  currency: 'coins', minLevel: 6, cat: 'fun' },
   // Công trình & xe
   hut:       { name: 'Lều tranh',       emoji: '🛖', price: 400,  currency: 'coins', minLevel: 4, cat: 'building' },
   barnhouse: { name: 'Chuồng trại',     emoji: '🏚️', price: 650,  currency: 'coins', minLevel: 5, cat: 'building' },
@@ -426,7 +441,10 @@ function petBuffs(petXp, fed) {
 const EARLY_REWARD_RATE = 0.5;     // thưởng xu/XP khi ôn sớm
 const EARLY_NEXT_FACTOR = 0.6;     // ôn sớm đúng → lần chín kế tiếp sau 60% khoảng ôn hiện tại (ít nhất 6 giờ)
 const WATER_CUT = 0.1;             // mỗi lần tưới đúng rút 10% thời gian còn lại
-const WATER_MAX_PER_DAY = 3;       // số lần tưới tối đa cho mỗi cây mỗi ngày
+const WATER_MAX_PER_DAY = 3;       // số lần tưới tối đa cho mỗi cây mỗi ngày khi có 1 giếng
+const WATER_MAX_CAP = 5;
+// Chưa có giếng → không tưới được; 1 giếng 3 lượt, 2 giếng 4, 3 giếng 5 (mỗi cây mỗi ngày)
+const waterMaxFor = (wells) => (wells <= 0 ? 0 : Math.min(WATER_MAX_CAP, WATER_MAX_PER_DAY - 1 + wells));
 const WATER_QUIZ_SIZE = 3;
 const WATER_REWARD = { coins: 3, xp: 1 };
 
@@ -490,18 +508,18 @@ function publicCatalog() {
     startPlots: START_PLOTS, maxPlots: MAX_PLOTS, firstGrowMinutes: FIRST_GROW_MINUTES,
     harvestCoins: HARVEST_COINS, harvestXp: HARVEST_XP, masteredBonus: MASTERED_BONUS, barnBonus: BARN_BONUS,
     orderTrashCost: ORDER_TRASH_COST, decorSellRate: DECOR_SELL_RATE, gemSellCoins: GEM_SELL_COINS,
-    petLevels: PET_LEVELS, petFeedReward: PET_FEED_REWARD, waitTiers: WAIT_TIERS, early: { rewardRate: EARLY_REWARD_RATE, nextFactor: EARLY_NEXT_FACTOR }, water: { cut: WATER_CUT, maxPerDay: WATER_MAX_PER_DAY, size: WATER_QUIZ_SIZE, reward: WATER_REWARD }, petTrips: PET_TRIPS, petPerks: PET_PERKS, petTripWordsPerDay: PET_TRIP_WORDS_PER_DAY,
+    petLevels: PET_LEVELS, petFeedReward: PET_FEED_REWARD, waitTiers: WAIT_TIERS, early: { rewardRate: EARLY_REWARD_RATE, nextFactor: EARLY_NEXT_FACTOR }, water: { cut: WATER_CUT, maxPerDay: WATER_MAX_PER_DAY, maxCap: WATER_MAX_CAP, size: WATER_QUIZ_SIZE, reward: WATER_REWARD }, petTrips: PET_TRIPS, petPerks: PET_PERKS, petTripWordsPerDay: PET_TRIP_WORDS_PER_DAY,
     visit: { likeReward: VISIT_LIKE_REWARD, giftReward: VISIT_GIFT_REWARD, giftCost: VISIT_GIFT_COST, giftsPerDay: VISIT_GIFTS_PER_DAY },
   };
 }
 
 module.exports = {
   CROPS, CROP_KEYS, TOPIC_CROP, cropForTopic, FIRST_GROW_MINUTES,
-  levelFor, harvestsForLevel, START_PLOTS, MAX_PLOTS, plotPrice, EXPAND, expansionStep, expansionCost,
+  levelFor, harvestsForLevel, START_PLOTS, MAX_PLOTS, plotPrice, EXPAND, expansionOffer,
   DECOR, PRODUCTS, FACTORIES, PENS, WAIT_TIERS, waitBonus, DECOR_SELL_RATE, GEM_SELL_COINS, sellValue, HARVEST_COINS, HARVEST_XP, MASTERED_BONUS, BARN_BONUS, WITHER_PENALTY_COINS,
   CUSTOMERS, ORDER_SLOTS, makeOrderTemplate, orderDifficulty, ORDER_TRASH_COST,
   PRODUCE_PRICE, PRODUCE_PER_HARVEST, BARN_TIERS, BARN_FULL_SELL_RATE, BARN_QUIZ, OUTFITS, OUTFIT_SLOTS, DECOR_CATS,
-  WHEEL, WHEEL_DECOR_POOL, EARLY_REWARD_RATE, EARLY_NEXT_FACTOR, WATER_CUT, WATER_MAX_PER_DAY, WATER_QUIZ_SIZE, WATER_REWARD, PET_TRIPS, PET_TRIP_WORDS_PER_DAY, PET_TRIP_LEVEL_BONUS, PET_PERKS, petBuffs, PET_FEED_REWARD, PET_PAT_XP, PET_LEVELS, petLevelFor,
+  WHEEL, WHEEL_DECOR_POOL, EARLY_REWARD_RATE, EARLY_NEXT_FACTOR, WATER_CUT, WATER_MAX_PER_DAY, waterMaxFor, WATER_QUIZ_SIZE, WATER_REWARD, PET_TRIPS, PET_TRIP_WORDS_PER_DAY, PET_TRIP_LEVEL_BONUS, PET_PERKS, petBuffs, PET_FEED_REWARD, PET_PAT_XP, PET_LEVELS, petLevelFor,
   VISIT_LIKE_REWARD, VISIT_GIFT_REWARD, VISIT_GIFT_COST, VISIT_GIFTS_PER_DAY, vnDay, publicCatalog,
   dailyQuestDefs, questChest, QUEST_STAT_KEYS, TRACKED_STATS, ACHIEVEMENTS, statValue,
 };
