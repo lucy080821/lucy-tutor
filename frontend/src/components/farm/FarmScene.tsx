@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Catalog, DecorPlaced, FarmView, PlotView } from "@/lib/farm/api";
 import { formatCountdown } from "@/lib/farm/api";
-import { Cloud, CropSprite, DecorSprite, SoilTile, TILE_H, TILE_W, diamondPoints, emojiSizeOf, type DecorMeta, type Outfit } from "./Sprites";
+import { Cloud, CropSprite, DecorSprite, NpcSprite, SoilTile, TILE_H, TILE_W, diamondPoints, emojiSizeOf, type DecorMeta, type Outfit } from "./Sprites";
 import Roamers, { type PenBird } from "./Roamers";
 import { AmbientLife, SkyBackdrop, cloudsFor, skyBackground, skyNow, type SkyInfo } from "./Ambient";
 import { isWetWeather, type WeatherKind } from "@/lib/farm/weather";
@@ -23,7 +23,7 @@ type Props = {
   onTileClick?: (x: number, y: number) => void; onPlotClick?: (plot: PlotView) => void;
   zoom?: number; onZoomChange?: (z: number) => void; fit?: boolean; petAway?: boolean; // petAway: Qilin đang đi thám hiểm → không hiện trong vườn
   // fit: vừa khít khung (toàn màn hình), không cuộn ngang
-  onDecorClick?: (d: DecorPlaced) => void; onFactoryClick?: (d: DecorPlaced) => void; onPenClick?: (d: DecorPlaced) => void; onWellClick?: (d: DecorPlaced) => void; onPetClick?: () => void;
+  onDecorClick?: (d: DecorPlaced) => void; onFactoryClick?: (d: DecorPlaced) => void; onPenClick?: (d: DecorPlaced) => void; onWellClick?: (d: DecorPlaced) => void; onPetClick?: () => void; npc?: { kind: string; name: string } | null; onNpcClick?: () => void;
 };
 
 const TOP_PAD = 90;
@@ -43,7 +43,7 @@ export function liveStatus(plot: PlotView, now: number) {
   return { status: now >= ready ? ("READY" as const) : ("GROWING" as const), growth, msLeft: ready - now };
 }
 
-export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", zoom = 1, onZoomChange, fit, petAway, onTileClick, onPlotClick, onDecorClick, onFactoryClick, onPenClick, onWellClick, onPetClick }: Props) {
+export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", zoom = 1, onZoomChange, fit, petAway, onTileClick, onPlotClick, onDecorClick, onFactoryClick, onPenClick, onWellClick, onPetClick, npc, onNpcClick }: Props) {
   const W = farm.gridW, H = farm.gridH;
   const originX = (H * TILE_W) / 2;
   const vbW = ((W + H) * TILE_W) / 2;
@@ -72,6 +72,12 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
     return s;
   }, [plots, farm.layout, catalog.decor]);
   // Vật nuôi đi dạo khi chơi bình thường / thăm bạn; đang sắp xếp hay đặt đồ thì đứng yên ở ô nhà để còn chọn/dời được
+  // ô NPC đứng: ô trống gần GIỮA đất nhất (cảnh mở ra ở giữa đất nên khách luôn nằm trong tầm nhìn, kể cả đất đã mở rộng)
+  const npcTile = useMemo<[number, number] | null>(() => {
+    let best: [number, number] | null = null, bd = 1e9;
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { if (occupied.has(`${x},${y}`)) continue; const d = Math.abs(x - (W - 1) / 2) + Math.abs(y - (H - 1) / 2); if (d < bd) { bd = d; best = [x, y]; } }
+    return best;
+  }, [W, H, occupied]);
   const roam = !placing && (!!readOnly || mode.type === "normal");
   const animals = useMemo(() => (roam ? farm.layout.filter((d) => catalog.decor[d.key]?.cat === "animal").map((d) => ({ uid: d.uid, key: d.key, x: d.x, y: d.y, emoji: catalog.decor[d.key].emoji, size: emojiSizeOf(d.key) })) : []), [roam, farm.layout, catalog.decor]);
   // Gà/vịt: ban ngày ra sân đi dạo, tối về chuồng (Roamers báo số con còn trong chuồng qua insideMap)
@@ -315,6 +321,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
         {/* thú cưng + vật nuôi đi dạo */}
         <Roamers W={W} H={H} toScreen={toScreen} blocked={blocked} animals={animals} sleeping={!!sky.sleeping} petAway={petAway} pet={pet} outfit={outfit} petJumping={petJumping} hearts={hearts} wet={wet} onPetClick={onPetClick} birds={birds} homeTime={homeTime} onInside={setInsideMap} />
         {/* chữ thưởng nổi lên (+xu, +XP...) */}
+        {npc && !readOnly && npcTile && (() => { const { cx, cy } = toScreen(npcTile[0], npcTile[1]); return <NpcSprite kind={npc.kind} name={npc.name} cx={cx} cy={cy + 4} onClick={onNpcClick} />; })()}
         {floats.map((f) => {
           const { cx, cy } = toScreen(f.x, f.y);
           return (

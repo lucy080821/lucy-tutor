@@ -10,7 +10,7 @@ import { PHASE_LABEL, skyNow } from "./Ambient";
 import { useFarmWeather } from "@/lib/farm/useWeather";
 import { WEATHER_KINDS, WEATHER_LABEL, weatherLabel, type WeatherKind } from "@/lib/farm/weather";
 import WeatherPanel from "./WeatherPanel";
-import { BasketIcon, CoinIcon, GemIcon, IconBarn, IconBolt, IconChevronDown, IconMenu, IconTruck, IconZoomIn, IconZoomOut, IconFlame, IconHelp, IconMaximize, IconMinimize, IconMove, IconPaw, IconRefresh, IconShop, IconSprout, IconTarget, IconUsers, IconVolume, IconVolumeOff, IconWeather, IconWheel, NamedIcon } from "./FarmIcons";
+import { BasketIcon, CoinIcon, GemIcon, IconBarn, IconBolt, IconChevronDown, IconMenu, IconTruck, IconZoomIn, IconZoomOut, IconFlame, IconHelp, IconMaximize, IconMinimize, IconMove, IconPaw, IconRefresh, IconShop, IconSprout, IconTarget, IconUsers, IconVolume, IconVolumeOff, IconWeather, IconWheel, IconMail, NamedIcon } from "./FarmIcons";
 import HarvestModal from "./HarvestModal";
 import SeedPicker from "./SeedPicker";
 import ShopPanel from "./ShopPanel";
@@ -26,8 +26,10 @@ import WaterModal from "./WaterModal";
 import QuestsPanel from "./QuestsPanel";
 import HelpPanel from "./HelpPanel";
 import WellPanel from "./WellPanel";
+import MailPanel from "./MailPanel";
+import NpcPanel from "./NpcPanel";
 
-type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "FACTORY" | "PEN" | "GROW" | "WELL" | "WATER" | "QUESTS" | "WEATHER" | "HELP";
+type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "FACTORY" | "PEN" | "GROW" | "WELL" | "MAIL" | "NPC" | "WATER" | "QUESTS" | "WEATHER" | "HELP";
 const TUT_KEY = "lucy_farm_tut_v2";
 
 async function confetti(opts: any) {
@@ -41,6 +43,7 @@ export default function FarmGame({ userId }: { userId: string }) {
   const offsetRef = useRef(0); // lệch giờ server - client để đếm ngược đúng
   const [mode, setMode] = useState<SceneMode>({ type: "normal" });
   const [panel, setPanel] = useState<Panel>(null);
+  const panelRef = useRef<Panel>(null); panelRef.current = panel;
   const [questTab, setQuestTab] = useState<"DAILY" | "ACH">("DAILY");
   const [activePlot, setActivePlot] = useState<PlotView | null>(null);
   const [factoryUid, setFactoryUid] = useState<string | null>(null);
@@ -134,6 +137,8 @@ export default function FarmGame({ userId }: { userId: string }) {
       const g = s.achievements.groups.find((x) => { const p = prev.achievements.groups.find((y) => y.id === x.id); return p && x.claimable > p.claimable; });
       if (g) { sfx.pop(); toast(`Thành tựu mới: ${g.name}`); }
     }
+    // khách NPC mới ghé thăm → báo 1 lần
+    if (prev && s.npc && prev.npc?.key !== s.npc.key && !s.npc.goalDone) { sfx.pop(); toast(`${s.npc.name} ghé thăm nông trại! Bấm vào để trò chuyện`); }
     prevRef.current = s;
   }, [toast, addFloat]);
 
@@ -144,6 +149,8 @@ export default function FarmGame({ userId }: { userId: string }) {
   useEffect(() => { const t = setInterval(() => setNow(Date.now() + offsetRef.current), 1000); return () => clearInterval(t); }, []);
   useEffect(() => { try { if (!localStorage.getItem(TUT_KEY)) setPanel("HELP"); } catch { /* bỏ qua */ } }, []);
   // Tải lại khi quay về tab (cây có thể đã chín, đơn mới...)
+  // làm mới nhẹ mỗi 2 phút khi tab đang mở: thư mới, khách NPC mới ghé (không làm mới khi đang mở hộp thoại để khỏi giật)
+  useEffect(() => { const t = setInterval(() => { if (document.visibilityState === "visible" && !panelRef.current) load(); }, 120000); return () => clearInterval(t); }, [load]);
   useEffect(() => { const f = () => { if (document.visibilityState === "visible") load(); }; document.addEventListener("visibilitychange", f); return () => document.removeEventListener("visibilitychange", f); }, [load]);
 
   const readyPlots = useMemo(() => (state?.plots || []).filter((p) => liveStatus(p, now).status === "READY"), [state, now]);
@@ -197,6 +204,7 @@ export default function FarmGame({ userId }: { userId: string }) {
   };
   const onPenClick = (d: DecorPlaced) => { sfx.pop(); setPenUid(d.uid); setPanel("PEN"); };
   const onWellClick = () => { sfx.pop(); setPanel("WELL"); };
+  const onNpcClick = () => { sfx.pop(); setPanel("NPC"); };
   const onFactoryClick = (d: DecorPlaced) => { sfx.pop(); setFactoryUid(d.uid); setPanel("FACTORY"); };
   const selectedDecor = state && mode.type === "edit" && mode.selected?.kind === "decor" ? state.farm.layout.find((l) => l.uid === mode.selected!.id) : undefined;
   const rotateSelected = async () => {
@@ -261,6 +269,7 @@ export default function FarmGame({ userId }: { userId: string }) {
   ];
   const tools: { k: string; title: string; Icon: (p: { size?: number }) => React.ReactElement; on?: boolean; off?: boolean; badge?: string; run: () => void }[] = [
     ...(fs ? [{ k: "ORDERS", title: ordersOpen ? "Đóng đơn hàng" : "Đơn hàng", Icon: IconTruck, on: ordersOpen, badge: readyOrders > 0 ? String(readyOrders) : undefined, run: () => { sfx.click(); setOrdersOpen((v) => !v); } }] : []),
+    { k: "MAIL", title: farm.mailUnread > 0 ? `Thư tiếng Anh (${farm.mailUnread} thư mới)` : "Thư tiếng Anh", Icon: IconMail, badge: farm.mailUnread > 0 ? String(farm.mailUnread) : undefined, run: () => openPanel("MAIL") },
     { k: "ZIN", title: `Phóng to (đang ${Math.round(effZoom * 100)}%)`, Icon: IconZoomIn, off: effZoom >= 3.95, run: () => stepZoom(1) },
     { k: "ZOUT", title: effZoom > 1.01 ? `Thu nhỏ (đang ${Math.round(effZoom * 100)}%)` : "Thu nhỏ (đang xem toàn bộ đất)", Icon: IconZoomOut, off: effZoom <= 1.01, run: () => stepZoom(-1) },
     { k: "EDIT", title: mode.type === "edit" ? "Xong sắp xếp" : "Sắp xếp đất & trang trí", Icon: IconMove, on: mode.type === "edit", run: () => { sfx.click(); setMode(mode.type === "edit" ? { type: "normal" } : { type: "edit", selected: null }); } },
@@ -311,7 +320,7 @@ export default function FarmGame({ userId }: { userId: string }) {
 
         <div className={fs ? "relative farm-fs-scene" : "relative"}>
           <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} sky={sky} weather={weather} zoom={effZoom} onZoomChange={(z) => setZoom(clampZoom(z / zoomBase))} fit={fs} petAway={!!farm.pet.trip}
-            onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onFactoryClick={onFactoryClick} onPenClick={onPenClick} onWellClick={onWellClick} onPetClick={onPetClick} />
+            onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onFactoryClick={onFactoryClick} onPenClick={onPenClick} onWellClick={onWellClick} onPetClick={onPetClick} npc={state.npc ? { kind: state.npc.kind, name: state.npc.name } : null} onNpcClick={onNpcClick} />
           {readyPlots.length > 0 && mode.type === "normal" && (
             <button onClick={() => { sfx.click(); setActivePlot(readyPlots[0]); setPanel("HARVEST"); }} className="absolute top-3 left-3 z-[5] btn-highlight rounded-full pl-3 pr-4 py-2 font-extrabold shadow-card farm-toast inline-flex items-center gap-2"><IconSprout size={18} />{readyPlots.length} cây chín</button>
           )}
@@ -401,6 +410,8 @@ export default function FarmGame({ userId }: { userId: string }) {
       {panel === "BARN" && <BarnPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "WEATHER" && <WeatherPanel status={wx.status} data={wx.data} error={wx.error} sky={sky} previewKind={wxPreview} onEnable={wx.enable} onDisable={wx.disable} onRefresh={wx.refresh} onClose={() => setPanel(null)} />}
       {panel === "QUESTS" && <QuestsPanel userId={userId} quests={quests} achievements={achievements} initialTab={questTab} onClose={() => setPanel(null)} onState={applyState} />}
+      {panel === "MAIL" && <MailPanel userId={userId} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} onReload={load} />}
+      {panel === "NPC" && state.npc && <NpcPanel userId={userId} npc={state.npc} inventory={farm.inventory} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "WELL" && <WellPanel farm={farm} plots={state.plots} catalog={catalog} now={now} onPick={(p) => { setActivePlot(p); setPanel("WATER"); }} onShop={() => setPanel("SHOP")} onClose={() => setPanel(null)} />}
       {panel === "HELP" && <HelpPanel onClose={closeTut} />}
     </div>

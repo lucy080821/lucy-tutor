@@ -56,6 +56,8 @@ export function NamedIcon({ name, size = 22, className }: { name: string; size?:
   const I = ICONS[name] || IconStar;
   return <span className={className} style={{ display: "inline-flex" }}><I size={size} /></span>;
 }
+export const IconMail = ({ size, ...r }: P) => <svg {...base(size)} {...r}><rect x="3" y="5" width="18" height="14" rx="2.5" /><path d="m4 7 8 6 8-6" /></svg>;
+export const IconChat = ({ size, ...r }: P) => <svg {...base(size)} {...r}><path d="M4 5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-5 4v-4H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1Z" /><path d="M8 10h8M8 13h5" /></svg>;
 export const IconZoomIn = ({ size, ...r }: P) => <svg {...base(size)} {...r}><circle cx="11" cy="11" r="7.5" /><path d="m21 21-4.3-4.3" /><path d="M11 8v6M8 11h6" /></svg>;
 export const IconZoomOut = ({ size, ...r }: P) => <svg {...base(size)} {...r}><circle cx="11" cy="11" r="7.5" /><path d="m21 21-4.3-4.3" /><path d="M8 11h6" /></svg>;
 export const IconChevronDown = ({ size, ...r }: P) => <svg {...base(size)} {...r}><path d="m6 9 6 6 6-6" /></svg>;

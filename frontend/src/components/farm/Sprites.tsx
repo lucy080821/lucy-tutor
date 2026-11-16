@@ -511,6 +511,42 @@ export function BuildingSprite({ kind, cx, cy }: { kind: string; cx: number; cy:
   return <HouseSprite cx={cx} cy={cy} k={kind} />;
 }
 
+// ── NPC ghé thăm (thương nhân, bà Lan, du khách, bé Mina): người vẽ nhìn thẳng + bóng thoại "!" ─────────────
+const NPC_LOOK: Record<string, { coat: string; coat2: string; hat?: string; hair: string; skin: string; kind: "cap" | "bun" | "pig" | "hat" }> = {
+  merchant: { coat: "#2f855a", coat2: "#276749", hat: "#8a5a2b", hair: "#4a3326", skin: "#f2c9a0", kind: "hat" },
+  grandma:  { coat: "#9f7aea", coat2: "#805ad5", hair: "#d1d5db", skin: "#f0c8a4", kind: "bun" },
+  traveler: { coat: "#e53e3e", coat2: "#c53030", hat: "#2b6cb0", hair: "#6b4423", skin: "#e8b98e", kind: "cap" },
+  kid:      { coat: "#f6c744", coat2: "#d69e2e", hair: "#3b2a1a", skin: "#f5d0ae", kind: "pig" },
+};
+export function NpcSprite({ kind, cx, cy, onClick, name }: { kind: string; cx: number; cy: number; onClick?: () => void; name: string }) {
+  const L = NPC_LOOK[kind] || NPC_LOOK.merchant; const kid = kind === "kid"; const bodyH = kid ? 20 : 26; const top = -bodyH - 7;
+  return (
+    <g onClick={(e) => { e.stopPropagation(); onClick?.(); }} style={{ cursor: "pointer" }} role="button" aria-label={name}>
+      <ellipse cx={cx} cy={cy + 6} rx={13} ry={4.5} fill="rgba(31,45,61,.22)" />
+      <g transform={`translate(${cx} ${cy})`}>
+        <g className="farm-npc-idle">
+          <rect x={-5.5} y={-8} width={4.2} height={9} rx={1.6} fill="#374151" /><rect x={1.3} y={-8} width={4.2} height={9} rx={1.6} fill="#374151" />
+          <path d={`M-9 -7 L-7 ${top + 4} Q0 ${top} 7 ${top + 4} L9 -7 Z`} fill={L.coat} stroke={L.coat2} strokeWidth={1} />
+          <rect x={-2.2} y={top + 6} width={4.4} height={bodyH - 6} fill={L.coat2} opacity={0.35} />
+          {kind === "merchant" && <rect x={7.5} y={top + 4} width={7} height={13} rx={2.5} fill="#a16207" stroke="#713f12" strokeWidth={0.8} />}
+          {kind === "traveler" && <rect x={-14.5} y={top + 4} width={7} height={14} rx={2.5} fill="#2563eb" stroke="#1e3a8a" strokeWidth={0.8} />}
+          <circle cx={0} cy={top - 6} r={7} fill={L.skin} stroke="#b9855c" strokeWidth={0.8} />
+          <circle cx={-2.6} cy={top - 6.5} r={0.9} fill="#1f2937" /><circle cx={2.6} cy={top - 6.5} r={0.9} fill="#1f2937" /><path d={`M-2 ${top - 3.2} Q0 ${top - 1.6} 2 ${top - 3.2}`} stroke="#9a3412" strokeWidth={0.9} fill="none" strokeLinecap="round" />
+          {L.kind === "hat" && <><ellipse cx={0} cy={top - 11} rx={11} ry={2.8} fill={L.hat} /><path d={`M-6.5 ${top - 11} Q0 ${top - 20} 6.5 ${top - 11}Z`} fill={L.hat} /></>}
+          {L.kind === "cap" && <><path d={`M-7 ${top - 10} Q0 ${top - 18} 7 ${top - 10}Z`} fill={L.hat} /><rect x={-2} y={top - 11.4} width={12} height={2.6} rx={1.2} fill={L.hat} /></>}
+          {L.kind === "bun" && <><path d={`M-7 ${top - 8} Q0 ${top - 17} 7 ${top - 8} Q5 ${top - 12} 0 ${top - 12} Q-5 ${top - 12} -7 ${top - 8}Z`} fill={L.hair} /><circle cx={0} cy={top - 17} r={3.6} fill={L.hair} /><circle cx={-2.6} cy={top - 6.5} r={2.3} fill="none" stroke="#6b7280" strokeWidth={0.7} /><circle cx={2.6} cy={top - 6.5} r={2.3} fill="none" stroke="#6b7280" strokeWidth={0.7} /></>}
+          {L.kind === "pig" && <><path d={`M-7 ${top - 8} Q0 ${top - 16} 7 ${top - 8} Q4 ${top - 11} -7 ${top - 8}Z`} fill={L.hair} /><circle cx={-8.5} cy={top - 6} r={3} fill={L.hair} /><circle cx={8.5} cy={top - 6} r={3} fill={L.hair} /><circle cx={-8.5} cy={top - 6} r={1.2} fill="#ec4899" /><circle cx={8.5} cy={top - 6} r={1.2} fill="#ec4899" /></>}
+        </g>
+        <g transform={`translate(10 ${top - 24})`}><g className="farm-ready-marker">
+          <path d="M-9 -9 h18 a4 4 0 0 1 4 4 v8 a4 4 0 0 1 -4 4 h-8 l-4 5 v-5 h-6 a4 4 0 0 1 -4 -4 v-8 a4 4 0 0 1 4 -4Z" fill="#fff" stroke="#1E3A8A" strokeWidth={1.4} />
+          <text x={0} y={3} textAnchor="middle" fontSize={11} fontWeight={900} fill="#1E3A8A">Hi!</text>
+        </g></g>
+      </g>
+      <text x={cx} y={cy + 20} textAnchor="middle" fontSize={11} fontWeight={800} fill="#14532d" style={{ paintOrder: "stroke", stroke: "#fff", strokeWidth: 3 }}>{name}</text>
+    </g>
+  );
+}
+
 // Cỡ chữ emoji theo món (cây/nhà to, hoa/nấm nhỏ)
 const EMOJI_SIZE: Record<string, number> = {
   tree: 58, pine: 58, cherry: 58, palm: 60, bamboo: 48, house: 62, windmill: 66, tent: 50, castle: 70, pagoda: 64, hut: 56, barnhouse: 58, tractor: 52, bridge: 56, boat: 44,

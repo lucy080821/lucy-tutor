@@ -357,6 +357,25 @@ function makeOrderTemplate(kind, difficulty, ctx = {}) {
 }
 const ORDER_TRASH_COST = 10; // xu để bỏ 1 đơn không thích
 
+// ── Giao tiếp: thư giữa bạn bè + NPC ghé thăm (luyện giao tiếp tiếng Anh) ─────────────────────────────
+const MAIL = { maxLen: 200, minWords: 2, sendPerDay: 15, asksPerDay: 3, askMax: 10, helpsRewardedPerDay: 5, keep: 40, sendReward: { coins: 4, xp: 1, perDay: 3 } };
+const NPC_SLOT_HOURS = 3;       // NPC ghé theo khung 3 giờ (giờ VN), mỗi khung ~60% có khách
+const NPC_PRESENT_PCT = 60;
+const NPC_TURNS_PER_VISIT = 6;  // số lượt nói tối đa mỗi lần ghé
+const NPC_TURNS_PER_DAY = 18;   // trần ngày (bảo vệ hạn mức AI)
+const NPC_TRADE_BONUS = 1.4;    // thương nhân mua cao hơn giá kho
+const NPCS = {
+  merchant: { name: 'Mr. Bao', role: 'Thương nhân thu mua nông sản', greeting: 'Good morning! I am looking for fresh vegetables. Can you sell me some?',
+    goalVi: 'Đề nghị bán nông sản cho ông (vd: "I can sell you 3 carrots.")', persona: 'a friendly travelling merchant who wants to buy farm produce at a fair price', reward: { coins: 40, xp: 8, gems: 0 } },
+  grandma: { name: 'Grandma Lan', role: 'Bà Lan hay hỏi chuyện nông trại', greeting: 'Hello, dear! What a lovely farm. What are you growing here?',
+    goalVi: 'Kể bà nghe bạn đang trồng gì hoặc thích gì ở nông trại (≥ 5 từ)', persona: 'a kind grandmother who loves chatting about gardening and cooking', reward: { coins: 35, xp: 8, gems: 0 } },
+  traveler: { name: 'Tom', role: 'Du khách đi lạc', greeting: 'Excuse me! I am lost. Could you tell me how to get to the market?',
+    goalVi: 'Chỉ đường cho Tom bằng câu đơn giản (vd: "Go straight, then turn left.")', persona: 'a polite tourist who is lost and needs simple directions', reward: { coins: 45, xp: 9, gems: 0 } },
+  kid: { name: 'Mina', role: 'Bé Mina tò mò', greeting: 'Hi! Is that your pet dragon? It is so cute! What is its name?',
+    goalVi: 'Giới thiệu Qilin với bé: tên, màu sắc hoặc nó làm gì (≥ 5 từ)', persona: 'a curious 8-year-old girl who loves animals', reward: { coins: 30, xp: 8, gems: 1 } },
+};
+const NPC_KEYS = Object.keys(NPCS);
+
 // ── Vòng quay may mắn (1 lần/ngày) ────────────────────────────────────────────
 // weight = tỉ lệ; kind: coins | gems | boost | decor | nothing
 const WHEEL = [
@@ -459,7 +478,7 @@ function waitBonus(waitMs) {
 
 const QUEST_STAT_KEYS = ['harvests', 'orders', 'plants', 'sold', 'feeds', 'spins', 'trips'];
 // Bộ đếm ghi bằng SQL nguyên tử (bumpStats trong farm.routes.js) — danh sách trắng
-const TRACKED_STATS = ['plants', 'sold', 'feeds', 'spins', 'trips', 'sentences', 'quizCorrect', 'likes', 'gifts', 'mastered'];
+const TRACKED_STATS = ['plants', 'sold', 'feeds', 'spins', 'trips', 'sentences', 'quizCorrect', 'likes', 'gifts', 'mastered', 'msgs', 'npcChats', 'helps'];
 
 const safeJson = (v, fb) => { try { return typeof v === 'string' ? JSON.parse(v) : (v ?? fb); } catch { return fb; } };
 // Giá trị hiện tại của 1 bộ đếm (nguồn có sẵn trong FarmState/User hoặc bộ đếm stats)
@@ -504,7 +523,7 @@ function vnDay(d = new Date()) {
 // Gói gửi về frontend (chỉ phần cần hiển thị giá/tên)
 function publicCatalog() {
   return {
-    crops: CROPS, products: PRODUCTS, factories: FACTORIES, pens: PENS, decor: DECOR, decorCats: DECOR_CATS, outfits: OUTFITS, outfitSlots: OUTFIT_SLOTS, producePrice: PRODUCE_PRICE, barnTiers: BARN_TIERS, barnQuiz: BARN_QUIZ, expand: EXPAND, wheel: WHEEL.map(({ id, label, kind }) => ({ id, label, kind })),
+    crops: CROPS, products: PRODUCTS, factories: FACTORIES, pens: PENS, decor: DECOR, decorCats: DECOR_CATS, outfits: OUTFITS, outfitSlots: OUTFIT_SLOTS, producePrice: PRODUCE_PRICE, barnTiers: BARN_TIERS, barnQuiz: BARN_QUIZ, expand: EXPAND, mail: MAIL, npcs: Object.fromEntries(Object.entries(NPCS).map(([k, v]) => [k, { name: v.name, role: v.role }])), npcTurns: { perVisit: NPC_TURNS_PER_VISIT, perDay: NPC_TURNS_PER_DAY }, wheel: WHEEL.map(({ id, label, kind }) => ({ id, label, kind })),
     startPlots: START_PLOTS, maxPlots: MAX_PLOTS, firstGrowMinutes: FIRST_GROW_MINUTES,
     harvestCoins: HARVEST_COINS, harvestXp: HARVEST_XP, masteredBonus: MASTERED_BONUS, barnBonus: BARN_BONUS,
     orderTrashCost: ORDER_TRASH_COST, decorSellRate: DECOR_SELL_RATE, gemSellCoins: GEM_SELL_COINS,
@@ -521,5 +540,6 @@ module.exports = {
   PRODUCE_PRICE, PRODUCE_PER_HARVEST, BARN_TIERS, BARN_FULL_SELL_RATE, BARN_QUIZ, OUTFITS, OUTFIT_SLOTS, DECOR_CATS,
   WHEEL, WHEEL_DECOR_POOL, EARLY_REWARD_RATE, EARLY_NEXT_FACTOR, WATER_CUT, WATER_MAX_PER_DAY, waterMaxFor, WATER_QUIZ_SIZE, WATER_REWARD, PET_TRIPS, PET_TRIP_WORDS_PER_DAY, PET_TRIP_LEVEL_BONUS, PET_PERKS, petBuffs, PET_FEED_REWARD, PET_PAT_XP, PET_LEVELS, petLevelFor,
   VISIT_LIKE_REWARD, VISIT_GIFT_REWARD, VISIT_GIFT_COST, VISIT_GIFTS_PER_DAY, vnDay, publicCatalog,
+  MAIL, NPC_SLOT_HOURS, NPC_PRESENT_PCT, NPC_TURNS_PER_VISIT, NPC_TURNS_PER_DAY, NPC_TRADE_BONUS, NPCS, NPC_KEYS,
   dailyQuestDefs, questChest, QUEST_STAT_KEYS, TRACKED_STATS, ACHIEVEMENTS, statValue,
 };

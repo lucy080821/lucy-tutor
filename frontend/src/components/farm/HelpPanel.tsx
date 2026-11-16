@@ -2,7 +2,7 @@
 import { useState, type ReactNode } from "react";
 import Modal from "./Modal";
 import {
-  IconBarn, IconBolt, IconFlame, IconGift, IconHelp, IconMaximize, IconMenu, IconMove, IconPalette, IconPaw, IconPen, IconShop,
+  IconBarn, IconBolt, IconMail, IconChat, IconFlame, IconGift, IconHelp, IconMaximize, IconMenu, IconMove, IconPalette, IconPaw, IconPen, IconShop,
   IconSprout, IconStar, IconTarget, IconTruck, IconUsers, IconWeather, IconWheel, IconZoomIn, IconBrain,
 } from "./FarmIcons";
 
@@ -53,6 +53,8 @@ const TABS: Tab[] = [
       { icon: IconBolt, title: "Thám hiểm", body: <>Cho Qilin đi <B>15 phút, 1 giờ hoặc 4 giờ</B> (mở dần theo cấp Qilin). Về mang xu, nông sản, đôi khi kim cương và <B>từ vựng mới tự vào deck</B> để bạn trồng. Lúc đi vắng Qilin không có ở nông trại.</> },
       { icon: IconTarget, title: "Nhiệm vụ & thành tựu", body: <>Mỗi ngày có <B>4 nhiệm vụ</B> và 1 rương thưởng khi làm đủ. <B>Thành tựu</B> là các mốc dài hạn. Nút Nhiệm vụ hiện số phần thưởng đang chờ nhận.</> },
       { icon: IconWheel, title: "Vòng quay", body: <>Quay <B>1 lần mỗi ngày</B> để nhận xu, kim cương, nông sản hoặc đồ trang trí.</> },
+      { icon: IconMail, title: "Thư tiếng Anh cho bạn cùng lớp", body: <>Nút <B>phong thư</B> bên phải cảnh. Viết thư <B>bằng tiếng Anh</B> cho bạn cùng lớp (có mẫu câu gợi ý), bấm <B>Kiểm tra bằng AI</B> để được sửa lỗi và nhận mẹo trước khi gửi. Chọn <B>Nhờ giúp nông sản</B> để xin bạn gửi hàng; khi bạn bấm <B>Giúp bạn</B> thì hàng chuyển sang Kho của người nhờ và bạn được thưởng xu.</>, tip: <>Mỗi ngày gửi tối đa 15 thư, nhờ giúp tối đa 3 lần; 3 thư đầu được thưởng xu. Không chia sẻ số điện thoại hay mạng xã hội.</> },
+      { icon: IconChat, title: "Khách ghé nông trại (NPC)", body: <>Mỗi khoảng 3 giờ có thể có khách ghé: <B>Mr. Bao</B> (thương nhân), <B>Grandma Lan</B>, <B>Tom</B> (du khách), <B>Mina</B> (bé gái). Bấm vào khách để trò chuyện bằng tiếng Anh, AI đóng vai và sửa câu của bạn. Làm xong <B>nhiệm vụ nói chuyện</B> để nhận thưởng; thương nhân còn <B>mua nông sản giá cao hơn Kho</B> sau khi bạn đề nghị bán.</> },
       { icon: IconUsers, title: "Bạn bè & bảng vàng", body: <>Thăm nông trại của bạn cùng lớp và học viên khác, <B>thả tim</B> (1 lần/ngày mỗi bạn), <B>tặng quà</B> (tối đa 3 lần/ngày) và xem <B>Bảng vàng</B> theo số lần thu hoạch.</> },
     ],
   },

@@ -38,6 +38,8 @@
 .farm-pose-b { animation: farm-pose-b .44s step-end infinite; }
 .farm-bob { animation: farm-bob .44s ease-in-out infinite alternate; }
 .farm-pet-walk { animation: farm-pet-walk .6s ease-in-out infinite; }
+@keyframes farm-npc-idle { from { transform: translateY(0); } to { transform: translateY(-2px); } }
+.farm-npc-idle { animation: farm-npc-idle .9s ease-in-out infinite alternate; }
 /* thác nước hòn non bộ + gợn sóng mặt ao */
 @keyframes farm-fall { to { stroke-dashoffset: -14; } }
 @keyframes farm-ripple { 0% { transform: scale(.55); opacity: .9; } 100% { transform: scale(1.35); opacity: 0; } }
@@ -93,7 +95,7 @@
 .farm-scroll-x { scrollbar-width: thin; }
 
 @media (prefers-reduced-motion: reduce) {
-  .farm-sway, .farm-ready-marker, .farm-pet-idle, .farm-glow, .farm-cloud, .farm-hop, .farm-hop-pet, .farm-pen-wander, .farm-fall, .farm-ripple, .farm-bob, .farm-pose-a, .farm-pose-b, .farm-pet-walk, .farm-wing, .farm-fly-bob { animation: none;  }
+  .farm-sway, .farm-ready-marker, .farm-pet-idle, .farm-glow, .farm-cloud, .farm-hop, .farm-hop-pet, .farm-pen-wander, .farm-npc-idle, .farm-fall, .farm-ripple, .farm-bob, .farm-pose-a, .farm-pose-b, .farm-pet-walk, .farm-wing, .farm-fly-bob { animation: none;  }
   .farm-pose-b { display: none; }
 }
 

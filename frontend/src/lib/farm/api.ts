@@ -29,7 +29,7 @@ export type FarmView = {
   coins: number; gems: number; gridW: number; gridH: number; layout: DecorPlaced[];
   harvestCount: number; witherCount: number; barnCount: number;
   level: number; levelStart: number; nextLevelAt: number;
-  wells: number; waterMax: number;
+  wells: number; waterMax: number; mailUnread: number;
   plotCount: number; plotPrice: number | null; nextExpansion: { w: ExpansionOffer | null; h: ExpansionOffer | null } | null;
   pet: { name: string; xp: number; level: number; fedToday: boolean; pats: number; trip: PetTripActive | null; buffs: PetBuffs };
   canSpin: boolean; boostHarvests: number;
@@ -41,6 +41,16 @@ export type OutfitItem = { name: string; emoji: string; slot: string; price: num
 export type DecorItem = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number; cat?: string; fam?: "wall" | "fence" | "hedge"; gate?: boolean; style?: string; factory?: boolean; pen?: boolean; buyNowPrice?: number; buildMinutes?: number; maxCount?: number };
 export type Recipe = { id: string; product: string; inputs: Record<string, number>; minutes: number };
 export type FactoryDef = { name: string; emoji: string; price: number; currency: "coins" | "gems"; minLevel: number; wall: string; roof: string; recipes: Recipe[] };
+export type MailMsg = { id: string; from: string; fromName: string; text: string; type: "MSG" | "ASK" | "THANKS"; ask: { crop: string; n: number } | null; at: string; read: boolean; helped: boolean };
+export type MailContact = { id: string; name: string; level: number; petName: string };
+export type MailBox = { mail: MailMsg[]; unread: number; contacts: MailContact[]; aiOn: boolean; limits: { sent: number; maxSend: number; asks: number; maxAsks: number; maxLen: number } };
+export type MailCheck = { ok: boolean; safe: boolean; corrected: string; tip: string; ai?: boolean };
+export type NpcState = {
+  key: string; kind: "merchant" | "grandma" | "traveler" | "kid"; name: string; role: string; greeting: string; goalVi: string; endsAt: string;
+  wants: { crop: string; n: number } | null; price: number | null; turns: number; turnsMax: number; goalDone: boolean; rewarded: boolean; traded: boolean;
+  turnsToday: number; turnsTodayMax: number; reward: { coins: number; xp: number; gems: number };
+};
+export type NpcReply = { reply: string; correction: string; tip: string; goalDone: boolean; ai: boolean; reward: { coins: number; gems: number; xp: number } | null };
 export type Catalog = {
   crops: Record<string, { name: string; emoji: string }>;
   products: Record<string, { name: string; emoji: string; price: number }>;
@@ -54,6 +64,8 @@ export type Catalog = {
   barnTiers: { capacity: number; price: number }[];
   barnQuiz: { size: number; coinsPerCorrect: number; dailyRewarded: number };
   expand: { baseW: number; baseH: number; maxW: number; maxH: number; addW: number; addH: number };
+  mail: { maxLen: number; minWords: number; sendPerDay: number; asksPerDay: number; askMax: number };
+  npcs: Record<string, { name: string; role: string }>; npcTurns: { perVisit: number; perDay: number };
   wheel: { id: number; label: string; kind: string }[];
   startPlots: number; maxPlots: number; firstGrowMinutes: number;
   harvestCoins: Record<string, number>; harvestXp: number; masteredBonus: { coins: number; gems: number }; barnBonus: { coins: number };
@@ -83,6 +95,8 @@ export type FarmState = {
   sold?: { key: string; refund: number; currency: string; qty?: number };
   tripResult?: TripResult;
   penResult?: { product: string; qty: number; price: number };
+  npc?: NpcState | null; npcReply?: NpcReply; npcTrade?: { crop: string; n: number; coins: number; xp: number };
+  mailSent?: { to: string; type: string; coins: number; xp: number }; helped?: { to: string; crop: string; n: number; coins: number; xp: number };
   watered?: { ok: boolean; word: string; cutMs: number; left: number; coins: number; xp: number };
   crafted?: { started?: string; product?: string; collected?: string; qty?: number; price?: number };
   stored?: { word: string; coins: number };
@@ -131,6 +145,13 @@ export const farmApi = {
   plant: (userId: string, plotId: string, src: { progressId?: string; seed?: { topicId?: string; word?: string; id?: string; sgk?: { grade: number; unit: number; en: string } } }) => post<FarmState>("/plant", { userId, plotId, ...src }),
   question: (userId: string, plotId: string, early = false) => get<Question>(`/plots/${plotId}/question?userId=${userId}${early ? "&early=1" : ""}`),
   harvest: (userId: string, plotId: string, answer: string, usedHint: boolean, early = false) => post<FarmState>(`/plots/${plotId}/harvest`, { userId, answer, usedHint, early }),
+  mailBox: (userId: string) => get<MailBox>(`/mail/${userId}`),
+  mailCheck: (userId: string, text: string) => post<MailCheck>("/mail/check", { userId, text }),
+  mailSend: (userId: string, toId: string, text: string, type: "MSG" | "ASK", ask?: { crop: string; n: number }) => post<FarmState>("/mail/send", { userId, toId, text, type, ask }),
+  mailRead: (userId: string) => post<{ ok: boolean }>("/mail/read", { userId }),
+  mailHelp: (userId: string, mailId: string) => post<FarmState>("/mail/help", { userId, mailId }),
+  npcTalk: (userId: string, message: string, history: { who: "me" | "npc"; text: string }[]) => post<FarmState>("/npc/talk", { userId, message, history }),
+  npcTrade: (userId: string) => post<FarmState>("/npc/trade", { userId }),
   waterQuiz: (userId: string, plotId: string) => get<WaterQuiz>(`/plots/${plotId}/water?userId=${userId}`),
   water: (userId: string, plotId: string, progressId: string, answer: string) => post<FarmState & { ok?: boolean }>(`/plots/${plotId}/water`, { userId, progressId, answer }),
   dig: (userId: string, plotId: string) => post<FarmState>(`/plots/${plotId}/dig`, { userId }),

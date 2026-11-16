@@ -11,6 +11,7 @@ const SEEDS = SC.VOCAB; // chỉ từ vựng (ngữ pháp/phát âm xem SC.TOPIC
 const { GROQ_TEXT_MODEL } = require('../lib/aiModel');
 
 const router = express.Router();
+let social = null; // gắn ở cuối file (routes/farmSocial.routes.js)
 
 // Groq chỉ dùng cho đơn hàng "Viết câu"; không có khoá thì chấm theo quy tắc.
 let groq = null;
@@ -111,6 +112,7 @@ function farmView(farm, plotCount) {
     barnQuizLeft: Math.max(0, C.BARN_QUIZ.dailyRewarded - (farm.barnQuizOn === today ? farm.barnQuizCount : 0)),
     harvestCount: farm.harvestCount, witherCount: farm.witherCount, barnCount: farm.barnCount,
     level, levelStart: C.harvestsForLevel(level), nextLevelAt: C.harvestsForLevel(level + 1),
+    mailUnread: (Array.isArray(farm.mail) ? farm.mail : []).filter((m) => m && !m.read).length,
     wells: wellsOf(farm), waterMax: C.waterMaxFor(wellsOf(farm)),
     plotCount, plotPrice: plotCount < C.MAX_PLOTS ? C.plotPrice(plotCount) : null, nextExpansion,
     pet: { name: farm.petName, xp: farm.petXp, level: C.petLevelFor(farm.petXp), fedToday: farm.petFedOn === today, pats: farm.petPats, trip: jsonObj(farm.petTrip).active || null, buffs: C.petBuffs(farm.petXp, farm.petFedOn === today) },
@@ -231,7 +233,7 @@ async function buildState(userId, extra = {}) {
   const orders = await ensureOrders(userId, farm, plots);
   const now = new Date();
   const inventory = parseJSON(farm.inventory, {});
-  return { now, farm: farmView(farm, plots.length), plots: plots.map((p) => ({ ...plotView(p, now), waterUsed: daily && daily.day === C.vnDay() ? (jsonObj(daily.water)[p.id] || 0) : 0 })), orders: orders.map((o) => orderView(o, inventory)), user, catalog: C.publicCatalog(),
+  return { now, farm: farmView(farm, plots.length), plots: plots.map((p) => ({ ...plotView(p, now), waterUsed: daily && daily.day === C.vnDay() ? (jsonObj(daily.water)[p.id] || 0) : 0 })), orders: orders.map((o) => orderView(o, inventory)), npc: social ? social.npcView(userId, daily) : null, user, catalog: C.publicCatalog(),
     quests: questsView(farm, daily), achievements: achievementsView(farm, user), ...extra };
 }
 
@@ -1282,5 +1284,7 @@ router.get('/leaderboard/:userId', async (req, res) => {
     res.json({ scope, total, top: rows.map((f, i) => row(f, i + 1)), myRank: myFarm ? ahead + 1 : null, hasClassroom: classIds.length > 0 });
   } catch (e) { console.error('[farm] leaderboard', e); res.status(500).json({ error: 'Không tải được bảng vàng' }); }
 });
+
+social = require('./farmSocial.routes')(router, { groq, parseJSON, jsonObj, buildState, ensureDaily, bumpStats });
 
 module.exports = router;

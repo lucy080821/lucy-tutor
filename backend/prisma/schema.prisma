@@ -1553,6 +1553,8 @@ model FarmState {
   daily Json @default("{}")
   // Thành tựu: { claimed: { groupId: số mốc đã nhận } }
   achievements Json @default("{}")
+  // Hộp thư tiếng Anh giữa bạn bè (≤40 thư mới nhất): [{id, from, fromName, text, type, ask?, at, read, helped?}]
+  mail Json @default("[]")
 
   // Chuyến thám hiểm của Qilin: { active?: { tier, startedAt, readyAt }, day, words } — xem farmCatalog PET_TRIPS
   petTrip Json?
