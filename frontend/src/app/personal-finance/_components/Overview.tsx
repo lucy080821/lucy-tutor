@@ -1,14 +1,16 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { SectionCard } from "@/app/administrator/_components/ui";
+import { formatShortVND as formatShort } from "@/lib/adminApi";
 import {
   daysInMonth, dayLabel, monthShort, OTHER_COLOR, SERIES_COLORS, shiftMonth, totalsByBig, vnd, WEEKDAYS, weekdayOf,
   type MonthRow, type PfData,
 } from "@/lib/personalFinance";
+import { RecentTransactions } from "./DashParts";
 
 const chartLoading = () => <div className="h-full flex items-center justify-center text-sm text-muted">Đang tải biểu đồ...</div>;
-const CashflowChart = dynamic(() => import("./PfCharts").then((m) => m.CashflowChart), { ssr: false, loading: chartLoading });
+const FinanceLineChart = dynamic(() => import("./PfCharts").then((m) => m.FinanceLineChart), { ssr: false, loading: chartLoading });
 const DonutChart = dynamic(() => import("./PfCharts").then((m) => m.DonutChart), { ssr: false, loading: chartLoading });
 const HorizontalBars = dynamic(() => import("./PfCharts").then((m) => m.HorizontalBars), { ssr: false, loading: chartLoading });
 const DailyBars = dynamic(() => import("./PfCharts").then((m) => m.DailyBars), { ssr: false, loading: chartLoading });
@@ -48,7 +50,8 @@ function Legend({ items }: { items: { name: string; value: number; color: string
   );
 }
 
-export default function Overview({ data, month, rows }: { data: PfData; month: string; rows: MonthRow[] }) {
+export default function Overview({ data, month, rows, onSeeAll }: { data: PfData; month: string; rows: MonthRow[]; onSeeAll: () => void }) {
+  const [finMode, setFinMode] = useState<"DAY" | "MONTH">("DAY");
   const calc = useMemo(() => {
     const { categories, transactions, today } = data;
     const monthTx = transactions.filter((t) => t.date.startsWith(month));
@@ -81,6 +84,14 @@ export default function Overview({ data, month, rows }: { data: PfData; month: s
       if (t.type !== "EXPENSE") continue;
       perDay[Number(t.date.slice(8)) - 1] += t.amount;
       perWeekday[weekdayOf(t.date)] += t.amount;
+    }
+    const perDayIncome = new Array(N).fill(0) as number[];
+    for (const t of monthTx) if (t.type === "INCOME") perDayIncome[Number(t.date.slice(8)) - 1] += t.amount;
+    const finDaily: { name: string; income: number | null; expense: number | null }[] = [];
+    for (let i = 0, ri = 0, re = 0; i < N; i++) {
+      ri += perDayIncome[i]; re += perDay[i];
+      const show = i < Math.max(elapsed, 1) || elapsed === N;
+      finDaily.push({ name: String(i + 1).padStart(2, "0"), income: show ? ri : null, expense: show ? re : null });
     }
     const daily = perDay.map((amount, i) => ({ day: String(i + 1).padStart(2, "0"), amount }));
     const cumulative: { day: string; cumulative: number | null }[] = [];
@@ -147,7 +158,7 @@ export default function Overview({ data, month, rows }: { data: PfData; month: s
       .sort((a, b) => b.spent / b.budget - a.spent / a.budget);
 
     return {
-      monthTx, expenses, incomes, cur, elapsed, N, donutExpense: toDonut(expenses), donutIncome: toDonut(incomes), subs, daily, cumulative,
+      monthTx, expenses, incomes, cur, finDaily, elapsed, N, donutExpense: toDonut(expenses), donutIncome: toDonut(incomes), subs, daily, cumulative,
       savingsSeries, weekday: WEEKDAYS.map((name, i) => ({ name, total: perWeekday[i] })), totalBudget, cashflow, saving, stacked, stackKeys, alerts, budgets,
       multiMonth: monthSet.size > 1,
     };
@@ -158,10 +169,46 @@ export default function Overview({ data, month, rows }: { data: PfData; month: s
   const avgDay = cur && calc.elapsed ? cur.expense / calc.elapsed : 0;
   const projected = cur && calc.elapsed && calc.elapsed < calc.N ? avgDay * calc.N : null;
 
+  const net = (cur?.income ?? 0) - (cur?.expense ?? 0);
+  const keepRate = cur && cur.income > 0 ? (net / cur.income) * 100 : null;
+  const finData = finMode === "DAY" ? calc.finDaily : calc.cashflow;
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+        <SectionCard title="Dòng tiền" subtitle={finMode === "DAY" ? "Thu và chi lũy kế từng ngày trong tháng" : "Thu, chi và số dư cuối kỳ qua các tháng"}
+          actions={(
+            <div className="flex gap-1.5">
+              {([["DAY", "Theo ngày"], ["MONTH", "Theo tháng"]] as const).map(([k, l]) => (
+                <button key={k} onClick={() => setFinMode(k)} className={`ui-chip !px-3.5 !py-1.5 text-xs cursor-pointer ${finMode === k ? "ui-chip-active" : ""}`}>{l}</button>
+              ))}
+            </div>
+          )}>
+          <ChartBox height="h-64 sm:h-72"><FinanceLineChart data={finData} /></ChartBox>
+        </SectionCard>
+
+        <SectionCard title="Chi theo danh mục" subtitle="Cơ cấu chi tiêu trong tháng">
+          {hasExpense ? (
+            <>
+              <ChartBox height="h-48"><DonutChart data={calc.donutExpense} centerLabel="Tổng chi" /></ChartBox>
+              <Legend items={calc.donutExpense.slice(0, 6)} />
+            </>
+          ) : <Empty text="Tháng này chưa có khoản chi." />}
+          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-3 text-center">
+            {([
+              ["Chi TB/ngày", avgDay ? formatShort(avgDay) : "—"],
+              ["Thu − chi", `${net > 0 ? "+" : net < 0 ? "−" : ""}${formatShort(Math.abs(net))}`],
+              ["Giữ lại", keepRate === null ? "—" : `${keepRate.toLocaleString("vi-VN", { maximumFractionDigits: 0 })}%`],
+            ] as const).map(([k, v]) => (
+              <div key={k} className="min-w-0"><p className="text-[11px] text-muted truncate">{k}</p><p className="text-sm font-extrabold text-foreground truncate">{v}</p></div>
+            ))}
+          </div>
+        </SectionCard>
+      </div>
+
+      <RecentTransactions data={data} month={month} onSeeAll={onSeeAll} />
+
       {/* Cảnh báo + hạn mức */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         <SectionCard title="Cảnh báo nhanh" subtitle="Tự tính theo quy tắc từ số liệu của bạn">
           {calc.alerts.length === 0 ? <Empty text="Ghi vài giao dịch để bắt đầu theo dõi." /> : (
             <ul className="space-y-2">
@@ -196,34 +243,21 @@ export default function Overview({ data, month, rows }: { data: PfData; month: s
         </SectionCard>
       </div>
 
-      <SectionCard title="Dòng tiền & số dư theo tháng" subtitle="Cột: thu và chi từng tháng · Đường cam: số dư cuối kỳ">
-        <ChartBox><CashflowChart data={calc.cashflow} /></ChartBox>
-      </SectionCard>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <SectionCard title="Chi theo danh mục lớn" subtitle="Cơ cấu chi tiêu trong tháng">
-          {hasExpense ? (
-            <>
-              <ChartBox height="h-64"><DonutChart data={calc.donutExpense} centerLabel="Tổng chi" /></ChartBox>
-              <Legend items={calc.donutExpense} />
-            </>
-          ) : <Empty text="Tháng này chưa có khoản chi." />}
-        </SectionCard>
+      <div className="grid gap-5 lg:grid-cols-2">
         <SectionCard title="Thu theo danh mục" subtitle="Nguồn thu trong tháng">
           {calc.incomes.length ? (
             <>
-              <ChartBox height="h-64"><DonutChart data={calc.donutIncome} centerLabel="Tổng thu" /></ChartBox>
+              <ChartBox height="h-56"><DonutChart data={calc.donutIncome} centerLabel="Tổng thu" /></ChartBox>
               <Legend items={calc.donutIncome} />
             </>
           ) : <Empty text="Tháng này chưa có khoản thu." />}
         </SectionCard>
+        <SectionCard title="Top khoản chi theo danh mục nhỏ" subtitle="Tiền đang đi đâu nhiều nhất">
+          {calc.subs.length ? <ChartBox height="h-80"><HorizontalBars data={calc.subs} /></ChartBox> : <Empty text="Chưa có dữ liệu." />}
+        </SectionCard>
       </div>
 
-      <SectionCard title="Top khoản chi theo danh mục nhỏ" subtitle="Tiền đang đi đâu nhiều nhất">
-        {calc.subs.length ? <ChartBox height="h-80"><HorizontalBars data={calc.subs} /></ChartBox> : <Empty text="Chưa có dữ liệu." />}
-      </SectionCard>
-
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         <SectionCard title="Chi từng ngày" subtitle="Ngày nào tiêu nhiều bất thường?">
           {hasExpense ? <ChartBox><DailyBars data={calc.daily} /></ChartBox> : <Empty text="Chưa có dữ liệu." />}
         </SectionCard>
@@ -232,7 +266,7 @@ export default function Overview({ data, month, rows }: { data: PfData; month: s
         </SectionCard>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         <SectionCard title="Chi theo thứ trong tuần" subtitle="Bạn hay tiêu vào ngày nào?">
           {hasExpense ? <ChartBox><WeekdayChart data={calc.weekday} /></ChartBox> : <Empty text="Chưa có dữ liệu." />}
         </SectionCard>

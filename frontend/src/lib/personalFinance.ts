@@ -149,5 +149,6 @@ export function totalsByBig(txs: PfTx[], categories: PfCategory[], type: PfType)
 }
 
 // Bảng màu phân loại: navy dẫn đầu (theo phong cách app), các màu còn lại tách biệt rõ trên nền trắng
-export const SERIES_COLORS = ["#1E3A8A", "#3b82f6", "#f9a95a", "#0d9488", "#e11d48", "#64748b", "#ca8a04", "#0ea5e9"];
-export const OTHER_COLOR = "#cbd5e1";
+// Bảng màu cho nền tối (dashboard /personal-finance)
+export const SERIES_COLORS = ["#5b84ff", "#a78bfa", "#f472b6", "#34d399", "#fbbf24", "#38bdf8", "#fb923c", "#2dd4bf"];
+export const OTHER_COLOR = "#4b5270";

@@ -12,8 +12,8 @@ import ExportExcel from "./ExportExcel";
 const SELECT = "ui-input !py-2";
 
 /** Chọn danh mục lớn › danh mục nhỏ; gõ tên mới + Enter là thêm ngay (hiện tức thì, lưu server ngầm). */
-function CategoryPicker({ store, categories, type, bigId, subId, onChange }: {
-  store: PfStore; categories: PfCategory[]; type: PfType; bigId: string; subId: string;
+function CategoryPicker({ store, categories, type, bigId, subId, onChange, compact }: {
+  compact?: boolean; store: PfStore; categories: PfCategory[]; type: PfType; bigId: string; subId: string;
   onChange: (bigId: string, subId: string) => void;
 }) {
   const [adding, setAdding] = useState<"big" | "sub" | null>(null);
@@ -48,7 +48,7 @@ function CategoryPicker({ store, categories, type, bigId, subId, onChange }: {
   );
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2">
+    <div className={`grid gap-3 ${compact ? "" : "sm:grid-cols-2"}`}>
       <div>
         <div className="flex items-center justify-between">
           <label className="ui-label">Danh mục lớn</label>
@@ -78,8 +78,8 @@ function CategoryPicker({ store, categories, type, bigId, subId, onChange }: {
 
 type Initial = { type: PfType; date: string; amount: string; bigId: string; subId: string; detail: string };
 
-function TxForm({ store, data, initial, submitLabel, resetAfter, onSubmit }: {
-  store: PfStore; data: PfData; initial: Initial; submitLabel: string; resetAfter: boolean;
+export function TxForm({ store, data, initial, submitLabel, resetAfter, onSubmit, compact = false, uid = "pf" }: {
+  store: PfStore; data: PfData; initial: Initial; submitLabel: string; resetAfter: boolean; compact?: boolean; uid?: string;
   onSubmit: (input: TxInput) => Promise<boolean>;
 }) {
   const [type, setType] = useState<PfType>(initial.type);
@@ -126,23 +126,23 @@ function TxForm({ store, data, initial, submitLabel, resetAfter, onSubmit }: {
             className={`ui-chip cursor-pointer ${type === t ? "ui-chip-active" : ""}`}>{t === "EXPENSE" ? "Khoản chi" : "Khoản thu"}</button>
         ))}
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className={`grid gap-3 ${compact ? "" : "sm:grid-cols-2"}`}>
         <div>
-          <label className="ui-label" htmlFor="pf-date">Ngày</label>
-          <input id="pf-date" type="date" required min={START_DATE} value={date} onChange={(e) => setDate(e.target.value)} className={SELECT} />
+          <label className="ui-label" htmlFor={`${uid}-date`}>Ngày</label>
+          <input id={`${uid}-date`} type="date" required min={START_DATE} value={date} onChange={(e) => setDate(e.target.value)} className={SELECT} />
         </div>
         <div>
-          <label className="ui-label" htmlFor="pf-amount">Số tiền (gõ 50k, 1,5tr, 1.250.000…)</label>
-          <input id="pf-amount" ref={amountRef} inputMode="decimal" autoComplete="off" value={amountText} onChange={(e) => setAmountText(e.target.value)}
+          <label className="ui-label" htmlFor={`${uid}-amount`}>Số tiền (gõ 50k, 1,5tr, 1.250.000…)</label>
+          <input id={`${uid}-amount`} ref={amountRef} inputMode="decimal" autoComplete="off" value={amountText} onChange={(e) => setAmountText(e.target.value)}
             placeholder="vd: 45k" className={SELECT} />
           {amountText && <p className={`mt-1 text-xs ${amountOk ? "text-muted" : "text-red-600"}`}>{amountOk ? `= ${vnd(amount)}` : "Chưa hiểu số tiền này"}</p>}
         </div>
       </div>
-      <CategoryPicker store={store} categories={data.categories} type={type} bigId={bigId} subId={subId}
+      <CategoryPicker compact={compact} store={store} categories={data.categories} type={type} bigId={bigId} subId={subId}
         onChange={(b, s) => { setBigId(b); setSubId(s); }} />
       <div>
-        <label className="ui-label" htmlFor="pf-detail">Chi tiết sử dụng</label>
-        <input id="pf-detail" value={detail} onChange={(e) => setDetail(e.target.value)} maxLength={200} placeholder="vd: Cơm trưa với team, đổ xăng, tiền điện tháng 11…" className={SELECT} />
+        <label className="ui-label" htmlFor={`${uid}-detail`}>Chi tiết sử dụng</label>
+        <input id={`${uid}-detail`} value={detail} onChange={(e) => setDetail(e.target.value)} maxLength={200} placeholder="vd: Cơm trưa với team, đổ xăng, tiền điện tháng 11…" className={SELECT} />
       </div>
       <button type="submit" disabled={busy || pending} className="btn-primary px-6 py-2.5 cursor-pointer disabled:opacity-60">
         {pending ? "Đang lưu danh mục…" : busy ? "Đang lưu…" : submitLabel}
@@ -201,7 +201,7 @@ export default function Transactions({ store, data, month }: { store: PfStore; d
 
   return (
     <div className="space-y-6">
-      <section className="ui-card p-4 sm:p-6">
+      <section className="ui-card p-4 sm:p-6 xl:hidden">
         <h2 className="text-lg font-bold text-primary mb-4">Ghi giao dịch mới</h2>
         <TxForm key={data.categories.length === 0 ? "empty" : "form"} store={store} data={data} resetAfter submitLabel="Lưu giao dịch"
           initial={{ type: "EXPENSE", date: defaultDate, amount: "", bigId: "", subId: "", detail: "" }}
