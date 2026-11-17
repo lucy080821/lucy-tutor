@@ -7,6 +7,7 @@ import {
   type PfCategory, type PfData, type PfTx, type PfType, type TxInput,
 } from "@/lib/personalFinance";
 import { isTemp, type PfStore } from "./usePfData";
+import ExportExcel from "./ExportExcel";
 
 const SELECT = "ui-input !py-2";
 
@@ -209,7 +210,10 @@ export default function Transactions({ store, data, month }: { store: PfStore; d
 
       <section className="ui-card p-4 sm:p-6">
         <div className="flex flex-col gap-3 mb-4">
-          <h2 className="text-lg font-bold text-primary">Giao dịch trong tháng <span className="text-muted font-normal text-sm">({filtered.length}/{monthTx.length})</span></h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-lg font-bold text-primary">Giao dịch trong tháng <span className="text-muted font-normal text-sm">({filtered.length}/{monthTx.length})</span></h2>
+            <ExportExcel data={data} month={month} />
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             {([["ALL", "Tất cả"], ["EXPENSE", "Chi"], ["INCOME", "Thu"]] as const).map(([k, label]) => (
               <button key={k} onClick={() => { setTypeFilter(k); setBigFilter(""); }} className={`ui-chip cursor-pointer ${typeFilter === k ? "ui-chip-active" : ""}`}>{label}</button>
