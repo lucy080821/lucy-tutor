@@ -47,7 +47,7 @@ function Hip({ u0 = -1, u1 = 1, v0 = -1, v1 = 1, z, rh, o = 0.1, roof, stripe }:
   const front = (p: number[], q: number[], col: string) => {
     if (!stripe) return poly([P(p[0], p[1], z), P(q[0], q[1], z), A], col);
     const n = 6; const out = [];
-    for (let i = 0; i < n; i++) { const t0 = i / n, t1 = (i + 1) / n; out.push(poly([P(p[0] + (q[0] - p[0]) * t0, p[1] + (q[1] - p[1]) * t0, z), P(p[0] + (q[0] - p[0]) * t1, p[1] + (q[1] - p[1]) * t1, z), A], i % 2 ? stripe : col, "rgba(0,0,0,.08)")); }
+    for (let i = 0; i < n; i++) { const t0 = i / n, t1 = (i + 1) / n; out.push(<g key={i}>{poly([P(p[0] + (q[0] - p[0]) * t0, p[1] + (q[1] - p[1]) * t0, z), P(p[0] + (q[0] - p[0]) * t1, p[1] + (q[1] - p[1]) * t1, z), A], i % 2 ? stripe : col, "rgba(0,0,0,.08)")}</g>); }
     return <g>{out}</g>;
   };
   return (

@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fire, alert as swalAlert } from "./farmSwal";
 import "./farm.css";
-import { farmApi, formatCountdown, sellValue, speak, type DecorPlaced, type FarmState, type PlotView } from "@/lib/farm/api";
+import { farmApi, formatCountdown, sellValue, speak, type DecorPlaced, type FarmState, type NpcState, type PlotView } from "@/lib/farm/api";
 import { loadSfxPref, setSfxEnabled, sfx } from "@/lib/farm/sfx";
 import FarmScene, { focusZoom, liveStatus, type FloatText, type SceneMode } from "./FarmScene";
 import { TILE_W, type Outfit } from "./Sprites";
@@ -28,8 +28,11 @@ import HelpPanel from "./HelpPanel";
 import WellPanel from "./WellPanel";
 import MailPanel from "./MailPanel";
 import NpcPanel from "./NpcPanel";
+import MarketPanel from "./MarketPanel";
+import Modal from "./Modal";
+import { PHRASES, type VPerson, type VenueId } from "@/lib/farm/village";
 
-type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "FACTORY" | "PEN" | "GROW" | "WELL" | "MAIL" | "NPC" | "WATER" | "QUESTS" | "WEATHER" | "HELP";
+type Panel = null | "SEED" | "HARVEST" | "SHOP" | "PET" | "WHEEL" | "NEIGHBORS" | "BARN" | "FACTORY" | "PEN" | "GROW" | "WELL" | "MAIL" | "NPC" | "WATER" | "QUESTS" | "WEATHER" | "HELP" | "MARKET" | "VENUE" | "BOARD";
 const TUT_KEY = "lucy_farm_tut_v2";
 
 async function confetti(opts: any) {
@@ -43,6 +46,9 @@ export default function FarmGame({ userId }: { userId: string }) {
   const offsetRef = useRef(0); // lệch giờ server - client để đếm ngược đúng
   const [mode, setMode] = useState<SceneMode>({ type: "normal" });
   const [panel, setPanel] = useState<Panel>(null);
+  const [venue, setVenue] = useState<{ id: string; npc: NpcState } | null>(null);
+  const [barnTab, setBarnTab] = useState<"STOCK" | "QUIZ" | "WORDS">("STOCK");
+  const phraseIdx = useRef(0);
   const panelRef = useRef<Panel>(null); panelRef.current = panel;
   const [questTab, setQuestTab] = useState<"DAILY" | "ACH">("DAILY");
   const [activePlot, setActivePlot] = useState<PlotView | null>(null);
@@ -205,6 +211,19 @@ export default function FarmGame({ userId }: { userId: string }) {
   const onPenClick = (d: DecorPlaced) => { sfx.pop(); setPenUid(d.uid); setPanel("PEN"); };
   const onWellClick = () => { sfx.pop(); setPanel("WELL"); };
   const onNpcClick = () => { sfx.pop(); setPanel("NPC"); };
+  // Bấm vào toà nhà trong làng → mở chức năng của nó (xem BUILDING_INFO trong lib/farm/village.ts)
+  const onVenueClick = (v: VenueId) => {
+    sfx.pop();
+    if (v === "school" || v === "diner") { farmApi.venueNpc(userId, v).then((r) => { setVenue({ id: v, npc: r.npc }); setPanel("VENUE"); }).catch((e) => swalAlert("", e.message, "info")); return; }
+    if (v === "depot" || v === "library") setBarnTab(v === "library" ? "QUIZ" : "STOCK");
+    const map: Partial<Record<VenueId, Panel>> = { post: "MAIL", market: "MARKET", store: "SHOP", hall: "QUESTS", depot: "BARN", library: "BARN", vet: "PET", fair: "WHEEL", gate: "NEIGHBORS", board: "BOARD" };
+    const next = map[v]; if (next) setPanel(next);
+  };
+  // Bấm vào dân làng → nghe 1 câu chào tiếng Anh (kèm nghĩa tiếng Việt)
+  const onVillagerClick = (p: VPerson) => {
+    const list = PHRASES[p.role] || PHRASES.farmer; const [en, vi] = list[phraseIdx.current++ % list.length];
+    sfx.pop(); speak(en); toast(`${p.name}: "${en}" — ${vi}`);
+  };
   const onFactoryClick = (d: DecorPlaced) => { sfx.pop(); setFactoryUid(d.uid); setPanel("FACTORY"); };
   const selectedDecor = state && mode.type === "edit" && mode.selected?.kind === "decor" ? state.farm.layout.find((l) => l.uid === mode.selected!.id) : undefined;
   const rotateSelected = async () => {
@@ -320,7 +339,7 @@ export default function FarmGame({ userId }: { userId: string }) {
 
         <div className={fs ? "relative farm-fs-scene" : "relative"}>
           <FarmScene farm={farm} plots={state.plots} catalog={catalog} now={now} mode={mode} pet={{ name: farm.pet.name, level: farm.pet.level }} outfit={outfit} petJumping={petJumping} hearts={hearts} floats={floats} sky={sky} weather={weather} zoom={effZoom} onZoomChange={(z) => setZoom(clampZoom(z / zoomBase))} fit={fs} petAway={!!farm.pet.trip}
-            onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onFactoryClick={onFactoryClick} onPenClick={onPenClick} onWellClick={onWellClick} onPetClick={onPetClick} npc={state.npc ? { kind: state.npc.kind, name: state.npc.name } : null} onNpcClick={onNpcClick} />
+            onTileClick={onTileClick} onPlotClick={onPlotClick} onDecorClick={onDecorClick} onFactoryClick={onFactoryClick} onPenClick={onPenClick} onWellClick={onWellClick} onPetClick={onPetClick} onVenueClick={onVenueClick} onVillagerClick={onVillagerClick} npc={state.npc ? { kind: state.npc.kind, name: state.npc.name } : null} onNpcClick={onNpcClick} />
           {readyPlots.length > 0 && mode.type === "normal" && (
             <button onClick={() => { sfx.click(); setActivePlot(readyPlots[0]); setPanel("HARVEST"); }} className="absolute top-3 left-3 z-[5] btn-highlight rounded-full pl-3 pr-4 py-2 font-extrabold shadow-card farm-toast inline-flex items-center gap-2"><IconSprout size={18} />{readyPlots.length} cây chín</button>
           )}
@@ -407,12 +426,19 @@ export default function FarmGame({ userId }: { userId: string }) {
       ); })()}
       {panel === "PEN" && penUid && <PenPanel userId={userId} uid={penUid} farm={farm} catalog={catalog} now={now} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "FACTORY" && factoryUid && <FactoryPanel userId={userId} uid={factoryUid} farm={farm} catalog={catalog} now={now} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
-      {panel === "BARN" && <BarnPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
+      {panel === "BARN" && <BarnPanel initialTab={barnTab} userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "WEATHER" && <WeatherPanel status={wx.status} data={wx.data} error={wx.error} sky={sky} previewKind={wxPreview} onEnable={wx.enable} onDisable={wx.disable} onRefresh={wx.refresh} onClose={() => setPanel(null)} />}
       {panel === "QUESTS" && <QuestsPanel userId={userId} quests={quests} achievements={achievements} initialTab={questTab} onClose={() => setPanel(null)} onState={applyState} />}
       {panel === "MAIL" && <MailPanel userId={userId} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} onReload={load} />}
-      {panel === "NPC" && state.npc && <NpcPanel userId={userId} npc={state.npc} inventory={farm.inventory} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
+      {panel === "NPC" && state.npc && <NpcPanel userId={userId} coins={farm.coins} npc={state.npc} inventory={farm.inventory} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
       {panel === "WELL" && <WellPanel farm={farm} plots={state.plots} catalog={catalog} now={now} onPick={(p) => { setActivePlot(p); setPanel("WATER"); }} onShop={() => setPanel("SHOP")} onClose={() => setPanel(null)} />}
+      {panel === "MARKET" && <MarketPanel userId={userId} farm={farm} catalog={catalog} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
+      {panel === "VENUE" && venue && <NpcPanel venue={venue.id} userId={userId} npc={venue.npc} onNpc={(n) => setVenue((v) => (v ? { ...v, npc: n } : v))} inventory={farm.inventory} catalog={catalog} coins={farm.coins} onClose={() => setPanel(null)} onState={applyState} onToast={toast} />}
+      {panel === "BOARD" && (
+        <Modal title="Bảng tin — đơn hàng" subtitle="Dân làng đang chờ hàng của bạn" onClose={() => setPanel(null)}>
+          <OrdersPanel userId={userId} orders={orders} catalog={catalog} coins={farm.coins} difficulty={farm.orderDifficulty} onState={applyState} onToast={toast} />
+        </Modal>
+      )}
       {panel === "HELP" && <HelpPanel onClose={closeTut} />}
     </div>
   );

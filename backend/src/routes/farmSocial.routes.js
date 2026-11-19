@@ -198,30 +198,50 @@ module.exports = function mountSocial(router, h) {
     const kind = forced || C.NPC_KEYS[Math.floor(hv / 100) % C.NPC_KEYS.length];
     const endsAt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), (slot + 1) * C.NPC_SLOT_HOURS) - 7 * 3600e3).toISOString();
     const out = { key, kind, endsAt };
-    if (kind === 'merchant') { const crops = Object.keys(C.CROPS); out.wants = { crop: crops[Math.floor(hv / 1000) % crops.length], n: 2 + (Math.floor(hv / 7) % 4) }; }
+    const crops = Object.keys(C.CROPS);
+    if (kind === 'merchant') out.wants = { crop: crops[Math.floor(hv / 1000) % crops.length], n: 2 + (Math.floor(hv / 7) % 4) };
+    if (kind === 'trucker') out.wants = { crop: crops[Math.floor(hv / 1000) % crops.length], n: 6 + (Math.floor(hv / 7) % 5) };
+    if (kind === 'peddler') out.offer = { crop: crops[Math.floor(hv / 1000) % crops.length], n: 2 + (Math.floor(hv / 7) % 4) };
     return out;
   }
-  function npcView(userId, daily) {
-    const now = npcNow(userId); if (!now) return null;
+  // Nhân vật cố định ở trường làng / quán ăn: mỗi ngày 1 phiên (khoá theo ngày VN), kết thúc cuối ngày
+  const VENUES = { school: 'teacher', diner: 'waiter' };
+  function venueNow(venue) {
+    const kind = VENUES[venue]; if (!kind) return null;
+    const d = vnNow(); const endsAt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1) - 7 * 3600e3).toISOString();
+    return { key: `${C.vnDay()}:venue:${venue}`, kind, endsAt };
+  }
+  const wantsBonus = (kind) => (kind === 'trucker' ? C.NPC_TRUCK_BONUS : C.NPC_TRADE_BONUS);
+  function viewOf(now, daily) {
     const st = jsonObj(jsonObj(daily?.npc)[now.key]); const def = C.NPCS[now.kind];
     return {
       key: now.key, kind: now.kind, name: def.name, role: def.role, greeting: def.greeting, goalVi: def.goalVi, endsAt: now.endsAt,
-      wants: now.wants || null, price: now.wants ? Math.round(C.PRODUCE_PRICE[now.wants.crop] * now.wants.n * C.NPC_TRADE_BONUS) : null,
+      vehicle: !!def.vehicle, venue: !!def.venue,
+      wants: now.wants || null, price: now.wants ? Math.round(C.PRODUCE_PRICE[now.wants.crop] * now.wants.n * wantsBonus(now.kind)) : now.offer ? Math.round(C.PRODUCE_PRICE[now.offer.crop] * now.offer.n * C.NPC_PEDDLER_MARKUP) : null,
+      offer: now.offer || null,
       turns: st.turns || 0, turnsMax: C.NPC_TURNS_PER_VISIT, goalDone: !!st.goal, rewarded: !!st.rewarded, traded: !!st.traded,
       turnsToday: daily?.npcTurns || 0, turnsTodayMax: C.NPC_TURNS_PER_DAY, reward: def.reward,
     };
   }
+  function npcView(userId, daily) { const now = npcNow(userId); return now ? viewOf(now, daily) : null; }
 
   const FALLBACK_REPLY = {
     merchant: ['Hmm, how many can you sell me?', 'That sounds good! Tell me the price, please.', 'Great, thank you!'],
     grandma: ['Oh, how wonderful! Do you like them?', 'That sounds lovely, dear.', 'I love fresh vegetables!'],
     traveler: ['I see. Is it far from here?', 'Thank you so much for helping me!', 'Go straight, then turn left? Great!'],
     kid: ['Wow! Can I pat it?', 'It looks so happy!', 'I want a pet dragon too!'],
+    trucker: ['Good! How many can you sell me?', 'That is a fair price. I need a lot today.', 'Great, thank you!'],
+    peddler: ['Of course! They are very fresh.', 'The price is on my sign. How many would you like?', 'Thank you, dear customer!'],
+    teacher: ['Very good! Can you tell me more about yourself?', 'Nice! How old are you?', 'Well done! Keep practising every day.'],
+    waiter: ['Certainly! Would you like something to drink?', 'Good choice! It will be ready soon.', 'Here you are. Enjoy your meal!'],
   };
   function ruleGoal(kind, text, wants) {
     const w = wordsOf(text); if (w.length < 4) return false;
     const low = text.toLowerCase();
-    if (kind === 'merchant') return /(sell|offer|have|deal|sure|price|for|can)/.test(low) && (/\d/.test(low) || /\b(one|two|three|four|five|six|some|few)\b/.test(low) || (wants && low.includes(wants.crop)));
+    if (kind === 'peddler') return /(how much|price|buy|would like|want|cost)/.test(low);
+    if (kind === 'teacher') return /(my name|i am|i'm|i live|years old|i come from)/.test(low);
+    if (kind === 'waiter') return /(would like|can i have|may i have|i want|i'll have|i will have|please)/.test(low);
+    if (kind === 'merchant' || kind === 'trucker') return /(sell|offer|have|deal|sure|price|for|can)/.test(low) && (/\d/.test(low) || /\b(one|two|three|four|five|six|some|few)\b/.test(low) || (wants && low.includes(wants.crop)));
     if (kind === 'traveler') return /(straight|left|right|turn|next to|near|opposite|walk|cross)/.test(low);
     return w.length >= 5;
   }
@@ -232,8 +252,9 @@ module.exports = function mountSocial(router, h) {
       const farm = await prisma.farmState.findUnique({ where: { userId } });
       if (!farm) return res.status(404).json({ error: 'Chưa có nông trại' });
       const { farm: farm2, daily } = await ensureDaily(farm);
-      const now = npcNow(userId);
-      if (!now) return res.status(400).json({ error: 'Hiện không có khách nào ghé thăm' });
+      const venue = req.body.venue ? String(req.body.venue) : '';
+      const now = venue ? venueNow(venue) : npcNow(userId);
+      if (!now) return res.status(400).json({ error: venue ? 'Nơi này chưa mở cửa' : 'Hiện không có khách nào ghé thăm' });
       const store = jsonObj(daily.npc); const st = jsonObj(store[now.key]);
       if ((st.turns || 0) >= C.NPC_TURNS_PER_VISIT) return res.status(400).json({ error: 'Khách đã nói chuyện đủ rồi, hẹn lần ghé sau nhé' });
       if ((daily.npcTurns || 0) >= C.NPC_TURNS_PER_DAY) return res.status(400).json({ error: 'Hôm nay bạn đã trò chuyện nhiều rồi, mai nói tiếp nhé' });
@@ -241,12 +262,16 @@ module.exports = function mountSocial(router, h) {
       const bad = moderate(text); if (bad) return res.status(400).json({ error: bad });
       const def = C.NPCS[now.kind];
       const history = (Array.isArray(req.body.history) ? req.body.history : []).slice(-6).map((m) => `${m.who === 'me' ? 'Student' : def.name}: ${tidy(m.text).slice(0, 200)}`).join('\n');
-      const wantsLine = now.wants ? ` The merchant wants to buy ${now.wants.n} ${enCrop(now.wants.crop, now.wants.n)}.` : '';
+      const wantsLine = now.wants ? ` ${def.name} wants to buy ${now.wants.n} ${enCrop(now.wants.crop, now.wants.n)}.` : now.offer ? ` ${def.name} is selling ${now.offer.n} ${enCrop(now.offer.crop, now.offer.n)} from the van.` : '';
       const goalEn = {
         merchant: 'the student makes a clear polite offer to sell (or agrees to sell) the produce',
         grandma: 'the student tells you what they grow or like on the farm in a full sentence',
         traveler: 'the student gives simple directions (go straight, turn left/right, next to…)',
         kid: 'the student describes their pet dragon (name, colour, or what it does) in a full sentence',
+        trucker: 'the student makes a clear polite offer to sell a large amount of produce (or agrees on a price)',
+        peddler: 'the student asks about the price or says they would like to buy something, politely',
+        teacher: 'the student introduces themselves in a full sentence (name, age, or where they live)',
+        waiter: 'the student politely orders food or a drink with a full sentence (I would like..., Can I have...)',
       }[now.kind];
       const ai = await askAi(
         `You role-play ${def.name}, ${def.persona}, visiting a student's farm in a language-learning game. The student is Vietnamese, level ${cefrFor(levelOf(farm))}. Stay in character, be warm and child-safe, never ask for personal information, and keep replies to 1-2 short sentences using simple words.${wantsLine} Reply with JSON only: {"reply": string, "correction": string, "tip": string, "goalDone": boolean}. "correction" = corrected version of the student's LAST message if it had mistakes, otherwise "". "tip" = ONE short friendly sentence in Vietnamese (max 25 words) about the main mistake or a compliment. "goalDone" = true if ${goalEn} (the goal may be completed by the last message or earlier messages).`,
@@ -262,7 +287,8 @@ module.exports = function mountSocial(router, h) {
       });
       if (!lock.count) return res.status(409).json({ error: 'Thử lại nhé' });
       await Promise.all([bumpStats(userId, { npcChats: 1 }), reward ? prisma.user.update({ where: { id: userId }, data: { totalXP: { increment: reward.xp } }, select: { id: true } }) : null]);
-      res.json(await buildState(userId, { npcReply: { ...reply, goalDone: goalNow, reward: reward ? { coins: reward.coins + levelOf(farm) * 2, gems: reward.gems, xp: reward.xp } : null } }));
+      const nextDaily = { ...daily, npc: { ...store, [now.key]: next }, npcTurns: (daily.npcTurns || 0) + 1 };
+      res.json(await buildState(userId, { npcReply: { ...reply, goalDone: goalNow, reward: reward ? { coins: reward.coins + levelOf(farm) * 2, gems: reward.gems, xp: reward.xp } : null }, ...(venue ? { venueNpc: viewOf(now, nextDaily) } : {}) }));
     } catch (e) { console.error('[farm] npc talk', e); res.status(500).json({ error: 'Khách chưa nghe rõ, thử lại nhé' }); }
   });
 
@@ -274,19 +300,79 @@ module.exports = function mountSocial(router, h) {
       if (!farm) return res.status(404).json({ error: 'Chưa có nông trại' });
       const { farm: farm2, daily } = await ensureDaily(farm);
       const now = npcNow(userId);
-      if (!now || now.kind !== 'merchant' || !now.wants) return res.status(400).json({ error: 'Hiện không có thương nhân' });
+      if (!now || !['merchant', 'trucker'].includes(now.kind) || !now.wants) return res.status(400).json({ error: 'Hiện không có người thu mua' });
       const store = jsonObj(daily.npc); const st = jsonObj(store[now.key]);
       if (!st.goal) return res.status(400).json({ error: 'Hãy đề nghị bán cho ông ấy bằng tiếng Anh trước nhé' });
       if (st.traded) return res.status(400).json({ error: 'Ông ấy đã mua rồi' });
       const inv = parseJSON(farm2.inventory, {}); const { crop, n } = now.wants;
       if ((inv[crop] || 0) < n) return res.status(400).json({ error: `Kho chưa đủ ${n} ${C.CROPS[crop].name.toLowerCase()} (đang có ${inv[crop] || 0})` });
       inv[crop] -= n; if (inv[crop] <= 0) delete inv[crop];
-      const coins = Math.round(C.PRODUCE_PRICE[crop] * n * C.NPC_TRADE_BONUS);
+      const coins = Math.round(C.PRODUCE_PRICE[crop] * n * wantsBonus(now.kind));
       const lock = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm2.updatedAt }, data: { inventory: JSON.stringify(inv), coins: { increment: coins }, daily: { ...daily, npc: { ...store, [now.key]: { ...st, traded: true } } } } });
       if (!lock.count) return res.status(409).json({ error: 'Thử lại nhé' });
       await prisma.user.update({ where: { id: userId }, data: { totalXP: { increment: 6 } }, select: { id: true } });
       res.json(await buildState(userId, { npcTrade: { crop, n, coins, xp: 6 } }));
     } catch (e) { console.error('[farm] npc trade', e); res.status(500).json({ error: 'Không bán được' }); }
+  });
+
+  // Xe bán rong: mua nông sản sau khi đã hỏi giá bằng tiếng Anh
+  router.post('/npc/buy', async (req, res) => {
+    try {
+      const { userId } = req.body;
+      const farm = await prisma.farmState.findUnique({ where: { userId } });
+      if (!farm) return res.status(404).json({ error: 'Chưa có nông trại' });
+      const { farm: farm2, daily } = await ensureDaily(farm);
+      const now = npcNow(userId);
+      if (!now || now.kind !== 'peddler' || !now.offer) return res.status(400).json({ error: 'Hiện không có xe bán hàng' });
+      const store = jsonObj(daily.npc); const st = jsonObj(store[now.key]);
+      if (!st.goal) return res.status(400).json({ error: 'Hãy hỏi giá bằng tiếng Anh trước nhé' });
+      if (st.traded) return res.status(400).json({ error: 'Bạn đã mua hàng của xe này rồi' });
+      const { crop, n } = now.offer; const price = Math.round(C.PRODUCE_PRICE[crop] * n * C.NPC_PEDDLER_MARKUP);
+      if (farm2.coins < price) return res.status(400).json({ error: `Chưa đủ xu (cần ${price})` });
+      const inv = parseJSON(farm2.inventory, {}); const used = Object.values(inv).reduce((a, b) => a + b, 0);
+      if (used + n > farm2.barnCapacity) return res.status(400).json({ error: 'Kho đầy, hãy bán bớt hoặc nâng cấp kho' });
+      inv[crop] = (inv[crop] || 0) + n;
+      const lock = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm2.updatedAt, coins: { gte: price } }, data: { inventory: JSON.stringify(inv), coins: { decrement: price }, daily: { ...daily, npc: { ...store, [now.key]: { ...st, traded: true } } } } });
+      if (!lock.count) return res.status(409).json({ error: 'Thử lại nhé' });
+      res.json(await buildState(userId, { npcBuy: { crop, n, price } }));
+    } catch (e) { console.error('[farm] npc buy', e); res.status(500).json({ error: 'Không mua được' }); }
+  });
+
+  // Nhân vật ở trường làng / quán ăn (xem phiên hôm nay)
+  router.get('/npc/venue/:userId/:venue', async (req, res) => {
+    try {
+      const farm = await prisma.farmState.findUnique({ where: { userId: req.params.userId } });
+      if (!farm) return res.status(404).json({ error: 'Chưa có nông trại' });
+      const now = venueNow(req.params.venue); if (!now) return res.status(404).json({ error: 'Không có nơi này' });
+      const { daily } = await ensureDaily(farm);
+      res.json({ npc: viewOf(now, daily) });
+    } catch (e) { console.error('[farm] venue', e); res.status(500).json({ error: 'Không mở được' }); }
+  });
+
+  // Chợ làng: giá nông sản theo ngày (hệ số 0,8–1,4 × giá kho), bán nhiều thì nhận theo giá hôm nay
+  const marketKeys = () => Object.keys(C.PRODUCE_PRICE);
+  router.get('/market/:userId', async (req, res) => {
+    try {
+      const farm = await prisma.farmState.findUnique({ where: { userId: req.params.userId } });
+      if (!farm) return res.status(404).json({ error: 'Chưa có nông trại' });
+      const day = C.vnDay(); const mults = {}; for (const k of marketKeys()) mults[k] = C.marketMult(day, k);
+      res.json({ day, mults });
+    } catch (e) { console.error('[farm] market', e); res.status(500).json({ error: 'Không mở được chợ' }); }
+  });
+  router.post('/market/sell', async (req, res) => {
+    try {
+      const { userId, key } = req.body; const qty = Math.max(1, Math.min(999, parseInt(req.body.qty, 10) || 1));
+      const farm = await prisma.farmState.findUnique({ where: { userId } });
+      if (!farm || !C.PRODUCE_PRICE[key]) return res.status(400).json({ error: 'Hàng không hợp lệ' });
+      const inv = parseJSON(farm.inventory, {});
+      if ((inv[key] || 0) < qty) return res.status(400).json({ error: 'Kho không đủ số lượng' });
+      inv[key] -= qty; if (inv[key] <= 0) delete inv[key];
+      const mult = C.marketMult(C.vnDay(), key); const coins = Math.round(C.PRODUCE_PRICE[key] * mult * qty);
+      const lock = await prisma.farmState.updateMany({ where: { userId, updatedAt: farm.updatedAt }, data: { inventory: JSON.stringify(inv), coins: { increment: coins } } });
+      if (!lock.count) return res.status(409).json({ error: 'Thử lại nhé' });
+      await bumpStats(userId, { sold: qty });
+      res.json(await buildState(userId, { sold: { key, qty, refund: coins, currency: 'coins', mult } }));
+    } catch (e) { console.error('[farm] market sell', e); res.status(500).json({ error: 'Không bán được' }); }
   });
 
   return { npcView };

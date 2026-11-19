@@ -46,7 +46,7 @@ export type MailContact = { id: string; name: string; level: number; petName: st
 export type MailBox = { mail: MailMsg[]; unread: number; contacts: MailContact[]; aiOn: boolean; limits: { sent: number; maxSend: number; asks: number; maxAsks: number; maxLen: number } };
 export type MailCheck = { ok: boolean; safe: boolean; corrected: string; tip: string; ai?: boolean };
 export type NpcState = {
-  key: string; kind: "merchant" | "grandma" | "traveler" | "kid"; name: string; role: string; greeting: string; goalVi: string; endsAt: string;
+  key: string; kind: "merchant" | "grandma" | "traveler" | "kid" | "trucker" | "peddler" | "teacher" | "waiter"; vehicle?: boolean; venue?: boolean; offer?: { crop: string; n: number } | null; name: string; role: string; greeting: string; goalVi: string; endsAt: string;
   wants: { crop: string; n: number } | null; price: number | null; turns: number; turnsMax: number; goalDone: boolean; rewarded: boolean; traded: boolean;
   turnsToday: number; turnsTodayMax: number; reward: { coins: number; xp: number; gems: number };
 };
@@ -92,10 +92,10 @@ export type FarmState = {
   spin?: { segmentId: number; label: string; kind: string; value: number; decorKey: string | null };
   delivered?: { ok: boolean; title: string; customer: string; coins: number; gems: number; xp: number; feedback?: string; corrected?: string; ai?: boolean };
   bought?: { itemKey: string; price?: number; currency?: string; build?: boolean };
-  sold?: { key: string; refund: number; currency: string; qty?: number };
+  sold?: { key: string; refund: number; currency: string; qty?: number; mult?: number };
   tripResult?: TripResult;
   penResult?: { product: string; qty: number; price: number };
-  npc?: NpcState | null; npcReply?: NpcReply; npcTrade?: { crop: string; n: number; coins: number; xp: number };
+  npc?: NpcState | null; npcReply?: NpcReply; venueNpc?: NpcState; npcBuy?: { crop: string; n: number; price: number }; npcTrade?: { crop: string; n: number; coins: number; xp: number };
   mailSent?: { to: string; type: string; coins: number; xp: number }; helped?: { to: string; crop: string; n: number; coins: number; xp: number };
   watered?: { ok: boolean; word: string; cutMs: number; left: number; coins: number; xp: number };
   crafted?: { started?: string; product?: string; collected?: string; qty?: number; price?: number };
@@ -150,7 +150,11 @@ export const farmApi = {
   mailSend: (userId: string, toId: string, text: string, type: "MSG" | "ASK", ask?: { crop: string; n: number }) => post<FarmState>("/mail/send", { userId, toId, text, type, ask }),
   mailRead: (userId: string) => post<{ ok: boolean }>("/mail/read", { userId }),
   mailHelp: (userId: string, mailId: string) => post<FarmState>("/mail/help", { userId, mailId }),
-  npcTalk: (userId: string, message: string, history: { who: "me" | "npc"; text: string }[]) => post<FarmState>("/npc/talk", { userId, message, history }),
+  npcTalk: (userId: string, message: string, history: { who: "me" | "npc"; text: string }[], venue?: string) => post<FarmState>("/npc/talk", { userId, message, history, venue }),
+  npcBuy: (userId: string) => post<FarmState>("/npc/buy", { userId }),
+  venueNpc: (userId: string, venue: string) => get<{ npc: NpcState }>(`/npc/venue/${userId}/${venue}`),
+  market: (userId: string) => get<{ day: string; mults: Record<string, number> }>(`/market/${userId}`),
+  marketSell: (userId: string, key: string, qty: number) => post<FarmState>("/market/sell", { userId, key, qty }),
   npcTrade: (userId: string) => post<FarmState>("/npc/trade", { userId }),
   waterQuiz: (userId: string, plotId: string) => get<WaterQuiz>(`/plots/${plotId}/water?userId=${userId}`),
   water: (userId: string, plotId: string, progressId: string, answer: string) => post<FarmState & { ok?: boolean }>(`/plots/${plotId}/water`, { userId, progressId, answer }),

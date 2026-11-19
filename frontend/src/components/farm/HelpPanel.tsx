@@ -59,6 +59,18 @@ const TABS: Tab[] = [
     ],
   },
   {
+    id: "village", label: "Làng quê",
+    intro: <>Nông trại của bạn nằm giữa một <B>ngôi làng quê</B>: đường làng, ruộng, ao, xe cộ và dân làng đi lại. <B>Thu nhỏ</B> (nút kính lúp −) để thấy cả làng, bấm vào các toà nhà để dùng chức năng của chúng.</>,
+    items: [
+      { icon: IconShop, title: "Chợ làng, Tạp hóa, Kho vận", body: <><B>Chợ làng</B> mua nông sản theo <B>giá chợ đổi mỗi ngày</B> (0,8–1,4× giá kho) — hôm nào giá cao thì bán. <B>Tạp hóa</B> là Cửa hàng. <B>Kho vận</B> là Kho nông sản.</>, tip: <>Hàng giá thấp hôm nay thì để dành giao đơn hoặc chờ ngày mai.</> },
+      { icon: IconChat, title: "Trường làng và Quán ăn", body: <>Nói chuyện tiếng Anh với <B>cô Mai</B> (giới thiệu bản thân) và phục vụ <B>Ben</B> (gọi món). Mỗi nơi có <B>1 nhiệm vụ nói mỗi ngày</B>, AI sửa câu cho bạn và có thưởng khi làm xong.</> },
+      { icon: IconMail, title: "Bưu điện, Thư viện, Đình làng", body: <><B>Bưu điện</B> viết thư tiếng Anh cho bạn cùng lớp. <B>Thư viện</B> mở thẳng mục <B>Ôn kho từ</B>. <B>Đình làng</B> là Nhiệm vụ, thành tựu và bảng vàng.</> },
+      { icon: IconPaw, title: "Thú y, Hội chợ, Cổng làng, Bảng tin", body: <><B>Trạm thú y</B> chăm Qilin · <B>Lều hội chợ</B> là vòng quay may mắn · <B>Cổng làng</B> để thăm bạn bè · <B>Bảng tin</B> là đơn hàng của dân làng.</> },
+      { icon: IconTruck, title: "Xe tới trại", body: <>Thỉnh thoảng có <B>xe tải thu mua</B> (mua số lượng lớn, giá cao) hoặc <B>xe bán rong</B> (bán nông sản cho bạn) đỗ ở lối vào phía đông. Bấm vào xe, nói tiếng Anh để hoàn thành nhiệm vụ rồi mới giao dịch được.</> },
+      { icon: IconUsers, title: "Dân làng", body: <>Bấm vào người đi bộ trên đường để nghe một <B>câu chào tiếng Anh</B> kèm nghĩa tiếng Việt — cách học câu giao tiếp thông dụng.</> },
+    ],
+  },
+  {
     id: "ctrl", label: "Điều khiển",
     items: [
       { icon: IconZoomIn, title: "Phóng to, thu nhỏ, kéo cảnh", body: <>Dùng 2 nút <B>kính lúp</B> bên phải cảnh, hoặc 2 ngón chụm trên điện thoại, hoặc <B>Ctrl + lăn chuột</B>. Khi đã phóng to hoặc đất rộng, <B>kéo</B> để xem phần còn lại.</> },

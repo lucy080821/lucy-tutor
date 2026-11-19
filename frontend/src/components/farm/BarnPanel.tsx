@@ -8,10 +8,10 @@ import { farmApi, produceInfo, speak, type BarnItem, type BarnQuizItem, type Cat
 //  - Nông sản: chứa nông sản thu hoạch được (bán lấy xu, hoặc để giao đơn nông sản lời gấp đôi), nâng cấp sức chứa.
 //  - Ôn kho từ: trả lời nhanh các từ đã thuộc lòng, mỗi câu đúng +xu (giới hạn mỗi ngày) — không đổi lịch SRS.
 //  - Từ đã thuộc: danh sách từ MASTERED, nghe lại.
-export default function BarnPanel({ userId, farm, catalog, onClose, onState, onToast }: {
-  userId: string; farm: FarmView; catalog: Catalog; onClose: () => void; onState: (s: FarmState) => void; onToast: (m: string) => void;
+export default function BarnPanel({ userId, farm, catalog, onClose, onState, onToast, initialTab }: {
+  initialTab?: "STOCK" | "QUIZ" | "WORDS"; userId: string; farm: FarmView; catalog: Catalog; onClose: () => void; onState: (s: FarmState) => void; onToast: (m: string) => void;
 }) {
-  const [tab, setTab] = useState<"STOCK" | "QUIZ" | "WORDS">("STOCK");
+  const [tab, setTab] = useState<"STOCK" | "QUIZ" | "WORDS">(initialTab ?? "STOCK");
   const [busy, setBusy] = useState<string | null>(null);
 
   // Tab từ đã thuộc

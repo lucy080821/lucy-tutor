@@ -374,7 +374,27 @@ const NPCS = {
   kid: { name: 'Mina', role: 'Bé Mina tò mò', greeting: 'Hi! Is that your pet dragon? It is so cute! What is its name?',
     goalVi: 'Giới thiệu Qilin với bé: tên, màu sắc hoặc nó làm gì (≥ 5 từ)', persona: 'a curious 8-year-old girl who loves animals', reward: { coins: 30, xp: 8, gems: 1 } },
 };
-const NPC_KEYS = Object.keys(NPCS);
+// Khách đi xe (đỗ ở lối vào nông trại) + 2 NPC cố định ở trường làng / quán ăn (không ngẫu nhiên, 1 nhiệm vụ nói mỗi ngày)
+Object.assign(NPCS, {
+  trucker: { name: 'Mr. Hung', role: 'Chủ xe tải thu mua số lượng lớn', vehicle: true, greeting: 'Hello! My truck is here. I am buying a lot of vegetables today. What can you sell me?',
+    goalVi: 'Chào bán số lượng lớn bằng tiếng Anh (vd: "I can sell you six tomatoes for a good price.")', persona: 'a cheerful truck driver who buys large amounts of produce for the city market', reward: { coins: 50, xp: 10, gems: 0 } },
+  peddler: { name: 'Ms. Hoa', role: 'Xe bán rong nông sản', vehicle: true, greeting: 'Fresh vegetables! I have good prices today. Would you like to buy some?',
+    goalVi: 'Hỏi giá món xe đang bán và nói bạn muốn mua (vd: "How much is it? I would like to buy some.")', persona: 'a friendly street vendor who sells fresh produce from her van', reward: { coins: 30, xp: 8, gems: 0 } },
+  teacher: { name: 'Teacher Mai', role: 'Cô giáo Mai ở trường làng', venue: true, greeting: 'Good morning, class! Today we practise introducing ourselves. Can you tell me about yourself?',
+    goalVi: 'Giới thiệu bản thân bằng 1 câu đầy đủ (tên, tuổi hoặc nơi ở), vd: "My name is Nam and I live in Hanoi."', persona: 'a patient village school teacher who helps students practise simple English', reward: { coins: 40, xp: 10, gems: 0 } },
+  waiter: { name: 'Ben', role: 'Phục vụ quán ăn', venue: true, greeting: 'Welcome to the Country Diner! What would you like to eat or drink today?',
+    goalVi: 'Gọi 1 món lịch sự bằng câu đầy đủ, vd: "I would like a bowl of soup, please."', persona: 'a friendly waiter at a small countryside diner', reward: { coins: 40, xp: 10, gems: 0 } },
+});
+const NPC_KEYS = Object.keys(NPCS).filter((k) => !NPCS[k].venue);
+const NPC_TRUCK_BONUS = 1.6;      // xe tải thu mua: số lượng lớn, giá cao hơn thương nhân
+const NPC_PEDDLER_MARKUP = 1.15;  // xe bán rong: bán nông sản cao hơn giá bán kho (tiện nhưng không có lợi nhuận chênh lệch)
+// Chợ làng: giá nông sản đổi theo NGÀY (xác định theo ngày VN + loại hàng, không lưu/cron)
+const MARKET = { min: 0.8, max: 1.4 };
+function marketMult(day, key) {
+  let h = 2166136261; const str = `${day}|${key}`;
+  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return Math.round((MARKET.min + ((h % 1000) / 1000) * (MARKET.max - MARKET.min)) * 100) / 100;
+}
 
 // ── Vòng quay may mắn (1 lần/ngày) ────────────────────────────────────────────
 // weight = tỉ lệ; kind: coins | gems | boost | decor | nothing
@@ -523,7 +543,7 @@ function vnDay(d = new Date()) {
 // Gói gửi về frontend (chỉ phần cần hiển thị giá/tên)
 function publicCatalog() {
   return {
-    crops: CROPS, products: PRODUCTS, factories: FACTORIES, pens: PENS, decor: DECOR, decorCats: DECOR_CATS, outfits: OUTFITS, outfitSlots: OUTFIT_SLOTS, producePrice: PRODUCE_PRICE, barnTiers: BARN_TIERS, barnQuiz: BARN_QUIZ, expand: EXPAND, mail: MAIL, npcs: Object.fromEntries(Object.entries(NPCS).map(([k, v]) => [k, { name: v.name, role: v.role }])), npcTurns: { perVisit: NPC_TURNS_PER_VISIT, perDay: NPC_TURNS_PER_DAY }, wheel: WHEEL.map(({ id, label, kind }) => ({ id, label, kind })),
+    crops: CROPS, products: PRODUCTS, factories: FACTORIES, pens: PENS, decor: DECOR, decorCats: DECOR_CATS, outfits: OUTFITS, outfitSlots: OUTFIT_SLOTS, producePrice: PRODUCE_PRICE, barnTiers: BARN_TIERS, barnQuiz: BARN_QUIZ, expand: EXPAND, mail: MAIL, market: MARKET, npcs: Object.fromEntries(Object.entries(NPCS).map(([k, v]) => [k, { name: v.name, role: v.role, vehicle: !!v.vehicle, venue: !!v.venue }])), npcTurns: { perVisit: NPC_TURNS_PER_VISIT, perDay: NPC_TURNS_PER_DAY }, wheel: WHEEL.map(({ id, label, kind }) => ({ id, label, kind })),
     startPlots: START_PLOTS, maxPlots: MAX_PLOTS, firstGrowMinutes: FIRST_GROW_MINUTES,
     harvestCoins: HARVEST_COINS, harvestXp: HARVEST_XP, masteredBonus: MASTERED_BONUS, barnBonus: BARN_BONUS,
     orderTrashCost: ORDER_TRASH_COST, decorSellRate: DECOR_SELL_RATE, gemSellCoins: GEM_SELL_COINS,
@@ -540,6 +560,6 @@ module.exports = {
   PRODUCE_PRICE, PRODUCE_PER_HARVEST, BARN_TIERS, BARN_FULL_SELL_RATE, BARN_QUIZ, OUTFITS, OUTFIT_SLOTS, DECOR_CATS,
   WHEEL, WHEEL_DECOR_POOL, EARLY_REWARD_RATE, EARLY_NEXT_FACTOR, WATER_CUT, WATER_MAX_PER_DAY, waterMaxFor, WATER_QUIZ_SIZE, WATER_REWARD, PET_TRIPS, PET_TRIP_WORDS_PER_DAY, PET_TRIP_LEVEL_BONUS, PET_PERKS, petBuffs, PET_FEED_REWARD, PET_PAT_XP, PET_LEVELS, petLevelFor,
   VISIT_LIKE_REWARD, VISIT_GIFT_REWARD, VISIT_GIFT_COST, VISIT_GIFTS_PER_DAY, vnDay, publicCatalog,
-  MAIL, NPC_SLOT_HOURS, NPC_PRESENT_PCT, NPC_TURNS_PER_VISIT, NPC_TURNS_PER_DAY, NPC_TRADE_BONUS, NPCS, NPC_KEYS,
+  MAIL, NPC_SLOT_HOURS, NPC_PRESENT_PCT, NPC_TURNS_PER_VISIT, NPC_TURNS_PER_DAY, NPC_TRADE_BONUS, NPC_TRUCK_BONUS, NPC_PEDDLER_MARKUP, MARKET, marketMult, NPCS, NPC_KEYS,
   dailyQuestDefs, questChest, QUEST_STAT_KEYS, TRACKED_STATS, ACHIEVEMENTS, statValue,
 };

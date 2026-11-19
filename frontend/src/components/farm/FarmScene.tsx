@@ -58,7 +58,11 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const village = useMemo(() => buildVillage(W, H), [W, H]);
   const proj = useMemo<Proj>(() => ({ ox: originX, top: TOP_PAD, M }), [originX, M]);
   const interact = !readOnly && mode.type === "normal";
-  const venueCb = interact ? onVenueClick : undefined, personCb = interact ? onVillagerClick : undefined;
+  // hàm bấm phải ỔN ĐỊNH (qua ref): nếu đổi mỗi giây thì các lớp làng đã memo sẽ bị vẽ lại liên tục
+  const venueRef = useRef(onVenueClick); venueRef.current = onVenueClick;
+  const personRef = useRef(onVillagerClick); personRef.current = onVillagerClick;
+  const venueCb = useMemo(() => (interact ? (v: VenueId) => venueRef.current?.(v) : undefined), [interact]);
+  const personCb = useMemo(() => (interact ? (p: VPerson) => personRef.current?.(p) : undefined), [interact]);
 
   // Giờ + thời tiết THẬT tại vị trí người chơi: bình minh / sáng / trưa / chiều / hoàng hôn / đêm
   const sky = skyProp ?? skyNow(now);
