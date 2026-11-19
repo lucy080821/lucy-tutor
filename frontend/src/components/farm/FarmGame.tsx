@@ -4,7 +4,7 @@ import { fire, alert as swalAlert } from "./farmSwal";
 import "./farm.css";
 import { farmApi, formatCountdown, sellValue, speak, type DecorPlaced, type FarmState, type PlotView } from "@/lib/farm/api";
 import { loadSfxPref, setSfxEnabled, sfx } from "@/lib/farm/sfx";
-import FarmScene, { liveStatus, type FloatText, type SceneMode } from "./FarmScene";
+import FarmScene, { focusZoom, liveStatus, type FloatText, type SceneMode } from "./FarmScene";
 import { TILE_W, type Outfit } from "./Sprites";
 import { PHASE_LABEL, skyNow } from "./Ambient";
 import { useFarmWeather } from "@/lib/farm/useWeather";
@@ -56,8 +56,8 @@ export default function FarmGame({ userId }: { userId: string }) {
   useEffect(() => { try { if (localStorage.getItem("lucy_farm_dock") === "hidden") setDockOpen(false); } catch { /* bỏ qua */ } }, []);
   const toggleDock = () => { sfx.click(); setDockOpen((v) => { try { localStorage.setItem("lucy_farm_dock", v ? "hidden" : "open"); } catch { /* bỏ qua */ } return !v; }); };
   // Đất rộng (sau khi mở rộng) thì mặc định chỉ hiện ~9 ô bề ngang cho rõ, phần còn lại kéo để xem; nút kính lúp thu nhỏ để xem toàn bộ
-  const zoomBase = Math.max(1, (((state?.farm.gridW ?? 8) + (state?.farm.gridH ?? 6)) * TILE_W) / 2 / 900);
-  const zoomMin = 1 / zoomBase, zoomMax = 4 / zoomBase;
+  const zoomBase = focusZoom(state?.farm.gridW ?? 8, state?.farm.gridH ?? 6); // 1 = vừa khít đất nông trại; thu nhỏ tới 1/zoomBase là thấy cả làng
+  const zoomMin = 1 / zoomBase, zoomMax = 2.4;
   const clampZoom = (z: number) => Math.max(zoomMin, Math.min(zoomMax, z));
   const effZoom = clampZoom(zoom) * zoomBase; // 1 = vừa khít toàn bộ đất
   const stepZoom = (dir: 1 | -1) => { sfx.click(); setZoom((z) => clampZoom(z * (dir > 0 ? 1.35 : 1 / 1.35))); };

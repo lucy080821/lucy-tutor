@@ -257,3 +257,16 @@
 .farm-pet-act-label { font-size: 15px; font-weight: 800; white-space: nowrap; }
 .farm-pet-act-sub { font-size: 11px; font-weight: 600; opacity: .8; white-space: nowrap; }
 @media (max-width: 380px) { .farm-pet-act-label { font-size: 13.5px; } .farm-pet-act-sub { font-size: 10px; } .farm-pet-act-ico { font-size: 20px; } }
+
+/* ── Làng quê quanh nông trại (Village.tsx) ── */
+@keyframes vg-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.6px); } }
+@keyframes vg-leg { 0%, 100% { transform: rotate(14deg); } 50% { transform: rotate(-14deg); } }
+@keyframes vg-leg2 { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(14deg); } }
+@keyframes vg-smoke { 0% { transform: translateY(0) scale(.6); opacity: .85; } 100% { transform: translateY(-30px) translateX(10px) scale(1.8); opacity: 0; } }
+@keyframes vg-jet { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.vg-bob { animation: vg-bob .5s ease-in-out infinite; }
+.vg-leg, .vg-leg2 { animation: vg-leg .5s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 0; }
+.vg-leg2 { animation-name: vg-leg2; }
+.vg-smoke { animation: vg-smoke 2.8s ease-out infinite; }
+.vg-jet { animation: vg-jet 1.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .vg-bob, .vg-leg, .vg-leg2, .vg-smoke, .vg-jet { animation: none; } }

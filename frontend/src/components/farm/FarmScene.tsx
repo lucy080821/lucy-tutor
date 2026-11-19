@@ -6,6 +6,8 @@ import { Cloud, CropSprite, DecorSprite, NpcSprite, SoilTile, TILE_H, TILE_W, di
 import Roamers, { type PenBird } from "./Roamers";
 import { AmbientLife, SkyBackdrop, cloudsFor, skyBackground, skyNow, type SkyInfo } from "./Ambient";
 import { isWetWeather, type WeatherKind } from "@/lib/farm/weather";
+import { buildVillage, WORLD_M, type VPerson, type VenueId } from "@/lib/farm/village";
+import { Label, TrafficLayer, VehicleSprite, VillageLayer, WorldGround, scr, type Proj } from "./Village";
 
 export type SceneMode =
   | { type: "normal" }
@@ -23,10 +25,13 @@ type Props = {
   onTileClick?: (x: number, y: number) => void; onPlotClick?: (plot: PlotView) => void;
   zoom?: number; onZoomChange?: (z: number) => void; fit?: boolean; petAway?: boolean; // petAway: Qilin đang đi thám hiểm → không hiện trong vườn
   // fit: vừa khít khung (toàn màn hình), không cuộn ngang
-  onDecorClick?: (d: DecorPlaced) => void; onFactoryClick?: (d: DecorPlaced) => void; onPenClick?: (d: DecorPlaced) => void; onWellClick?: (d: DecorPlaced) => void; onPetClick?: () => void; npc?: { kind: string; name: string } | null; onNpcClick?: () => void;
+  onDecorClick?: (d: DecorPlaced) => void; onVenueClick?: (v: VenueId) => void; onVillagerClick?: (p: VPerson) => void; onFactoryClick?: (d: DecorPlaced) => void; onPenClick?: (d: DecorPlaced) => void; onWellClick?: (d: DecorPlaced) => void; onPetClick?: () => void; npc?: { kind: string; name: string } | null; onNpcClick?: () => void;
 };
 
-const TOP_PAD = 90;
+const TOP_PAD = 150;
+const VEHICLE_NPC: Record<string, { kind: "pickup" | "truck" | "van"; color: string }> = { trucker: { kind: "truck", color: "#2563eb" }, peddler: { kind: "van", color: "#f8fafc" } };
+/** Mức phóng để cảnh vừa khít đất nông trại (1 = nhìn thấy cả làng). FarmGame dùng làm mốc 100%. */
+export function focusZoom(W: number, H: number, cap = 900) { const M = WORLD_M; return (((W + H + 4 * M) * TILE_W) / 2) / Math.min(((W + H) * TILE_W) / 2, cap); }
 const LAMP_KEYS = new Set(["lamp", "xmas", "lantern"]);
 
 // Băm vị trí ô → số cố định (cụm cỏ/hoa mọc cùng chỗ mỗi lần vẽ lại)
@@ -43,12 +48,17 @@ export function liveStatus(plot: PlotView, now: number) {
   return { status: now >= ready ? ("READY" as const) : ("GROWING" as const), growth, msLeft: ready - now };
 }
 
-export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", zoom = 1, onZoomChange, fit, petAway, onTileClick, onPlotClick, onDecorClick, onFactoryClick, onPenClick, onWellClick, onPetClick, npc, onNpcClick }: Props) {
+export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, pet, outfit, petJumping, hearts = [], floats = [], sky: skyProp, weather = "clear", zoom = 1, onZoomChange, fit, petAway, onTileClick, onPlotClick, onDecorClick, onFactoryClick, onPenClick, onWellClick, onPetClick, npc, onNpcClick, onVenueClick, onVillagerClick }: Props) {
   const W = farm.gridW, H = farm.gridH;
-  const originX = (H * TILE_W) / 2;
-  const vbW = ((W + H) * TILE_W) / 2;
-  const vbH = TOP_PAD + ((W + H) * TILE_H) / 2 + 48;
-  const toScreen = useCallback((gx: number, gy: number) => ({ cx: originX + ((gx - gy) * TILE_W) / 2, cy: TOP_PAD + ((gx + gy) * TILE_H) / 2 + TILE_H / 2 }), [originX]);
+  const M = WORLD_M; const Wt = W + 2 * M, Ht = H + 2 * M; // cả làng: đất của bạn nằm giữa, làng bao quanh M ô mỗi phía
+  const originX = (Ht * TILE_W) / 2;
+  const vbW = ((Wt + Ht) * TILE_W) / 2;
+  const vbH = TOP_PAD + ((Wt + Ht) * TILE_H) / 2 + 48;
+  const toScreen = useCallback((gx: number, gy: number) => ({ cx: originX + ((gx - gy) * TILE_W) / 2, cy: TOP_PAD + ((gx + gy + 2 * M) * TILE_H) / 2 + TILE_H / 2 }), [originX, M]);
+  const village = useMemo(() => buildVillage(W, H), [W, H]);
+  const proj = useMemo<Proj>(() => ({ ox: originX, top: TOP_PAD, M }), [originX, M]);
+  const interact = !readOnly && mode.type === "normal";
+  const venueCb = interact ? onVenueClick : undefined, personCb = interact ? onVillagerClick : undefined;
 
   // Giờ + thời tiết THẬT tại vị trí người chơi: bình minh / sáng / trưa / chiều / hoàng hôn / đêm
   const sky = skyProp ?? skyNow(now);
@@ -97,9 +107,9 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const homeTime = phase === "dusk" || phase === "night";
 
   // ── Phóng to / thu nhỏ: thu hẹp viewBox quanh 1 điểm giữa (nét vẫn sắc), kéo để dời, 2 ngón để chụm, Ctrl+lăn chuột ──
-  const gridCx = originX + ((W - H) * TILE_W) / 4, gridCy = TOP_PAD + ((W + H - 2) * TILE_H) / 4 + TILE_H / 2;
+  const gridCx = originX + ((W - H) * TILE_W) / 4, gridCy = TOP_PAD + ((W + H - 2 + 4 * M) * TILE_H) / 4 + TILE_H / 2;
   const [center, setCenter] = useState<{ x: number; y: number } | null>(null);
-  const z = Math.max(1, Math.min(4, zoom));
+  const z = Math.max(1, Math.min(12, readOnly ? zoom * focusZoom(W, H, 1e9) : zoom));
   const vw = vbW / z, vh = vbH / z;
   const clampN = (v: number, lo: number, hi: number) => (hi < lo ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v)));
   const ccx = clampN(center?.x ?? gridCx, vw / 2, vbW - vw / 2), ccy = clampN(center?.y ?? gridCy, vh / 2, vbH - vh / 2);
@@ -113,7 +123,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const [panned, setPanned] = useState(false);
   useEffect(() => {
     const el = svgRef.current; if (!el) return;
-    const wheel = (e: WheelEvent) => { if (!(e.ctrlKey || e.metaKey)) return; e.preventDefault(); zcb.current?.(Math.max(1, Math.min(4, zRef.current * (e.deltaY < 0 ? 1.15 : 1 / 1.15)))); };
+    const wheel = (e: WheelEvent) => { if (!(e.ctrlKey || e.metaKey)) return; e.preventDefault(); zcb.current?.(Math.max(1, Math.min(12, zRef.current * (e.deltaY < 0 ? 1.15 : 1 / 1.15)))); };
     el.addEventListener("wheel", wheel, { passive: false });
     return () => el.removeEventListener("wheel", wheel);
   }, []);
@@ -128,7 +138,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const onPM = (e: React.PointerEvent) => {
     const g = gest.current; if (!g.pts.has(e.pointerId)) return;
     g.pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (g.pts.size >= 2 && g.pinch) { const [a, b] = [...g.pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); zcb.current?.(Math.max(1, Math.min(4, g.pinch.z * (d / g.pinch.d)))); return; }
+    if (g.pts.size >= 2 && g.pinch) { const [a, b] = [...g.pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); zcb.current?.(Math.max(1, Math.min(12, g.pinch.z * (d / g.pinch.d)))); return; }
     if (g.pts.size === 1 && g.start && zRef.current > 1) {
       const dx = e.clientX - g.start.x, dy = e.clientY - g.start.y;
       if (!g.moved && Math.hypot(dx, dy) > 6) { g.moved = true; try { svgRef.current?.setPointerCapture(e.pointerId); } catch { /* bỏ qua */ } }
@@ -152,7 +162,7 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
     if (!o || !oi?.fam || oi.fam !== self.fam) return false;
     return !oi.gate || (o.r ? 1 : 0) === axisOf(k);
   };
-  const lamps = useMemo(() => farm.layout.filter((d) => LAMP_KEYS.has(d.key)).map((d) => ({ cx: originX + ((d.x - d.y) * TILE_W) / 2, cy: TOP_PAD + ((d.x + d.y) * TILE_H) / 2 + TILE_H / 2 })), [farm.layout, originX]);
+  const lamps = useMemo(() => [...farm.layout.filter((d) => LAMP_KEYS.has(d.key)).map((d) => scr(proj, d.x, d.y)), ...village.props.filter((p) => p.kind === "lamp").map((p) => { const q = scr(proj, p.x, p.y); return { cx: q.cx, cy: q.cy + 6 }; })], [farm.layout, village, proj]);
 
   const selectedId = mode.type === "edit" ? mode.selected?.id : null;
 
@@ -160,11 +170,6 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
   const cells: { x: number; y: number }[] = [];
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) cells.push({ x, y });
   cells.sort((a, b) => a.x + a.y - (b.x + b.y) || a.x - b.x);
-
-  // Bệ đất 3D
-  const corners = { top: toScreen(0, 0), right: toScreen(W - 1, 0), bottom: toScreen(W - 1, H - 1), left: toScreen(0, H - 1) };
-  const thick = 16;
-  const bx = corners.bottom.cx, by = corners.bottom.cy + TILE_H / 2 + thick;
 
   return (
     <div ref={scrollRef} onClickCapture={onClickCap} className="farm-scene relative rounded-2xl overflow-x-auto overflow-y-hidden border border-line" style={{ background: skyBackground(phase, weather), transition: "background 2s ease" }}>
@@ -176,14 +181,13 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
             <Cloud key={i} x={cx} y={cy} scale={sc} duration={du} delay={de} fill={clouds.fill} />
           ))}
         </g>
-        {/* bóng đổ + đá treo dưới hòn đảo */}
-        <ellipse cx={bx} cy={by + 26} rx={vbW * 0.3} ry={9} fill="rgba(15,23,42,.14)" />
-        <polygon points={`${bx - 34},${by - 2} ${bx - 6},${by - 2} ${bx - 20},${by + 20}`} fill="#7c4a22" />
-        <polygon points={`${bx + 8},${by - 3} ${bx + 36},${by - 3} ${bx + 24},${by + 14}`} fill="#6b3f1d" />
-        <polygon points={`${bx - 8},${by} ${bx + 4},${by} ${bx - 2},${by + 10}`} fill="#5a3418" />
-        {/* bệ đất */}
-        <polygon points={`${corners.left.cx - TILE_W / 2},${corners.left.cy} ${corners.bottom.cx},${corners.bottom.cy + TILE_H / 2} ${corners.bottom.cx},${corners.bottom.cy + TILE_H / 2 + thick} ${corners.left.cx - TILE_W / 2},${corners.left.cy + thick}`} fill="#8b5a2b" />
-        <polygon points={`${corners.bottom.cx},${corners.bottom.cy + TILE_H / 2} ${corners.right.cx + TILE_W / 2},${corners.right.cy} ${corners.right.cx + TILE_W / 2},${corners.right.cy + thick} ${corners.bottom.cx},${corners.bottom.cy + TILE_H / 2 + thick}`} fill="#6b4423" />
+        {/* làng quê: núi xa + nền đất + đường + ruộng/ao; nhà, cây, xe và dân làng theo vùng che (xem lib/farm/village.ts) */}
+        <WorldGround village={village} proj={proj} vbW={vbW} vbH={vbH} />
+        <VillageLayer village={village} proj={proj} zone="back" onVenue={venueCb} />
+        <TrafficLayer village={village} proj={proj} zone="back" what="people" onPerson={personCb} />
+        <TrafficLayer village={village} proj={proj} zone="back" what="vehicles" />
+        <VillageLayer village={village} proj={proj} zone="mid" onVenue={venueCb} />
+        <TrafficLayer village={village} proj={proj} zone="mid" what="people" onPerson={personCb} />
         {/* cỏ */}
         {cells.map(({ x, y }) => {
           const { cx, cy } = toScreen(x, y);
@@ -269,6 +273,10 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
           }
           return null;
         })}
+        <VillageLayer village={village} proj={proj} zone="near" onVenue={venueCb} />
+        <TrafficLayer village={village} proj={proj} zone="far" what="vehicles" />
+        <VillageLayer village={village} proj={proj} zone="far" onVenue={venueCb} />
+        <TrafficLayer village={village} proj={proj} zone="far" what="people" onPerson={personCb} />
         {/* lớp phủ: thanh lớn + đếm ngược — vẽ sau mọi vật thể để không bị ô đất hàng dưới che */}
         {plots.map((plot) => {
           if (plot.status === "EMPTY") return null;
@@ -321,7 +329,18 @@ export default function FarmScene({ farm, plots, catalog, now, mode, readOnly, p
         {/* thú cưng + vật nuôi đi dạo */}
         <Roamers W={W} H={H} toScreen={toScreen} blocked={blocked} animals={animals} sleeping={!!sky.sleeping} petAway={petAway} pet={pet} outfit={outfit} petJumping={petJumping} hearts={hearts} wet={wet} onPetClick={onPetClick} birds={birds} homeTime={homeTime} onInside={setInsideMap} />
         {/* chữ thưởng nổi lên (+xu, +XP...) */}
-        {npc && !readOnly && npcTile && (() => { const { cx, cy } = toScreen(npcTile[0], npcTile[1]); return <NpcSprite kind={npc.kind} name={npc.name} cx={cx} cy={cy + 4} onClick={onNpcClick} />; })()}
+        {npc && !readOnly && VEHICLE_NPC[npc.kind] && (() => {
+          const v = VEHICLE_NPC[npc.kind]; const q = scr(proj, village.W + 0.9, village.ymid);
+          return (
+            <g transform={`translate(${q.cx} ${q.cy})`} onClick={(e) => { e.stopPropagation(); onNpcClick?.(); }} style={{ cursor: "pointer" }} role="button" aria-label={npc.name} className="farm-tile">
+              <animateTransform attributeName="transform" type="translate" from={`${q.cx + 110} ${q.cy - 55}`} to={`${q.cx} ${q.cy}`} dur="3.2s" fill="freeze" />
+              <VehicleSprite kind={v.kind} color={v.color} axis="x" sign={-1} />
+              <g transform="translate(0 -62)"><g className="farm-ready-marker"><circle r={13} fill="#f9a95a" stroke="#fff" strokeWidth={2.4} /><text y={5} textAnchor="middle" fontSize={15} fontWeight={800} fill="#1f2d3d">!</text></g></g>
+              <Label x={0} y={-92} icon={npc.kind === "trucker" ? "🚚" : "🛒"} text={npc.name} />
+            </g>
+          );
+        })()}
+        {npc && !readOnly && npcTile && !VEHICLE_NPC[npc.kind] && (() => { const { cx, cy } = toScreen(npcTile[0], npcTile[1]); return <NpcSprite kind={npc.kind} name={npc.name} cx={cx} cy={cy + 4} onClick={onNpcClick} />; })()}
         {floats.map((f) => {
           const { cx, cy } = toScreen(f.x, f.y);
           return (
