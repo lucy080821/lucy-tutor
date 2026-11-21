@@ -1,0 +1,246 @@
+{
+  "note": "Bản chụp các bài ĐÃ CÓ trên blog thật (lấy từ API công khai 20/11/2026) — dùng để chống trùng chủ đề/từ khoá và để chèn link nội bộ. Bài mới do pipeline tạo nằm trong posts/ nên không cần thêm vào đây.",
+  "categories": [
+    {
+      "slug": "cong-cu-hoc-tieng-anh",
+      "name": "Công cụ học tiếng Anh"
+    },
+    {
+      "slug": "meo-thi-ielts",
+      "name": "Mẹo thi IELTS"
+    },
+    {
+      "slug": "nghe-noi-giao-tiep",
+      "name": "Nghe nói giao tiếp"
+    },
+    {
+      "slug": "ngu-phap-tieng-anh",
+      "name": "Ngữ pháp tiếng Anh"
+    },
+    {
+      "slug": "phat-am-ipa",
+      "name": "Phát âm & IPA"
+    },
+    {
+      "slug": "phuong-phap-hoc-tu-vung",
+      "name": "Phương pháp học từ vựng"
+    },
+    {
+      "slug": "phuong-phap-tu-hoc",
+      "name": "Phương pháp tự học"
+    },
+    {
+      "slug": "tu-duy-hoc-tieng-anh",
+      "name": "Tư duy học tiếng Anh"
+    }
+  ],
+  "posts": [
+    {
+      "slug": "so-noi-sai-tieng-anh",
+      "title": "Sợ Nói Sai Tiếng Anh? Đây Là Lý Do Bạn Nên \"Sai\" Nhiều Hơn",
+      "category": "tu-duy-hoc-tieng-anh",
+      "tags": [
+        "sợ nói sai tiếng Anh",
+        "ngại nói tiếng Anh",
+        "mistake và error",
+        "tư duy học tiếng Anh",
+        "luyện nói"
+      ],
+      "publishedAt": "2026-10-03"
+    },
+    {
+      "slug": "phuong-phap-lap-lai-ngat-quang",
+      "title": "Phương Pháp Lặp Lại Ngắt Quãng (Spaced Repetition): Bí Quyết Học Từ Vựng Tiếng Anh Nhớ Lâu",
+      "category": "phuong-phap-hoc-tu-vung",
+      "tags": [
+        "lặp lại ngắt quãng",
+        "spaced repetition",
+        "phương pháp lặp lại ngắt quãng",
+        "cách học từ vựng tiếng Anh nhớ lâu",
+        "đường cong quên lãng",
+        "học từ vựng hiệu quả"
+      ],
+      "publishedAt": "2026-10-04"
+    },
+    {
+      "slug": "hoc-phrasal-verb-theo-tieu-tu",
+      "title": "Học Phrasal Verb Theo Tiểu Từ: Hiểu Up, Out, Off, On, Down Để Đoán Nghĩa",
+      "category": "phuong-phap-hoc-tu-vung",
+      "tags": [
+        "cách học phrasal verb",
+        "học phrasal verb theo tiểu từ",
+        "phrasal verb là gì",
+        "phrasal verb thông dụng",
+        "cụm động từ tiếng Anh",
+        "phrasal verb up out off on down"
+      ],
+      "publishedAt": "2026-10-06"
+    },
+    {
+      "slug": "viet-nhat-ky-bang-tieng-anh",
+      "title": "Viết Nhật Ký Bằng Tiếng Anh: Công Thức 5 Câu Mỗi Ngày Cho Người Mới",
+      "category": "phuong-phap-tu-hoc",
+      "tags": [
+        "viết nhật ký bằng tiếng Anh",
+        "cách viết nhật ký bằng tiếng Anh",
+        "nhật ký tiếng Anh mẫu",
+        "viết nhật ký tiếng Anh hằng ngày",
+        "diary và journal",
+        "luyện viết tiếng Anh",
+        "tự học tiếng Anh tại nhà"
+      ],
+      "publishedAt": "2026-10-07"
+    },
+    {
+      "slug": "phuong-phap-shadowing-luyen-nghe-noi-tieng-anh",
+      "title": "Phương Pháp Shadowing: 5 Bước Luyện Nghe Nói Tiếng Anh Tự Nhiên",
+      "category": "nghe-noi-giao-tiep",
+      "tags": [
+        "phương pháp Shadowing",
+        "Shadowing là gì",
+        "luyện nghe nói tiếng Anh",
+        "cách luyện Shadowing",
+        "Shadowing cho người mới bắt đầu",
+        "ngữ điệu tiếng Anh",
+        "nối âm tiếng Anh"
+      ],
+      "publishedAt": "2026-10-08"
+    },
+    {
+      "slug": "am-cuoi-trong-tieng-anh-cach-sua-loi-nuot-am",
+      "title": "Âm Cuối Trong Tiếng Anh: Vì Sao Người Việt Hay Nuốt Và Cách Sửa",
+      "category": "phat-am-ipa",
+      "tags": [
+        "âm cuối trong tiếng Anh",
+        "ending sound",
+        "nuốt âm cuối",
+        "cách phát âm âm cuối",
+        "luyện âm cuối tiếng Anh",
+        "phát âm tiếng Anh cho người Việt",
+        "nối âm tiếng Anh"
+      ],
+      "publishedAt": "2026-10-09"
+    },
+    {
+      "slug": "cach-tra-tu-dien-tieng-anh-hieu-qua",
+      "title": "Cách Tra Từ Điển Tiếng Anh Hiệu Quả: 5 Thông Tin Bạn Đang Bỏ Qua",
+      "category": "cong-cu-hoc-tieng-anh",
+      "tags": [
+        "cách tra từ điển tiếng Anh",
+        "từ điển Anh Anh",
+        "Cambridge Dictionary",
+        "Oxford Learner's Dictionaries",
+        "phiên âm IPA",
+        "collocation",
+        "học từ vựng tiếng Anh"
+      ],
+      "publishedAt": "2026-10-10"
+    },
+    {
+      "slug": "cach-dat-muc-tieu-hoc-tieng-anh",
+      "title": "Mục Tiêu Học Tiếng Anh: Cách Đặt Mục Tiêu Rõ Ràng Để Không Bỏ Cuộc Giữa Chừng",
+      "category": "tu-duy-hoc-tieng-anh",
+      "tags": [
+        "mục tiêu học tiếng Anh",
+        "cách đặt mục tiêu học tiếng Anh",
+        "nguyên tắc SMART",
+        "goal và target",
+        "kế hoạch học tiếng Anh",
+        "tự học tiếng Anh",
+        "động lực học tiếng Anh"
+      ],
+      "publishedAt": "2026-10-13"
+    },
+    {
+      "slug": "am-schwa-la-gi-cach-phat-am",
+      "title": "Âm Schwa /ə/ Là Gì? Cách Nhận Biết Và Phát Âm Âm Schwa Chuẩn",
+      "category": "phat-am-ipa",
+      "tags": [
+        "âm schwa",
+        "âm schwa là gì",
+        "schwa sound",
+        "cách phát âm âm schwa",
+        "nguyên âm /ə/",
+        "weak form",
+        "trọng âm tiếng Anh",
+        "phát âm tiếng Anh"
+      ],
+      "publishedAt": "2026-10-14"
+    },
+    {
+      "slug": "cach-dung-a-an-the",
+      "title": "Cách Dùng A An The Dễ Hiểu Nhất: 3 Câu Hỏi Và Mẹo Phát Âm IPA",
+      "category": "ngu-phap-tieng-anh",
+      "tags": [
+        "cách dùng a an the",
+        "mạo từ a an the",
+        "mạo từ trong tiếng Anh",
+        "khi nào dùng a và an",
+        "zero article",
+        "cách phát âm the",
+        "ngữ pháp tiếng Anh"
+      ],
+      "publishedAt": "2026-10-16"
+    },
+    {
+      "slug": "cach-luyen-nghe-tieng-anh-cho-nguoi-moi-bat-dau",
+      "title": "Cách Luyện Nghe Tiếng Anh Cho Người Mới Bắt Đầu: 4 Bước Đi Từ Phát Âm Đúng",
+      "category": "nghe-noi-giao-tiep",
+      "tags": [
+        "cách luyện nghe tiếng Anh cho người mới bắt đầu",
+        "luyện nghe tiếng Anh",
+        "luyện nghe tiếng Anh cơ bản",
+        "nghe chép chính tả tiếng Anh",
+        "luyện nghe thụ động",
+        "luyện nghe cho người mất gốc",
+        "phiên âm IPA"
+      ],
+      "publishedAt": "2026-10-19"
+    },
+    {
+      "slug": "cach-phat-am-th-trong-tieng-anh",
+      "title": "Cách Phát Âm Th Trong Tiếng Anh: Đọc Đúng /θ/ Và /ð/ Trong 10 Phút Mỗi Ngày",
+      "category": "phat-am-ipa",
+      "tags": [
+        "cách phát âm th trong tiếng Anh",
+        "âm th trong tiếng Anh",
+        "phát âm /θ/ và /ð/",
+        "cách nhận biết âm th",
+        "minimal pairs",
+        "phát âm tiếng Anh cho người Việt",
+        "phiên âm IPA"
+      ],
+      "publishedAt": "2026-10-21"
+    },
+    {
+      "slug": "tu-hoc-tieng-anh-cho-nguoi-mat-goc",
+      "title": "Tự Học Tiếng Anh Cho Người Mất Gốc: Học Theo Thứ Tự Nào Và Lộ Trình 12 Tuần",
+      "category": "phuong-phap-tu-hoc",
+      "tags": [
+        "tự học tiếng Anh cho người mất gốc",
+        "lộ trình học tiếng Anh cho người mất gốc",
+        "học tiếng Anh cho người mất gốc",
+        "mất gốc tiếng Anh nên bắt đầu từ đâu",
+        "tự học tiếng Anh tại nhà",
+        "phiên âm IPA",
+        "lộ trình 12 tuần"
+      ],
+      "publishedAt": "2026-10-23"
+    },
+    {
+      "slug": "cach-tinh-diem-ielts-overall",
+      "title": "Cách Tính Điểm IELTS Overall: Công Thức, Quy Tắc Làm Tròn Và Ví Dụ Dễ Hiểu",
+      "category": "meo-thi-ielts",
+      "tags": [
+        "cách tính điểm IELTS Overall",
+        "cách làm tròn điểm IELTS",
+        "điểm IELTS Overall",
+        "cách tính điểm IELTS Reading Listening",
+        "cách tính điểm IELTS Writing",
+        "band điểm IELTS",
+        "IELTS band score"
+      ],
+      "publishedAt": "2026-10-27"
+    }
+  ]
+}

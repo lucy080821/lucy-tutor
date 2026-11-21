@@ -1,0 +1,73 @@
+{
+  "slug": "hoc-tieng-anh-qua-phim",
+  "title": "Học Tiếng Anh Qua Phim: Quy Trình 5 Bước Để Không Phụ Thuộc Phụ Đề",
+  "focusKeyword": "học tiếng Anh qua phim",
+  "secondaryKeywords": [
+    "cách học tiếng Anh qua phim",
+    "học tiếng Anh qua phim có phụ đề",
+    "phim học tiếng Anh cho người mới bắt đầu",
+    "xem phim học tiếng Anh"
+  ],
+  "category": {
+    "slug": "phuong-phap-tu-hoc",
+    "name": "Phương pháp tự học"
+  },
+  "author": "leo-harrison",
+  "publishAt": "2026-11-24T05:00:00+07:00",
+  "excerpt": "Xem phim mãi mà tiếng Anh không tiến bộ? Học tiếng Anh qua phim đúng cách là chọn phim hợp trình độ, xem mỗi cảnh 3 lần theo 5 bước và giảm dần phụ đề.",
+  "metaTitle": "Học Tiếng Anh Qua Phim: 5 Bước Không Phụ Thuộc Phụ Đề",
+  "metaDescription": "Học tiếng Anh qua phim hiệu quả với quy trình 5 bước: chọn phim đúng trình độ, xem 3 lần, ghi cụm hữu ích, shadowing và ôn lại để bỏ dần phụ đề.",
+  "tags": [
+    "học tiếng Anh qua phim",
+    "cách học tiếng Anh qua phim",
+    "học tiếng Anh qua phim có phụ đề",
+    "phim học tiếng Anh cho người mới bắt đầu",
+    "xem phim học tiếng Anh",
+    "luyện nghe tiếng Anh",
+    "tự học tiếng Anh tại nhà"
+  ],
+  "related": [
+    "phuong-phap-shadowing-luyen-nghe-noi-tieng-anh",
+    "phuong-phap-lap-lai-ngat-quang",
+    "cach-luyen-nghe-tieng-anh-cho-nguoi-moi-bat-dau"
+  ],
+  "images": {
+    "cover": {
+      "file": "hoc-tieng-anh-qua-phim-thumbnail.png",
+      "alt": "Học tiếng Anh qua phim: quy trình 5 bước không phụ thuộc phụ đề",
+      "pill": "Phương pháp tự học",
+      "title": "Học tiếng Anh qua phim: {5 bước} không lệ thuộc phụ đề",
+      "subtitle": "Cách chọn phim và xem mỗi cảnh 3 lần để nghe hiểu thật sự"
+    },
+    "infographic": {
+      "file": "hoc-tieng-anh-qua-phim-infographic.png",
+      "alt": "Infographic học tiếng Anh qua phim: quy trình 5 bước từ xem phim đến nhớ lâu",
+      "type": "steps",
+      "eyebrow": "Học tiếng Anh qua phim",
+      "title": "Quy trình {5 bước} từ xem phim đến nhớ lâu",
+      "items": [
+        {
+          "t": "Xem lần 1: hiểu cốt truyện",
+          "s": "Cảnh 3–5 phút, phụ đề tiếng Việt cũng được"
+        },
+        {
+          "t": "Xem lần 2: phụ đề tiếng Anh",
+          "s": "Ghi 5 cụm hữu ích, không ghi cả trang từ"
+        },
+        {
+          "t": "Xem lần 3: bỏ phụ đề",
+          "s": "Kiểm tra xem mình nghe được thêm bao nhiêu"
+        },
+        {
+          "t": "Shadowing 1 đoạn 30–60 giây",
+          "s": "Nói theo đúng nhịp và ngữ điệu"
+        },
+        {
+          "t": "Ôn lại sau 1 – 3 – 7 ngày",
+          "s": "Đặt 1 câu của riêng bạn với mỗi cụm"
+        }
+      ],
+      "footer": "**Một cảnh ngắn, xem 3 lần** hiệu quả hơn xem hết cả bộ phim một lần"
+    }
+  }
+}

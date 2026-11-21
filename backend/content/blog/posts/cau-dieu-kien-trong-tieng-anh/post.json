@@ -1,0 +1,89 @@
+{
+  "slug": "cau-dieu-kien-trong-tieng-anh",
+  "title": "Câu Điều Kiện Trong Tiếng Anh: Loại 0, 1, 2, 3 Và Cách Phân Biệt Dễ Nhớ",
+  "focusKeyword": "câu điều kiện trong tiếng Anh",
+  "secondaryKeywords": [
+    "câu điều kiện loại 1 2 3",
+    "câu điều kiện loại 0",
+    "câu điều kiện hỗn hợp",
+    "cách dùng câu điều kiện"
+  ],
+  "category": {
+    "slug": "ngu-phap-tieng-anh",
+    "name": "Ngữ pháp tiếng Anh"
+  },
+  "author": "leo-harrison",
+  "publishAt": "2026-11-26T05:00:00+07:00",
+  "excerpt": "Câu điều kiện trong tiếng Anh gồm loại 0, 1, 2, 3 và hỗn hợp. Xem công thức, ví dụ, lỗi hay gặp và mẹo chọn đúng loại chỉ bằng một câu hỏi.",
+  "metaTitle": "Câu Điều Kiện Trong Tiếng Anh: Loại 0, 1, 2, 3, Hỗn Hợp",
+  "metaDescription": "Câu điều kiện trong tiếng Anh gồm loại 0, 1, 2, 3 và hỗn hợp. Xem công thức, cách dùng, ví dụ, lỗi hay gặp và mẹo chọn đúng loại bằng một câu hỏi.",
+  "tags": [
+    "câu điều kiện trong tiếng Anh",
+    "câu điều kiện loại 1 2 3",
+    "câu điều kiện loại 0",
+    "câu điều kiện hỗn hợp",
+    "cách dùng câu điều kiện",
+    "conditional sentences",
+    "ngữ pháp tiếng Anh"
+  ],
+  "related": [
+    "cac-thi-trong-tieng-anh",
+    "cach-dung-a-an-the",
+    "viet-nhat-ky-bang-tieng-anh"
+  ],
+  "images": {
+    "cover": {
+      "file": "cau-dieu-kien-trong-tieng-anh-thumbnail.png",
+      "alt": "Câu điều kiện trong tiếng Anh: loại 0, 1, 2, 3 và cách phân biệt dễ nhớ",
+      "pill": "Ngữ pháp tiếng Anh",
+      "title": "Câu điều kiện trong tiếng Anh: {loại 0, 1, 2, 3} dễ nhớ",
+      "subtitle": "Chọn đúng loại chỉ bằng một câu hỏi"
+    },
+    "infographic": {
+      "file": "cau-dieu-kien-trong-tieng-anh-infographic.png",
+      "alt": "Infographic câu điều kiện trong tiếng Anh: bảng công thức loại 0, 1, 2, 3 và hỗn hợp kèm ví dụ",
+      "type": "table",
+      "eyebrow": "Câu điều kiện trong tiếng Anh",
+      "title": "{5 loại} câu điều kiện trong một bảng",
+      "columns": [
+        "LOẠI",
+        "DÙNG KHI",
+        "CÔNG THỨC",
+        "VÍ DỤ"
+      ],
+      "rows": [
+        [
+          "LOẠI 0",
+          "Sự thật, quy luật",
+          "If + V(s/es),||V(s/es)",
+          "If you heat ice, it melts."
+        ],
+        [
+          "LOẠI 1",
+          "Có thể xảy ra ở tương lai",
+          "If + V(s/es),||will + V",
+          "If it rains, we will stay home."
+        ],
+        [
+          "LOẠI 2",
+          "Trái hiện tại, khó xảy ra",
+          "If + V2,||would + V",
+          "If I were you, I would go."
+        ],
+        [
+          "LOẠI 3",
+          "Trái quá khứ, tiếc nuối",
+          "If + had + V3,||would have + V3",
+          "If I had known, I would have called."
+        ],
+        [
+          "HỖN HỢP",
+          "Quá khứ ảnh hưởng hiện tại",
+          "If + had + V3,||would + V",
+          "If I had slept, I would be fine now."
+        ]
+      ],
+      "footer": "**Một câu hỏi để chọn loại:** điều kiện này là thật hay chỉ là tưởng tượng?"
+    }
+  }
+}

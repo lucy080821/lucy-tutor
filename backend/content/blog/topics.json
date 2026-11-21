@@ -1,0 +1,393 @@
+{
+  "note": "Kho chủ đề đã nghiên cứu (20/11/2026). Mỗi tuần chọn 5 chủ đề status=planned có priority nhỏ nhất, kiểm lại từ khoá bằng tìm kiếm mới, viết xong đổi status=done + ghi publishAt. Không lấy chủ đề trùng existing-posts.json hoặc posts/.",
+  "competitors": [
+    "prepedu.com",
+    "hoanghamobile.com",
+    "voh.com.vn",
+    "vietjack.com",
+    "ielts.idp.com/vietnam",
+    "britishcouncil.vn",
+    "mytour.vn",
+    "zim.vn",
+    "langmaster.edu.vn",
+    "vus.edu.vn",
+    "vnexpress.net"
+  ],
+  "newCategories": {
+    "luyen-thi-thpt": "Luyện thi THPT"
+  },
+  "topics": [
+    {
+      "priority": 1,
+      "id": "cac-thi-trong-tieng-anh",
+      "focusKeyword": "các thì trong tiếng Anh",
+      "secondaryKeywords": [
+        "12 thì trong tiếng Anh",
+        "bảng tổng hợp các thì",
+        "cách nhớ các thì trong tiếng Anh",
+        "các thì trong tiếng Anh và cách dùng"
+      ],
+      "category": "ngu-phap-tieng-anh",
+      "infographic": "matrix",
+      "angle": "Ma trận 3 mốc thời gian × 4 thể → 12 thì; mỗi thì 1 câu hỏi 'dùng khi nào' + dấu hiệu + ví dụ; lỗi hay nhầm. Đối thủ (hoanghamobile, ebomb, IDP) liệt kê khô, ít cách nhớ.",
+      "internalLinks": "/grammar-gym, /blog/cach-dung-a-an-the",
+      "status": "done",
+      "publishAt": "2026-11-23T05:00:00+07:00"
+    },
+    {
+      "priority": 2,
+      "id": "hoc-tieng-anh-qua-phim",
+      "focusKeyword": "học tiếng Anh qua phim",
+      "secondaryKeywords": [
+        "cách học tiếng Anh qua phim",
+        "học tiếng Anh qua phim có phụ đề",
+        "phim học tiếng Anh cho người mới bắt đầu"
+      ],
+      "category": "phuong-phap-tu-hoc",
+      "infographic": "steps",
+      "angle": "Quy trình 5 bước xem 3 lần để không phụ thuộc phụ đề; cách chọn phim theo trình độ. Đối thủ (PREP, VOH) nặng danh sách phim, ít quy trình.",
+      "internalLinks": "/blog/phuong-phap-shadowing-luyen-nghe-noi-tieng-anh, /blog/phuong-phap-lap-lai-ngat-quang, /gym",
+      "status": "done",
+      "publishAt": "2026-11-24T05:00:00+07:00"
+    },
+    {
+      "priority": 3,
+      "id": "cach-phat-am-duoi-ed",
+      "focusKeyword": "cách phát âm đuôi ed",
+      "secondaryKeywords": [
+        "phát âm ed",
+        "quy tắc phát âm ed",
+        "cách đọc đuôi ed trong tiếng Anh",
+        "âm /t/ /d/ /ɪd/"
+      ],
+      "category": "phat-am-ipa",
+      "infographic": "steps",
+      "angle": "3 bước: nhìn ÂM cuối (không phải chữ cái) → hữu thanh/vô thanh → chọn /t/ /d/ /ɪd/; ngoại lệ naked/wicked. Có công cụ miễn phí /cach-phat-am-ed-s-es.",
+      "internalLinks": "/cach-phat-am-ed-s-es, /phonetics, /blog/am-cuoi-trong-tieng-anh-cach-sua-loi-nuot-am",
+      "status": "done",
+      "publishAt": "2026-11-25T05:00:00+07:00"
+    },
+    {
+      "priority": 4,
+      "id": "cau-dieu-kien-trong-tieng-anh",
+      "focusKeyword": "câu điều kiện trong tiếng Anh",
+      "secondaryKeywords": [
+        "câu điều kiện loại 1 2 3",
+        "câu điều kiện loại 0",
+        "câu điều kiện hỗn hợp",
+        "cách dùng câu điều kiện"
+      ],
+      "category": "ngu-phap-tieng-anh",
+      "infographic": "compare",
+      "angle": "Phân biệt bằng 1 câu hỏi: điều kiện có thật hay trái thực tế? Bảng 4 loại + lỗi nhầm loại 2/3 + were cho mọi chủ ngữ.",
+      "internalLinks": "/grammar-gym, /blog/cac-thi-trong-tieng-anh",
+      "status": "done",
+      "publishAt": "2026-11-26T05:00:00+07:00"
+    },
+    {
+      "priority": 5,
+      "id": "hoc-tu-vung-tieng-anh-theo-chu-de",
+      "focusKeyword": "học từ vựng tiếng Anh theo chủ đề",
+      "secondaryKeywords": [
+        "từ vựng tiếng Anh theo chủ đề",
+        "cách học từ vựng theo chủ đề",
+        "10 chủ đề từ vựng tiếng Anh cơ bản"
+      ],
+      "category": "phuong-phap-hoc-tu-vung",
+      "infographic": "steps",
+      "angle": "Học theo cụm + ví dụ + ôn ngắt quãng; 10 chủ đề nên học trước. KHÔNG nhắm 'học từ vựng nhớ lâu' (đã có bài lặp lại ngắt quãng).",
+      "internalLinks": "/game-nong-trai-hoc-tieng-anh, /gym, /blog/phuong-phap-lap-lai-ngat-quang, /blog/cach-tra-tu-dien-tieng-anh-hieu-qua",
+      "status": "done",
+      "publishAt": "2026-11-27T05:00:00+07:00"
+    },
+    {
+      "priority": 6,
+      "id": "luyen-noi-tieng-anh-mot-minh",
+      "focusKeyword": "luyện nói tiếng Anh một mình",
+      "secondaryKeywords": [
+        "cách luyện nói tiếng Anh một mình tại nhà",
+        "tự luyện nói tiếng Anh",
+        "độc thoại tiếng Anh",
+        "luyện nói tiếng Anh với AI"
+      ],
+      "category": "nghe-noi-giao-tiep",
+      "infographic": "timeline",
+      "angle": "Lịch 15 phút/ngày × 4 tuần: nói theo chủ đề, ghi âm nghe lại, tự hỏi tự đáp. Tránh trùng bài Shadowing và bài Sợ nói sai (chỉ link).",
+      "internalLinks": "/conversation, /pronunciation, /blog/phuong-phap-shadowing-luyen-nghe-noi-tieng-anh, /blog/so-noi-sai-tieng-anh",
+      "status": "planned"
+    },
+    {
+      "priority": 7,
+      "id": "loi-sai-ngu-phap-tieng-anh-thuong-gap",
+      "focusKeyword": "lỗi sai ngữ pháp tiếng Anh thường gặp",
+      "secondaryKeywords": [
+        "lỗi sai ngữ pháp của người Việt",
+        "lỗi sai tiếng Anh phổ biến",
+        "cách sửa lỗi ngữ pháp tiếng Anh"
+      ],
+      "category": "ngu-phap-tieng-anh",
+      "infographic": "compare",
+      "angle": "10 lỗi do tiếng Việt không chia động từ/không có mạo từ/số nhiều: sai → đúng → vì sao. Nguồn học thuật cho thấy lỗi quá khứ, mạo từ, to be, chia động từ là nhóm đầu.",
+      "internalLinks": "/cham-writing-mien-phi, /blog/cach-dung-a-an-the",
+      "status": "planned"
+    },
+    {
+      "priority": 8,
+      "id": "collocation-la-gi",
+      "focusKeyword": "collocation là gì",
+      "secondaryKeywords": [
+        "collocation trong tiếng Anh",
+        "cách học collocation",
+        "ví dụ collocation thông dụng",
+        "make và do"
+      ],
+      "category": "phuong-phap-hoc-tu-vung",
+      "infographic": "formula",
+      "angle": "Collocation = cặp từ đi cùng nhau tự nhiên; 5 công thức (V+N, Adj+N, Adv+Adj...) + make/do/take/have; học bằng cụm. Đã có 1 mục trong bài tra từ điển → bài này đào sâu.",
+      "internalLinks": "/blog/cach-tra-tu-dien-tieng-anh-hieu-qua, /gym",
+      "status": "planned"
+    },
+    {
+      "priority": 9,
+      "id": "hoc-tieng-anh-cho-nguoi-di-lam",
+      "focusKeyword": "học tiếng Anh cho người đi làm",
+      "secondaryKeywords": [
+        "học tiếng Anh cho người đi làm bận rộn",
+        "học tiếng Anh 15 phút mỗi ngày",
+        "microlearning tiếng Anh",
+        "tiếng Anh công sở"
+      ],
+      "category": "phuong-phap-tu-hoc",
+      "infographic": "timeline",
+      "angle": "Chia 15 phút = 5 nghe + 5 nói + 5 ôn; lịch tuần cho dân văn phòng; tận dụng thời gian chết. Khác bài mất gốc (12 tuần) và bài mục tiêu.",
+      "internalLinks": "/gym, /listening, /blog/cach-dat-muc-tieu-hoc-tieng-anh",
+      "status": "planned"
+    },
+    {
+      "priority": 10,
+      "id": "cau-truc-de-thi-tieng-anh-tot-nghiep-thpt",
+      "focusKeyword": "cấu trúc đề thi tiếng Anh tốt nghiệp THPT",
+      "secondaryKeywords": [
+        "đề thi tiếng Anh tốt nghiệp THPT 2026",
+        "cách ôn thi tiếng Anh tốt nghiệp THPT",
+        "đề thi tiếng Anh THPT bao nhiêu câu"
+      ],
+      "category": "luyen-thi-thpt",
+      "infographic": "steps",
+      "angle": "CHỈ dùng số liệu đã xác minh: 40 câu/50 phút/0,25đ mỗi câu (đề 2025–2026), bỏ câu ngữ âm/trọng âm riêng lẻ, tăng văn bản thực tiễn. Ghi rõ đề 2027 chờ Bộ GD&ĐT công bố. Phải kiểm lại nguồn chính thức trước khi viết.",
+      "internalLinks": "/mock-test, /reading, /kiem-tra-trinh-do-tieng-anh",
+      "status": "planned"
+    },
+    {
+      "priority": 11,
+      "id": "hoc-tieng-anh-voi-chatgpt",
+      "focusKeyword": "học tiếng Anh với ChatGPT",
+      "secondaryKeywords": [
+        "cách dùng ChatGPT học tiếng Anh",
+        "luyện nói tiếng Anh với ChatGPT",
+        "prompt học tiếng Anh",
+        "học tiếng Anh với AI"
+      ],
+      "category": "cong-cu-hoc-tieng-anh",
+      "infographic": "steps",
+      "angle": "6 kiểu prompt (đóng vai, sửa câu, giải thích lỗi, tạo bài tập, dịch ngược, ôn từ) + giới hạn của AI; so với công cụ chuyên biệt của Lucy Tutor (không bịa số liệu về ChatGPT).",
+      "internalLinks": "/cham-writing-mien-phi, /conversation, /pronunciation",
+      "status": "planned"
+    },
+    {
+      "priority": 12,
+      "id": "dong-tu-bat-quy-tac",
+      "focusKeyword": "cách học động từ bất quy tắc",
+      "secondaryKeywords": [
+        "bảng động từ bất quy tắc",
+        "động từ bất quy tắc thông dụng",
+        "mẹo nhớ động từ bất quy tắc"
+      ],
+      "category": "ngu-phap-tieng-anh",
+      "infographic": "compare",
+      "angle": "Nhóm theo mẫu (ang-ung, ow-ew-own, ought...) thay vì học theo ABC; 100 động từ thông dụng. Link công cụ /bang-dong-tu-bat-quy-tac.",
+      "internalLinks": "/bang-dong-tu-bat-quy-tac, /gym",
+      "status": "planned"
+    },
+    {
+      "priority": 13,
+      "id": "hien-tai-hoan-thanh-va-qua-khu-don",
+      "focusKeyword": "phân biệt hiện tại hoàn thành và quá khứ đơn",
+      "secondaryKeywords": [
+        "present perfect và past simple",
+        "thì hiện tại hoàn thành",
+        "khi nào dùng hiện tại hoàn thành"
+      ],
+      "category": "ngu-phap-tieng-anh",
+      "infographic": "compare",
+      "angle": "Câu hỏi quyết định: thời điểm đã xác định hay chưa; dấu hiệu just/already/yet/ago/yesterday; bài tập mini.",
+      "internalLinks": "/blog/cac-thi-trong-tieng-anh, /grammar-gym",
+      "status": "planned"
+    },
+    {
+      "priority": 14,
+      "id": "cach-phat-am-duoi-s-es",
+      "focusKeyword": "cách phát âm đuôi s es",
+      "secondaryKeywords": [
+        "phát âm s es",
+        "quy tắc phát âm s es",
+        "âm /s/ /z/ /ɪz/"
+      ],
+      "category": "phat-am-ipa",
+      "infographic": "steps",
+      "angle": "3 nhóm /s/ /z/ /ɪz/ theo âm cuối; lỗi 'houses', 'clothes'. Link công cụ.",
+      "internalLinks": "/cach-phat-am-ed-s-es, /blog/cach-phat-am-duoi-ed",
+      "status": "planned"
+    },
+    {
+      "priority": 15,
+      "id": "bang-phien-am-ipa",
+      "focusKeyword": "bảng phiên âm IPA",
+      "secondaryKeywords": [
+        "bảng phiên âm IPA tiếng Anh",
+        "cách đọc phiên âm IPA",
+        "44 âm trong tiếng Anh"
+      ],
+      "category": "phat-am-ipa",
+      "infographic": "matrix",
+      "angle": "Bảng 44 âm gọn + cách đọc từ điển; link /phonetics (bảng nghe được).",
+      "internalLinks": "/phonetics, /blog/am-schwa-la-gi-cach-phat-am, /blog/cach-phat-am-th-trong-tieng-anh",
+      "status": "planned"
+    },
+    {
+      "priority": 16,
+      "id": "hoc-tieng-anh-qua-bai-hat",
+      "focusKeyword": "học tiếng Anh qua bài hát",
+      "secondaryKeywords": [
+        "cách học tiếng Anh qua bài hát",
+        "bài hát tiếng Anh dễ học cho người mới",
+        "nghe nhạc học tiếng Anh"
+      ],
+      "category": "phuong-phap-tu-hoc",
+      "infographic": "steps",
+      "angle": "Quy trình nghe–điền từ–hát theo; chọn bài chậm, lời rõ; tránh học vẹt.",
+      "internalLinks": "/listening, /blog/phuong-phap-shadowing-luyen-nghe-noi-tieng-anh",
+      "status": "planned"
+    },
+    {
+      "priority": 17,
+      "id": "cach-lam-bai-doc-hieu-tieng-anh",
+      "focusKeyword": "cách làm bài đọc hiểu tiếng Anh",
+      "secondaryKeywords": [
+        "kỹ năng skimming và scanning",
+        "mẹo làm bài đọc hiểu tiếng Anh",
+        "cách đọc hiểu tiếng Anh nhanh"
+      ],
+      "category": "meo-thi-ielts",
+      "infographic": "steps",
+      "angle": "Skim → scan → paraphrase; xử lý từ lạ; quản lý thời gian.",
+      "internalLinks": "/reading, /mock-test",
+      "status": "planned"
+    },
+    {
+      "priority": 18,
+      "id": "viet-email-tieng-anh",
+      "focusKeyword": "cách viết email tiếng Anh",
+      "secondaryKeywords": [
+        "mẫu email tiếng Anh công việc",
+        "viết email tiếng Anh chuyên nghiệp",
+        "cấu trúc email tiếng Anh"
+      ],
+      "category": "phuong-phap-tu-hoc",
+      "infographic": "steps",
+      "angle": "Khung 5 phần + mẫu câu mở/kết + lỗi giọng điệu.",
+      "internalLinks": "/cham-writing-mien-phi",
+      "status": "planned"
+    },
+    {
+      "priority": 19,
+      "id": "trong-am-trong-tieng-anh",
+      "focusKeyword": "trọng âm trong tiếng Anh",
+      "secondaryKeywords": [
+        "quy tắc trọng âm tiếng Anh",
+        "cách đánh trọng âm",
+        "trọng âm từ 2 âm tiết"
+      ],
+      "category": "phat-am-ipa",
+      "infographic": "compare",
+      "angle": "Quy tắc danh/động từ 2 âm tiết, hậu tố, từ ghép; liên hệ schwa.",
+      "internalLinks": "/phonetics, /blog/am-schwa-la-gi-cach-phat-am",
+      "status": "planned"
+    },
+    {
+      "priority": 20,
+      "id": "bang-quy-doi-ielts-sang-cefr",
+      "focusKeyword": "bảng quy đổi điểm IELTS sang CEFR",
+      "secondaryKeywords": [
+        "IELTS 6.5 tương đương CEFR",
+        "IELTS bao nhiêu điểm là B2",
+        "quy đổi band IELTS"
+      ],
+      "category": "meo-thi-ielts",
+      "infographic": "matrix",
+      "angle": "Bảng band↔CEFR (chỉ mang tính tham khảo), liên hệ công cụ tính band.",
+      "internalLinks": "/ielts-band-calculator, /kiem-tra-trinh-do-tieng-anh, /blog/cach-tinh-diem-ielts-overall",
+      "status": "planned"
+    },
+    {
+      "priority": 21,
+      "id": "cau-bi-dong-trong-tieng-anh",
+      "focusKeyword": "câu bị động trong tiếng Anh",
+      "secondaryKeywords": [
+        "cách chuyển câu chủ động sang bị động",
+        "công thức câu bị động",
+        "bị động các thì"
+      ],
+      "category": "ngu-phap-tieng-anh",
+      "infographic": "formula",
+      "angle": "Công thức be + V3 theo từng thì; khi nào KHÔNG dùng bị động.",
+      "internalLinks": "/grammar-gym, /blog/cac-thi-trong-tieng-anh",
+      "status": "planned"
+    },
+    {
+      "priority": 22,
+      "id": "so-sanh-hon-va-so-sanh-nhat",
+      "focusKeyword": "so sánh hơn và so sánh nhất trong tiếng Anh",
+      "secondaryKeywords": [
+        "cấu trúc so sánh hơn",
+        "so sánh nhất",
+        "tính từ ngắn và tính từ dài"
+      ],
+      "category": "ngu-phap-tieng-anh",
+      "infographic": "compare",
+      "angle": "Quy tắc tính từ ngắn/dài + bất quy tắc good/bad + lỗi 'more taller'.",
+      "internalLinks": "/grammar-gym",
+      "status": "planned"
+    },
+    {
+      "priority": 23,
+      "id": "phan-biet-say-tell-speak-talk",
+      "focusKeyword": "phân biệt say tell speak talk",
+      "secondaryKeywords": [
+        "say và tell khác nhau thế nào",
+        "speak và talk",
+        "cách dùng say tell speak talk"
+      ],
+      "category": "ngu-phap-tieng-anh",
+      "infographic": "compare",
+      "angle": "Bảng so 4 động từ + collocation; lỗi hay gặp.",
+      "internalLinks": "/grammar-gym",
+      "status": "planned"
+    },
+    {
+      "priority": 24,
+      "id": "lo-trinh-hoc-tieng-anh-giao-tiep",
+      "focusKeyword": "lộ trình học tiếng Anh giao tiếp",
+      "secondaryKeywords": [
+        "học tiếng Anh giao tiếp cho người mới bắt đầu",
+        "lộ trình 90 ngày tiếng Anh giao tiếp",
+        "mẫu câu giao tiếp thông dụng"
+      ],
+      "category": "nghe-noi-giao-tiep",
+      "infographic": "timeline",
+      "angle": "Lộ trình 90 ngày KHÁC bài mất gốc 12 tuần: tập trung mẫu câu theo tình huống; mốc thực tế 3/6/12 tháng.",
+      "internalLinks": "/conversation, /blog/tu-hoc-tieng-anh-cho-nguoi-mat-goc",
+      "status": "planned"
+    }
+  ]
+}

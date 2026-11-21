@@ -113,4 +113,6 @@ app.listen(PORT, () => {
   require('./utils/searchConsole').startSearchConsoleSync();
   // Đồng bộ YouTube + Facebook (tab Mạng xã hội): 45 giây sau khởi động, mỗi 20 phút, và đầy đủ lúc 06:00 giờ VN
   require('./utils/social').startSocialSync();
+  // Nhập bài blog mới từ backend/content/blog/posts/ (chỉ tạo bài chưa có, hẹn giờ đăng theo post.json) — tắt bằng BLOG_CONTENT_SYNC=off
+  setTimeout(() => require('./utils/blogContentSync').syncBlogContent().catch((e) => console.error('[blog-sync]', e.message)), 20000);
 });

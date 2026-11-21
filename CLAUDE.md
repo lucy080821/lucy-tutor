@@ -759,6 +759,14 @@ Cho phép học sinh cài app lên điện thoại (Add to Home Screen):
 
 ---
 
+## Blog tự động (bài viết SEO đăng 05:00 thứ 2–thứ 6)
+
+- Nội dung bài nằm trong repo: `backend/content/blog/posts/<slug>/{post.json,content.html}` + ảnh `frontend/public/images/blog/<slug>/<từ-khoá>-thumbnail.png|-infographic.png`.
+- `backend/src/utils/blogContentSync.js` (gọi từ `server.js` sau 20 giây khi khởi động) tạo `BlogPost` PUBLISHED với `publishedAt` = `publishAt` trong post.json (tương lai = bài hẹn giờ; API công khai chỉ hiện khi `publishedAt <= now`). **Chỉ tạo bài chưa có slug, không ghi đè bài đã sửa.** Tắt: `BLOG_CONTENT_SYNC=off`; thử: `cd backend && node scripts/importBlogContent.js --dry-run`.
+- Công cụ: `tools/render-images.js <slug>` (Playwright → ảnh), `tools/validate.js` (kiểm SEO, phải 0 lỗi/0 cảnh báo), `tools/next-slots.js N` (khung giờ tiếp theo). Backlog chủ đề: `topics.json`; snapshot bài đã có: `existing-posts.json`.
+- Tác giả `leo-harrison` phải tồn tại trên DB (TEACHER có `authorSlug`). Audio blog không đọc bảng/ảnh → tóm tắt ý bảng bằng câu văn.
+- Quy trình viết & chuẩn SEO đầy đủ: `backend/content/blog/README.md`.
+
 ## Lưu ý kỹ thuật quan trọng
 
 - **Model AI (Groq) khai báo DUY NHẤT ở [backend/src/lib/aiModel.js](backend/src/lib/aiModel.js)** (`GROQ_TEXT_MODEL`, mặc định `openai/gpt-oss-120b`, override bằng biến môi trường `GROQ_TEXT_MODEL`). Không hardcode tên model trong route. Lý do: Groq đã gỡ `llama-3.3-70b-versatile` mà không báo trước, khiến toàn bộ tính năng AI chữ (18 chỗ) lỗi `model_not_found` cùng lúc. Danh sách model khả dụng: `groq.models.list()`. `whisper-large-v3` (chuyển giọng nói) vẫn còn.

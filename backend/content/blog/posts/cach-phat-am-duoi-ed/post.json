@@ -1,0 +1,73 @@
+{
+  "slug": "cach-phat-am-duoi-ed",
+  "title": "Cách Phát Âm Đuôi Ed: Quy Tắc 3 Bước Để Đọc Đúng /t/, /d/ Và /ɪd/",
+  "focusKeyword": "cách phát âm đuôi ed",
+  "secondaryKeywords": [
+    "phát âm ed",
+    "quy tắc phát âm ed",
+    "cách đọc đuôi ed",
+    "phát âm /t/ /d/ /ɪd/"
+  ],
+  "category": {
+    "slug": "phat-am-ipa",
+    "name": "Phát âm & IPA"
+  },
+  "author": "leo-harrison",
+  "publishAt": "2026-11-25T05:00:00+07:00",
+  "excerpt": "Cách phát âm đuôi ed chỉ có 3 âm /t/, /d/ và /ɪd/. Học quy tắc 3 bước, mẹo thử cổ họng, các ngoại lệ như naked, wicked và bài tập nhỏ có đáp án.",
+  "metaTitle": "Cách Phát Âm Đuôi Ed: Quy Tắc 3 Bước Dễ Nhớ",
+  "metaDescription": "Cách phát âm đuôi ed gồm 3 âm /t/, /d/ và /ɪd/. Học quy tắc 3 bước, mẹo thử cổ họng, ngoại lệ naked, wicked và bài tập có đáp án.",
+  "tags": [
+    "cách phát âm đuôi ed",
+    "phát âm ed",
+    "quy tắc phát âm ed",
+    "cách đọc đuôi ed",
+    "phát âm /t/ /d/ /ɪd/",
+    "phiên âm IPA",
+    "phát âm tiếng Anh cho người Việt"
+  ],
+  "related": [
+    "am-cuoi-trong-tieng-anh-cach-sua-loi-nuot-am",
+    "cach-phat-am-th-trong-tieng-anh",
+    "am-schwa-la-gi-cach-phat-am"
+  ],
+  "images": {
+    "cover": {
+      "file": "cach-phat-am-duoi-ed-thumbnail.png",
+      "alt": "Cách phát âm đuôi ed: quy tắc 3 bước đọc đúng /t/, /d/ và /ɪd/",
+      "pill": "Phát âm & IPA",
+      "title": "Cách phát âm đuôi ed: {3 bước} đọc đúng /t/, /d/, /ɪd/",
+      "subtitle": "Mẹo thử cổ họng, ngoại lệ naked – wicked và bài tập có đáp án"
+    },
+    "infographic": {
+      "file": "cach-phat-am-duoi-ed-infographic.png",
+      "alt": "Infographic cách phát âm đuôi ed: bảng 3 âm /t/, /d/, /ɪd/ theo âm cuối của động từ",
+      "type": "table",
+      "eyebrow": "Cách phát âm đuôi ed",
+      "title": "Nhìn {âm cuối}, đừng nhìn chữ cái cuối",
+      "columns": [
+        "ÂM CUỐI CỦA ĐỘNG TỪ GỐC",
+        "ĐUÔI -ED ĐỌC LÀ",
+        "VÍ DỤ"
+      ],
+      "rows": [
+        [
+          "/t/ hoặc /d/",
+          "**/ɪd/**||thêm 1 âm tiết",
+          "wanted, needed||started, decided"
+        ],
+        [
+          "Vô thanh: /p/ /k/ /f/ /s/ /ʃ/ /tʃ/ /θ/",
+          "**/t/**||không thêm âm tiết",
+          "looked, stopped||laughed, watched"
+        ],
+        [
+          "Hữu thanh và nguyên âm (còn lại)",
+          "**/d/**||không thêm âm tiết",
+          "played, loved||opened, enjoyed"
+        ]
+      ],
+      "footer": "**Mẹo thử cổ họng:** đặt tay lên cổ, đọc kéo dài âm cuối. Rung là hữu thanh → /d/"
+    }
+  }
+}

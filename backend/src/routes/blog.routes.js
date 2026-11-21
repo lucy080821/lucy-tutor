@@ -835,4 +835,8 @@ Trả về JSON nguyên chất:
   }
 });
 
+// Dùng lại ở utils/blogContentSync.js (nhập bài từ file vào CSDL cùng bộ lọc HTML với trình soạn bài)
+router.SANITIZE_OPTIONS = SANITIZE_OPTIONS;
+router.estimateReadingMinutes = estimateReadingMinutes;
+
 module.exports = router;

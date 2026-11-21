@@ -1,0 +1,83 @@
+{
+  "slug": "cac-thi-trong-tieng-anh",
+  "title": "Các Thì Trong Tiếng Anh: Bảng 12 Thì, Công Thức Và Cách Nhớ Nhanh",
+  "focusKeyword": "các thì trong tiếng Anh",
+  "secondaryKeywords": [
+    "12 thì trong tiếng Anh",
+    "bảng tổng hợp các thì",
+    "cách nhớ các thì trong tiếng Anh",
+    "các thì trong tiếng Anh và cách dùng",
+    "dấu hiệu nhận biết các thì"
+  ],
+  "category": {
+    "slug": "ngu-phap-tieng-anh",
+    "name": "Ngữ pháp tiếng Anh"
+  },
+  "author": "leo-harrison",
+  "publishAt": "2026-11-23T05:00:00+07:00",
+  "excerpt": "Các thì trong tiếng Anh thực ra chỉ là ma trận 3 mốc thời gian × 4 thể. Xem bảng 12 thì, công thức, dấu hiệu nhận biết và cách nhớ nhanh trong 15 phút.",
+  "metaTitle": "Các Thì Trong Tiếng Anh: Bảng 12 Thì Và Cách Nhớ Nhanh",
+  "metaDescription": "Các thì trong tiếng Anh gồm 12 thì, ghép từ 3 mốc thời gian và 4 thể. Xem bảng công thức, dấu hiệu nhận biết, 5 cặp thì dễ nhầm và cách nhớ nhanh.",
+  "tags": [
+    "các thì trong tiếng Anh",
+    "12 thì trong tiếng Anh",
+    "bảng tổng hợp các thì",
+    "cách nhớ các thì trong tiếng Anh",
+    "các thì trong tiếng Anh và cách dùng",
+    "dấu hiệu nhận biết các thì",
+    "ngữ pháp tiếng Anh",
+    "tự học tiếng Anh"
+  ],
+  "related": [
+    "cach-dung-a-an-the",
+    "phuong-phap-lap-lai-ngat-quang",
+    "viet-nhat-ky-bang-tieng-anh"
+  ],
+  "images": {
+    "cover": {
+      "file": "cac-thi-trong-tieng-anh-thumbnail.png",
+      "alt": "Các thì trong tiếng Anh: bảng 12 thì dễ nhớ cho người học",
+      "pill": "Ngữ pháp tiếng Anh",
+      "title": "Các thì trong tiếng Anh: {bảng 12 thì} dễ nhớ",
+      "subtitle": "Ma trận 3 mốc thời gian × 4 thể và cách nhớ nhanh trong 15 phút"
+    },
+    "infographic": {
+      "file": "cac-thi-trong-tieng-anh-infographic.png",
+      "alt": "Bảng các thì trong tiếng Anh: ma trận 12 thì gồm 3 mốc thời gian và 4 thể",
+      "type": "table",
+      "eyebrow": "Các thì trong tiếng Anh",
+      "title": "Ma trận {12 thì} = 3 mốc × 4 thể",
+      "columns": [
+        "",
+        "ĐƠN",
+        "TIẾP DIỄN",
+        "HOÀN THÀNH",
+        "HOÀN THÀNH TIẾP DIỄN"
+      ],
+      "rows": [
+        [
+          "HIỆN TẠI",
+          "S + V(s/es)||She walks",
+          "S + am/is/are + V-ing||She is walking",
+          "S + have/has + V3||She has walked",
+          "S + have/has + been + V-ing||She has been walking"
+        ],
+        [
+          "QUÁ KHỨ",
+          "S + V2/V-ed||She walked",
+          "S + was/were + V-ing||She was walking",
+          "S + had + V3||She had walked",
+          "S + had + been + V-ing||She had been walking"
+        ],
+        [
+          "TƯƠNG LAI",
+          "S + will + V||She will walk",
+          "S + will be + V-ing||She will be walking",
+          "S + will have + V3||She will have walked",
+          "S + will have been + V-ing||She will have been walking"
+        ]
+      ],
+      "footer": "**Mẹo nhớ:** thể quyết định động từ phía sau, mốc thời gian quyết định trợ động từ phía trước"
+    }
+  }
+}
