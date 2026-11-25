@@ -187,7 +187,14 @@ kbd{font:700 .72rem var(--body);background:#eef0f7;border:1px solid #d5d9e8;bord
 /* ---- Menu v3: 3 clear steps, icon tiles, sticky call-to-action ---- */
 .menu-card{max-width:44rem;gap:1.1rem;padding-bottom:0}
 .menu-head{display:flex;align-items:center;gap:.9rem}
-.menu-head img{width:84px;height:auto;flex:none;filter:drop-shadow(0 6px 10px rgba(30,58,138,.25));animation:bob 1.6s ease-in-out infinite}
+.menu-head>img{width:84px;height:auto;flex:none;filter:drop-shadow(0 6px 10px rgba(30,58,138,.25));animation:bob 1.6s ease-in-out infinite}
+.chars{display:flex;gap:.45rem;flex-wrap:wrap}
+.char{display:grid;justify-items:center;align-content:end;gap:.15rem;width:4.7rem;padding:.3rem .25rem .4rem;border:2px solid #dde2f0;background:#fff;border-radius:16px;cursor:pointer;font:700 .72rem var(--body);color:var(--ink)}
+.char img{height:3.1rem;width:auto;max-width:100%;object-fit:contain}
+.char:hover{border-color:var(--navy)}
+.char[aria-pressed="true"]{border-color:var(--navy);background:#eef2ff;box-shadow:inset 0 0 0 2px var(--navy)}
+.char:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+@media (max-width:520px){.char{width:3.9rem}.char img{height:2.6rem}}
 .menu-title{display:flex;flex-direction:column;gap:.45rem;min-width:0;flex:1}
 .name-pill{display:flex;align-items:center;gap:.5rem;background:#fff;border:2px solid #dde2f0;border-radius:999px;padding:.25rem .5rem .25rem .9rem;max-width:20rem;cursor:text}
 .name-pill:focus-within{border-color:var(--navy)}
@@ -254,7 +261,7 @@ kbd{font:700 .72rem var(--body);background:#eef0f7;border:1px solid #d5d9e8;bord
   .screen.full>.card{max-width:none;min-height:100%;border-radius:0;box-shadow:none;
     padding-top:max(1rem,env(safe-area-inset-top,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
   .menu-cta{margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding-left:16px;padding-right:16px;border-radius:0;margin-top:auto}
-  .menu-head img{width:64px}
+  .menu-head>img{width:64px}
   h1{font-size:2rem}
   .topics{grid-template-columns:repeat(2,minmax(0,1fr))}
   .topics.units{grid-template-columns:repeat(3,minmax(0,1fr))}
@@ -341,9 +348,10 @@ kbd{font:700 .72rem var(--body);background:#eef0f7;border:1px solid #d5d9e8;bord
         <h1>Qilin <span>Run</span></h1>
         <label class="name-pill" for="nameInput">
           <span>Tên</span>
-          <input id="nameInput" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Qilin">
+          <input id="nameInput" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Tên của bạn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
         </label>
+        <div class="chars" id="charRow" role="group" aria-label="Chọn nhân vật"></div>
       </div>
     </header>
 
@@ -547,12 +555,25 @@ const BOOK_COLORS = ["#1E3A8A", "#f9a95a", "#2f9be0", "#d9576a", "#38a477", "#74
 
 const $ = (s) => document.querySelector(s);
 const app = $("#app"), stage = $("#stage"), cv = $("#cv"), ctx = cv.getContext("2d");
-const QILIN_SRC = "data:image/webp;base64,__QILIN__";
-const img = new Image(); img.src = QILIN_SRC; $("#menuImg").src = QILIN_SRC;
+const CHAR_DIR = "/games/qilin-run/chars/";
+// 5 nhân vật để người chơi chọn. w = bề ngang tối đa khi vẽ trong game (px của khung 540 cao) để con nào dẹt cũng không quá to.
+const CHARS = [
+  { id: "qilin", name: "Qilin", alt: "Qilin, rồng nước đội mũ tốt nghiệp", w: 96 },
+  { id: "fox", name: "Hồ ly", alt: "Hồ ly chín đuôi màu tím", w: 118 },
+  { id: "unicorn", name: "Unicorn", alt: "Unicorn bờm cầu vồng", w: 118 },
+  { id: "griffin", name: "Griffin", alt: "Griffin đại bàng đầu sư tử", w: 126 },
+  { id: "phoenix", name: "Phượng hoàng", alt: "Phượng hoàng lửa", w: 122 },
+];
+for (const c of CHARS) { c.img = new Image(); c.img.src = CHAR_DIR + c.id + ".webp"; }
 
 function lsGet(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : v; } catch (e) { return d; } }
 function lsSet(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
-let playerName = lsGet("lucy_run_name", "Qilin") || "Qilin";
+let charId = lsGet("lucy_run_char", "qilin"); if (!CHARS.some((c) => c.id === charId)) charId = "qilin";
+const curChar = () => CHARS.find((c) => c.id === charId);
+// Tên tự đặt (rỗng = lấy tên nhân vật đang chọn). Bản cũ từng lưu cứng "Qilin" → coi như chưa đặt.
+let customName = lsGet("lucy_run_name", ""); if (customName === "Qilin") customName = "";
+let playerName = customName || "Qilin";
+const nameOf = () => ($("#nameInput").value.trim() || curChar().name).slice(0, 14);
 let catId = lsGet("lucy_run_cat", "vocab"); if (!CATS.some((c) => c.id === catId)) catId = "vocab";
 let levelId = lsGet("lucy_run_level", "easy"); if (!LEVELS.some((l) => l.id === levelId)) levelId = "easy";
 const topicPick = {};
@@ -812,8 +833,7 @@ function newPlayer() { return { x: 140, y: GROUND - 64, w: 54, h: 64, vy: 0, gro
 function startGame() {
   if (!setItems().length) return;
   ensureAudio();
-  playerName = ($("#nameInput").value.trim() || "Qilin").slice(0, 14);
-  lsSet("lucy_run_name", playerName);
+  customName = $("#nameInput").value.trim().slice(0, 14); playerName = nameOf(); lsSet("lucy_run_name", customName);
   const items = runSet && runSet.length ? runSet : pickRun(), base = hasLevels() ? curLevel().speed : 235;
   runSet = null;
   G = Object.assign(buildLevel(items), {
@@ -870,8 +890,7 @@ function cefrBadge(c) { const b = el("span", "cefr", c); b.dataset.c = c; return
 
 function openStudy() {
   if (!setItems().length) return;
-  playerName = ($("#nameInput").value.trim() || "Qilin").slice(0, 14);
-  lsSet("lucy_run_name", playerName);
+  customName = $("#nameInput").value.trim().slice(0, 14); playerName = nameOf(); lsSet("lucy_run_name", customName);
   ensureAudio();
   G = null; setPlaying(false);
   if (!runSet) runSet = pickRun();
@@ -1318,7 +1337,16 @@ const CHECK = '<svg class="tick" viewBox="0 0 24 24" fill="none" stroke="current
 
 function bestOf(topicId, lv) { return parseInt(lsGet(bestKey(setKey(topicId, lv)), "0"), 10) || 0; }
 function renderMenu() {
-  $("#nameInput").value = playerName;
+  $("#nameInput").value = customName; $("#nameInput").placeholder = curChar().name;
+  $("#menuImg").src = curChar().img.src; $("#menuImg").alt = curChar().alt;
+  const row = $("#charRow"); row.innerHTML = "";
+  for (const c of CHARS) {
+    const b = el("button", "char"); b.type = "button"; b.setAttribute("aria-pressed", String(c.id === charId)); b.title = c.name;
+    const im = new Image(); im.src = c.img.src; im.alt = ""; im.width = 60; im.height = 50;
+    b.append(im, el("span", null, c.name));
+    b.addEventListener("click", () => { charId = c.id; lsSet("lucy_run_char", charId); renderMenu(); });
+    row.appendChild(b);
+  }
   const tabs = $("#catTabs"); tabs.innerHTML = "";
   for (const c of CATS) {
     const b = el("button", "cat"); b.type = "button"; b.setAttribute("role", "tab");
@@ -1572,8 +1600,10 @@ function drawFinish(cam) {
   ctx.fillText("VỀ ĐÍCH", x + 86, top - 17);
 }
 function drawQilin(cx, footY, o) {
+  const ch = curChar(), img = ch.img;
   if (!img.complete || !img.naturalWidth) return;
-  const dh = 104, dw = dh * img.naturalWidth / img.naturalHeight;
+  const aspect = img.naturalWidth / img.naturalHeight;
+  const dh = Math.min(104, ch.w / aspect), dw = dh * aspect;
   ctx.save();
   ctx.globalAlpha = o.alpha == null ? 1 : o.alpha;
   ctx.translate(cx, footY);
@@ -1633,7 +1663,7 @@ function render() {
     const run = T * 16;
     ctx.fillStyle = "rgba(10,25,70,.2)"; ctx.beginPath(); ctx.ellipse(300, GROUND + 3, 32, 6, 0, 0, 7); ctx.fill();
     drawQilin(300, GROUND, { rot: Math.sin(run) * 0.045 + 0.04, bob: -Math.abs(Math.sin(run)) * 6 });
-    drawNameTag(300, GROUND - 120, ($("#nameInput").value.trim() || "Qilin").slice(0, 14));
+    drawNameTag(300, GROUND - 120, nameOf());
     return;
   }
   const cam = G.cam;

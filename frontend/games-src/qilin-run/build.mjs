@@ -23,7 +23,6 @@ const swap = (token, value) => {
   if (!html.includes(token)) throw new Error("Thiếu " + token + " trong game.html");
   html = html.split(token).join(value);
 };
-swap('"data:image/webp;base64,__QILIN__"', '"/games/qilin-run/qilin.webp"');
 swap("__VOCAB__", JSON.stringify(grade3));
 swap("__CONTENT__", read(join(here, "content.js")));
 swap("__GRADES_URL__", JSON.stringify("/game-hoc-tieng-anh/tu-vung-sgk.json"));
