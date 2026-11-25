@@ -5,6 +5,7 @@
 //  - Từ vựng Lớp 3 dự phòng lấy từ src/lib/games/grade3.ts; từ vựng SGK lớp 1–12 game tự tải lúc chạy
 //    từ /game-hoc-tieng-anh/tu-vung-sgk.json (cùng nguồn với trang Flashcard).
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -46,4 +47,7 @@ ${html}
 const out = join(root, "public/games/qilin-run/play.html");
 mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, page);
+// Mã băm nội dung → trang nhúng gắn ?v=<mã> để trình duyệt (nhất là điện thoại) không giữ bản play.html cũ.
+const version = createHash("sha1").update(page).digest("hex").slice(0, 10);
+writeFileSync(join(root, "src/components/tools/qilinRunVersion.ts"), `// Tự sinh bởi games-src/qilin-run/build.mjs — đừng sửa tay.\nexport const QILIN_RUN_VERSION = "${version}";\n`);
 console.log("Đã build", out, Math.round(page.length / 1024) + "KB");

@@ -1,9 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { QILIN_RUN_VERSION } from "./qilinRunVersion";
 
 // Game Qilin Run là 1 trang HTML tĩnh (public/games/qilin-run/play.html, build từ games-src/qilin-run/)
 // nhúng qua iframe: CSS/JS của game tách hẳn khỏi globals.css nên không đụng class của app.
-export const QILIN_RUN_SRC = "/games/qilin-run/play.html";
+// ?v= là mã băm nội dung play.html (build.mjs tự ghi vào qilinRunVersion.ts) — trình duyệt điện thoại hay giữ bản play.html
+// cũ rất lâu vì file tĩnh không có Cache-Control, đổi mã băm thì tải bản mới ngay sau mỗi lần sửa game.
+export const QILIN_RUN_SRC = `/games/qilin-run/play.html?v=${QILIN_RUN_VERSION}`;
 
 export default function QilinRunEmbed() {
   const wrap = useRef<HTMLDivElement>(null);
