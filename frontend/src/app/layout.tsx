@@ -64,7 +64,7 @@ export const metadata: Metadata = {
   // Next tự khai báo từ file app/favicon.ico.
   icons: {
     icon: "/icon.png",
-    apple: "/logo.png",
+    apple: "/apple-touch-icon.png", // iOS tô nền đen cho PNG trong suốt → dùng bản nền sáng riêng
   },
   formatDetection: { telephone: false },
   manifest: "/manifest.json",
